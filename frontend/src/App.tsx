@@ -40,6 +40,8 @@ import { NodesView } from '@/features/nodes/NodesView'
 import { NamespacesView } from '@/features/namespaces/NamespacesView'
 import { OverviewView } from '@/features/overview/OverviewView'
 import { WorkloadsOverviewView } from '@/features/overview/WorkloadsOverviewView'
+import { CustomResourceView } from '@/features/crds/CustomResourceView'
+import { CRDGroups } from '@/features/crds/CRDGroups'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
 import { RowActionDialogs } from '@/features/_shared/RowActionDialogs'
 import { KeyboardShortcutsDialog } from '@/features/_shared/KeyboardShortcutsDialog'
@@ -51,9 +53,10 @@ import { PortForwardIndicator } from '@/features/portforward/PortForwardIndicato
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
-import { onPFUpdate } from '@/lib/events'
+import { onKubeChange, onPFUpdate } from '@/lib/events'
 import { useUIStore, type ResourceView } from '@/store/ui'
 import { useResources } from '@/store/resources'
+import { useCRDStore } from '@/store/crds'
 import { usePortForwards } from '@/store/portForwards'
 
 type NavItem = { label: string; view?: ResourceView }
@@ -121,6 +124,18 @@ const RESOURCE_GROUPS: Array<{ label: string; items: NavItem[] }> = [
 
 function MainView() {
   const view = useUIStore((s) => s.selectedView)
+  const selectedCRDKey = useUIStore((s) => s.selectedCRDKey)
+  const crd = useCRDStore((s) => (selectedCRDKey ? s.byKey[selectedCRDKey] : null))
+  if (selectedCRDKey) {
+    if (!crd) {
+      return (
+        <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
+          Loading CRD…
+        </div>
+      )
+    }
+    return <CustomResourceView crd={crd} />
+  }
   switch (view) {
     case 'overview':
       return <OverviewView />
@@ -215,6 +230,8 @@ function App() {
   const selectedResource = useUIStore((s) => s.selectedResource)
   const collapsedNavGroups = useUIStore((s) => s.collapsedNavGroups)
   const toggleNavGroup = useUIStore((s) => s.toggleNavGroup)
+  const expandedCRDGroups = useUIStore((s) => s.expandedCRDGroups)
+  const toggleCRDGroup = useUIStore((s) => s.toggleCRDGroup)
   const primaryTagId = useUIStore((s) =>
     s.selectedContext ? (s.contextTags[s.selectedContext]?.[0] ?? null) : null,
   )
@@ -222,6 +239,11 @@ function App() {
   const currentTagMeta = resolveTagMeta(primaryTagId, customTags)
   const resetResources = useResources((s) => s.reset)
   const setPortForwards = usePortForwards((s) => s.setList)
+  const crds = useCRDStore((s) => s.crds)
+  const setCRDs = useCRDStore((s) => s.setCRDs)
+  const resetCRDs = useCRDStore((s) => s.reset)
+  const selectedCRDKey = useUIStore((s) => s.selectedCRDKey)
+  const setSelectedCRD = useUIStore((s) => s.setSelectedCRD)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -253,8 +275,26 @@ function App() {
     return () => {
       api.stopWatch(selectedContext).catch(console.error)
       resetResources()
+      resetCRDs()
     }
-  }, [selectedContext, resetResources])
+  }, [selectedContext, resetResources, resetCRDs])
+
+  useEffect(() => {
+    if (!selectedContext) {
+      setCRDs([])
+      return
+    }
+    const reload = () => {
+      api
+        .listCRDs(selectedContext)
+        .then((list) => setCRDs(list ?? []))
+        .catch(() => setCRDs([]))
+    }
+    reload()
+    return onKubeChange('_crds', (ctx) => {
+      if (ctx === selectedContext) reload()
+    })
+  }, [selectedContext, setCRDs])
 
   if (!selectedContext) {
     return (
@@ -308,7 +348,10 @@ function App() {
                   {!collapsed && (
                     <ul className="flex flex-col">
                       {group.items.map((item) => {
-                        const active = item.view !== undefined && item.view === selectedView
+                        const active =
+                          item.view !== undefined &&
+                          item.view === selectedView &&
+                          selectedCRDKey === null
                         const enabled = item.view !== undefined
                         return (
                           <li
@@ -334,6 +377,13 @@ function App() {
                 </div>
               )
             })}
+            <CRDGroups
+              crds={crds}
+              expandedGroups={expandedCRDGroups}
+              toggleGroup={toggleCRDGroup}
+              selectedCRDKey={selectedCRDKey}
+              onSelect={setSelectedCRD}
+            />
           </nav>
         </aside>
 
