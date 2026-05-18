@@ -115,6 +115,10 @@ export function ResourceTable<T>({
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const fetchRef = useRef(fetch)
+  fetchRef.current = fetch
+  const setDataRef = useRef(setData)
+  setDataRef.current = setData
 
   // When the detail panel closes we flash the row that was just open.
   useEffect(() => {
@@ -145,20 +149,20 @@ export function ResourceTable<T>({
 
   useEffect(() => {
     if (!selectedContext) {
-      setData([])
+      setDataRef.current([])
       setLoaded(false)
       return
     }
     setLoaded(false)
     let cancelled = false
     const reload = () => {
-      fetch(selectedContext, query.apiNamespace).then((list) => {
+      fetchRef.current(selectedContext, query.apiNamespace).then((list) => {
         if (cancelled) return
         const raw = list ?? []
         if (scope === 'namespaced' && selectedNamespaces.length > 1) {
-          setData(raw.filter((row) => query.matches((row as RowIdentity).namespace ?? '')))
+          setDataRef.current(raw.filter((row) => query.matches((row as RowIdentity).namespace ?? '')))
         } else {
-          setData(raw)
+          setDataRef.current(raw)
         }
         setLoaded(true)
       })
@@ -171,7 +175,7 @@ export function ResourceTable<T>({
       cancelled = true
       unsub()
     }
-  }, [selectedContext, query, scope, selectedNamespaces.length, kind, fetch, setData])
+  }, [selectedContext, query, scope, selectedNamespaces.length, kind])
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 10_000)
