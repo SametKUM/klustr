@@ -18,6 +18,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -382,6 +383,8 @@ type ChangeFunc func(kind string)
 
 type contextWatcher struct {
 	factory  informers.SharedInformerFactory
+	dyn      dynamic.Interface
+	crd      *crdWatcher
 	onChange ChangeFunc
 	cancel   context.CancelFunc
 
@@ -390,9 +393,10 @@ type contextWatcher struct {
 	timer   *time.Timer
 }
 
-func newContextWatcher(cs *kubernetes.Clientset, onChange ChangeFunc) *contextWatcher {
+func newContextWatcher(cs *kubernetes.Clientset, dyn dynamic.Interface, onChange ChangeFunc) *contextWatcher {
 	return &contextWatcher{
 		factory:  informers.NewSharedInformerFactory(cs, 0),
+		dyn:      dyn,
 		onChange: onChange,
 		pending:  make(map[string]struct{}),
 	}
@@ -401,6 +405,11 @@ func newContextWatcher(cs *kubernetes.Clientset, onChange ChangeFunc) *contextWa
 func (w *contextWatcher) start(parent context.Context) error {
 	ctx, cancel := context.WithCancel(parent)
 	w.cancel = cancel
+	w.crd = newCRDWatcher(w.dyn, ctx.Done(), w.touch)
+	if err := w.crd.start(); err != nil {
+		cancel()
+		return err
+	}
 
 	ns := w.factory.Core().V1().Namespaces().Informer()
 	if _, err := ns.AddEventHandler(cache.ResourceEventHandlerFuncs{

@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -124,6 +126,10 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	if err != nil {
 		return err
 	}
+	dyn, err := m.dynamicClient(contextName)
+	if err != nil {
+		return err
+	}
 
 	m.mu.Lock()
 	if existing, ok := m.watchers[contextName]; ok {
@@ -134,7 +140,7 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	cb := m.onChange
 	m.mu.Unlock()
 
-	w := newContextWatcher(cs, func(kind string) {
+	w := newContextWatcher(cs, dyn, func(kind string) {
 		if cb != nil {
 			cb(ContextChange{Context: contextName, Kind: kind})
 		}
@@ -496,6 +502,38 @@ func (m *ClientManager) Namespace(contextName, name string) (*NamespaceDetail, e
 		return nil, fmt.Errorf("no active watch for context %q", contextName)
 	}
 	return w.Namespace(name)
+}
+
+func (m *ClientManager) CRDs(contextName string) []CRDInfo {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return []CRDInfo{}
+	}
+	return w.crd.CRDs()
+}
+
+func (m *ClientManager) EnsureCRWatch(contextName, group, version, resource string) error {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.crd.EnsureCRWatch(schema.GroupVersionResource{Group: group, Version: version, Resource: resource})
+}
+
+func (m *ClientManager) CustomResources(contextName, group, version, resource, namespace string) []CustomResourceInfo {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return []CustomResourceInfo{}
+	}
+	return w.crd.ListCustomResources(schema.GroupVersionResource{Group: group, Version: version, Resource: resource}, namespace)
+}
+
+func (m *ClientManager) CustomResource(ctx context.Context, contextName, group, version, resource, namespace, name string) (*unstructured.Unstructured, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.crd.GetCustomResource(ctx, schema.GroupVersionResource{Group: group, Version: version, Resource: resource}, namespace, name)
 }
 
 func (m *ClientManager) watcher(contextName string) (*contextWatcher, bool) {
