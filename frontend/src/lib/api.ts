@@ -1,6 +1,10 @@
 import {
   ApplyResourceYAML,
   DeleteResource,
+  EnsureCustomResourceWatch,
+  GetCustomResourceYAML,
+  ListCRDs,
+  ListCustomResources,
   ListEvents,
   ListClusterWarningEvents,
   GetClusterOverview,
@@ -180,6 +184,8 @@ export type PodMetrics = kube.PodMetrics
 export type ClusterOverview = kube.ClusterOverview
 export type ClusterResource = kube.ClusterResource
 export type ClusterPods = kube.ClusterPods
+export type CRDInfo = kube.CRDInfo
+export type CustomResourceInfo = kube.CustomResourceInfo
 
 export const api = {
   listContexts: (): Promise<Kubeconfig> => ListContexts(),
@@ -362,5 +368,29 @@ export const api = {
     GetClusterOverview(contextName),
   listClusterWarningEvents: (contextName: string, limit: number): Promise<EventInfo[]> =>
     ListClusterWarningEvents(contextName, limit),
+  listCRDs: (contextName: string): Promise<CRDInfo[]> => ListCRDs(contextName),
+  ensureCustomResourceWatch: (
+    contextName: string,
+    group: string,
+    version: string,
+    resource: string,
+  ): Promise<void> => EnsureCustomResourceWatch(contextName, group, version, resource),
+  listCustomResources: (
+    contextName: string,
+    group: string,
+    version: string,
+    resource: string,
+    namespace: string,
+  ): Promise<CustomResourceInfo[]> =>
+    ListCustomResources(contextName, group, version, resource, namespace),
+  getCustomResourceYAML: (
+    contextName: string,
+    group: string,
+    version: string,
+    resource: string,
+    namespace: string,
+    name: string,
+  ): Promise<string> =>
+    GetCustomResourceYAML(contextName, group, version, resource, namespace, name),
   version: (): Promise<string> => Version(),
 }
