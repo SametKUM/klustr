@@ -56,11 +56,11 @@ export function detectProvider(c: { name: string; server: string; cluster?: stri
   const server = c.server ?? ''
   const cluster = (c.cluster ?? '').toLowerCase()
 
-  if (/\.eks\.amazonaws\.com/i.test(server) || name.startsWith('arn:aws:eks:') || /eks/.test(name) || /eks/.test(cluster)) return 'aws'
+  if (/\.eks\.amazonaws\.com(?:[:/]|$)/i.test(server) || name.startsWith('arn:aws:eks:') || /eks/.test(name) || /eks/.test(cluster)) return 'aws'
   if (/\.gke\./i.test(server) || /container\.googleapis/i.test(server) || name.startsWith('gke_') || /gke/.test(name)) return 'gcp'
-  if (/\.azmk8s\.io/i.test(server) || name.startsWith('aks-') || /aks/.test(name)) return 'azure'
-  if (/\.k8s\.ondigitalocean\.com/i.test(server) || /doks/.test(name)) return 'digitalocean'
-  if (/\.linodelke\.net/i.test(server) || /lke/.test(name)) return 'linode'
+  if (/\.azmk8s\.io(?:[:/]|$)/i.test(server) || name.startsWith('aks-') || /aks/.test(name)) return 'azure'
+  if (/\.k8s\.ondigitalocean\.com(?:[:/]|$)/i.test(server) || /doks/.test(name)) return 'digitalocean'
+  if (/\.linodelke\.net(?:[:/]|$)/i.test(server) || /lke/.test(name)) return 'linode'
 
   if (/orbstack/.test(name) || /orbstack/i.test(server)) return 'orbstack'
   if (/docker-desktop/.test(name) || /docker\.internal/i.test(server)) return 'docker'
