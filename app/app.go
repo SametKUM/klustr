@@ -444,6 +444,26 @@ func (a *App) ListNodes(name string) []kube.NodeInfo {
 	return a.clients.Nodes(name)
 }
 
+func (a *App) ListCRDs(contextName string) []kube.CRDInfo {
+	return a.clients.CRDs(contextName)
+}
+
+func (a *App) EnsureCustomResourceWatch(contextName, group, version, resource string) error {
+	return a.clients.EnsureCRWatch(contextName, group, version, resource)
+}
+
+func (a *App) ListCustomResources(contextName, group, version, resource, namespace string) []kube.CustomResourceInfo {
+	return a.clients.CustomResources(contextName, group, version, resource, namespace)
+}
+
+func (a *App) GetCustomResourceYAML(contextName, group, version, resource, namespace, name string) (string, error) {
+	obj, err := a.clients.CustomResource(a.ctx, contextName, group, version, resource, namespace, name)
+	if err != nil {
+		return "", err
+	}
+	return kube.MarshalCustomResourceYAML(obj)
+}
+
 func (a *App) ListEvents(contextName, namespace, kind, name string) ([]kube.EventInfo, error) {
 	return a.clients.ListEvents(a.ctx, contextName, namespace, kind, name)
 }

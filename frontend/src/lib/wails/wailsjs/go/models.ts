@@ -1,5 +1,31 @@
 export namespace kube {
 	
+	export class CRDInfo {
+	    kind: string;
+	    group: string;
+	    version: string;
+	    resource: string;
+	    singular: string;
+	    shortNames: string[];
+	    scope: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CRDInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.group = source["group"];
+	        this.version = source["version"];
+	        this.resource = source["resource"];
+	        this.singular = source["singular"];
+	        this.shortNames = source["shortNames"];
+	        this.scope = source["scope"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class ClusterPods {
 	    usage: number;
 	    allocatable: number;
@@ -420,6 +446,22 @@ export namespace kube {
 	        this.suspend = source["suspend"];
 	        this.active = source["active"];
 	        this.lastSchedule = source["lastSchedule"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class CustomResourceInfo {
+	    name: string;
+	    namespace: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CustomResourceInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
 	        this.createdAt = source["createdAt"];
 	    }
 	}

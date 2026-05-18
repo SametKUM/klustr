@@ -6,11 +6,15 @@ export function ApplyResourceYAML(arg1:string,arg2:string):Promise<void>;
 
 export function DeleteResource(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
+export function EnsureCustomResourceWatch(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
 export function GetClusterOverview(arg1:string):Promise<kube.ClusterOverview>;
 
 export function GetConfigMap(arg1:string,arg2:string,arg3:string):Promise<kube.ConfigMapDetail>;
 
 export function GetCronJob(arg1:string,arg2:string,arg3:string):Promise<kube.CronJobDetail>;
+
+export function GetCustomResourceYAML(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<string>;
 
 export function GetDaemonSet(arg1:string,arg2:string,arg3:string):Promise<kube.DaemonSetDetail>;
 
@@ -70,6 +74,8 @@ export function GetStorageClass(arg1:string,arg2:string):Promise<kube.StorageCla
 
 export function GetValidatingWebhookConfiguration(arg1:string,arg2:string):Promise<kube.WebhookConfigurationDetail>;
 
+export function ListCRDs(arg1:string):Promise<Array<kube.CRDInfo>>;
+
 export function ListClusterWarningEvents(arg1:string,arg2:number):Promise<Array<kube.EventInfo>>;
 
 export function ListConfigMaps(arg1:string,arg2:string):Promise<Array<kube.ConfigMapInfo>>;
@@ -77,6 +83,8 @@ export function ListConfigMaps(arg1:string,arg2:string):Promise<Array<kube.Confi
 export function ListContexts():Promise<kube.Kubeconfig>;
 
 export function ListCronJobs(arg1:string,arg2:string):Promise<Array<kube.CronJobInfo>>;
+
+export function ListCustomResources(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<Array<kube.CustomResourceInfo>>;
 
 export function ListDaemonSets(arg1:string,arg2:string):Promise<Array<kube.DaemonSetInfo>>;
 

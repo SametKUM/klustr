@@ -10,6 +10,10 @@ export function DeleteResource(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['DeleteResource'](arg1, arg2, arg3, arg4);
 }
 
+export function EnsureCustomResourceWatch(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['EnsureCustomResourceWatch'](arg1, arg2, arg3, arg4);
+}
+
 export function GetClusterOverview(arg1) {
   return window['go']['app']['App']['GetClusterOverview'](arg1);
 }
@@ -20,6 +24,10 @@ export function GetConfigMap(arg1, arg2, arg3) {
 
 export function GetCronJob(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetCronJob'](arg1, arg2, arg3);
+}
+
+export function GetCustomResourceYAML(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['app']['App']['GetCustomResourceYAML'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
 export function GetDaemonSet(arg1, arg2, arg3) {
@@ -138,6 +146,10 @@ export function GetValidatingWebhookConfiguration(arg1, arg2) {
   return window['go']['app']['App']['GetValidatingWebhookConfiguration'](arg1, arg2);
 }
 
+export function ListCRDs(arg1) {
+  return window['go']['app']['App']['ListCRDs'](arg1);
+}
+
 export function ListClusterWarningEvents(arg1, arg2) {
   return window['go']['app']['App']['ListClusterWarningEvents'](arg1, arg2);
 }
@@ -152,6 +164,10 @@ export function ListContexts() {
 
 export function ListCronJobs(arg1, arg2) {
   return window['go']['app']['App']['ListCronJobs'](arg1, arg2);
+}
+
+export function ListCustomResources(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['ListCustomResources'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function ListDaemonSets(arg1, arg2) {
