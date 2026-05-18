@@ -75,10 +75,10 @@ export function ContextSwitcher() {
           <ChevronDown />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 max-w-[90vw] p-0" align="start">
+      <PopoverContent className="w-[22rem] max-w-[90vw] p-0" align="start">
         <Command>
           <CommandInput placeholder="Filter contexts…" />
-          <CommandList>
+          <CommandList className="max-h-[24rem]">
             <CommandEmpty>No contexts match.</CommandEmpty>
             {contexts.length === 0 ? (
               <div className="px-2 py-3 text-xs text-muted-foreground">No contexts found.</div>
@@ -97,35 +97,46 @@ export function ContextSwitcher() {
                       key={c.name}
                       value={c.name}
                       onSelect={() => toggleAggregated(c.name)}
+                      className="items-start gap-2 py-2"
                     >
                       <Checkbox checked={isActive} />
-                      <ProviderIcon context={c} className="size-3.5 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 truncate text-sm">
-                          <span className="truncate">{c.name}</span>
+                      <ProviderIcon context={c} className="mt-0.5 size-3.5 shrink-0" />
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span
+                            className="min-w-0 flex-1 truncate text-sm font-medium"
+                            title={c.name}
+                          >
+                            {c.name}
+                          </span>
                           {isAutoConnect && (
-                            <span className="rounded bg-muted px-1 py-px text-[10px] uppercase tracking-wide text-muted-foreground">
+                            <span className="shrink-0 rounded bg-muted px-1 py-px text-[10px] uppercase tracking-wide text-muted-foreground">
                               auto
                             </span>
                           )}
                         </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {c.server || c.cluster}
-                        </div>
+                        {(c.server || c.cluster) && (
+                          <div
+                            className="truncate text-[11px] text-muted-foreground"
+                            title={c.server || c.cluster}
+                          >
+                            {c.server || c.cluster}
+                          </div>
+                        )}
+                        {tagMetas.length > 0 && (
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                            {tagMetas.map((m) => (
+                              <span
+                                key={m.id}
+                                className={`rounded border px-1 py-px text-[9px] font-semibold leading-tight tracking-wider ${m.badgeClass}`}
+                                aria-label={m.label}
+                              >
+                                {m.shortLabel}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      {tagMetas.length > 0 && (
-                        <div className="mt-0.5 flex shrink-0 flex-wrap items-center gap-1">
-                          {tagMetas.map((m) => (
-                            <span
-                              key={m.id}
-                              className={`rounded border px-1 py-px text-[10px] font-semibold tracking-wider ${m.badgeClass}`}
-                              aria-label={m.label}
-                            >
-                              {m.shortLabel}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </CommandItem>
                   )
                 })}
