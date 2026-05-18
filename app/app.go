@@ -444,6 +444,58 @@ func (a *App) ListNodes(name string) []kube.NodeInfo {
 	return a.clients.Nodes(name)
 }
 
+func (a *App) ListHelmReleases(contextName, namespace string) ([]kube.HelmReleaseInfo, error) {
+	return a.clients.HelmReleases(contextName, namespace)
+}
+
+func (a *App) GetHelmRelease(contextName, namespace, name string) (*kube.HelmReleaseDetail, error) {
+	return a.clients.HelmRelease(contextName, namespace, name)
+}
+
+func (a *App) ListHelmReleaseHistory(contextName, namespace, name string) ([]kube.HelmRevisionInfo, error) {
+	return a.clients.HelmReleaseHistory(contextName, namespace, name)
+}
+
+func (a *App) InstallHelmRelease(opts kube.HelmInstallOptions) (*kube.HelmDryRunResult, error) {
+	return a.clients.HelmInstall(a.ctx, opts)
+}
+
+func (a *App) UpgradeHelmRelease(opts kube.HelmInstallOptions) (*kube.HelmDryRunResult, error) {
+	return a.clients.HelmUpgrade(a.ctx, opts)
+}
+
+func (a *App) RollbackHelmRelease(contextName, namespace, name string, revision int, wait bool) error {
+	return a.clients.HelmRollback(contextName, namespace, name, revision, wait)
+}
+
+func (a *App) UninstallHelmRelease(contextName, namespace, name string, keepHistory bool) error {
+	return a.clients.HelmUninstall(contextName, namespace, name, keepHistory)
+}
+
+func (a *App) ListHelmRepos() ([]kube.HelmRepoInfo, error) {
+	return a.clients.HelmRepos()
+}
+
+func (a *App) AddHelmRepo(name, url string) error {
+	return a.clients.HelmAddRepo(name, url)
+}
+
+func (a *App) RemoveHelmRepo(name string) error {
+	return a.clients.HelmRemoveRepo(name)
+}
+
+func (a *App) UpdateHelmRepos() error {
+	return a.clients.HelmUpdateRepos()
+}
+
+func (a *App) SearchHelmCharts(query string) ([]kube.HelmChartSearchResult, error) {
+	return a.clients.HelmSearchCharts(query)
+}
+
+func (a *App) HelmChartVersions(repoName, chartName string) ([]string, error) {
+	return a.clients.HelmChartVersions(repoName, chartName)
+}
+
 func (a *App) ListCRDs(contextName string) []kube.CRDInfo {
 	return a.clients.CRDs(contextName)
 }
