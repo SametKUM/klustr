@@ -24,9 +24,10 @@ type Props = {
   kind: string
   namespace: string
   name: string
+  gvr?: { group: string; version: string; resource: string }
 }
 
-export function ResourceYAMLTab({ contextName, kind, namespace, name }: Props) {
+export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Props) {
   const theme = useThemeMode()
   const [source, setSource] = useState<string>('')
   const [draft, setDraft] = useState<string>('')
@@ -40,8 +41,10 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name }: Props) {
     let cancelled = false
     setLoaded(false)
     setLoadError(null)
-    api
-      .getResourceYAML(contextName, kind, namespace, name)
+    const fetcher = gvr
+      ? api.getCustomResourceYAML(contextName, gvr.group, gvr.version, gvr.resource, namespace, name)
+      : api.getResourceYAML(contextName, kind, namespace, name)
+    fetcher
       .then((y) => {
         if (cancelled) return
         setSource(y)
@@ -56,7 +59,7 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name }: Props) {
     return () => {
       cancelled = true
     }
-  }, [contextName, kind, namespace, name])
+  }, [contextName, kind, namespace, name, gvr?.group, gvr?.version, gvr?.resource])
 
   const apply = useMutation({
     mutationFn: async () => {

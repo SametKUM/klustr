@@ -151,10 +151,32 @@ const EVENT_BEARING_KINDS: ResourceKind[] = [
 ]
 
 function DetailContent({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
+  if (resource.gvr) {
+    return <CustomResourceTabs contextName={contextName} resource={resource} />
+  }
   if (resource.kind === 'Pod') {
     return <PodTabs contextName={contextName} namespace={resource.namespace} name={resource.name} />
   }
   return <NonPodTabs contextName={contextName} resource={resource} />
+}
+
+function CustomResourceTabs({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
+  return (
+    <Tabs value="yaml" className="flex min-h-0 flex-1 flex-col">
+      <TabsList className="mx-6 mt-3 w-fit">
+        <TabsTrigger value="yaml">YAML</TabsTrigger>
+      </TabsList>
+      <TabsContent value="yaml" className="min-h-0 flex-1 p-0">
+        <ResourceYAMLTab
+          contextName={contextName}
+          kind={resource.kind}
+          namespace={resource.namespace}
+          name={resource.name}
+          gvr={resource.gvr}
+        />
+      </TabsContent>
+    </Tabs>
+  )
 }
 
 function NonPodTabs({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
