@@ -56,6 +56,35 @@ func resourceForKind(kind string) (schema.GroupVersionResource, error) {
 	return gvr, nil
 }
 
+// resolveKind looks up a Kind first in the built-in table and then in the
+// per-context CRD cache. Apply/Delete/YAML paths use this so they work
+// uniformly for both core and custom resources.
+func (m *ClientManager) resolveKind(contextName, kind string) (schema.GroupVersionResource, error) {
+	if gvr, ok := kindToGVR[kind]; ok {
+		return gvr, nil
+	}
+	if w, ok := m.watcher(contextName); ok && w.crd != nil {
+		if info, found := w.crd.LookupCRDByKind(kind); found {
+			return info.GVR(), nil
+		}
+	}
+	return schema.GroupVersionResource{}, fmt.Errorf("unsupported kind: %q", kind)
+}
+
+// resolveGVK is used by Apply: the YAML carries an apiVersion that uniquely
+// disambiguates which CRD (or built-in) we're targeting.
+func (m *ClientManager) resolveGVK(contextName string, gvk schema.GroupVersionKind) (schema.GroupVersionResource, error) {
+	if gvr, ok := kindToGVR[gvk.Kind]; ok && gvr.Group == gvk.Group {
+		return schema.GroupVersionResource{Group: gvk.Group, Version: gvk.Version, Resource: gvr.Resource}, nil
+	}
+	if w, ok := m.watcher(contextName); ok && w.crd != nil {
+		if info, found := w.crd.LookupCRDByGVK(gvk); found {
+			return schema.GroupVersionResource{Group: info.Group, Version: gvk.Version, Resource: info.Resource}, nil
+		}
+	}
+	return schema.GroupVersionResource{}, fmt.Errorf("unsupported kind: %q (apiVersion %q)", gvk.Kind, gvk.GroupVersion().String())
+}
+
 func (m *ClientManager) dynamicClient(contextName string) (dynamic.Interface, error) {
 	cfg, err := m.restConfig(contextName)
 	if err != nil {
@@ -72,7 +101,7 @@ func resourceFor(d dynamic.Interface, gvr schema.GroupVersionResource, namespace
 }
 
 func (m *ClientManager) GetResourceYAML(ctx context.Context, contextName, kind, namespace, name string) (string, error) {
-	gvr, err := resourceForKind(kind)
+	gvr, err := m.resolveKind(contextName, kind)
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +141,7 @@ func (m *ClientManager) ApplyResourceYAML(ctx context.Context, contextName, yaml
 	if gvk.Kind == "" {
 		return fmt.Errorf("YAML missing kind")
 	}
-	gvr, err := resourceForKind(gvk.Kind)
+	gvr, err := m.resolveGVK(contextName, gvk)
 	if err != nil {
 		return err
 	}
@@ -138,7 +167,7 @@ func (m *ClientManager) ApplyResourceYAML(ctx context.Context, contextName, yaml
 }
 
 func (m *ClientManager) DeleteResource(ctx context.Context, contextName, kind, namespace, name string) error {
-	gvr, err := resourceForKind(kind)
+	gvr, err := m.resolveKind(contextName, kind)
 	if err != nil {
 		return err
 	}
