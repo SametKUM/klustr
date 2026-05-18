@@ -5,46 +5,58 @@ import { Button } from '@/components/ui/button'
 import { formatAge } from '@/lib/time'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { ErrorBox, Th, Td } from '@/features/_shared/DetailPrimitives'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
+
+type TaggedEvent = EventInfo & { contextName: string }
 
 export function EventsView() {
-  const selectedContext = useUIStore((s) => s.selectedContext)
+  const activeContexts = useActiveContexts()
   const isAggregated = useIsAggregated()
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-  const [events, setEvents] = useState<EventInfo[]>([])
+  const [events, setEvents] = useState<TaggedEvent[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const ctxKey = activeContexts.join('|')
 
   const refresh = useCallback(async () => {
-    if (!selectedContext) return
+    if (activeContexts.length === 0) return
     setLoading(true)
     setError(null)
     try {
       const { apiNamespace, matches } = namespaceQuery(selectedNamespaces)
-      const list = await api.listEvents(selectedContext, apiNamespace, '', '')
-      setEvents(selectedNamespaces.length > 1 ? list.filter((e) => matches(e.namespace)) : list)
+      const results = await Promise.all(
+        activeContexts.map((ctx) =>
+          api
+            .listEvents(ctx, apiNamespace, '', '')
+            .then((list) =>
+              list.map((e) => Object.assign(e, { contextName: ctx }) as TaggedEvent),
+            )
+            .catch(() => [] as TaggedEvent[]),
+        ),
+      )
+      const merged: TaggedEvent[] = []
+      for (const list of results) {
+        for (const e of list) {
+          if (selectedNamespaces.length > 1 && !matches(e.namespace)) continue
+          merged.push(e)
+        }
+      }
+      merged.sort((a, b) => (b.lastSeen ?? '').localeCompare(a.lastSeen ?? ''))
+      setEvents(merged)
     } catch (err) {
       setError(String(err))
     } finally {
       setLoading(false)
     }
-  }, [selectedContext, selectedNamespaces])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctxKey, selectedNamespaces])
 
   useEffect(() => {
     refresh()
   }, [refresh])
 
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
-        Cluster-wide events are only available in single-context mode. Pick one context to see
-        them.
-      </div>
-    )
-  }
-
-  if (!selectedContext) {
+  if (activeContexts.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
         Select a kubeconfig context to see events.
@@ -62,6 +74,7 @@ export function EventsView() {
             : selectedNamespaces.length === 1
               ? ` in ${selectedNamespaces[0]}`
               : ` in ${selectedNamespaces.length} namespaces`}
+          {isAggregated ? ` across ${activeContexts.length} contexts` : ''}
         </span>
         <Button
           size="sm"
@@ -84,6 +97,7 @@ export function EventsView() {
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
+                  {isAggregated && <Th>Context</Th>}
                   <Th>Type</Th>
                   <Th>Reason</Th>
                   <Th>Age</Th>
@@ -97,7 +111,7 @@ export function EventsView() {
               <tbody>
                 {events.map((e) => (
                   <tr
-                    key={e.namespace + '/' + e.name}
+                    key={e.contextName + '/' + e.namespace + '/' + e.name}
                     className="cursor-pointer border-t border-border align-top hover:bg-muted/40"
                     onClick={() => {
                       if (!e.objectKind || !e.objectName) return
@@ -105,9 +119,11 @@ export function EventsView() {
                         kind: e.objectKind as any,
                         namespace: e.namespace,
                         name: e.objectName,
+                        context: e.contextName,
                       })
                     }}
                   >
+                    {isAggregated && <Td className="font-mono text-xs">{e.contextName}</Td>}
                     <Td><span className={typeClass(e.type)}>{e.type}</span></Td>
                     <Td className="font-mono">{e.reason}</Td>
                     <Td className="whitespace-nowrap text-muted-foreground">{formatAge(e.lastSeen)}</Td>

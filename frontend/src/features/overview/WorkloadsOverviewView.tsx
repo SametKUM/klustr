@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   api,
   type CronJobInfo,
@@ -14,7 +14,7 @@ import {
 import { onKubeChange } from '@/lib/events'
 import { formatAge } from '@/lib/time'
 import { namespaceQuery } from '@/lib/namespaceFilter'
-import { useIsAggregated, useUIStore, type ResourceView } from '@/store/ui'
+import { useActiveContexts, useIsAggregated, useUIStore, type ResourceView } from '@/store/ui'
 
 const POLL_INTERVAL_MS = 30_000
 const EVENTS_LIMIT = 200
@@ -26,8 +26,10 @@ type WorkloadHealth = {
   healthy: number
 }
 
+type TaggedEvent = EventInfo & { contextName: string }
+
 export function WorkloadsOverviewView() {
-  const contextName = useUIStore((s) => s.selectedContext)
+  const activeContexts = useActiveContexts()
   const isAggregated = useIsAggregated()
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const setSelectedView = useUIStore((s) => s.setSelectedView)
@@ -36,6 +38,7 @@ export function WorkloadsOverviewView() {
     [selectedNamespaces],
   )
   const multi = selectedNamespaces.length > 1
+  const ctxKey = activeContexts.join('|')
 
   const [pods, setPods] = useState<PodInfo[]>([])
   const [deployments, setDeployments] = useState<DeploymentInfo[]>([])
@@ -45,14 +48,110 @@ export function WorkloadsOverviewView() {
   const [replicationControllers, setReplicationControllers] = useState<ReplicationControllerInfo[]>([])
   const [jobs, setJobs] = useState<JobInfo[]>([])
   const [cronJobs, setCronJobs] = useState<CronJobInfo[]>([])
-  const [events, setEvents] = useState<EventInfo[]>([])
+  const [events, setEvents] = useState<TaggedEvent[]>([])
   const [error, setError] = useState<string | null>(null)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null)
   const [query, setQuery] = useState('')
   const debounceRef = useRef<number | null>(null)
 
+  const pull = useCallback(() => {
+    if (activeContexts.length === 0) return
+    let cancelled = false
+
+    const filterByNs = <T extends { namespace: string }>(list: T[]): T[] =>
+      multi ? list.filter((r) => matches(r.namespace)) : list
+
+    const fetches = activeContexts.map((ctx) =>
+      Promise.all([
+        api.listPods(ctx, apiNamespace),
+        api.listDeployments(ctx, apiNamespace),
+        api.listStatefulSets(ctx, apiNamespace),
+        api.listDaemonSets(ctx, apiNamespace),
+        api.listReplicaSets(ctx, apiNamespace),
+        api.listReplicationControllers(ctx, apiNamespace),
+        api.listJobs(ctx, apiNamespace),
+        api.listCronJobs(ctx, apiNamespace),
+        api.listEvents(ctx, apiNamespace, '', ''),
+      ])
+        .then(([p, d, s, ds, rs, rc, j, cj, e]) => ({
+          ctx,
+          p: p ?? [],
+          d: d ?? [],
+          s: s ?? [],
+          ds: ds ?? [],
+          rs: rs ?? [],
+          rc: rc ?? [],
+          j: j ?? [],
+          cj: cj ?? [],
+          e: e ?? [],
+          err: null as string | null,
+        }))
+        .catch((err: unknown) => ({
+          ctx,
+          p: [] as PodInfo[],
+          d: [] as DeploymentInfo[],
+          s: [] as StatefulSetInfo[],
+          ds: [] as DaemonSetInfo[],
+          rs: [] as ReplicaSetInfo[],
+          rc: [] as ReplicationControllerInfo[],
+          j: [] as JobInfo[],
+          cj: [] as CronJobInfo[],
+          e: [] as EventInfo[],
+          err: String(err),
+        })),
+    )
+
+    Promise.all(fetches)
+      .then((results) => {
+        if (cancelled) return
+        const mergedPods: PodInfo[] = []
+        const mergedDeployments: DeploymentInfo[] = []
+        const mergedStatefulSets: StatefulSetInfo[] = []
+        const mergedDaemonSets: DaemonSetInfo[] = []
+        const mergedReplicaSets: ReplicaSetInfo[] = []
+        const mergedReplicationControllers: ReplicationControllerInfo[] = []
+        const mergedJobs: JobInfo[] = []
+        const mergedCronJobs: CronJobInfo[] = []
+        const mergedEvents: TaggedEvent[] = []
+        const firstError = results.find((r) => r.err && !r.err.includes('no active watcher'))?.err
+        for (const r of results) {
+          mergedPods.push(...filterByNs(r.p))
+          mergedDeployments.push(...filterByNs(r.d))
+          mergedStatefulSets.push(...filterByNs(r.s))
+          mergedDaemonSets.push(...filterByNs(r.ds))
+          mergedReplicaSets.push(...filterByNs(r.rs))
+          mergedReplicationControllers.push(...filterByNs(r.rc))
+          mergedJobs.push(...filterByNs(r.j))
+          mergedCronJobs.push(...filterByNs(r.cj))
+          for (const ev of filterByNs(r.e)) {
+            mergedEvents.push(Object.assign(ev, { contextName: r.ctx }) as TaggedEvent)
+          }
+        }
+        mergedEvents.sort((a, b) => (b.lastSeen ?? '').localeCompare(a.lastSeen ?? ''))
+        setPods(mergedPods)
+        setDeployments(mergedDeployments)
+        setStatefulSets(mergedStatefulSets)
+        setDaemonSets(mergedDaemonSets)
+        setReplicaSets(mergedReplicaSets)
+        setReplicationControllers(mergedReplicationControllers)
+        setJobs(mergedJobs)
+        setCronJobs(mergedCronJobs)
+        setEvents(mergedEvents.slice(0, EVENTS_LIMIT))
+        setError(firstError ?? null)
+        setLastUpdatedAt(Date.now())
+      })
+      .catch(() => {
+        /* per-context errors handled above */
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctxKey, apiNamespace, matches, multi])
+
   useEffect(() => {
-    if (!contextName) {
+    if (activeContexts.length === 0) {
       setPods([])
       setDeployments([])
       setStatefulSets([])
@@ -64,43 +163,7 @@ export function WorkloadsOverviewView() {
       setEvents([])
       return
     }
-    let cancelled = false
-
-    const filterByNs = <T extends { namespace: string }>(list: T[]): T[] =>
-      multi ? list.filter((r) => matches(r.namespace)) : list
-
-    const pull = () => {
-      Promise.all([
-        api.listPods(contextName, apiNamespace),
-        api.listDeployments(contextName, apiNamespace),
-        api.listStatefulSets(contextName, apiNamespace),
-        api.listDaemonSets(contextName, apiNamespace),
-        api.listReplicaSets(contextName, apiNamespace),
-        api.listReplicationControllers(contextName, apiNamespace),
-        api.listJobs(contextName, apiNamespace),
-        api.listCronJobs(contextName, apiNamespace),
-        api.listEvents(contextName, apiNamespace, '', ''),
-      ])
-        .then(([p, d, s, ds, rs, rc, j, cj, e]) => {
-          if (cancelled) return
-          setPods(filterByNs(p ?? []))
-          setDeployments(filterByNs(d ?? []))
-          setStatefulSets(filterByNs(s ?? []))
-          setDaemonSets(filterByNs(ds ?? []))
-          setReplicaSets(filterByNs(rs ?? []))
-          setReplicationControllers(filterByNs(rc ?? []))
-          setJobs(filterByNs(j ?? []))
-          setCronJobs(filterByNs(cj ?? []))
-          setEvents(filterByNs(e ?? []).slice(0, EVENTS_LIMIT))
-          setError(null)
-          setLastUpdatedAt(Date.now())
-        })
-        .catch((err) => {
-          if (cancelled) return
-          if (String(err).includes('no active watcher')) return
-          setError(String(err))
-        })
-    }
+    const cleanup = pull()
 
     const scheduleSoon = () => {
       if (debounceRef.current !== null) return
@@ -110,7 +173,6 @@ export function WorkloadsOverviewView() {
       }, 300)
     }
 
-    pull()
     const id = window.setInterval(pull, POLL_INTERVAL_MS)
     const kinds = [
       'Pod',
@@ -124,30 +186,23 @@ export function WorkloadsOverviewView() {
     ]
     const unsubs = kinds.map((kind) =>
       onKubeChange(kind, (ctx) => {
-        if (ctx === contextName) scheduleSoon()
+        if (activeContexts.includes(ctx)) scheduleSoon()
       }),
     )
 
     return () => {
-      cancelled = true
       window.clearInterval(id)
       if (debounceRef.current !== null) {
         window.clearTimeout(debounceRef.current)
         debounceRef.current = null
       }
       unsubs.forEach((u) => u())
+      if (cleanup) cleanup()
     }
-  }, [contextName, apiNamespace, matches, multi])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctxKey, pull])
 
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
-        Workloads overview is only available in single-context mode. Pick one context to see it.
-      </div>
-    )
-  }
-
-  if (!contextName) {
+  if (activeContexts.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
         Select a context to see the workloads overview.
@@ -207,20 +262,28 @@ export function WorkloadsOverviewView() {
   ]
 
   const filteredEvents = filterEvents(events, query)
+  const scopeLabel = isAggregated
+    ? `${activeContexts.length} contexts`
+    : (activeContexts[0] ?? '')
+  const namespaceLabel =
+    selectedNamespaces.length === 0
+      ? 'all namespaces'
+      : selectedNamespaces.length === 1
+        ? selectedNamespaces[0]
+        : `${selectedNamespaces.length} namespaces`
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-3">
         <div className="flex items-center gap-2">
           <h1 className="text-sm font-medium">Workloads Overview</h1>
-          <span className="text-xs text-muted-foreground">
-            {contextName}
+          <span
+            className="text-xs text-muted-foreground"
+            title={isAggregated ? activeContexts.join(', ') : undefined}
+          >
+            {scopeLabel}
             {' · '}
-            {selectedNamespaces.length === 0
-              ? 'all namespaces'
-              : selectedNamespaces.length === 1
-                ? selectedNamespaces[0]
-                : `${selectedNamespaces.length} namespaces`}
+            {namespaceLabel}
           </span>
         </div>
         <UpdatedAgo at={lastUpdatedAt} />
@@ -257,7 +320,7 @@ export function WorkloadsOverviewView() {
         />
       </div>
 
-      <EventsTable events={filteredEvents} />
+      <EventsTable events={filteredEvents} showContext={isAggregated} />
     </div>
   )
 }
@@ -337,16 +400,16 @@ function UpdatedAgo({ at }: { at: number | null }) {
   )
 }
 
-function filterEvents(events: EventInfo[], query: string): EventInfo[] {
+function filterEvents(events: TaggedEvent[], query: string): TaggedEvent[] {
   const q = query.trim().toLowerCase()
   if (!q) return events
   return events.filter((e) =>
-    [e.message, e.objectKind, e.objectName, e.reason, e.source, e.namespace, e.type]
+    [e.message, e.objectKind, e.objectName, e.reason, e.source, e.namespace, e.type, e.contextName]
       .some((v) => v && v.toLowerCase().includes(q)),
   )
 }
 
-function EventsTable({ events }: { events: EventInfo[] }) {
+function EventsTable({ events, showContext }: { events: TaggedEvent[]; showContext: boolean }) {
   if (events.length === 0) {
     return (
       <div className="mx-6 mb-6 rounded-lg border border-border bg-card px-3 py-4 text-center text-xs text-muted-foreground">
@@ -359,6 +422,7 @@ function EventsTable({ events }: { events: EventInfo[] }) {
       <table className="w-full text-xs tabular-nums">
         <thead>
           <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+            {showContext && <th className="px-3 py-2 font-medium">Context</th>}
             <th className="px-3 py-2 font-medium">Type</th>
             <th className="px-3 py-2 font-medium">Source</th>
             <th className="px-3 py-2 font-medium">Namespace</th>
@@ -372,9 +436,14 @@ function EventsTable({ events }: { events: EventInfo[] }) {
         <tbody>
           {events.map((e, i) => (
             <tr
-              key={`${e.namespace}/${e.name}/${i}`}
+              key={`${e.contextName}/${e.namespace}/${e.name}/${i}`}
               className="border-b border-border/50 last:border-0 hover:bg-muted/40"
             >
+              {showContext && (
+                <td className="px-3 py-2 align-top font-mono text-[11px] text-muted-foreground">
+                  {e.contextName}
+                </td>
+              )}
               <td className={`px-3 py-2 align-top font-medium ${e.type === 'Warning' ? 'text-destructive' : 'text-muted-foreground'}`}>
                 {e.type}
               </td>

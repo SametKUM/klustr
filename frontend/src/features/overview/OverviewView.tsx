@@ -9,7 +9,7 @@ import {
 } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
 import { formatAge } from '@/lib/time'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useActiveContexts, useIsAggregated } from '@/store/ui'
 
 const POLL_INTERVAL_MS = 15_000
 const WARNING_LIMIT = 50
@@ -18,92 +18,124 @@ function isWatcherNotReady(err: unknown): boolean {
   return String(err).includes('no active watcher')
 }
 
+type ClusterState = {
+  overview: ClusterOverview | null
+  overviewError: string | null
+  warnings: EventInfo[]
+  warningsError: string | null
+  lastUpdatedAt: number | null
+}
+
+const EMPTY_STATE: ClusterState = {
+  overview: null,
+  overviewError: null,
+  warnings: [],
+  warningsError: null,
+  lastUpdatedAt: null,
+}
+
 export function OverviewView() {
-  const contextName = useUIStore((s) => s.selectedContext)
+  const activeContexts = useActiveContexts()
   const isAggregated = useIsAggregated()
-  const [overview, setOverview] = useState<ClusterOverview | null>(null)
-  const [warnings, setWarnings] = useState<EventInfo[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [warningsError, setWarningsError] = useState<string | null>(null)
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null)
-  const retryTimerRef = useRef<number | null>(null)
+  const [byContext, setByContext] = useState<Record<string, ClusterState>>({})
   const debounceRef = useRef<number | null>(null)
+  const ctxKey = activeContexts.join('|')
 
   useEffect(() => {
-    if (!contextName) {
-      setOverview(null)
-      setWarnings([])
-      setError(null)
+    if (activeContexts.length === 0) {
+      setByContext({})
       return
     }
     let cancelled = false
-    let attempt = 0
+    const attempts = new Map<string, number>()
+    const retryTimers = new Map<string, number>()
 
-    const clearTimers = () => {
-      if (retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current)
-        retryTimerRef.current = null
+    const clearRetry = (ctx: string) => {
+      const id = retryTimers.get(ctx)
+      if (id !== undefined) {
+        window.clearTimeout(id)
+        retryTimers.delete(ctx)
       }
     }
 
-    const pull = () => {
-      clearTimers()
+    const updateContext = (ctx: string, patch: Partial<ClusterState>) => {
+      setByContext((prev) => ({
+        ...prev,
+        [ctx]: { ...(prev[ctx] ?? EMPTY_STATE), ...patch },
+      }))
+    }
+
+    const pullOne = (ctx: string) => {
+      clearRetry(ctx)
       api
-        .getClusterOverview(contextName)
+        .getClusterOverview(ctx)
         .then((v) => {
           if (cancelled) return
-          setOverview(v)
-          setError(null)
-          setLastUpdatedAt(Date.now())
-          attempt = 0
+          updateContext(ctx, {
+            overview: v,
+            overviewError: null,
+            lastUpdatedAt: Date.now(),
+          })
+          attempts.set(ctx, 0)
         })
         .catch((e) => {
           if (cancelled) return
-          if (isWatcherNotReady(e) && attempt < 6) {
-            attempt++
-            const delay = Math.min(250 * 2 ** attempt, 4000)
-            retryTimerRef.current = window.setTimeout(pull, delay)
+          const n = attempts.get(ctx) ?? 0
+          if (isWatcherNotReady(e) && n < 6) {
+            const next = n + 1
+            attempts.set(ctx, next)
+            const delay = Math.min(250 * 2 ** next, 4000)
+            retryTimers.set(ctx, window.setTimeout(() => pullOne(ctx), delay))
             return
           }
-          setError(String(e))
+          updateContext(ctx, { overviewError: String(e) })
         })
       api
-        .listClusterWarningEvents(contextName, WARNING_LIMIT)
+        .listClusterWarningEvents(ctx, WARNING_LIMIT)
         .then((v) => {
           if (cancelled) return
-          setWarnings(v ?? [])
-          setWarningsError(null)
+          updateContext(ctx, { warnings: v ?? [], warningsError: null })
         })
         .catch((e) => {
           if (cancelled) return
-          setWarningsError(String(e))
+          updateContext(ctx, { warningsError: String(e) })
         })
+    }
+
+    const pullAll = () => {
+      for (const ctx of activeContexts) {
+        attempts.set(ctx, 0)
+        pullOne(ctx)
+      }
     }
 
     const scheduleSoon = () => {
       if (debounceRef.current !== null) return
       debounceRef.current = window.setTimeout(() => {
         debounceRef.current = null
-        attempt = 0
-        pull()
+        pullAll()
       }, 300)
     }
 
-    pull()
-    const id = window.setInterval(() => {
-      attempt = 0
-      pull()
-    }, POLL_INTERVAL_MS)
-
+    setByContext((prev) => {
+      const keep: Record<string, ClusterState> = {}
+      for (const ctx of activeContexts) {
+        keep[ctx] = prev[ctx] ?? EMPTY_STATE
+      }
+      return keep
+    })
+    pullAll()
+    const id = window.setInterval(pullAll, POLL_INTERVAL_MS)
     const unsubs = ['Node', 'Pod', 'Namespace'].map((kind) =>
       onKubeChange(kind, (ctx) => {
-        if (ctx === contextName) scheduleSoon()
+        if (activeContexts.includes(ctx)) scheduleSoon()
       }),
     )
 
     return () => {
       cancelled = true
-      clearTimers()
+      for (const id of retryTimers.values()) window.clearTimeout(id)
+      retryTimers.clear()
       if (debounceRef.current !== null) {
         window.clearTimeout(debounceRef.current)
         debounceRef.current = null
@@ -111,17 +143,10 @@ export function OverviewView() {
       window.clearInterval(id)
       unsubs.forEach((u) => u())
     }
-  }, [contextName])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctxKey])
 
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
-        Cluster overview is only available in single-context mode. Pick one context to see it.
-      </div>
-    )
-  }
-
-  if (!contextName) {
+  if (activeContexts.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
         Select a context to see the cluster overview.
@@ -131,14 +156,47 @@ export function OverviewView() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      {activeContexts.map((ctx, idx) => (
+        <ClusterSection
+          key={ctx}
+          contextName={ctx}
+          isAggregated={isAggregated}
+          state={byContext[ctx] ?? EMPTY_STATE}
+          isFirst={idx === 0}
+        />
+      ))}
+    </div>
+  )
+}
+
+function ClusterSection({
+  contextName,
+  isAggregated,
+  state,
+  isFirst,
+}: {
+  contextName: string
+  isAggregated: boolean
+  state: ClusterState
+  isFirst: boolean
+}) {
+  const { overview, overviewError, warnings, warningsError, lastUpdatedAt } = state
+  return (
+    <div className={isFirst ? '' : 'border-t border-border'}>
       <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-3">
         <div className="flex items-center gap-2">
-          <h1 className="text-sm font-medium">Cluster Overview</h1>
+          <h1 className="text-sm font-medium">
+            {isAggregated ? contextName : 'Cluster Overview'}
+          </h1>
           <span className="text-xs text-muted-foreground">
-            {contextName}
+            {!isAggregated && (
+              <>
+                {contextName}
+                {overview && ' · '}
+              </>
+            )}
             {overview && (
               <>
-                {' · '}
                 {overview.nodeCount} node{overview.nodeCount === 1 ? '' : 's'}
                 {' · '}
                 {overview.namespaceCount} namespace{overview.namespaceCount === 1 ? '' : 's'}
@@ -152,9 +210,9 @@ export function OverviewView() {
       {overview && !overview.metricsAvailable && (
         <MetricsBanner error={overview.metricsError ?? ''} />
       )}
-      {error && (
+      {overviewError && (
         <div className="border-b border-destructive/30 bg-destructive/10 px-6 py-2 text-xs text-destructive">
-          {error}
+          {overviewError}
         </div>
       )}
 
