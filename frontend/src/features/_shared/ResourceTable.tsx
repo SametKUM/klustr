@@ -114,6 +114,7 @@ export function ResourceTable<T>({
   const [, setTick] = useState(0)
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   // When the detail panel closes we flash the row that was just open.
   useEffect(() => {
@@ -145,8 +146,10 @@ export function ResourceTable<T>({
   useEffect(() => {
     if (!selectedContext) {
       setData([])
+      setLoaded(false)
       return
     }
+    setLoaded(false)
     let cancelled = false
     const reload = () => {
       fetch(selectedContext, query.apiNamespace).then((list) => {
@@ -157,6 +160,7 @@ export function ResourceTable<T>({
         } else {
           setData(raw)
         }
+        setLoaded(true)
       })
     }
     reload()
@@ -231,9 +235,11 @@ export function ResourceTable<T>({
 
   const filteredCount = table.getRowModel().rows.length
   const total = data.length
-  const countLabel = filter
-    ? `${filteredCount} of ${total} ${total === 1 ? noun.singular : noun.plural}`
-    : `${total} ${total === 1 ? noun.singular : noun.plural}`
+  const countLabel = !loaded
+    ? `Loading ${noun.plural}…`
+    : filter
+      ? `${filteredCount} of ${total} ${total === 1 ? noun.singular : noun.plural}`
+      : `${total} ${total === 1 ? noun.singular : noun.plural}`
   const scopeLabel =
     scope === 'namespaced'
       ? selectedNamespaces.length === 0
@@ -339,9 +345,11 @@ export function ResourceTable<T>({
                   colSpan={columns.length + 1}
                   className="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
-                  {filter
-                    ? `No ${noun.plural} matching "${filter}".`
-                    : `No ${noun.plural}${scope === 'namespaced' && selectedNamespaces.length > 0 ? scopeLabel : ''}.`}
+                  {!loaded
+                    ? `Loading ${noun.plural}…`
+                    : filter
+                      ? `No ${noun.plural} matching "${filter}".`
+                      : `No ${noun.plural}${scope === 'namespaced' && selectedNamespaces.length > 0 ? scopeLabel : ''}.`}
                 </td>
               </tr>
             ) : (
