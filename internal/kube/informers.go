@@ -463,9 +463,9 @@ func (w *contextWatcher) start(parent context.Context) error {
 
 	secrets := w.factory.Core().V1().Secrets().Informer()
 	if _, err := secrets.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Secret") },
-		UpdateFunc: func(any, any) { w.touch("Secret") },
-		DeleteFunc: func(any) { w.touch("Secret") },
+		AddFunc:    func(obj any) { w.touch("Secret"); maybeTouchHelm(obj, w) },
+		UpdateFunc: func(_, obj any) { w.touch("Secret"); maybeTouchHelm(obj, w) },
+		DeleteFunc: func(obj any) { w.touch("Secret"); maybeTouchHelm(obj, w) },
 	}); err != nil {
 		cancel()
 		return err
