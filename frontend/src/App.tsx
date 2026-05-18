@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ContextSwitcher } from '@/features/contexts/ContextSwitcher'
+import { ContextTagPicker } from '@/features/contexts/ContextTagPicker'
+import { resolveTagMeta } from '@/features/contexts/contextTagMeta'
 import { ConnectionStatus } from '@/features/contexts/ConnectionStatus'
 import { ConnectionsScreen } from '@/features/contexts/ConnectionsScreen'
 import { NamespaceSelector } from '@/features/contexts/NamespaceSelector'
@@ -213,6 +215,11 @@ function App() {
   const selectedResource = useUIStore((s) => s.selectedResource)
   const collapsedNavGroups = useUIStore((s) => s.collapsedNavGroups)
   const toggleNavGroup = useUIStore((s) => s.toggleNavGroup)
+  const primaryTagId = useUIStore((s) =>
+    s.selectedContext ? (s.contextTags[s.selectedContext]?.[0] ?? null) : null,
+  )
+  const customTags = useUIStore((s) => s.customTags)
+  const currentTagMeta = resolveTagMeta(primaryTagId, customTags)
   const resetResources = useResources((s) => s.reset)
   const setPortForwards = usePortForwards((s) => s.setList)
 
@@ -261,11 +268,18 @@ function App() {
   return (
     <TooltipProvider delayDuration={250}>
     <div className="flex h-screen flex-col bg-background text-foreground">
+      {currentTagMeta && (
+        <div
+          className={`h-[3px] w-full shrink-0 ${currentTagMeta.barClass}`}
+          aria-hidden
+        />
+      )}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold tracking-tight">Klustr</span>
           <ContextSwitcher />
           <NamespaceSelector />
+          <ContextTagPicker />
         </div>
         <div className="flex items-center gap-1">
           <PortForwardIndicator />

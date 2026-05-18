@@ -12,16 +12,18 @@ import {
 import { api, type ContextInfo } from '@/lib/api'
 import { ProviderIcon } from '@/features/_shared/providerIcons'
 import { useUIStore } from '@/store/ui'
+import { resolveTagMeta } from './contextTagMeta'
 
 export function ContextSwitcher() {
   const [contexts, setContexts] = useState<ContextInfo[]>([])
-  const [defaultContext, setDefaultContext] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const selected = useUIStore((s) => s.selectedContext)
   const setSelected = useUIStore((s) => s.setSelectedContext)
   const autoConnectContext = useUIStore((s) => s.defaultContext)
+  const contextTags = useUIStore((s) => s.contextTags)
+  const customTags = useUIStore((s) => s.customTags)
 
   useEffect(() => {
     let cancelled = false
@@ -30,7 +32,6 @@ export function ContextSwitcher() {
       .then((cfg) => {
         if (cancelled) return
         setContexts(cfg.contexts)
-        setDefaultContext(cfg.currentContext)
         setLoading(false)
       })
       .catch((e: unknown) => {
@@ -63,8 +64,10 @@ export function ContextSwitcher() {
         ) : (
           contexts.map((c) => {
             const isSelected = selected === c.name
-            const isDefault = c.name === defaultContext
             const isAutoConnect = c.name === autoConnectContext
+            const tagMetas = (contextTags[c.name] ?? [])
+              .map((id) => resolveTagMeta(id, customTags))
+              .filter((m): m is NonNullable<ReturnType<typeof resolveTagMeta>> => m !== null)
             return (
               <DropdownMenuItem
                 key={c.name}
@@ -73,7 +76,7 @@ export function ContextSwitcher() {
               >
                 <div className="flex min-w-0 flex-1 items-start gap-2">
                   <ProviderIcon context={c} className="mt-0.5 size-3.5 shrink-0" />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 truncate text-sm">
                       <span className="truncate">{c.name}</span>
                       {isAutoConnect && (
@@ -81,14 +84,22 @@ export function ContextSwitcher() {
                           auto
                         </span>
                       )}
-                      {isDefault && !isAutoConnect && (
-                        <span className="rounded bg-muted px-1 py-px text-[10px] uppercase tracking-wide text-muted-foreground">
-                          default
-                        </span>
-                      )}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">{c.server || c.cluster}</div>
                   </div>
+                  {tagMetas.length > 0 && (
+                    <div className="mt-0.5 flex shrink-0 flex-wrap items-center gap-1">
+                      {tagMetas.map((m) => (
+                        <span
+                          key={m.id}
+                          className={`rounded border px-1 py-px text-[10px] font-semibold tracking-wider ${m.badgeClass}`}
+                          aria-label={m.label}
+                        >
+                          {m.shortLabel}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </DropdownMenuItem>
             )

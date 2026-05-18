@@ -51,6 +51,111 @@ function readDefaultContext(): string | null {
   return v && v.length > 0 ? v : null
 }
 
+export type ContextTag = string
+
+export type TagColor =
+  | 'rose'
+  | 'red'
+  | 'orange'
+  | 'amber'
+  | 'yellow'
+  | 'lime'
+  | 'emerald'
+  | 'teal'
+  | 'cyan'
+  | 'sky'
+  | 'blue'
+  | 'indigo'
+  | 'violet'
+  | 'fuchsia'
+  | 'pink'
+  | 'slate'
+
+export type CustomTagDef = {
+  id: string
+  label: string
+  shortLabel: string
+  color: TagColor
+}
+
+const CONTEXT_TAGS_KEY = 'klustr-context-tags'
+const CUSTOM_TAGS_KEY = 'klustr-custom-tags'
+
+export const MAX_TAGS_PER_CONTEXT = 3
+
+function readContextTags(): Record<string, ContextTag[]> {
+  try {
+    const raw = localStorage.getItem(CONTEXT_TAGS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object') return {}
+    const result: Record<string, ContextTag[]> = {}
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof v === 'string' && v.length > 0) {
+        result[k] = [v]
+      } else if (Array.isArray(v)) {
+        const ids = v
+          .filter((x): x is string => typeof x === 'string' && x.length > 0)
+          .slice(0, MAX_TAGS_PER_CONTEXT)
+        if (ids.length > 0) result[k] = ids
+      }
+    }
+    return result
+  } catch {
+    return {}
+  }
+}
+
+const VALID_COLORS: ReadonlySet<TagColor> = new Set([
+  'rose',
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'lime',
+  'emerald',
+  'teal',
+  'cyan',
+  'sky',
+  'blue',
+  'indigo',
+  'violet',
+  'fuchsia',
+  'pink',
+  'slate',
+])
+
+function readCustomTags(): Record<string, CustomTagDef> {
+  try {
+    const raw = localStorage.getItem(CUSTOM_TAGS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object') return {}
+    const result: Record<string, CustomTagDef> = {}
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (!v || typeof v !== 'object') continue
+      const def = v as Partial<CustomTagDef>
+      if (
+        typeof def.id === 'string' &&
+        typeof def.label === 'string' &&
+        typeof def.shortLabel === 'string' &&
+        typeof def.color === 'string' &&
+        VALID_COLORS.has(def.color as TagColor)
+      ) {
+        result[k] = {
+          id: def.id,
+          label: def.label,
+          shortLabel: def.shortLabel,
+          color: def.color as TagColor,
+        }
+      }
+    }
+    return result
+  } catch {
+    return {}
+  }
+}
+
 export type ResourceView =
   | 'overview'
   | 'workloadsoverview'
@@ -143,6 +248,8 @@ type UIState = {
   themeId: ThemeId
   collapsedNavGroups: string[]
   defaultContext: string | null
+  contextTags: Record<string, ContextTag[]>
+  customTags: Record<string, CustomTagDef>
   setSelectedContext: (name: string | null) => void
   setSelectedNamespaces: (names: string[]) => void
   toggleSelectedNamespace: (name: string) => void
@@ -155,6 +262,10 @@ type UIState = {
   setTheme: (id: ThemeId) => void
   toggleNavGroup: (label: string) => void
   setDefaultContext: (name: string | null) => void
+  toggleContextTag: (name: string, tagId: string) => void
+  clearContextTags: (name: string) => void
+  addCustomTag: (def: CustomTagDef) => void
+  removeCustomTag: (id: string) => void
 }
 
 function sameResource(a: SelectedResource, b: SelectedResource): boolean {
@@ -195,6 +306,8 @@ export const useUIStore = create<UIState>((set) => {
     themeId: initialThemeId,
     collapsedNavGroups: readCollapsedNavGroups(),
     defaultContext: initialDefaultContext,
+    contextTags: readContextTags(),
+    customTags: readCustomTags(),
     setSelectedContext: (name) =>
       set((s) =>
         s.selectedContext === name
@@ -279,5 +392,48 @@ export const useUIStore = create<UIState>((set) => {
       }
       set({ defaultContext: name && name.length > 0 ? name : null })
     },
+    toggleContextTag: (name, tagId) =>
+      set((s) => {
+        const current = s.contextTags[name] ?? []
+        let nextList: string[]
+        if (current.includes(tagId)) {
+          nextList = current.filter((t) => t !== tagId)
+        } else {
+          if (current.length >= MAX_TAGS_PER_CONTEXT) return s
+          nextList = [...current, tagId]
+        }
+        const next = { ...s.contextTags }
+        if (nextList.length === 0) delete next[name]
+        else next[name] = nextList
+        localStorage.setItem(CONTEXT_TAGS_KEY, JSON.stringify(next))
+        return { contextTags: next }
+      }),
+    clearContextTags: (name) =>
+      set((s) => {
+        if (!s.contextTags[name]) return s
+        const next = { ...s.contextTags }
+        delete next[name]
+        localStorage.setItem(CONTEXT_TAGS_KEY, JSON.stringify(next))
+        return { contextTags: next }
+      }),
+    addCustomTag: (def) =>
+      set((s) => {
+        const next = { ...s.customTags, [def.id]: def }
+        localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(next))
+        return { customTags: next }
+      }),
+    removeCustomTag: (id) =>
+      set((s) => {
+        const nextTags = { ...s.customTags }
+        delete nextTags[id]
+        const nextAssignments: Record<string, string[]> = {}
+        for (const [ctx, list] of Object.entries(s.contextTags)) {
+          const filtered = list.filter((t) => t !== id)
+          if (filtered.length > 0) nextAssignments[ctx] = filtered
+        }
+        localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(nextTags))
+        localStorage.setItem(CONTEXT_TAGS_KEY, JSON.stringify(nextAssignments))
+        return { customTags: nextTags, contextTags: nextAssignments }
+      }),
   }
 })

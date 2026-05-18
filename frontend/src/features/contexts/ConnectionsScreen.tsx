@@ -1,21 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Check, Loader2, RefreshCcw, Search, Zap } from 'lucide-react'
+import { AlertTriangle, Check, Loader2, RefreshCcw, Search, Tag, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ProviderIcon, providerMeta } from '@/features/_shared/providerIcons'
 import { api, type ContextInfo } from '@/lib/api'
 import { useUIStore } from '@/store/ui'
+import { resolveTagMeta, type ContextTagMeta } from './contextTagMeta'
+import { ContextTagMenuContent } from './ContextTagPicker'
 
 type LoadState =
   | { kind: 'loading' }
-  | { kind: 'ready'; contexts: ContextInfo[]; currentContext: string }
+  | { kind: 'ready'; contexts: ContextInfo[] }
   | { kind: 'error'; message: string }
 
 export function ConnectionsScreen() {
   const setSelectedContext = useUIStore((s) => s.setSelectedContext)
   const defaultContext = useUIStore((s) => s.defaultContext)
   const setDefaultContext = useUIStore((s) => s.setDefaultContext)
+  const contextTags = useUIStore((s) => s.contextTags)
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' })
   const [query, setQuery] = useState('')
@@ -28,7 +36,7 @@ export function ConnectionsScreen() {
       .listContexts()
       .then((cfg) => {
         if (cancelled) return
-        setState({ kind: 'ready', contexts: cfg.contexts, currentContext: cfg.currentContext })
+        setState({ kind: 'ready', contexts: cfg.contexts })
       })
       .catch((e: unknown) => {
         if (cancelled) return
@@ -40,7 +48,6 @@ export function ConnectionsScreen() {
   }, [reloadKey])
 
   const contexts = state.kind === 'ready' ? state.contexts : []
-  const currentContext = state.kind === 'ready' ? state.currentContext : ''
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -126,8 +133,8 @@ export function ConnectionsScreen() {
                   <ContextCard
                     key={c.name}
                     context={c}
-                    isCurrent={c.name === currentContext}
                     isDefault={c.name === defaultContext}
+                    tagIds={contextTags[c.name] ?? []}
                     onConnect={() => setSelectedContext(c.name)}
                     onToggleDefault={() =>
                       setDefaultContext(c.name === defaultContext ? null : c.name)
@@ -144,20 +151,89 @@ export function ConnectionsScreen() {
   )
 }
 
+function CardTagBadges({
+  contextName,
+  tagMetas,
+}: {
+  contextName: string
+  tagMetas: ContextTagMeta[]
+}) {
+  const [open, setOpen] = useState(false)
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation()
+  const trigger =
+    tagMetas.length > 0 ? (
+      <span
+        role="button"
+        tabIndex={0}
+        aria-label="Change tags"
+        onClick={stop}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            stop(e)
+            e.preventDefault()
+            setOpen(true)
+          }
+        }}
+        className="inline-flex cursor-pointer items-center gap-1 rounded transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {tagMetas.map((m) => (
+          <span
+            key={m.id}
+            className={`rounded border px-1 py-px text-[10px] font-semibold tracking-wider ${m.badgeClass}`}
+            aria-label={m.label}
+          >
+            {m.shortLabel}
+          </span>
+        ))}
+      </span>
+    ) : (
+      <span
+        role="button"
+        tabIndex={0}
+        aria-label="Add tag"
+        onClick={stop}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            stop(e)
+            e.preventDefault()
+            setOpen(true)
+          }
+        }}
+        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-dashed border-muted-foreground/40 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground opacity-0 transition-opacity hover:bg-muted focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+      >
+        <Tag className="size-3" />
+        <span>Tag</span>
+      </span>
+    )
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent align="start" className="w-60 p-1" onClick={stop}>
+        <ContextTagMenuContent contextName={contextName} onClose={() => setOpen(false)} />
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 function ContextCard({
   context,
-  isCurrent,
   isDefault,
+  tagIds,
   onConnect,
   onToggleDefault,
 }: {
   context: ContextInfo
-  isCurrent: boolean
   isDefault: boolean
+  tagIds: string[]
   onConnect: () => void
   onToggleDefault: () => void
 }) {
+  const customTags = useUIStore((s) => s.customTags)
   const meta = providerMeta(context)
+  const tagMetas = tagIds
+    .map((id) => resolveTagMeta(id, customTags))
+    .filter((m): m is ContextTagMeta => m !== null)
+  const primaryTagMeta = tagMetas[0] ?? null
   return (
     <li>
       <button
@@ -165,15 +241,17 @@ function ContextCard({
         onClick={onConnect}
         className="group relative flex w-full items-start gap-3 rounded-lg border border-border bg-card px-3.5 py-3 pb-9 text-left transition-colors hover:border-ring hover:bg-accent"
       >
+        {primaryTagMeta && (
+          <span
+            className={`absolute left-0 top-0 h-full w-[3px] rounded-l-lg ${primaryTagMeta.dotClass}`}
+            aria-hidden
+          />
+        )}
         <ProviderIcon context={context} className="mt-0.5 size-5 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-sm font-medium">{context.name}</span>
-            {isCurrent && (
-              <span className="rounded bg-muted px-1 py-px text-[10px] uppercase tracking-wide text-muted-foreground">
-                default
-              </span>
-            )}
+            <CardTagBadges contextName={context.name} tagMetas={tagMetas} />
           </div>
           <div className="mt-0.5 truncate text-xs text-muted-foreground">
             {context.server || context.cluster || meta.label}
