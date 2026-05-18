@@ -47,6 +47,12 @@ import { SecretDetailBody } from '@/features/secrets/SecretDetailBody'
 import { IngressDetailBody } from '@/features/ingresses/IngressDetailBody'
 import { NodeDetailBody } from '@/features/nodes/NodeDetailBody'
 import { NamespaceDetailBody } from '@/features/namespaces/NamespaceDetailBody'
+import { HelmReleaseDetailBody } from '@/features/helm/HelmReleaseDetailBody'
+import { HelmInstallDialog } from '@/features/helm/HelmInstallDialog'
+import { HelmRollbackDialog } from '@/features/helm/HelmRollbackDialog'
+import { HelmRollbackPickerDialog } from '@/features/helm/HelmRollbackPickerDialog'
+import { HelmUninstallDialog } from '@/features/helm/HelmUninstallDialog'
+import type { HelmReleaseDetail } from '@/lib/api'
 
 type Props = {
   contextName: string | null
@@ -103,7 +109,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
               </div>
             )}
           </div>
-          {resource && (
+          {resource && resource.kind !== 'HelmRelease' && (
             <div className="flex shrink-0 items-center gap-2 pt-1">
               {resource.kind === 'Pod' && (
                 <PortForwardButton contextName={contextName} resource={resource} />
@@ -151,6 +157,9 @@ const EVENT_BEARING_KINDS: ResourceKind[] = [
 ]
 
 function DetailContent({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
+  if (resource.kind === 'HelmRelease') {
+    return <HelmReleaseTabs contextName={contextName} namespace={resource.namespace} name={resource.name} />
+  }
   if (resource.gvr) {
     return <CustomResourceTabs contextName={contextName} resource={resource} />
   }
@@ -158,6 +167,100 @@ function DetailContent({ contextName, resource }: { contextName: string | null; 
     return <PodTabs contextName={contextName} namespace={resource.namespace} name={resource.name} />
   }
   return <NonPodTabs contextName={contextName} resource={resource} />
+}
+
+function HelmReleaseTabs({
+  contextName,
+  namespace,
+  name,
+}: {
+  contextName: string | null
+  namespace: string
+  name: string
+}) {
+  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
+  const [detail, setDetail] = useState<HelmReleaseDetail | null>(null)
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const [reloadTick, setReloadTick] = useState(0)
+  const [rollbackRev, setRollbackRev] = useState<number | null>(null)
+  const [rollbackPickerOpen, setRollbackPickerOpen] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [uninstallOpen, setUninstallOpen] = useState(false)
+
+  useEffect(() => {
+    if (!contextName) return
+    let cancelled = false
+    setDetail(null)
+    setDetailError(null)
+    api
+      .getHelmRelease(contextName, namespace, name)
+      .then((d) => {
+        if (cancelled) return
+        setDetail(d)
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return
+        setDetailError(String(e))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [contextName, namespace, name, reloadTick])
+
+  return (
+    <>
+      <HelmReleaseDetailBody
+        detail={detail}
+        error={detailError}
+        onRequestRollback={(rev) => setRollbackRev(rev)}
+        onRequestRollbackPicker={() => setRollbackPickerOpen(true)}
+        onRequestUpgrade={() => setUpgradeOpen(true)}
+        onRequestUninstall={() => setUninstallOpen(true)}
+      />
+      {rollbackRev !== null && (
+        <HelmRollbackDialog
+          contextName={contextName}
+          namespace={namespace}
+          name={name}
+          revision={rollbackRev}
+          open
+          onOpenChange={(o) => !o && setRollbackRev(null)}
+          onRolledBack={() => setReloadTick((t) => t + 1)}
+        />
+      )}
+      {detail && (
+        <HelmRollbackPickerDialog
+          contextName={contextName}
+          namespace={namespace}
+          name={name}
+          currentRevision={detail.info.revision}
+          revisions={detail.revisions}
+          open={rollbackPickerOpen}
+          onOpenChange={setRollbackPickerOpen}
+          onRolledBack={() => setReloadTick((t) => t + 1)}
+        />
+      )}
+      <HelmInstallDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        mode="upgrade"
+        initialName={name}
+        initialNamespace={namespace}
+        initialChartRef={detail?.chartName ?? ''}
+        initialVersion={detail?.chartVersion ?? ''}
+        initialValues={detail?.userValues || detail?.mergedValues || ''}
+        onSuccess={() => setReloadTick((t) => t + 1)}
+      />
+      <HelmUninstallDialog
+        contextName={contextName}
+        namespace={namespace}
+        name={name}
+        open={uninstallOpen}
+        onOpenChange={setUninstallOpen}
+        onUninstalled={() => setSelectedResource(null)}
+      />
+    </>
+  )
 }
 
 function CustomResourceTabs({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
