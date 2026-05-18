@@ -20,7 +20,7 @@ const SCALABLE_KINDS: ResourceKind[] = ['Deployment', 'StatefulSet']
 const MIN_REPLICAS = 0
 const MAX_REPLICAS = 1000
 
-export function isScalable(kind: ResourceKind): boolean {
+export function isScalable(kind: string): boolean {
   return (SCALABLE_KINDS as readonly string[]).includes(kind)
 }
 

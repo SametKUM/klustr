@@ -23,8 +23,8 @@ const RESTARTABLE_KINDS: ReadonlySet<ResourceKind> = new Set<ResourceKind>([
   'DaemonSet',
 ])
 
-export function isRestartable(kind: ResourceKind): boolean {
-  return RESTARTABLE_KINDS.has(kind)
+export function isRestartable(kind: string): boolean {
+  return RESTARTABLE_KINDS.has(kind as ResourceKind)
 }
 
 type DialogProps = {

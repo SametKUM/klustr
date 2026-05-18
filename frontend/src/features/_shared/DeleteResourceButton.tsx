@@ -43,7 +43,7 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
   const [typedName, setTypedName] = useState('')
 
-  const requireName = CONFIRM_BY_NAME_KINDS.has(resource.kind)
+  const requireName = CONFIRM_BY_NAME_KINDS.has(resource.kind as ResourceKind)
   const nameMatches = typedName === resource.name
 
   const del = useMutation({
