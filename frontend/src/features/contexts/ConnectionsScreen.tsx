@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ProviderIcon, providerMeta } from '@/features/_shared/providerIcons'
 import { api, type ContextInfo } from '@/lib/api'
@@ -239,7 +240,7 @@ function ContextCard({
       <button
         type="button"
         onClick={onConnect}
-        className="group relative flex w-full items-start gap-3 rounded-lg border border-border bg-card px-3.5 py-3 pb-9 text-left transition-colors hover:border-ring hover:bg-accent"
+        className="group relative flex w-full items-start gap-2.5 rounded-lg border border-border bg-card px-3 py-2 text-left transition-colors hover:border-ring hover:bg-accent"
       >
         {primaryTagMeta && (
           <span
@@ -249,42 +250,49 @@ function ContextCard({
         )}
         <ProviderIcon context={context} className="mt-0.5 size-5 shrink-0" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-sm font-medium">{context.name}</span>
-            <CardTagBadges contextName={context.name} tagMetas={tagMetas} />
-          </div>
-          <div className="mt-0.5 truncate text-xs text-muted-foreground">
+          <div className="truncate pr-7 text-sm font-medium">{context.name}</div>
+          <div className="truncate pr-7 text-xs text-muted-foreground">
             {context.server || context.cluster || meta.label}
           </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <CardTagBadges contextName={context.name} tagMetas={tagMetas} />
+          </div>
         </div>
-        <span
-          role="button"
-          aria-label={isDefault ? 'Disable auto-connect on launch' : 'Enable auto-connect on launch'}
-          aria-pressed={isDefault}
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleDefault()
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.stopPropagation()
-              e.preventDefault()
-              onToggleDefault()
-            }
-          }}
-          className={[
-            'absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide transition-opacity',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            isDefault
-              ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 opacity-100 dark:text-amber-400'
-              : 'border-border bg-background/80 text-muted-foreground opacity-0 hover:bg-muted group-hover:opacity-100 focus-visible:opacity-100',
-          ].join(' ')}
-          title={isDefault ? 'Auto-connecting to this context on launch' : 'Connect to this context on launch'}
-        >
-          {isDefault ? <Check className="size-3" /> : <Zap className="size-3" />}
-          <span>Auto-connect</span>
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              role="button"
+              aria-label={isDefault ? 'Disable auto-connect on launch' : 'Enable auto-connect on launch'}
+              aria-pressed={isDefault}
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleDefault()
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  onToggleDefault()
+                }
+              }}
+              className={[
+                'absolute right-1.5 top-1.5 inline-flex size-5 items-center justify-center rounded-md border transition-opacity',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                isDefault
+                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 opacity-100 dark:text-amber-400'
+                  : 'border-border bg-background/80 text-muted-foreground opacity-0 hover:bg-muted group-hover:opacity-100 focus-visible:opacity-100',
+              ].join(' ')}
+            >
+              {isDefault ? <Check className="size-3" /> : <Zap className="size-3" />}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="max-w-[14rem] text-xs">
+            {isDefault
+              ? 'Auto-connect enabled — Klustr will skip this picker and open this context on next launch. Click to disable.'
+              : 'Set as auto-connect — Klustr will skip this picker and open this context on next launch.'}
+          </TooltipContent>
+        </Tooltip>
       </button>
     </li>
   )
