@@ -199,6 +199,8 @@ export type ResourceView =
   | 'ingresses'
   | 'nodes'
   | 'namespaces'
+  | 'helmreleases'
+  | 'helmrepos'
 
 export type ResourceKind =
   | 'Pod'
