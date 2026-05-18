@@ -1,10 +1,23 @@
 import {
+  AddHelmRepo,
   ApplyResourceYAML,
   DeleteResource,
   EnsureCustomResourceWatch,
   GetCustomResourceYAML,
+  GetHelmRelease,
+  HelmChartVersions,
+  InstallHelmRelease,
   ListCRDs,
   ListCustomResources,
+  ListHelmReleaseHistory,
+  ListHelmReleases,
+  ListHelmRepos,
+  RemoveHelmRepo,
+  RollbackHelmRelease,
+  SearchHelmCharts,
+  UninstallHelmRelease,
+  UpdateHelmRepos,
+  UpgradeHelmRelease,
   ListEvents,
   ListClusterWarningEvents,
   GetClusterOverview,
@@ -186,6 +199,13 @@ export type ClusterResource = kube.ClusterResource
 export type ClusterPods = kube.ClusterPods
 export type CRDInfo = kube.CRDInfo
 export type CustomResourceInfo = kube.CustomResourceInfo
+export type HelmReleaseInfo = kube.HelmReleaseInfo
+export type HelmReleaseDetail = kube.HelmReleaseDetail
+export type HelmRevisionInfo = kube.HelmRevisionInfo
+export type HelmRepoInfo = kube.HelmRepoInfo
+export type HelmChartSearchResult = kube.HelmChartSearchResult
+export type HelmInstallOptions = kube.HelmInstallOptions
+export type HelmDryRunResult = kube.HelmDryRunResult
 
 export const api = {
   listContexts: (): Promise<Kubeconfig> => ListContexts(),
@@ -368,6 +388,39 @@ export const api = {
     GetClusterOverview(contextName),
   listClusterWarningEvents: (contextName: string, limit: number): Promise<EventInfo[]> =>
     ListClusterWarningEvents(contextName, limit),
+  listHelmReleases: (contextName: string, namespace: string): Promise<HelmReleaseInfo[]> =>
+    ListHelmReleases(contextName, namespace),
+  getHelmRelease: (contextName: string, namespace: string, name: string): Promise<HelmReleaseDetail> =>
+    GetHelmRelease(contextName, namespace, name),
+  listHelmReleaseHistory: (
+    contextName: string,
+    namespace: string,
+    name: string,
+  ): Promise<HelmRevisionInfo[]> => ListHelmReleaseHistory(contextName, namespace, name),
+  installHelmRelease: (opts: HelmInstallOptions): Promise<HelmDryRunResult> =>
+    InstallHelmRelease(opts),
+  upgradeHelmRelease: (opts: HelmInstallOptions): Promise<HelmDryRunResult> =>
+    UpgradeHelmRelease(opts),
+  rollbackHelmRelease: (
+    contextName: string,
+    namespace: string,
+    name: string,
+    revision: number,
+    wait: boolean,
+  ): Promise<void> => RollbackHelmRelease(contextName, namespace, name, revision, wait),
+  uninstallHelmRelease: (
+    contextName: string,
+    namespace: string,
+    name: string,
+    keepHistory: boolean,
+  ): Promise<void> => UninstallHelmRelease(contextName, namespace, name, keepHistory),
+  listHelmRepos: (): Promise<HelmRepoInfo[]> => ListHelmRepos(),
+  addHelmRepo: (name: string, url: string): Promise<void> => AddHelmRepo(name, url),
+  removeHelmRepo: (name: string): Promise<void> => RemoveHelmRepo(name),
+  updateHelmRepos: (): Promise<void> => UpdateHelmRepos(),
+  searchHelmCharts: (query: string): Promise<HelmChartSearchResult[]> => SearchHelmCharts(query),
+  helmChartVersions: (repoName: string, chartName: string): Promise<string[]> =>
+    HelmChartVersions(repoName, chartName),
   listCRDs: (contextName: string): Promise<CRDInfo[]> => ListCRDs(contextName),
   ensureCustomResourceWatch: (
     contextName: string,
