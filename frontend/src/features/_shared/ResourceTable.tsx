@@ -223,10 +223,14 @@ export function ResourceTable<T>({
   }, [columns, isAggregated])
 
   const allColumnIds = useMemo(() => tableColumns.map((c) => columnId(c)), [tableColumns])
-  const columnOrder = useMemo(() => mergeOrder(allColumnIds, prefs?.order ?? []), [
-    allColumnIds,
-    prefs?.order,
-  ])
+  const columnOrder = useMemo(() => {
+    const saved = prefs?.order ?? []
+    if (!isAggregated || saved.includes('klustrContext')) {
+      return mergeOrder(allColumnIds, saved)
+    }
+    const withoutCtx = allColumnIds.filter((id) => id !== 'klustrContext')
+    return ['klustrContext', ...mergeOrder(withoutCtx, saved)]
+  }, [allColumnIds, prefs?.order, isAggregated])
   const columnVisibility = useMemo<VisibilityState>(() => {
     const v: VisibilityState = {}
     for (const id of allColumnIds) v[id] = !(prefs?.hidden ?? []).includes(id)
