@@ -50,8 +50,8 @@ export function PersistentVolumeClaimsView() {
       setData={setPVCs}
       fetch={api.listPersistentVolumeClaims}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'PersistentVolumeClaim', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'PersistentVolumeClaim', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

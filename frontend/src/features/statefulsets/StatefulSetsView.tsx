@@ -53,8 +53,8 @@ export function StatefulSetsView() {
       setData={setStatefulSets}
       fetch={api.listStatefulSets}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'StatefulSet', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'StatefulSet', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

@@ -49,8 +49,8 @@ export function PriorityClassesView() {
       fetch={(ctx) => api.listPriorityClasses(ctx)}
       columns={columns}
       defaultSort={[{ id: 'value', desc: true }]}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'PriorityClass', namespace: '', name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'PriorityClass', namespace: '', name: row.name, context: ctx })
       }
     />
   )

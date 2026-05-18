@@ -36,8 +36,8 @@ export function LeasesView() {
       setData={setLeases}
       fetch={api.listLeases}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'Lease', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'Lease', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

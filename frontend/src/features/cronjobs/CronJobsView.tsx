@@ -48,8 +48,8 @@ export function CronJobsView() {
       setData={setCronJobs}
       fetch={api.listCronJobs}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'CronJob', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'CronJob', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

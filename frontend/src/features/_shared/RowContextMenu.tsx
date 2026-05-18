@@ -44,17 +44,25 @@ const EVENT_BEARING_KINDS: ReadonlySet<ResourceKind> = new Set<ResourceKind>([
 
 type Props = {
   kind: ResourceKind
+  contextName: string
   namespace: string
   name: string
   canPortForward?: boolean
   children: React.ReactNode
 }
 
-export function RowContextMenu({ kind, namespace, name, canPortForward, children }: Props) {
+export function RowContextMenu({
+  kind,
+  contextName,
+  namespace,
+  name,
+  canPortForward,
+  children,
+}: Props) {
   const openResource = useUIStore((s) => s.openResource)
   const setPendingAction = useUIStore((s) => s.setPendingAction)
 
-  const resource: SelectedResource = { kind, namespace, name }
+  const resource: SelectedResource = { kind, namespace, name, context: contextName }
   const isPod = POD_KINDS.has(kind)
   const hasLogs = WORKLOAD_LOG_KINDS.has(kind)
   const hasEvents = EVENT_BEARING_KINDS.has(kind)

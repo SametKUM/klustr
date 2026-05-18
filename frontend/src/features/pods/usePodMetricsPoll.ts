@@ -4,33 +4,38 @@ import { useMetrics } from '@/store/metrics'
 
 const POLL_MS = 15_000
 
-export function usePodMetricsPoll(contextName: string | null, namespace: string) {
+export function usePodMetricsPoll(contexts: readonly string[], namespace: string) {
   const setPodMetrics = useMetrics((s) => s.setPodMetrics)
   const setUnavailable = useMetrics((s) => s.setUnavailable)
+  const clearContext = useMetrics((s) => s.clearContext)
+  const ctxKey = contexts.join('|')
 
   useEffect(() => {
-    if (!contextName) {
-      setUnavailable()
-      return
-    }
+    if (contexts.length === 0) return
     let cancelled = false
 
-    const tick = async () => {
+    const tick = async (ctx: string) => {
       try {
-        const list = await api.listPodMetrics(contextName, namespace)
+        const list = await api.listPodMetrics(ctx, namespace)
         if (cancelled) return
-        setPodMetrics(list)
+        setPodMetrics(ctx, list)
       } catch {
         if (cancelled) return
-        setUnavailable()
+        setUnavailable(ctx)
       }
     }
 
-    tick()
-    const id = window.setInterval(tick, POLL_MS)
+    const intervalIds: number[] = []
+    for (const ctx of contexts) {
+      tick(ctx)
+      const id = window.setInterval(() => tick(ctx), POLL_MS)
+      intervalIds.push(id)
+    }
     return () => {
       cancelled = true
-      window.clearInterval(id)
+      for (const ctx of contexts) clearContext(ctx)
+      for (const id of intervalIds) window.clearInterval(id)
     }
-  }, [contextName, namespace, setPodMetrics, setUnavailable])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctxKey, namespace, setPodMetrics, setUnavailable, clearContext])
 }

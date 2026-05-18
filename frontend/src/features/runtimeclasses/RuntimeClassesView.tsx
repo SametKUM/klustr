@@ -35,8 +35,8 @@ export function RuntimeClassesView() {
       setData={setRCs}
       fetch={(ctx) => api.listRuntimeClasses(ctx)}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'RuntimeClass', namespace: '', name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'RuntimeClass', namespace: '', name: row.name, context: ctx })
       }
     />
   )

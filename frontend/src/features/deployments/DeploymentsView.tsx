@@ -55,8 +55,8 @@ export function DeploymentsView() {
       setData={setDeployments}
       fetch={api.listDeployments}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'Deployment', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'Deployment', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

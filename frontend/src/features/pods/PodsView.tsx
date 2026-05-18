@@ -5,12 +5,12 @@ import { formatAge } from '@/lib/time'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { useResources } from '@/store/resources'
-import { useUIStore } from '@/store/ui'
-import { useMetrics, podKey } from '@/store/metrics'
+import { useActiveContexts, useUIStore } from '@/store/ui'
+import { selectMetricsAvailable, selectPodMetric, useMetrics } from '@/store/metrics'
 import { usePodMetricsPoll } from './usePodMetricsPoll'
 import { PodResourceBars } from './PodResourceBars'
 
-const columnHelper = createColumnHelper<PodInfo>()
+const columnHelper = createColumnHelper<PodInfo & { __klustrCtx?: string }>()
 
 const HEALTHY_STATUS = new Set(['Running'])
 const TERMINAL_STATUS = new Set(['Completed', 'Succeeded'])
@@ -34,8 +34,8 @@ const FAILURE_STATUS = new Set([
   'DeadlineExceeded',
 ])
 
-function PodUsageCell({ pod }: { pod: PodInfo }) {
-  const m = useMetrics((s) => s.byPod[podKey(pod.namespace, pod.name)])
+function PodUsageCell({ pod, ctx }: { pod: PodInfo; ctx: string }) {
+  const m = useMetrics(selectPodMetric(ctx, pod.namespace, pod.name))
   return (
     <PodResourceBars
       cpuUsageMC={m?.cpuMC ?? 0}
@@ -72,10 +72,10 @@ export function PodsView() {
   const pods = useResources((s) => s.pods)
   const setPods = useResources((s) => s.setPods)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-  const selectedContext = useUIStore((s) => s.selectedContext)
+  const activeContexts = useActiveContexts()
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
-  const metricsAvailable = useMetrics((s) => s.available)
-  usePodMetricsPoll(selectedContext, namespaceQuery(selectedNamespaces).apiNamespace)
+  const metricsAvailable = useMetrics(selectMetricsAvailable(activeContexts))
+  usePodMetricsPoll(activeContexts, namespaceQuery(selectedNamespaces).apiNamespace)
 
   const columns = useMemo(
     () => [
@@ -102,7 +102,11 @@ export function PodsView() {
             columnHelper.display({
               id: 'usage',
               header: 'CPU / Mem',
-              cell: (info) => <PodUsageCell pod={info.row.original} />,
+              cell: (info) => {
+                const row = info.row.original
+                const ctx = row.__klustrCtx ?? ''
+                return <PodUsageCell pod={row} ctx={ctx} />
+              },
             }),
           ]
         : []),
@@ -119,8 +123,8 @@ export function PodsView() {
       setData={setPods}
       fetch={api.listPods}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'Pod', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'Pod', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

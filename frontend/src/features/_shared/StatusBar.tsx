@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Boxes, Folder, Network } from 'lucide-react'
-import { useUIStore } from '@/store/ui'
+import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
 import { usePortForwards } from '@/store/portForwards'
 import { api } from '@/lib/api'
 
 type ConnStatus = 'idle' | 'connecting' | 'connected' | 'error'
 
 export function StatusBar() {
+  const activeContexts = useActiveContexts()
+  const isAggregated = useIsAggregated()
   const selectedContext = useUIStore((s) => s.selectedContext)
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const portForwards = usePortForwards((s) => s.list)
+  const contextText = isAggregated
+    ? `${activeContexts.length} contexts`
+    : (selectedContext ?? 'no context')
   const namespaceText =
     selectedNamespaces.length === 0
       ? 'all namespaces'
@@ -71,15 +76,18 @@ export function StatusBar() {
 
   return (
     <footer className="flex h-6 shrink-0 items-center gap-3 border-t border-border bg-background px-3 text-[10px] text-muted-foreground">
-      <span className="inline-flex items-center gap-1.5">
+      <span
+        className="inline-flex items-center gap-1.5"
+        title={isAggregated ? activeContexts.join(', ') : undefined}
+      >
         <span
           aria-label={`Cluster ${status}`}
           className={['inline-block size-2 rounded-full', dotClass].join(' ')}
         />
         <Boxes className="size-3" />
-        {selectedContext ?? 'no context'}
+        {contextText}
       </span>
-      {selectedContext && (
+      {activeContexts.length > 0 && (
         <span
           className="inline-flex items-center gap-1.5"
           title={

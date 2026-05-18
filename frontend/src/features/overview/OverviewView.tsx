@@ -9,7 +9,7 @@ import {
 } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
 import { formatAge } from '@/lib/time'
-import { useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore } from '@/store/ui'
 
 const POLL_INTERVAL_MS = 15_000
 const WARNING_LIMIT = 50
@@ -20,6 +20,7 @@ function isWatcherNotReady(err: unknown): boolean {
 
 export function OverviewView() {
   const contextName = useUIStore((s) => s.selectedContext)
+  const isAggregated = useIsAggregated()
   const [overview, setOverview] = useState<ClusterOverview | null>(null)
   const [warnings, setWarnings] = useState<EventInfo[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -111,6 +112,14 @@ export function OverviewView() {
       unsubs.forEach((u) => u())
     }
   }, [contextName])
+
+  if (isAggregated) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+        Cluster overview is only available in single-context mode. Pick one context to see it.
+      </div>
+    )
+  }
 
   if (!contextName) {
     return (

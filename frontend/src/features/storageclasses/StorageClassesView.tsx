@@ -53,8 +53,8 @@ export function StorageClassesView() {
       setData={setSCs}
       fetch={(ctx) => api.listStorageClasses(ctx)}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'StorageClass', namespace: '', name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'StorageClass', namespace: '', name: row.name, context: ctx })
       }
     />
   )

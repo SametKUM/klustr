@@ -40,8 +40,8 @@ export function PodDisruptionBudgetsView() {
       setData={setPDBs}
       fetch={api.listPodDisruptionBudgets}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'PodDisruptionBudget', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'PodDisruptionBudget', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

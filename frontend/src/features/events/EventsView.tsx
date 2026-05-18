@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button'
 import { formatAge } from '@/lib/time'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { ErrorBox, Th, Td } from '@/features/_shared/DetailPrimitives'
-import { useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore } from '@/store/ui'
 
 export function EventsView() {
   const selectedContext = useUIStore((s) => s.selectedContext)
+  const isAggregated = useIsAggregated()
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
   const [events, setEvents] = useState<EventInfo[]>([])
@@ -33,6 +34,15 @@ export function EventsView() {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  if (isAggregated) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+        Cluster-wide events are only available in single-context mode. Pick one context to see
+        them.
+      </div>
+    )
+  }
 
   if (!selectedContext) {
     return (

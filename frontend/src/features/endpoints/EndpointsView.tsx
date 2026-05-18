@@ -39,8 +39,8 @@ export function EndpointsView() {
       setData={setEps}
       fetch={api.listEndpoints}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'Endpoints', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'Endpoints', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

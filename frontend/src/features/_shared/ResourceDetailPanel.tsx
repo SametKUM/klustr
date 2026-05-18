@@ -406,10 +406,10 @@ function PodTabs({
         {detail && <PodOverviewBody contextName={contextName} detail={detail} />}
       </TabsContent>
       <TabsContent value="logs" className="min-h-0 flex-1 p-0">
-        {detail && <PodLogsTab detail={detail} />}
+        {detail && <PodLogsTab detail={detail} contextName={contextName} />}
       </TabsContent>
       <TabsContent value="exec" className="min-h-0 flex-1 p-0">
-        {detail && <PodExecTab detail={detail} />}
+        {detail && <PodExecTab detail={detail} contextName={contextName} />}
       </TabsContent>
       <TabsContent value="events" className="min-h-0 flex-1 p-0">
         <EventsTab contextName={contextName} namespace={namespace} kind="Pod" name={name} />

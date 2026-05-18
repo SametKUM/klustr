@@ -57,8 +57,8 @@ export function ReplicaSetsView() {
       setData={setReplicaSets}
       fetch={api.listReplicaSets}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'ReplicaSet', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'ReplicaSet', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

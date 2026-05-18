@@ -42,8 +42,8 @@ export function ReplicationControllersView() {
       setData={setRCs}
       fetch={api.listReplicationControllers}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'ReplicationController', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'ReplicationController', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

@@ -45,8 +45,8 @@ export function HorizontalPodAutoscalersView() {
       setData={setHPAs}
       fetch={api.listHorizontalPodAutoscalers}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'HorizontalPodAutoscaler', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'HorizontalPodAutoscaler', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

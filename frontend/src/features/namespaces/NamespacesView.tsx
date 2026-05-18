@@ -44,7 +44,7 @@ export function NamespacesView() {
       setData={setNamespaces}
       fetch={(ctx) => api.listNamespaces(ctx)}
       columns={columns}
-      onRowClick={(row) => setSelectedResource({ kind: 'Namespace', namespace: '', name: row.name })}
+      onRowClick={(row, ctx) => setSelectedResource({ kind: 'Namespace', namespace: '', name: row.name, context: ctx })}
     />
   )
 }

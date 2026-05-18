@@ -38,8 +38,8 @@ export function ResourceQuotasView() {
       setData={setQuotas}
       fetch={api.listResourceQuotas}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'ResourceQuota', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'ResourceQuota', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

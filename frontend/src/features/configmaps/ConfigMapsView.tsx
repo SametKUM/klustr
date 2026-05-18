@@ -36,8 +36,8 @@ export function ConfigMapsView() {
       setData={setConfigMaps}
       fetch={api.listConfigMaps}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'ConfigMap', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'ConfigMap', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

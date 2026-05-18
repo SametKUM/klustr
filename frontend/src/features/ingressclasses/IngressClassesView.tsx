@@ -47,8 +47,8 @@ export function IngressClassesView() {
       setData={setClasses}
       fetch={(ctx) => api.listIngressClasses(ctx)}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'IngressClass', namespace: '', name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'IngressClass', namespace: '', name: row.name, context: ctx })
       }
     />
   )

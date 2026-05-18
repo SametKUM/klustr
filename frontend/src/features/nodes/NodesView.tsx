@@ -55,7 +55,7 @@ export function NodesView() {
       setData={setNodes}
       fetch={(ctx) => api.listNodes(ctx)}
       columns={columns}
-      onRowClick={(row) => setSelectedResource({ kind: 'Node', namespace: '', name: row.name })}
+      onRowClick={(row, ctx) => setSelectedResource({ kind: 'Node', namespace: '', name: row.name, context: ctx })}
     />
   )
 }

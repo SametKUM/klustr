@@ -48,8 +48,8 @@ export function ServicesView() {
       setData={setServices}
       fetch={api.listServices}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'Service', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'Service', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

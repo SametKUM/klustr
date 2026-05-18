@@ -56,7 +56,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import { onKubeChange, onPFUpdate } from '@/lib/events'
-import { useUIStore, type ResourceView } from '@/store/ui'
+import { useActiveContexts, useUIStore, type ResourceView } from '@/store/ui'
 import { useResources } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
 import { useHelmStore } from '@/store/helm'
@@ -238,6 +238,7 @@ function isEditableTarget(t: EventTarget | null): boolean {
 }
 
 function App() {
+  const activeContexts = useActiveContexts()
   const selectedContext = useUIStore((s) => s.selectedContext)
   const selectedView = useUIStore((s) => s.selectedView)
   const setSelectedView = useUIStore((s) => s.setSelectedView)
@@ -285,18 +286,22 @@ function App() {
   }, [setPortForwards])
 
   useEffect(() => {
-    if (!selectedContext) return
+    if (activeContexts.length === 0) return
     resetResources()
     resetCRDs()
     resetHelm()
-    api.startWatch(selectedContext).catch(console.error)
+    for (const ctx of activeContexts) {
+      api.startWatch(ctx).catch(console.error)
+    }
     return () => {
-      api.stopWatch(selectedContext).catch(console.error)
+      for (const ctx of activeContexts) {
+        api.stopWatch(ctx).catch(console.error)
+      }
       resetResources()
       resetCRDs()
       resetHelm()
     }
-  }, [selectedContext, resetResources, resetCRDs, resetHelm])
+  }, [activeContexts, resetResources, resetCRDs, resetHelm])
 
   useEffect(() => {
     if (!selectedContext) {
@@ -315,7 +320,7 @@ function App() {
     })
   }, [selectedContext, setCRDs])
 
-  if (!selectedContext) {
+  if (activeContexts.length === 0) {
     return (
       <TooltipProvider delayDuration={250}>
         <ConnectionsScreen />
@@ -413,7 +418,10 @@ function App() {
 
       <StatusBar />
 
-      <ResourceDetailPanel contextName={selectedContext} resource={selectedResource} />
+      <ResourceDetailPanel
+        contextName={selectedResource?.context ?? selectedContext}
+        resource={selectedResource}
+      />
       <RowActionDialogs />
       <KeyboardShortcutsDialog />
       <CommandPalette />

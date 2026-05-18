@@ -12,15 +12,16 @@ import {
 import { type NamespaceInfo } from '@/lib/api'
 import { useResources } from '@/store/resources'
 import { selectFavorites, useNamespaceFavorites } from '@/store/namespaceFavorites'
-import { useUIStore } from '@/store/ui'
+import { useActiveContexts, useUIStore } from '@/store/ui'
 
 export function NamespaceSearchPalette() {
   const [open, setOpen] = useState(false)
+  const activeContexts = useActiveContexts()
   const selectedContext = useUIStore((s) => s.selectedContext)
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const toggleSelectedNamespace = useUIStore((s) => s.toggleSelectedNamespace)
   const clearSelectedNamespaces = useUIStore((s) => s.clearSelectedNamespaces)
-  const namespaces = useResources((s) => s.namespaces)
+  const namespacesByContext = useResources((s) => s.namespaces)
   const favorites = useNamespaceFavorites(selectFavorites(selectedContext))
   const toggleFavorite = useNamespaceFavorites((s) => s.toggle)
 
@@ -35,17 +36,28 @@ export function NamespaceSearchPalette() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const unifiedNamespaces = useMemo<NamespaceInfo[]>(() => {
+    const byName = new Map<string, NamespaceInfo>()
+    for (const ctx of activeContexts) {
+      const list = namespacesByContext[ctx] ?? []
+      for (const ns of list) {
+        if (!byName.has(ns.name)) byName.set(ns.name, ns)
+      }
+    }
+    return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [activeContexts, namespacesByContext])
+
   const favoriteSet = useMemo(() => new Set(favorites), [favorites])
   const { favoriteNamespaces, otherNamespaces } = useMemo(() => {
     const fav: NamespaceInfo[] = []
     const others: NamespaceInfo[] = []
-    for (const ns of namespaces) {
+    for (const ns of unifiedNamespaces) {
       if (favoriteSet.has(ns.name)) fav.push(ns)
       else others.push(ns)
     }
     fav.sort((a, b) => a.name.localeCompare(b.name))
     return { favoriteNamespaces: fav, otherNamespaces: others }
-  }, [namespaces, favoriteSet])
+  }, [unifiedNamespaces, favoriteSet])
 
   return (
     <CommandDialog
@@ -57,7 +69,7 @@ export function NamespaceSearchPalette() {
       <CommandInput placeholder="Search namespaces…" />
       <CommandList>
         <CommandEmpty>
-          {selectedContext ? 'No matching namespaces.' : 'Select a context first.'}
+          {activeContexts.length > 0 ? 'No matching namespaces.' : 'Select a context first.'}
         </CommandEmpty>
         <CommandGroup heading="Scope">
           <CommandItem value="__all__ All namespaces" onSelect={() => clearSelectedNamespaces()}>

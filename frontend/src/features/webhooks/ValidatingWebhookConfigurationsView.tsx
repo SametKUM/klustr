@@ -35,8 +35,8 @@ export function ValidatingWebhookConfigurationsView() {
       setData={setList}
       fetch={(ctx) => api.listValidatingWebhookConfigurations(ctx)}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'ValidatingWebhookConfiguration', namespace: '', name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'ValidatingWebhookConfiguration', namespace: '', name: row.name, context: ctx })
       }
     />
   )

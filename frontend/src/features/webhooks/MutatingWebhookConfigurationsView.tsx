@@ -35,8 +35,8 @@ export function MutatingWebhookConfigurationsView() {
       setData={setList}
       fetch={(ctx) => api.listMutatingWebhookConfigurations(ctx)}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'MutatingWebhookConfiguration', namespace: '', name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'MutatingWebhookConfiguration', namespace: '', name: row.name, context: ctx })
       }
     />
   )

@@ -3,8 +3,9 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type CRDInfo, type CustomResourceInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { type ByContext } from '@/store/resources'
 import { useCRDStore, crdKey } from '@/store/crds'
-import { useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore } from '@/store/ui'
 
 const columnHelper = createColumnHelper<CustomResourceInfo>()
 
@@ -17,6 +18,7 @@ type Props = {
 export function CustomResourceView({ crd }: Props) {
   const key = crdKey(crd)
   const selectedContext = useUIStore((s) => s.selectedContext)
+  const isAggregated = useIsAggregated()
   const customResources = useCRDStore((s) => s.customResources[key] ?? EMPTY_CRS)
   const setCustomResources = useCRDStore((s) => s.setCustomResources)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
@@ -59,8 +61,12 @@ export function CustomResourceView({ crd }: Props) {
     return cols
   }, [crd.scope])
 
+  const data = useMemo<ByContext<CustomResourceInfo>>(
+    () => (selectedContext ? { [selectedContext]: customResources } : {}),
+    [selectedContext, customResources],
+  )
   const setData = useCallback(
-    (list: CustomResourceInfo[]) => setCustomResources(key, list),
+    (_ctx: string, list: CustomResourceInfo[]) => setCustomResources(key, list),
     [key, setCustomResources],
   )
   const fetch = useCallback(
@@ -69,11 +75,12 @@ export function CustomResourceView({ crd }: Props) {
     [crd.group, crd.version, crd.resource],
   )
   const onRowClick = useCallback(
-    (row: CustomResourceInfo) =>
+    (row: CustomResourceInfo, ctx: string) =>
       setSelectedResource({
         kind: crd.kind,
         namespace: row.namespace,
         name: row.name,
+        context: ctx,
         gvr: { group: crd.group, version: crd.version, resource: crd.resource },
       }),
     [crd.group, crd.version, crd.resource, crd.kind, setSelectedResource],
@@ -82,6 +89,15 @@ export function CustomResourceView({ crd }: Props) {
     () => ({ singular: crd.singular || crd.kind.toLowerCase(), plural: crd.resource }),
     [crd.singular, crd.kind, crd.resource],
   )
+
+  if (isAggregated) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
+        Custom resources are only available in single-context mode. Pick one context to browse{' '}
+        {crd.kind}.
+      </div>
+    )
+  }
 
   if (error) {
     return (
@@ -104,7 +120,7 @@ export function CustomResourceView({ crd }: Props) {
       kind={`cr:${crd.group}/${crd.resource}`}
       noun={noun}
       scope={crd.scope === 'Namespaced' ? 'namespaced' : 'cluster'}
-      data={customResources}
+      data={data}
       setData={setData}
       fetch={fetch}
       columns={columns}

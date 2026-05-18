@@ -36,8 +36,8 @@ export function LimitRangesView() {
       setData={setLRs}
       fetch={api.listLimitRanges}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'LimitRange', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'LimitRange', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

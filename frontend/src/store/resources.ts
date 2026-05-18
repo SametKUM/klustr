@@ -31,136 +31,199 @@ import type {
   StatefulSetInfo,
 } from '@/lib/api'
 
+export type ByContext<T> = Record<string, T[]>
+
 type ResourcesState = {
-  namespaces: NamespaceInfo[]
-  pods: PodInfo[]
-  deployments: DeploymentInfo[]
-  services: ServiceInfo[]
-  configMaps: ConfigMapInfo[]
-  secrets: SecretInfo[]
-  statefulSets: StatefulSetInfo[]
-  daemonSets: DaemonSetInfo[]
-  replicaSets: ReplicaSetInfo[]
-  persistentVolumeClaims: PersistentVolumeClaimInfo[]
-  persistentVolumes: PersistentVolumeInfo[]
-  storageClasses: StorageClassInfo[]
-  networkPolicies: NetworkPolicyInfo[]
-  horizontalPodAutoscalers: HorizontalPodAutoscalerInfo[]
-  podDisruptionBudgets: PodDisruptionBudgetInfo[]
-  endpointSlices: EndpointSliceInfo[]
-  resourceQuotas: ResourceQuotaInfo[]
-  limitRanges: LimitRangeInfo[]
-  ingressClasses: IngressClassInfo[]
-  priorityClasses: PriorityClassInfo[]
-  runtimeClasses: RuntimeClassInfo[]
-  leases: LeaseInfo[]
-  mutatingWebhookConfigurations: WebhookConfigurationInfo[]
-  validatingWebhookConfigurations: WebhookConfigurationInfo[]
-  endpoints: EndpointsInfo[]
-  replicationControllers: ReplicationControllerInfo[]
-  jobs: JobInfo[]
-  cronJobs: CronJobInfo[]
-  ingresses: IngressInfo[]
-  nodes: NodeInfo[]
-  setNamespaces: (list: NamespaceInfo[]) => void
-  setPods: (list: PodInfo[]) => void
-  setDeployments: (list: DeploymentInfo[]) => void
-  setServices: (list: ServiceInfo[]) => void
-  setConfigMaps: (list: ConfigMapInfo[]) => void
-  setSecrets: (list: SecretInfo[]) => void
-  setStatefulSets: (list: StatefulSetInfo[]) => void
-  setDaemonSets: (list: DaemonSetInfo[]) => void
-  setReplicaSets: (list: ReplicaSetInfo[]) => void
-  setPersistentVolumeClaims: (list: PersistentVolumeClaimInfo[]) => void
-  setPersistentVolumes: (list: PersistentVolumeInfo[]) => void
-  setStorageClasses: (list: StorageClassInfo[]) => void
-  setNetworkPolicies: (list: NetworkPolicyInfo[]) => void
-  setHorizontalPodAutoscalers: (list: HorizontalPodAutoscalerInfo[]) => void
-  setPodDisruptionBudgets: (list: PodDisruptionBudgetInfo[]) => void
-  setEndpointSlices: (list: EndpointSliceInfo[]) => void
-  setResourceQuotas: (list: ResourceQuotaInfo[]) => void
-  setLimitRanges: (list: LimitRangeInfo[]) => void
-  setIngressClasses: (list: IngressClassInfo[]) => void
-  setPriorityClasses: (list: PriorityClassInfo[]) => void
-  setRuntimeClasses: (list: RuntimeClassInfo[]) => void
-  setLeases: (list: LeaseInfo[]) => void
-  setMutatingWebhookConfigurations: (list: WebhookConfigurationInfo[]) => void
-  setValidatingWebhookConfigurations: (list: WebhookConfigurationInfo[]) => void
-  setEndpoints: (list: EndpointsInfo[]) => void
-  setReplicationControllers: (list: ReplicationControllerInfo[]) => void
-  setJobs: (list: JobInfo[]) => void
-  setCronJobs: (list: CronJobInfo[]) => void
-  setIngresses: (list: IngressInfo[]) => void
-  setNodes: (list: NodeInfo[]) => void
+  namespaces: ByContext<NamespaceInfo>
+  pods: ByContext<PodInfo>
+  deployments: ByContext<DeploymentInfo>
+  services: ByContext<ServiceInfo>
+  configMaps: ByContext<ConfigMapInfo>
+  secrets: ByContext<SecretInfo>
+  statefulSets: ByContext<StatefulSetInfo>
+  daemonSets: ByContext<DaemonSetInfo>
+  replicaSets: ByContext<ReplicaSetInfo>
+  persistentVolumeClaims: ByContext<PersistentVolumeClaimInfo>
+  persistentVolumes: ByContext<PersistentVolumeInfo>
+  storageClasses: ByContext<StorageClassInfo>
+  networkPolicies: ByContext<NetworkPolicyInfo>
+  horizontalPodAutoscalers: ByContext<HorizontalPodAutoscalerInfo>
+  podDisruptionBudgets: ByContext<PodDisruptionBudgetInfo>
+  endpointSlices: ByContext<EndpointSliceInfo>
+  resourceQuotas: ByContext<ResourceQuotaInfo>
+  limitRanges: ByContext<LimitRangeInfo>
+  ingressClasses: ByContext<IngressClassInfo>
+  priorityClasses: ByContext<PriorityClassInfo>
+  runtimeClasses: ByContext<RuntimeClassInfo>
+  leases: ByContext<LeaseInfo>
+  mutatingWebhookConfigurations: ByContext<WebhookConfigurationInfo>
+  validatingWebhookConfigurations: ByContext<WebhookConfigurationInfo>
+  endpoints: ByContext<EndpointsInfo>
+  replicationControllers: ByContext<ReplicationControllerInfo>
+  jobs: ByContext<JobInfo>
+  cronJobs: ByContext<CronJobInfo>
+  ingresses: ByContext<IngressInfo>
+  nodes: ByContext<NodeInfo>
+  setNamespaces: (ctx: string, list: NamespaceInfo[]) => void
+  setPods: (ctx: string, list: PodInfo[]) => void
+  setDeployments: (ctx: string, list: DeploymentInfo[]) => void
+  setServices: (ctx: string, list: ServiceInfo[]) => void
+  setConfigMaps: (ctx: string, list: ConfigMapInfo[]) => void
+  setSecrets: (ctx: string, list: SecretInfo[]) => void
+  setStatefulSets: (ctx: string, list: StatefulSetInfo[]) => void
+  setDaemonSets: (ctx: string, list: DaemonSetInfo[]) => void
+  setReplicaSets: (ctx: string, list: ReplicaSetInfo[]) => void
+  setPersistentVolumeClaims: (ctx: string, list: PersistentVolumeClaimInfo[]) => void
+  setPersistentVolumes: (ctx: string, list: PersistentVolumeInfo[]) => void
+  setStorageClasses: (ctx: string, list: StorageClassInfo[]) => void
+  setNetworkPolicies: (ctx: string, list: NetworkPolicyInfo[]) => void
+  setHorizontalPodAutoscalers: (ctx: string, list: HorizontalPodAutoscalerInfo[]) => void
+  setPodDisruptionBudgets: (ctx: string, list: PodDisruptionBudgetInfo[]) => void
+  setEndpointSlices: (ctx: string, list: EndpointSliceInfo[]) => void
+  setResourceQuotas: (ctx: string, list: ResourceQuotaInfo[]) => void
+  setLimitRanges: (ctx: string, list: LimitRangeInfo[]) => void
+  setIngressClasses: (ctx: string, list: IngressClassInfo[]) => void
+  setPriorityClasses: (ctx: string, list: PriorityClassInfo[]) => void
+  setRuntimeClasses: (ctx: string, list: RuntimeClassInfo[]) => void
+  setLeases: (ctx: string, list: LeaseInfo[]) => void
+  setMutatingWebhookConfigurations: (ctx: string, list: WebhookConfigurationInfo[]) => void
+  setValidatingWebhookConfigurations: (ctx: string, list: WebhookConfigurationInfo[]) => void
+  setEndpoints: (ctx: string, list: EndpointsInfo[]) => void
+  setReplicationControllers: (ctx: string, list: ReplicationControllerInfo[]) => void
+  setJobs: (ctx: string, list: JobInfo[]) => void
+  setCronJobs: (ctx: string, list: CronJobInfo[]) => void
+  setIngresses: (ctx: string, list: IngressInfo[]) => void
+  setNodes: (ctx: string, list: NodeInfo[]) => void
+  clearContext: (ctx: string) => void
   reset: () => void
 }
 
-function emptyLists() {
-  return {
-    namespaces: [] as NamespaceInfo[],
-    pods: [] as PodInfo[],
-    deployments: [] as DeploymentInfo[],
-    services: [] as ServiceInfo[],
-    configMaps: [] as ConfigMapInfo[],
-    secrets: [] as SecretInfo[],
-    statefulSets: [] as StatefulSetInfo[],
-    daemonSets: [] as DaemonSetInfo[],
-    replicaSets: [] as ReplicaSetInfo[],
-    persistentVolumeClaims: [] as PersistentVolumeClaimInfo[],
-    persistentVolumes: [] as PersistentVolumeInfo[],
-    storageClasses: [] as StorageClassInfo[],
-    networkPolicies: [] as NetworkPolicyInfo[],
-    horizontalPodAutoscalers: [] as HorizontalPodAutoscalerInfo[],
-    podDisruptionBudgets: [] as PodDisruptionBudgetInfo[],
-    endpointSlices: [] as EndpointSliceInfo[],
-    resourceQuotas: [] as ResourceQuotaInfo[],
-    limitRanges: [] as LimitRangeInfo[],
-    ingressClasses: [] as IngressClassInfo[],
-    priorityClasses: [] as PriorityClassInfo[],
-    runtimeClasses: [] as RuntimeClassInfo[],
-    leases: [] as LeaseInfo[],
-    mutatingWebhookConfigurations: [] as WebhookConfigurationInfo[],
-    validatingWebhookConfigurations: [] as WebhookConfigurationInfo[],
-    endpoints: [] as EndpointsInfo[],
-    replicationControllers: [] as ReplicationControllerInfo[],
-    jobs: [] as JobInfo[],
-    cronJobs: [] as CronJobInfo[],
-    ingresses: [] as IngressInfo[],
-    nodes: [] as NodeInfo[],
+const KIND_KEYS = [
+  'namespaces',
+  'pods',
+  'deployments',
+  'services',
+  'configMaps',
+  'secrets',
+  'statefulSets',
+  'daemonSets',
+  'replicaSets',
+  'persistentVolumeClaims',
+  'persistentVolumes',
+  'storageClasses',
+  'networkPolicies',
+  'horizontalPodAutoscalers',
+  'podDisruptionBudgets',
+  'endpointSlices',
+  'resourceQuotas',
+  'limitRanges',
+  'ingressClasses',
+  'priorityClasses',
+  'runtimeClasses',
+  'leases',
+  'mutatingWebhookConfigurations',
+  'validatingWebhookConfigurations',
+  'endpoints',
+  'replicationControllers',
+  'jobs',
+  'cronJobs',
+  'ingresses',
+  'nodes',
+] as const
+
+type KindKey = (typeof KIND_KEYS)[number]
+
+function emptyMaps(): Pick<ResourcesState, KindKey> {
+  const out = {} as Record<KindKey, ByContext<unknown>>
+  for (const k of KIND_KEYS) out[k] = {}
+  return out as Pick<ResourcesState, KindKey>
+}
+
+function withCtx<T>(map: ByContext<T>, ctx: string, list: T[]): ByContext<T> {
+  return { ...map, [ctx]: list }
+}
+
+function withoutCtx<T>(map: ByContext<T>, ctx: string): ByContext<T> {
+  if (!(ctx in map)) return map
+  const next = { ...map }
+  delete next[ctx]
+  return next
+}
+
+export function mergeForContexts<T>(
+  byContext: ByContext<T>,
+  contexts: readonly string[],
+): T[] {
+  const out: T[] = []
+  for (const ctx of contexts) {
+    const list = byContext[ctx]
+    if (list && list.length > 0) {
+      for (const item of list) out.push(item)
+    }
   }
+  return out
 }
 
 export const useResources = create<ResourcesState>((set) => ({
-  ...emptyLists(),
-  setNamespaces: (list) => set({ namespaces: list }),
-  setPods: (list) => set({ pods: list }),
-  setDeployments: (list) => set({ deployments: list }),
-  setServices: (list) => set({ services: list }),
-  setConfigMaps: (list) => set({ configMaps: list }),
-  setSecrets: (list) => set({ secrets: list }),
-  setStatefulSets: (list) => set({ statefulSets: list }),
-  setDaemonSets: (list) => set({ daemonSets: list }),
-  setReplicaSets: (list) => set({ replicaSets: list }),
-  setPersistentVolumeClaims: (list) => set({ persistentVolumeClaims: list }),
-  setPersistentVolumes: (list) => set({ persistentVolumes: list }),
-  setStorageClasses: (list) => set({ storageClasses: list }),
-  setNetworkPolicies: (list) => set({ networkPolicies: list }),
-  setHorizontalPodAutoscalers: (list) => set({ horizontalPodAutoscalers: list }),
-  setPodDisruptionBudgets: (list) => set({ podDisruptionBudgets: list }),
-  setEndpointSlices: (list) => set({ endpointSlices: list }),
-  setResourceQuotas: (list) => set({ resourceQuotas: list }),
-  setLimitRanges: (list) => set({ limitRanges: list }),
-  setIngressClasses: (list) => set({ ingressClasses: list }),
-  setPriorityClasses: (list) => set({ priorityClasses: list }),
-  setRuntimeClasses: (list) => set({ runtimeClasses: list }),
-  setLeases: (list) => set({ leases: list }),
-  setMutatingWebhookConfigurations: (list) => set({ mutatingWebhookConfigurations: list }),
-  setValidatingWebhookConfigurations: (list) => set({ validatingWebhookConfigurations: list }),
-  setEndpoints: (list) => set({ endpoints: list }),
-  setReplicationControllers: (list) => set({ replicationControllers: list }),
-  setJobs: (list) => set({ jobs: list }),
-  setCronJobs: (list) => set({ cronJobs: list }),
-  setIngresses: (list) => set({ ingresses: list }),
-  setNodes: (list) => set({ nodes: list }),
-  reset: () => set(emptyLists()),
+  ...emptyMaps(),
+  setNamespaces: (ctx, list) => set((s) => ({ namespaces: withCtx(s.namespaces, ctx, list) })),
+  setPods: (ctx, list) => set((s) => ({ pods: withCtx(s.pods, ctx, list) })),
+  setDeployments: (ctx, list) => set((s) => ({ deployments: withCtx(s.deployments, ctx, list) })),
+  setServices: (ctx, list) => set((s) => ({ services: withCtx(s.services, ctx, list) })),
+  setConfigMaps: (ctx, list) => set((s) => ({ configMaps: withCtx(s.configMaps, ctx, list) })),
+  setSecrets: (ctx, list) => set((s) => ({ secrets: withCtx(s.secrets, ctx, list) })),
+  setStatefulSets: (ctx, list) => set((s) => ({ statefulSets: withCtx(s.statefulSets, ctx, list) })),
+  setDaemonSets: (ctx, list) => set((s) => ({ daemonSets: withCtx(s.daemonSets, ctx, list) })),
+  setReplicaSets: (ctx, list) => set((s) => ({ replicaSets: withCtx(s.replicaSets, ctx, list) })),
+  setPersistentVolumeClaims: (ctx, list) =>
+    set((s) => ({ persistentVolumeClaims: withCtx(s.persistentVolumeClaims, ctx, list) })),
+  setPersistentVolumes: (ctx, list) =>
+    set((s) => ({ persistentVolumes: withCtx(s.persistentVolumes, ctx, list) })),
+  setStorageClasses: (ctx, list) =>
+    set((s) => ({ storageClasses: withCtx(s.storageClasses, ctx, list) })),
+  setNetworkPolicies: (ctx, list) =>
+    set((s) => ({ networkPolicies: withCtx(s.networkPolicies, ctx, list) })),
+  setHorizontalPodAutoscalers: (ctx, list) =>
+    set((s) => ({
+      horizontalPodAutoscalers: withCtx(s.horizontalPodAutoscalers, ctx, list),
+    })),
+  setPodDisruptionBudgets: (ctx, list) =>
+    set((s) => ({ podDisruptionBudgets: withCtx(s.podDisruptionBudgets, ctx, list) })),
+  setEndpointSlices: (ctx, list) =>
+    set((s) => ({ endpointSlices: withCtx(s.endpointSlices, ctx, list) })),
+  setResourceQuotas: (ctx, list) =>
+    set((s) => ({ resourceQuotas: withCtx(s.resourceQuotas, ctx, list) })),
+  setLimitRanges: (ctx, list) => set((s) => ({ limitRanges: withCtx(s.limitRanges, ctx, list) })),
+  setIngressClasses: (ctx, list) =>
+    set((s) => ({ ingressClasses: withCtx(s.ingressClasses, ctx, list) })),
+  setPriorityClasses: (ctx, list) =>
+    set((s) => ({ priorityClasses: withCtx(s.priorityClasses, ctx, list) })),
+  setRuntimeClasses: (ctx, list) =>
+    set((s) => ({ runtimeClasses: withCtx(s.runtimeClasses, ctx, list) })),
+  setLeases: (ctx, list) => set((s) => ({ leases: withCtx(s.leases, ctx, list) })),
+  setMutatingWebhookConfigurations: (ctx, list) =>
+    set((s) => ({
+      mutatingWebhookConfigurations: withCtx(s.mutatingWebhookConfigurations, ctx, list),
+    })),
+  setValidatingWebhookConfigurations: (ctx, list) =>
+    set((s) => ({
+      validatingWebhookConfigurations: withCtx(s.validatingWebhookConfigurations, ctx, list),
+    })),
+  setEndpoints: (ctx, list) => set((s) => ({ endpoints: withCtx(s.endpoints, ctx, list) })),
+  setReplicationControllers: (ctx, list) =>
+    set((s) => ({ replicationControllers: withCtx(s.replicationControllers, ctx, list) })),
+  setJobs: (ctx, list) => set((s) => ({ jobs: withCtx(s.jobs, ctx, list) })),
+  setCronJobs: (ctx, list) => set((s) => ({ cronJobs: withCtx(s.cronJobs, ctx, list) })),
+  setIngresses: (ctx, list) => set((s) => ({ ingresses: withCtx(s.ingresses, ctx, list) })),
+  setNodes: (ctx, list) => set((s) => ({ nodes: withCtx(s.nodes, ctx, list) })),
+  clearContext: (ctx) =>
+    set((s) => {
+      const next = {} as Partial<Record<KindKey, ByContext<unknown>>>
+      for (const k of KIND_KEYS) {
+        const map = s[k] as ByContext<unknown>
+        if (ctx in map) next[k] = withoutCtx(map, ctx)
+      }
+      return next as Partial<ResourcesState>
+    }),
+  reset: () => set(emptyMaps()),
 }))

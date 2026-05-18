@@ -40,8 +40,8 @@ export function NetworkPoliciesView() {
       setData={setPolicies}
       fetch={api.listNetworkPolicies}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'NetworkPolicy', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'NetworkPolicy', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

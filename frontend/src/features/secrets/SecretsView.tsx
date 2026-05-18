@@ -45,8 +45,8 @@ export function SecretsView() {
       setData={setSecrets}
       fetch={api.listSecrets}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'Secret', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'Secret', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

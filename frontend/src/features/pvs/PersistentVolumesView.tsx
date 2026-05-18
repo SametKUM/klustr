@@ -51,8 +51,8 @@ export function PersistentVolumesView() {
       setData={setPVs}
       fetch={(ctx) => api.listPersistentVolumes(ctx)}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'PersistentVolume', namespace: '', name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'PersistentVolume', namespace: '', name: row.name, context: ctx })
       }
     />
   )

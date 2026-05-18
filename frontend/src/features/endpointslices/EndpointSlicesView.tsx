@@ -39,8 +39,8 @@ export function EndpointSlicesView() {
       setData={setSlices}
       fetch={api.listEndpointSlices}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'EndpointSlice', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'EndpointSlice', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

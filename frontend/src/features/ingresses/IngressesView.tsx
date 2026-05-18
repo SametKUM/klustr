@@ -45,8 +45,8 @@ export function IngressesView() {
       setData={setIngresses}
       fetch={api.listIngresses}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'Ingress', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'Ingress', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

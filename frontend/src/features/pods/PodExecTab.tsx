@@ -11,10 +11,12 @@ const SHELLS = ['/bin/sh', '/bin/bash']
 
 type Props = {
   detail: PodDetail
+  contextName?: string | null
 }
 
-export function PodExecTab({ detail }: Props) {
-  const selectedContext = useUIStore((s) => s.selectedContext)
+export function PodExecTab({ detail, contextName }: Props) {
+  const fallbackContext = useUIStore((s) => s.selectedContext)
+  const selectedContext = contextName ?? fallbackContext
   const themeId = useUIStore((s) => s.themeId)
   const containerNames = useMemo(
     () => detail.containers.map((c) => c.name),

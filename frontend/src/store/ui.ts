@@ -260,6 +260,7 @@ export type SelectedResource = {
   namespace: string
   name: string
   gvr?: SelectedResourceGVR
+  context?: string
 }
 
 export type DetailTab = 'overview' | 'logs' | 'exec' | 'events' | 'yaml'

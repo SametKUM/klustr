@@ -15,10 +15,12 @@ const TAIL_LINES = 200
 
 type Props = {
   detail: PodDetail
+  contextName?: string | null
 }
 
-export function PodLogsTab({ detail }: Props) {
-  const selectedContext = useUIStore((s) => s.selectedContext)
+export function PodLogsTab({ detail, contextName }: Props) {
+  const fallbackContext = useUIStore((s) => s.selectedContext)
+  const selectedContext = contextName ?? fallbackContext
   const themeId = useUIStore((s) => s.themeId)
   const containerNames = useMemo(
     () => [...detail.initContainers.map((c) => c.name), ...detail.containers.map((c) => c.name)],

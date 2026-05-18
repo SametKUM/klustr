@@ -16,58 +16,68 @@ import { onKubeChange } from '@/lib/events'
 import { namespaceLabel } from '@/lib/namespaceFilter'
 import { useResources } from '@/store/resources'
 import { selectFavorites, useNamespaceFavorites } from '@/store/namespaceFavorites'
-import { useUIStore } from '@/store/ui'
+import { useActiveContexts, useUIStore } from '@/store/ui'
 
 export function NamespaceSelector() {
+  const activeContexts = useActiveContexts()
   const selectedContext = useUIStore((s) => s.selectedContext)
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const toggleSelectedNamespace = useUIStore((s) => s.toggleSelectedNamespace)
   const clearSelectedNamespaces = useUIStore((s) => s.clearSelectedNamespaces)
-  const namespaces = useResources((s) => s.namespaces)
+  const namespacesByContext = useResources((s) => s.namespaces)
   const setNamespaces = useResources((s) => s.setNamespaces)
   const favorites = useNamespaceFavorites(selectFavorites(selectedContext))
   const toggleFavorite = useNamespaceFavorites((s) => s.toggle)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (!selectedContext) {
-      setNamespaces([])
-      return
-    }
+    if (activeContexts.length === 0) return
     let cancelled = false
-    const reload = () => {
-      api.listNamespaces(selectedContext).then((list) => {
-        if (!cancelled) setNamespaces(list ?? [])
+    const reload = (ctx: string) => {
+      api.listNamespaces(ctx).then((list) => {
+        if (!cancelled) setNamespaces(ctx, list ?? [])
       })
     }
-    reload()
+    for (const ctx of activeContexts) reload(ctx)
     const unsub = onKubeChange('Namespace', (ctx) => {
-      if (ctx === selectedContext) reload()
+      if (activeContexts.includes(ctx)) reload(ctx)
     })
     return () => {
       cancelled = true
       unsub()
     }
-  }, [selectedContext, setNamespaces])
+  }, [activeContexts, setNamespaces])
+
+  const unifiedNamespaces = useMemo<NamespaceInfo[]>(() => {
+    const byName = new Map<string, NamespaceInfo>()
+    for (const ctx of activeContexts) {
+      const list = namespacesByContext[ctx] ?? []
+      for (const ns of list) {
+        if (!byName.has(ns.name)) byName.set(ns.name, ns)
+      }
+    }
+    return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [activeContexts, namespacesByContext])
 
   const favoriteSet = useMemo(() => new Set(favorites), [favorites])
   const { favoriteNamespaces, otherNamespaces } = useMemo(() => {
     const fav: NamespaceInfo[] = []
     const others: NamespaceInfo[] = []
-    for (const ns of namespaces) {
+    for (const ns of unifiedNamespaces) {
       if (favoriteSet.has(ns.name)) fav.push(ns)
       else others.push(ns)
     }
     fav.sort((a, b) => a.name.localeCompare(b.name))
     return { favoriteNamespaces: fav, otherNamespaces: others }
-  }, [namespaces, favoriteSet])
+  }, [unifiedNamespaces, favoriteSet])
 
-  const disabled = !selectedContext
-  const label = !selectedContext
-    ? 'No context'
-    : namespaces.length === 0
-      ? 'Loading…'
-      : namespaceLabel(selectedNamespaces)
+  const disabled = activeContexts.length === 0
+  const label =
+    activeContexts.length === 0
+      ? 'No context'
+      : unifiedNamespaces.length === 0
+        ? 'Loading…'
+        : namespaceLabel(selectedNamespaces)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

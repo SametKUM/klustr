@@ -41,8 +41,8 @@ export function DaemonSetsView() {
       setData={setDaemonSets}
       fetch={api.listDaemonSets}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'DaemonSet', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'DaemonSet', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )

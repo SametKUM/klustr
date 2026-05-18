@@ -13,8 +13,9 @@ import {
 import { ArrowDown, ArrowUp, ChevronsUpDown, Search, X } from 'lucide-react'
 import { onKubeChange } from '@/lib/events'
 import { namespaceQuery } from '@/lib/namespaceFilter'
-import { useUIStore, type ResourceKind } from '@/store/ui'
+import { useActiveContexts, useIsAggregated, useUIStore, type ResourceKind } from '@/store/ui'
 import { useTablePrefs } from '@/store/tablePrefs'
+import { type ByContext } from '@/store/resources'
 import { ColumnControls } from './ColumnControls'
 import { RowContextMenu } from './RowContextMenu'
 
@@ -24,20 +25,24 @@ type Scope = 'namespaced' | 'cluster'
 
 type Noun = { singular: string; plural: string }
 
+export const KLUSTR_CTX = '__klustrCtx' as const
+
+export type Tagged<T> = T & { [KLUSTR_CTX]: string }
+
 export type ResourceTableProps<T> = {
   kind: string
   noun: Noun
   scope: Scope
-  data: T[]
-  setData: (list: T[]) => void
+  data: ByContext<T>
+  setData: (ctx: string, list: T[]) => void
   fetch: (contextName: string, namespace: string) => Promise<T[]>
   columns: ColumnDef<T, any>[]
   defaultSort?: SortingState
-  onRowClick?: (row: T) => void
+  onRowClick?: (row: T, contextName: string) => void
 }
 
-function identityKey(r: RowIdentity): string {
-  return `${r.namespace ?? ''}/${r.name ?? ''}`
+function identityKey(ctx: string, r: RowIdentity): string {
+  return `${ctx}/${r.namespace ?? ''}/${r.name ?? ''}`
 }
 
 function columnId<T>(c: ColumnDef<T, any>): string {
@@ -92,7 +97,8 @@ export function ResourceTable<T>({
   defaultSort,
   onRowClick,
 }: ResourceTableProps<T>) {
-  const selectedContext = useUIStore((s) => s.selectedContext)
+  const activeContexts = useActiveContexts()
+  const isAggregated = useIsAggregated()
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const selectedResource = useUIStore((s) => s.selectedResource)
   const lastSelectedResource = useUIStore((s) => s.lastSelectedResource)
@@ -114,26 +120,41 @@ export function ResourceTable<T>({
   const [, setTick] = useState(0)
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
-  const [loaded, setLoaded] = useState(false)
+  const [loadedSet, setLoadedSet] = useState<Set<string>>(() => new Set())
   const fetchRef = useRef(fetch)
   fetchRef.current = fetch
   const setDataRef = useRef(setData)
   setDataRef.current = setData
 
-  // When the detail panel closes we flash the row that was just open.
+  const mergedData = useMemo<Tagged<T>[]>(() => {
+    const out: Tagged<T>[] = []
+    for (const ctx of activeContexts) {
+      const list = data[ctx]
+      if (!list || list.length === 0) continue
+      for (const item of list) {
+        if (scope === 'namespaced' && selectedNamespaces.length > 1) {
+          const ns = (item as RowIdentity).namespace ?? ''
+          if (!query.matches(ns)) continue
+        }
+        out.push({ ...(item as object), [KLUSTR_CTX]: ctx } as Tagged<T>)
+      }
+    }
+    return out
+  }, [activeContexts, data, scope, selectedNamespaces.length, query])
+
   useEffect(() => {
     if (selectedResource) return
     if (!lastSelectedResource) return
-    const key = identityKey(lastSelectedResource)
+    const ctx = lastSelectedResource.context ?? activeContexts[0] ?? ''
+    const key = identityKey(ctx, lastSelectedResource)
     setFlashKey(key)
     const id = window.setTimeout(() => setFlashKey(null), 1_200)
     return () => window.clearTimeout(id)
-  }, [selectedResource, lastSelectedResource])
+  }, [selectedResource, lastSelectedResource, activeContexts])
 
-  // Drop filter input when the table contents drop to 0 on context/namespace change
   useEffect(() => {
-    if (data.length === 0) setFilter('')
-  }, [data.length])
+    if (mergedData.length === 0) setFilter('')
+  }, [mergedData.length])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -148,41 +169,60 @@ export function ResourceTable<T>({
   }, [])
 
   useEffect(() => {
-    if (!selectedContext) {
-      setDataRef.current([])
-      setLoaded(false)
+    if (activeContexts.length === 0) {
+      setLoadedSet(new Set())
       return
     }
-    setLoaded(false)
+    setLoadedSet(new Set())
     let cancelled = false
-    const reload = () => {
-      fetchRef.current(selectedContext, query.apiNamespace).then((list) => {
+    const reload = (ctx: string) => {
+      fetchRef.current(ctx, query.apiNamespace).then((list) => {
         if (cancelled) return
-        const raw = list ?? []
-        if (scope === 'namespaced' && selectedNamespaces.length > 1) {
-          setDataRef.current(raw.filter((row) => query.matches((row as RowIdentity).namespace ?? '')))
-        } else {
-          setDataRef.current(raw)
-        }
-        setLoaded(true)
+        setDataRef.current(ctx, list ?? [])
+        setLoadedSet((prev) => {
+          if (prev.has(ctx)) return prev
+          const next = new Set(prev)
+          next.add(ctx)
+          return next
+        })
+      }).catch(() => {
+        if (cancelled) return
+        setDataRef.current(ctx, [])
+        setLoadedSet((prev) => {
+          if (prev.has(ctx)) return prev
+          const next = new Set(prev)
+          next.add(ctx)
+          return next
+        })
       })
     }
-    reload()
+    for (const ctx of activeContexts) reload(ctx)
     const unsub = onKubeChange(kind, (ctx) => {
-      if (ctx === selectedContext) reload()
+      if (activeContexts.includes(ctx)) reload(ctx)
     })
     return () => {
       cancelled = true
       unsub()
     }
-  }, [selectedContext, query, scope, selectedNamespaces.length, kind])
+  }, [activeContexts, query, kind])
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 10_000)
     return () => clearInterval(id)
   }, [])
 
-  const allColumnIds = useMemo(() => columns.map(columnId), [columns])
+  const tableColumns = useMemo<ColumnDef<Tagged<T>, any>[]>(() => {
+    const baseCols = columns as unknown as ColumnDef<Tagged<T>, any>[]
+    if (!isAggregated) return baseCols
+    const ctxCol: ColumnDef<Tagged<T>, any> = {
+      id: 'klustrContext',
+      header: 'Context',
+      accessorFn: (row) => row[KLUSTR_CTX],
+    }
+    return [ctxCol, ...baseCols]
+  }, [columns, isAggregated])
+
+  const allColumnIds = useMemo(() => tableColumns.map((c) => columnId(c)), [tableColumns])
   const columnOrder = useMemo(() => mergeOrder(allColumnIds, prefs?.order ?? []), [
     allColumnIds,
     prefs?.order,
@@ -194,8 +234,8 @@ export function ResourceTable<T>({
   }, [allColumnIds, prefs?.hidden])
 
   const table = useReactTable({
-    data,
-    columns,
+    data: mergedData,
+    columns: tableColumns,
     state: {
       sorting,
       globalFilter: filter,
@@ -229,7 +269,7 @@ export function ResourceTable<T>({
     getFilteredRowModel: getFilteredRowModel(),
   })
 
-  if (!selectedContext) {
+  if (activeContexts.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
         Select a kubeconfig context to see {noun.plural}.
@@ -237,9 +277,10 @@ export function ResourceTable<T>({
     )
   }
 
+  const allLoaded = activeContexts.every((c) => loadedSet.has(c))
   const filteredCount = table.getRowModel().rows.length
-  const total = data.length
-  const countLabel = !loaded
+  const total = mergedData.length
+  const countLabel = !allLoaded
     ? `Loading ${noun.plural}…`
     : filter
       ? `${filteredCount} of ${total} ${total === 1 ? noun.singular : noun.plural}`
@@ -252,6 +293,7 @@ export function ResourceTable<T>({
           ? ` in ${selectedNamespaces[0]}`
           : ` in ${selectedNamespaces.length} namespaces`
       : ''
+  const contextLabel = isAggregated ? ` across ${activeContexts.length} contexts` : ''
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -259,6 +301,7 @@ export function ResourceTable<T>({
         <span className="min-w-0">
           {countLabel}
           {scopeLabel}
+          {contextLabel}
         </span>
         <div className="relative ml-auto w-64 max-w-full">
           <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
@@ -346,10 +389,10 @@ export function ResourceTable<T>({
             {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + 1}
+                  colSpan={tableColumns.length + 1}
                   className="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
-                  {!loaded
+                  {!allLoaded
                     ? `Loading ${noun.plural}…`
                     : filter
                       ? `No ${noun.plural} matching "${filter}".`
@@ -358,10 +401,12 @@ export function ResourceTable<T>({
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => {
-                const identity = row.original as RowIdentity
-                const flashing = flashKey !== null && flashKey === identityKey(identity)
+                const tagged = row.original as Tagged<T>
+                const ctx = tagged[KLUSTR_CTX]
+                const identity = tagged as unknown as RowIdentity
+                const flashing = flashKey !== null && flashKey === identityKey(ctx, identity)
                 const canPortForward =
-                  kind === 'Pod' ? (row.original as { hasPorts?: boolean }).hasPorts === true : false
+                  kind === 'Pod' ? (tagged as { hasPorts?: boolean }).hasPorts === true : false
                 const rowEl = (
                   <tr
                     key={row.id}
@@ -370,7 +415,7 @@ export function ResourceTable<T>({
                       onRowClick ? 'cursor-pointer select-none' : '',
                       flashing ? 'bg-emerald-100/60 dark:bg-emerald-400/15' : '',
                     ].join(' ')}
-                    onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                    onClick={onRowClick ? () => onRowClick(tagged as unknown as T, ctx) : undefined}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
@@ -389,6 +434,7 @@ export function ResourceTable<T>({
                   <RowContextMenu
                     key={row.id}
                     kind={kind as ResourceKind}
+                    contextName={ctx}
                     namespace={identity.namespace ?? ''}
                     name={identity.name}
                     canPortForward={canPortForward}

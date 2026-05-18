@@ -14,7 +14,7 @@ import {
 import { onKubeChange } from '@/lib/events'
 import { formatAge } from '@/lib/time'
 import { namespaceQuery } from '@/lib/namespaceFilter'
-import { useUIStore, type ResourceView } from '@/store/ui'
+import { useIsAggregated, useUIStore, type ResourceView } from '@/store/ui'
 
 const POLL_INTERVAL_MS = 30_000
 const EVENTS_LIMIT = 200
@@ -28,6 +28,7 @@ type WorkloadHealth = {
 
 export function WorkloadsOverviewView() {
   const contextName = useUIStore((s) => s.selectedContext)
+  const isAggregated = useIsAggregated()
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const setSelectedView = useUIStore((s) => s.setSelectedView)
   const { apiNamespace, matches } = useMemo(
@@ -137,6 +138,14 @@ export function WorkloadsOverviewView() {
       unsubs.forEach((u) => u())
     }
   }, [contextName, apiNamespace, matches, multi])
+
+  if (isAggregated) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+        Workloads overview is only available in single-context mode. Pick one context to see it.
+      </div>
+    )
+  }
 
   if (!contextName) {
     return (

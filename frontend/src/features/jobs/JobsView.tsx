@@ -56,8 +56,8 @@ export function JobsView() {
       setData={setJobs}
       fetch={api.listJobs}
       columns={columns}
-      onRowClick={(row) =>
-        setSelectedResource({ kind: 'Job', namespace: row.namespace, name: row.name })
+      onRowClick={(row, ctx) =>
+        setSelectedResource({ kind: 'Job', namespace: row.namespace, name: row.name, context: ctx })
       }
     />
   )
