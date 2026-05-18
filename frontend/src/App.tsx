@@ -42,6 +42,8 @@ import { OverviewView } from '@/features/overview/OverviewView'
 import { WorkloadsOverviewView } from '@/features/overview/WorkloadsOverviewView'
 import { CustomResourceView } from '@/features/crds/CustomResourceView'
 import { CRDGroups } from '@/features/crds/CRDGroups'
+import { HelmReleasesView } from '@/features/helm/HelmReleasesView'
+import { HelmReposView } from '@/features/helm/HelmReposView'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
 import { RowActionDialogs } from '@/features/_shared/RowActionDialogs'
 import { KeyboardShortcutsDialog } from '@/features/_shared/KeyboardShortcutsDialog'
@@ -57,6 +59,7 @@ import { onKubeChange, onPFUpdate } from '@/lib/events'
 import { useUIStore, type ResourceView } from '@/store/ui'
 import { useResources } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
+import { useHelmStore } from '@/store/helm'
 import { usePortForwards } from '@/store/portForwards'
 
 type NavItem = { label: string; view?: ResourceView }
@@ -118,6 +121,13 @@ const RESOURCE_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { label: 'PersistentVolumeClaims', view: 'persistentvolumeclaims' },
       { label: 'PersistentVolumes', view: 'persistentvolumes' },
       { label: 'StorageClasses', view: 'storageclasses' },
+    ],
+  },
+  {
+    label: 'Helm',
+    items: [
+      { label: 'Releases', view: 'helmreleases' },
+      { label: 'Repositories', view: 'helmrepos' },
     ],
   },
 ]
@@ -203,6 +213,10 @@ function MainView() {
       return <NodesView />
     case 'namespaces':
       return <NamespacesView />
+    case 'helmreleases':
+      return <HelmReleasesView />
+    case 'helmrepos':
+      return <HelmReposView />
     default:
       return (
         <div className="flex flex-1 items-center justify-center">
@@ -242,6 +256,7 @@ function App() {
   const crds = useCRDStore((s) => s.crds)
   const setCRDs = useCRDStore((s) => s.setCRDs)
   const resetCRDs = useCRDStore((s) => s.reset)
+  const resetHelm = useHelmStore((s) => s.reset)
   const selectedCRDKey = useUIStore((s) => s.selectedCRDKey)
   const setSelectedCRD = useUIStore((s) => s.setSelectedCRD)
 
@@ -271,13 +286,17 @@ function App() {
 
   useEffect(() => {
     if (!selectedContext) return
+    resetResources()
+    resetCRDs()
+    resetHelm()
     api.startWatch(selectedContext).catch(console.error)
     return () => {
       api.stopWatch(selectedContext).catch(console.error)
       resetResources()
       resetCRDs()
+      resetHelm()
     }
-  }, [selectedContext, resetResources, resetCRDs])
+  }, [selectedContext, resetResources, resetCRDs, resetHelm])
 
   useEffect(() => {
     if (!selectedContext) {
