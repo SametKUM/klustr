@@ -104,6 +104,67 @@ export type CustomTagDef = {
 
 const CONTEXT_TAGS_KEY = 'klustr-context-tags'
 const CUSTOM_TAGS_KEY = 'klustr-custom-tags'
+const CONTEXT_GROUPS_KEY = 'klustr-context-groups'
+
+export type ContextGroup = {
+  id: string
+  name: string
+  contexts: string[]
+  color: TagColor
+}
+
+const VALID_GROUP_COLORS: ReadonlySet<TagColor> = new Set([
+  'rose',
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'lime',
+  'emerald',
+  'teal',
+  'cyan',
+  'sky',
+  'blue',
+  'indigo',
+  'violet',
+  'fuchsia',
+  'pink',
+  'slate',
+])
+
+function readContextGroups(): ContextGroup[] {
+  try {
+    const raw = localStorage.getItem(CONTEXT_GROUPS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    const out: ContextGroup[] = []
+    for (const item of parsed) {
+      if (!item || typeof item !== 'object') continue
+      const g = item as Partial<ContextGroup>
+      if (typeof g.id !== 'string' || typeof g.name !== 'string') continue
+      if (!Array.isArray(g.contexts)) continue
+      const contexts = g.contexts.filter((c): c is string => typeof c === 'string' && c.length > 0)
+      if (g.id.length === 0 || g.name.length === 0) continue
+      const color =
+        typeof g.color === 'string' && VALID_GROUP_COLORS.has(g.color as TagColor)
+          ? (g.color as TagColor)
+          : 'sky'
+      out.push({ id: g.id, name: g.name, contexts, color })
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
+function persistContextGroups(list: ContextGroup[]) {
+  if (list.length === 0) {
+    localStorage.removeItem(CONTEXT_GROUPS_KEY)
+  } else {
+    localStorage.setItem(CONTEXT_GROUPS_KEY, JSON.stringify(list))
+  }
+}
 
 export const MAX_TAGS_PER_CONTEXT = 3
 
@@ -273,6 +334,7 @@ export type PendingAction =
 type UIState = {
   selectedContext: string | null
   aggregatedContexts: string[]
+  activeGroupId: string | null
   selectedNamespaces: string[]
   selectedView: ResourceView
   selectedCRDKey: string | null
@@ -287,8 +349,9 @@ type UIState = {
   defaultContext: string | null
   contextTags: Record<string, ContextTag[]>
   customTags: Record<string, CustomTagDef>
+  contextGroups: ContextGroup[]
   setSelectedContext: (name: string | null) => void
-  setAggregatedContexts: (names: string[]) => void
+  setAggregatedContexts: (names: string[], groupId?: string | null) => void
   toggleAggregatedContext: (name: string) => void
   clearAggregatedContexts: () => void
   setSelectedNamespaces: (names: string[]) => void
@@ -308,6 +371,8 @@ type UIState = {
   clearContextTags: (name: string) => void
   addCustomTag: (def: CustomTagDef) => void
   removeCustomTag: (id: string) => void
+  upsertContextGroup: (group: ContextGroup) => void
+  removeContextGroup: (id: string) => void
 }
 
 function sameResource(a: SelectedResource, b: SelectedResource): boolean {
@@ -332,6 +397,7 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
 type NormalizedContexts = {
   selectedContext: string | null
   aggregatedContexts: string[]
+  activeGroupId: string | null
   selectedNamespaces: string[]
   selectedCRDKey: string | null
   selectedResource: SelectedResource | null
@@ -346,6 +412,7 @@ function normalizeContexts(next: readonly string[]): NormalizedContexts {
   return {
     selectedContext: selectedNext,
     aggregatedContexts: aggregatedNext,
+    activeGroupId: null,
     selectedNamespaces: [],
     selectedCRDKey: null,
     selectedResource: null,
@@ -377,6 +444,7 @@ export const useUIStore = create<UIState>((set) => {
   return {
     selectedContext: selectedAtBoot,
     aggregatedContexts: aggregatedAtBoot,
+    activeGroupId: null,
     selectedNamespaces: [],
     selectedView: 'overview',
     selectedCRDKey: null,
@@ -391,17 +459,19 @@ export const useUIStore = create<UIState>((set) => {
     defaultContext: initialDefaultContext,
     contextTags: readContextTags(),
     customTags: readCustomTags(),
+    contextGroups: readContextGroups(),
     setSelectedContext: (name) =>
       set((s) => {
         const next = name ? [name] : []
         if (sameList(next, effectiveContextList(s))) return s
         return normalizeContexts(next)
       }),
-    setAggregatedContexts: (names) =>
+    setAggregatedContexts: (names, groupId) =>
       set((s) => {
         const next = dedupeSorted(names)
-        if (sameList(next, effectiveContextList(s))) return s
-        return normalizeContexts(next)
+        const nextGroup = groupId ?? null
+        if (sameList(next, effectiveContextList(s)) && s.activeGroupId === nextGroup) return s
+        return { ...normalizeContexts(next), activeGroupId: nextGroup }
       }),
     toggleAggregatedContext: (name) =>
       set((s) => {
@@ -549,6 +619,30 @@ export const useUIStore = create<UIState>((set) => {
         localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(nextTags))
         localStorage.setItem(CONTEXT_TAGS_KEY, JSON.stringify(nextAssignments))
         return { customTags: nextTags, contextTags: nextAssignments }
+      }),
+    upsertContextGroup: (group) =>
+      set((s) => {
+        const color = VALID_GROUP_COLORS.has(group.color) ? group.color : 'sky'
+        const cleaned: ContextGroup = {
+          id: group.id,
+          name: group.name.trim(),
+          contexts: Array.from(new Set(group.contexts.filter((c) => c.length > 0))),
+          color,
+        }
+        if (cleaned.name.length === 0 || cleaned.contexts.length === 0) return s
+        const idx = s.contextGroups.findIndex((g) => g.id === cleaned.id)
+        const next = idx === -1
+          ? [...s.contextGroups, cleaned]
+          : s.contextGroups.map((g, i) => (i === idx ? cleaned : g))
+        persistContextGroups(next)
+        return { contextGroups: next }
+      }),
+    removeContextGroup: (id) =>
+      set((s) => {
+        const next = s.contextGroups.filter((g) => g.id !== id)
+        if (next.length === s.contextGroups.length) return s
+        persistContextGroups(next)
+        return { contextGroups: next }
       }),
   }
 })

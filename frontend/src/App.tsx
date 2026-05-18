@@ -3,7 +3,8 @@ import { ChevronRight } from 'lucide-react'
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ContextSwitcher } from '@/features/contexts/ContextSwitcher'
 import { ContextTagPicker } from '@/features/contexts/ContextTagPicker'
-import { resolveTagMeta } from '@/features/contexts/contextTagMeta'
+import { DisconnectButton } from '@/features/contexts/DisconnectButton'
+import { COLOR_PALETTE, resolveTagMeta } from '@/features/contexts/contextTagMeta'
 import { ConnectionStatus } from '@/features/contexts/ConnectionStatus'
 import { ConnectionsScreen } from '@/features/contexts/ConnectionsScreen'
 import { NamespaceSelector } from '@/features/contexts/NamespaceSelector'
@@ -252,6 +253,11 @@ function App() {
   )
   const customTags = useUIStore((s) => s.customTags)
   const currentTagMeta = resolveTagMeta(primaryTagId, customTags)
+  const activeGroupId = useUIStore((s) => s.activeGroupId)
+  const contextGroups = useUIStore((s) => s.contextGroups)
+  const activeGroup = activeGroupId ? contextGroups.find((g) => g.id === activeGroupId) : null
+  const activeGroupBarClass = activeGroup ? COLOR_PALETTE[activeGroup.color]?.barClass ?? null : null
+  const topBarClass = currentTagMeta?.barClass ?? activeGroupBarClass ?? null
   const resetResources = useResources((s) => s.reset)
   const setPortForwards = usePortForwards((s) => s.setList)
   const crds = useCRDStore((s) => s.crds)
@@ -332,9 +338,9 @@ function App() {
   return (
     <TooltipProvider delayDuration={250}>
     <div className="flex h-screen flex-col bg-background text-foreground">
-      {currentTagMeta && (
+      {topBarClass && (
         <div
-          className={`h-[3px] w-full shrink-0 ${currentTagMeta.barClass}`}
+          className={`h-[3px] w-full shrink-0 ${topBarClass}`}
           aria-hidden
         />
       )}
@@ -347,6 +353,7 @@ function App() {
         </div>
         <div className="flex items-center gap-1">
           <PortForwardIndicator />
+          <DisconnectButton />
           <ThemePicker />
         </div>
       </header>
