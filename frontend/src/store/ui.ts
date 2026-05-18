@@ -32,16 +32,25 @@ function applyThemeClasses(theme: ThemeDefinition) {
 }
 
 const COLLAPSED_NAV_GROUPS_KEY = 'klustr-collapsed-nav-groups'
+const EXPANDED_CRD_GROUPS_KEY = 'klustr-expanded-crd-groups'
 
-function readCollapsedNavGroups(): string[] {
+function readStringArray(key: string): string[] {
   try {
-    const raw = localStorage.getItem(COLLAPSED_NAV_GROUPS_KEY)
+    const raw = localStorage.getItem(key)
     if (!raw) return []
     const parsed = JSON.parse(raw) as unknown
     return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : []
   } catch {
     return []
   }
+}
+
+function readCollapsedNavGroups(): string[] {
+  return readStringArray(COLLAPSED_NAV_GROUPS_KEY)
+}
+
+function readExpandedCRDGroups(): string[] {
+  return readStringArray(EXPANDED_CRD_GROUPS_KEY)
 }
 
 const DEFAULT_CONTEXT_KEY = 'klustr-default-context'
@@ -223,10 +232,17 @@ export type ResourceKind =
   | 'Node'
   | 'Namespace'
 
+export type SelectedResourceGVR = {
+  group: string
+  version: string
+  resource: string
+}
+
 export type SelectedResource = {
-  kind: ResourceKind
+  kind: ResourceKind | string
   namespace: string
   name: string
+  gvr?: SelectedResourceGVR
 }
 
 export type DetailTab = 'overview' | 'logs' | 'exec' | 'events' | 'yaml'
@@ -240,6 +256,7 @@ type UIState = {
   selectedContext: string | null
   selectedNamespaces: string[]
   selectedView: ResourceView
+  selectedCRDKey: string | null
   selectedResource: SelectedResource | null
   lastSelectedResource: SelectedResource | null
   resourceNavStack: SelectedResource[]
@@ -247,6 +264,7 @@ type UIState = {
   pendingAction: PendingAction | null
   themeId: ThemeId
   collapsedNavGroups: string[]
+  expandedCRDGroups: string[]
   defaultContext: string | null
   contextTags: Record<string, ContextTag[]>
   customTags: Record<string, CustomTagDef>
@@ -255,12 +273,14 @@ type UIState = {
   toggleSelectedNamespace: (name: string) => void
   clearSelectedNamespaces: () => void
   setSelectedView: (view: ResourceView) => void
+  setSelectedCRD: (key: string | null) => void
   setSelectedResource: (resource: SelectedResource | null) => void
   openResource: (resource: SelectedResource, tab?: DetailTab) => void
   goBackResource: () => void
   setPendingAction: (action: PendingAction | null) => void
   setTheme: (id: ThemeId) => void
   toggleNavGroup: (label: string) => void
+  toggleCRDGroup: (label: string) => void
   setDefaultContext: (name: string | null) => void
   toggleContextTag: (name: string, tagId: string) => void
   clearContextTags: (name: string) => void
@@ -298,6 +318,7 @@ export const useUIStore = create<UIState>((set) => {
     selectedContext: initialDefaultContext,
     selectedNamespaces: [],
     selectedView: 'overview',
+    selectedCRDKey: null,
     selectedResource: null,
     lastSelectedResource: null,
     resourceNavStack: [],
@@ -305,6 +326,7 @@ export const useUIStore = create<UIState>((set) => {
     pendingAction: null,
     themeId: initialThemeId,
     collapsedNavGroups: readCollapsedNavGroups(),
+    expandedCRDGroups: readExpandedCRDGroups(),
     defaultContext: initialDefaultContext,
     contextTags: readContextTags(),
     customTags: readCustomTags(),
@@ -315,6 +337,7 @@ export const useUIStore = create<UIState>((set) => {
           : {
               selectedContext: name,
               selectedNamespaces: [],
+              selectedCRDKey: null,
               selectedResource: null,
               lastSelectedResource: null,
             },
@@ -333,6 +356,15 @@ export const useUIStore = create<UIState>((set) => {
     setSelectedView: (view) =>
       set({
         selectedView: view,
+        selectedCRDKey: null,
+        selectedResource: null,
+        lastSelectedResource: null,
+        resourceNavStack: [],
+        requestedTab: null,
+      }),
+    setSelectedCRD: (key) =>
+      set({
+        selectedCRDKey: key,
         selectedResource: null,
         lastSelectedResource: null,
         resourceNavStack: [],
@@ -383,6 +415,14 @@ export const useUIStore = create<UIState>((set) => {
           : [...s.collapsedNavGroups, label]
         localStorage.setItem(COLLAPSED_NAV_GROUPS_KEY, JSON.stringify(next))
         return { collapsedNavGroups: next }
+      }),
+    toggleCRDGroup: (label) =>
+      set((s) => {
+        const next = s.expandedCRDGroups.includes(label)
+          ? s.expandedCRDGroups.filter((g) => g !== label)
+          : [...s.expandedCRDGroups, label]
+        localStorage.setItem(EXPANDED_CRD_GROUPS_KEY, JSON.stringify(next))
+        return { expandedCRDGroups: next }
       }),
     setDefaultContext: (name) => {
       if (name && name.length > 0) {
