@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 import {
   DEFAULT_DARK,
   DEFAULT_LIGHT,
@@ -58,6 +59,20 @@ const DEFAULT_CONTEXT_KEY = 'klustr-default-context'
 function readDefaultContext(): string | null {
   const v = localStorage.getItem(DEFAULT_CONTEXT_KEY)
   return v && v.length > 0 ? v : null
+}
+
+const AGGREGATED_CONTEXTS_KEY = 'klustr-aggregated-contexts'
+
+function readAggregatedContexts(): string[] {
+  return readStringArray(AGGREGATED_CONTEXTS_KEY)
+}
+
+function persistAggregatedContexts(list: string[]) {
+  if (list.length === 0) {
+    localStorage.removeItem(AGGREGATED_CONTEXTS_KEY)
+  } else {
+    localStorage.setItem(AGGREGATED_CONTEXTS_KEY, JSON.stringify(list))
+  }
 }
 
 export type ContextTag = string
@@ -256,6 +271,7 @@ export type PendingAction =
 
 type UIState = {
   selectedContext: string | null
+  aggregatedContexts: string[]
   selectedNamespaces: string[]
   selectedView: ResourceView
   selectedCRDKey: string | null
@@ -271,6 +287,9 @@ type UIState = {
   contextTags: Record<string, ContextTag[]>
   customTags: Record<string, CustomTagDef>
   setSelectedContext: (name: string | null) => void
+  setAggregatedContexts: (names: string[]) => void
+  toggleAggregatedContext: (name: string) => void
+  clearAggregatedContexts: () => void
   setSelectedNamespaces: (names: string[]) => void
   toggleSelectedNamespace: (name: string) => void
   clearSelectedNamespaces: () => void
@@ -298,6 +317,41 @@ function dedupeSorted(names: readonly string[]): string[] {
   return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b))
 }
 
+type ContextSlice = Pick<UIState, 'selectedContext' | 'aggregatedContexts'>
+
+function effectiveContextList(s: ContextSlice): string[] {
+  if (s.aggregatedContexts.length > 0) return s.aggregatedContexts
+  return s.selectedContext ? [s.selectedContext] : []
+}
+
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((n, i) => b[i] === n)
+}
+
+type NormalizedContexts = {
+  selectedContext: string | null
+  aggregatedContexts: string[]
+  selectedNamespaces: string[]
+  selectedCRDKey: string | null
+  selectedResource: SelectedResource | null
+  lastSelectedResource: SelectedResource | null
+}
+
+function normalizeContexts(next: readonly string[]): NormalizedContexts {
+  const sortedNext = dedupeSorted(next)
+  const aggregatedNext = sortedNext.length >= 2 ? sortedNext : []
+  const selectedNext = sortedNext.length === 1 ? sortedNext[0] : null
+  persistAggregatedContexts(aggregatedNext)
+  return {
+    selectedContext: selectedNext,
+    aggregatedContexts: aggregatedNext,
+    selectedNamespaces: [],
+    selectedCRDKey: null,
+    selectedResource: null,
+    lastSelectedResource: null,
+  }
+}
+
 export const useUIStore = create<UIState>((set) => {
   const saved = readSavedThemeId()
   const initialThemeId = saved ?? systemThemeId()
@@ -315,9 +369,13 @@ export const useUIStore = create<UIState>((set) => {
   }
 
   const initialDefaultContext = readDefaultContext()
+  const initialAggregatedContexts = readAggregatedContexts()
+  const aggregatedAtBoot = initialAggregatedContexts.length >= 2 ? initialAggregatedContexts : []
+  const selectedAtBoot = aggregatedAtBoot.length > 0 ? null : initialDefaultContext
 
   return {
-    selectedContext: initialDefaultContext,
+    selectedContext: selectedAtBoot,
+    aggregatedContexts: aggregatedAtBoot,
     selectedNamespaces: [],
     selectedView: 'overview',
     selectedCRDKey: null,
@@ -333,17 +391,31 @@ export const useUIStore = create<UIState>((set) => {
     contextTags: readContextTags(),
     customTags: readCustomTags(),
     setSelectedContext: (name) =>
-      set((s) =>
-        s.selectedContext === name
-          ? s
-          : {
-              selectedContext: name,
-              selectedNamespaces: [],
-              selectedCRDKey: null,
-              selectedResource: null,
-              lastSelectedResource: null,
-            },
-      ),
+      set((s) => {
+        const next = name ? [name] : []
+        if (sameList(next, effectiveContextList(s))) return s
+        return normalizeContexts(next)
+      }),
+    setAggregatedContexts: (names) =>
+      set((s) => {
+        const next = dedupeSorted(names)
+        if (sameList(next, effectiveContextList(s))) return s
+        return normalizeContexts(next)
+      }),
+    toggleAggregatedContext: (name) =>
+      set((s) => {
+        const current = effectiveContextList(s)
+        const next = current.includes(name)
+          ? current.filter((n) => n !== name)
+          : dedupeSorted([...current, name])
+        if (sameList(next, current)) return s
+        return normalizeContexts(next)
+      }),
+    clearAggregatedContexts: () =>
+      set((s) => {
+        if (effectiveContextList(s).length === 0) return s
+        return normalizeContexts([])
+      }),
     setSelectedNamespaces: (names) =>
       set({ selectedNamespaces: dedupeSorted(names) }),
     toggleSelectedNamespace: (name) =>
@@ -479,3 +551,19 @@ export const useUIStore = create<UIState>((set) => {
       }),
   }
 })
+
+export function useActiveContexts(): string[] {
+  return useUIStore(
+    useShallow((s) =>
+      s.aggregatedContexts.length > 0
+        ? s.aggregatedContexts
+        : s.selectedContext
+          ? [s.selectedContext]
+          : [],
+    ),
+  )
+}
+
+export function useIsAggregated(): boolean {
+  return useUIStore((s) => s.aggregatedContexts.length > 1)
+}
