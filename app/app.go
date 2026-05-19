@@ -528,6 +528,10 @@ func (a *App) ListArgoApplicationResources(contextName, namespace, name string) 
 	return a.clients.ListArgoApplicationResources(a.ctx, contextName, namespace, name)
 }
 
+func (a *App) ListArgoApplications(contextName, namespace string) []kube.ArgoApplicationInfo {
+	return a.clients.ListArgoApplications(contextName, namespace)
+}
+
 func (a *App) ListEvents(contextName, namespace, kind, name string) ([]kube.EventInfo, error) {
 	return a.clients.ListEvents(a.ctx, contextName, namespace, kind, name)
 }

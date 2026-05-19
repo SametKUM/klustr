@@ -4,12 +4,113 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+// ArgoApplicationInfo is the row shape the Argo Applications view renders.
+// It pulls together fields that live in different sub-paths of the
+// Application CR so the frontend doesn't have to.
+type ArgoApplicationInfo struct {
+	Name           string `json:"name"`
+	Namespace      string `json:"namespace"`
+	Sync           string `json:"sync"`
+	Health         string `json:"health"`
+	Revision       string `json:"revision"`
+	Project        string `json:"project"`
+	RepoURL        string `json:"repoURL"`
+	Path           string `json:"path"`
+	TargetRevision string `json:"targetRevision"`
+	AutoSync       bool   `json:"autoSync"`
+	SelfHeal       bool   `json:"selfHeal"`
+	Prune          bool   `json:"prune"`
+	CreatedAt      string `json:"createdAt"`
+}
+
+// ListArgoApplications reads the cached Application CRs (via the same dynamic
+// informer the generic CR view uses) and projects each into ArgoApplicationInfo.
+// Caller should have started the CR watch first (the frontend does this on
+// view mount).
+func (m *ClientManager) ListArgoApplications(contextName, namespace string) []ArgoApplicationInfo {
+	w, ok := m.watcher(contextName)
+	if !ok || w.crd == nil {
+		return []ArgoApplicationInfo{}
+	}
+	w.crd.crMu.Lock()
+	started := w.crd.crWatches[argoApplicationGVR]
+	w.crd.crMu.Unlock()
+	if !started {
+		return []ArgoApplicationInfo{}
+	}
+	lister := w.crd.crFactory.ForResource(argoApplicationGVR).Lister()
+	var objs []runtime.Object
+	var err error
+	if namespace == "" {
+		objs, err = lister.List(labels.Everything())
+	} else {
+		objs, err = lister.ByNamespace(namespace).List(labels.Everything())
+	}
+	if err != nil {
+		return []ArgoApplicationInfo{}
+	}
+	out := make([]ArgoApplicationInfo, 0, len(objs))
+	for _, raw := range objs {
+		obj, ok := raw.(*unstructured.Unstructured)
+		if !ok {
+			continue
+		}
+		out = append(out, extractArgoApplication(obj))
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Namespace != out[j].Namespace {
+			return out[i].Namespace < out[j].Namespace
+		}
+		return out[i].Name < out[j].Name
+	})
+	return out
+}
+
+func extractArgoApplication(obj *unstructured.Unstructured) ArgoApplicationInfo {
+	syncStatus, _, _ := unstructured.NestedString(obj.Object, "status", "sync", "status")
+	health, _, _ := unstructured.NestedString(obj.Object, "status", "health", "status")
+	revision, _, _ := unstructured.NestedString(obj.Object, "status", "sync", "revision")
+	project, _, _ := unstructured.NestedString(obj.Object, "spec", "project")
+	repoURL, _, _ := unstructured.NestedString(obj.Object, "spec", "source", "repoURL")
+	path, _, _ := unstructured.NestedString(obj.Object, "spec", "source", "path")
+	targetRev, _, _ := unstructured.NestedString(obj.Object, "spec", "source", "targetRevision")
+	autoSync, selfHeal, prune := false, false, false
+	if automated, found, _ := unstructured.NestedMap(obj.Object, "spec", "syncPolicy", "automated"); found && automated != nil {
+		autoSync = true
+		if v, ok := automated["selfHeal"].(bool); ok {
+			selfHeal = v
+		}
+		if v, ok := automated["prune"].(bool); ok {
+			prune = v
+		}
+	}
+	return ArgoApplicationInfo{
+		Name:           obj.GetName(),
+		Namespace:      obj.GetNamespace(),
+		Sync:           syncStatus,
+		Health:         health,
+		Revision:       revision,
+		Project:        project,
+		RepoURL:        repoURL,
+		Path:           path,
+		TargetRevision: targetRev,
+		AutoSync:       autoSync,
+		SelfHeal:       selfHeal,
+		Prune:          prune,
+		CreatedAt:      obj.GetCreationTimestamp().UTC().Format(time.RFC3339),
+	}
+}
 
 // ArgoApplicationResource describes one managed resource as Argo reports it
 // under Application.status.resources. The frontend turns each row into a

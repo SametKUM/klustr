@@ -7,6 +7,7 @@ import {
   SyncArgoApplication,
   RefreshArgoApplication,
   ListArgoApplicationResources,
+  ListArgoApplications,
   GetHelmRelease,
   HelmChartVersions,
   InstallHelmRelease,
@@ -210,6 +211,7 @@ export type HelmChartSearchResult = kube.HelmChartSearchResult
 export type HelmInstallOptions = kube.HelmInstallOptions
 export type HelmDryRunResult = kube.HelmDryRunResult
 export type ArgoApplicationResource = kube.ArgoApplicationResource
+export type ArgoApplicationInfo = kube.ArgoApplicationInfo
 
 export const api = {
   listContexts: (): Promise<Kubeconfig> => ListContexts(),
@@ -468,5 +470,9 @@ export const api = {
     name: string,
   ): Promise<ArgoApplicationResource[]> =>
     ListArgoApplicationResources(contextName, namespace, name),
+  listArgoApplications: (
+    contextName: string,
+    namespace: string,
+  ): Promise<ArgoApplicationInfo[]> => ListArgoApplications(contextName, namespace),
   version: (): Promise<string> => Version(),
 }

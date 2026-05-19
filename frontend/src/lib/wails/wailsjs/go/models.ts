@@ -1,5 +1,41 @@
 export namespace kube {
 	
+	export class ArgoApplicationInfo {
+	    name: string;
+	    namespace: string;
+	    sync: string;
+	    health: string;
+	    revision: string;
+	    project: string;
+	    repoURL: string;
+	    path: string;
+	    targetRevision: string;
+	    autoSync: boolean;
+	    selfHeal: boolean;
+	    prune: boolean;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ArgoApplicationInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.sync = source["sync"];
+	        this.health = source["health"];
+	        this.revision = source["revision"];
+	        this.project = source["project"];
+	        this.repoURL = source["repoURL"];
+	        this.path = source["path"];
+	        this.targetRevision = source["targetRevision"];
+	        this.autoSync = source["autoSync"];
+	        this.selfHeal = source["selfHeal"];
+	        this.prune = source["prune"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class ArgoApplicationResource {
 	    group: string;
 	    version: string;

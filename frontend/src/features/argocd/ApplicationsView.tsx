@@ -1,21 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
-import { RefreshCcw, RotateCw } from 'lucide-react'
+import { ExternalLink, RefreshCcw, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { api, type CustomResourceInfo } from '@/lib/api'
+import { api, type ArgoApplicationInfo } from '@/lib/api'
+import { BrowserOpenURL } from '@/lib/wails/wailsjs/runtime/runtime'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
-import { useCRDStore, crdKey } from '@/store/crds'
+import { useCRDStore } from '@/store/crds'
 import { useIsAggregated, useUIStore } from '@/store/ui'
 
 const ARGO_GROUP = 'argoproj.io'
 const ARGO_RESOURCE = 'applications'
 
-const columnHelper = createColumnHelper<CustomResourceInfo>()
-const EMPTY: CustomResourceInfo[] = []
+const columnHelper = createColumnHelper<ArgoApplicationInfo>()
+const EMPTY: ArgoApplicationInfo[] = []
 
 export function ApplicationsView() {
   const selectedContext = useUIStore((s) => s.selectedContext)
@@ -25,12 +26,8 @@ export function ApplicationsView() {
   const crd = useCRDStore(
     (s) => s.crds.find((c) => c.group === ARGO_GROUP && c.resource === ARGO_RESOURCE) ?? null,
   )
-  const key = crd ? crdKey(crd) : null
-  const customResources = useCRDStore((s) =>
-    key ? s.customResources[key] ?? EMPTY : EMPTY,
-  )
-  const setCustomResources = useCRDStore((s) => s.setCustomResources)
 
+  const [rows, setRows] = useState<ArgoApplicationInfo[]>(EMPTY)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -56,7 +53,7 @@ export function ApplicationsView() {
   }, [selectedContext, crd])
 
   const onSync = useCallback(
-    async (row: CustomResourceInfo) => {
+    async (row: ArgoApplicationInfo) => {
       if (!selectedContext) return
       try {
         await api.syncArgoApplication(selectedContext, row.namespace, row.name, '', true)
@@ -69,7 +66,7 @@ export function ApplicationsView() {
   )
 
   const onRefresh = useCallback(
-    async (row: CustomResourceInfo) => {
+    async (row: ArgoApplicationInfo) => {
       if (!selectedContext) return
       try {
         await api.refreshArgoApplication(selectedContext, row.namespace, row.name, 'normal')
@@ -85,33 +82,39 @@ export function ApplicationsView() {
     () => [
       columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
-      columnHelper.accessor((r) => r.cells?.['Sync Status'] ?? '', {
-        id: 'sync',
+      columnHelper.accessor('sync', {
         header: 'Sync',
         size: COL_SM,
-        cell: (i) => <SyncPill value={i.getValue() as string} />,
+        cell: (i) => <SyncPill value={i.getValue()} />,
       }),
-      columnHelper.accessor((r) => r.cells?.['Health Status'] ?? '', {
-        id: 'health',
+      columnHelper.accessor('health', {
         header: 'Health',
         size: COL_SM,
-        cell: (i) => <HealthPill value={i.getValue() as string} />,
+        cell: (i) => <HealthPill value={i.getValue()} />,
       }),
-      columnHelper.accessor((r) => r.cells?.Revision ?? '', {
-        id: 'revision',
+      columnHelper.accessor('autoSync', {
+        header: 'Auto-sync',
+        size: COL_SM,
+        cell: (i) => <AutoSyncPill row={i.row.original} />,
+        sortingFn: (a, b) => Number(a.original.autoSync) - Number(b.original.autoSync),
+      }),
+      columnHelper.accessor('revision', {
         header: 'Revision',
         size: COL_SM,
         cell: (i) => {
-          const v = i.getValue() as string
+          const v = i.getValue()
           return v ? <span className="font-mono text-xs">{v.slice(0, 8)}</span> : <span className="text-muted-foreground">—</span>
         },
       }),
-      columnHelper.accessor((r) => r.cells?.Project ?? '', {
-        id: 'project',
+      columnHelper.accessor('repoURL', {
+        header: 'Repo',
+        cell: (i) => <RepoLink url={i.getValue()} />,
+      }),
+      columnHelper.accessor('project', {
         header: 'Project',
         size: COL_MD,
         cell: (i) => {
-          const v = i.getValue() as string
+          const v = i.getValue()
           return v ? <span>{v}</span> : <span className="text-muted-foreground">—</span>
         },
       }),
@@ -159,25 +162,20 @@ export function ApplicationsView() {
     [onSync, onRefresh],
   )
 
-  const data = useMemo<ByContext<CustomResourceInfo>>(
-    () => (selectedContext ? { [selectedContext]: customResources } : {}),
-    [selectedContext, customResources],
+  const data = useMemo<ByContext<ArgoApplicationInfo>>(
+    () => (selectedContext ? { [selectedContext]: rows } : {}),
+    [selectedContext, rows],
   )
   const setData = useCallback(
-    (_ctx: string, list: CustomResourceInfo[]) => {
-      if (key) setCustomResources(key, list)
-    },
-    [key, setCustomResources],
+    (_ctx: string, list: ArgoApplicationInfo[]) => setRows(list),
+    [],
   )
   const fetch = useCallback(
-    (ctx: string, ns: string) =>
-      crd
-        ? api.listCustomResources(ctx, crd.group, crd.version, crd.resource, ns)
-        : Promise.resolve([] as CustomResourceInfo[]),
-    [crd],
+    (ctx: string, ns: string) => api.listArgoApplications(ctx, ns),
+    [],
   )
   const onRowClick = useCallback(
-    (row: CustomResourceInfo, ctx: string) => {
+    (row: ArgoApplicationInfo, ctx: string) => {
       if (!crd) return
       setSelectedResource({
         kind: 'Application',
@@ -261,4 +259,59 @@ function HealthPill({ value }: { value: string }) {
           ? 'text-amber-600 dark:text-amber-400'
           : 'text-muted-foreground'
   return <span className={cls}>{value || '—'}</span>
+}
+
+function AutoSyncPill({ row }: { row: ArgoApplicationInfo }) {
+  if (!row.autoSync) {
+    return <span className="text-muted-foreground">Manual</span>
+  }
+  const extras: string[] = []
+  if (row.selfHeal) extras.push('self-heal')
+  if (row.prune) extras.push('prune')
+  const title = extras.length > 0 ? `Auto-sync (${extras.join(', ')})` : 'Auto-sync'
+  return (
+    <span className="text-emerald-600 dark:text-emerald-400" title={title}>
+      Auto
+    </span>
+  )
+}
+
+function RepoLink({ url }: { url: string }) {
+  if (!url) return <span className="text-muted-foreground">—</span>
+  const label = formatRepoLabel(url)
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        BrowserOpenURL(toBrowserURL(url))
+      }}
+      title={url}
+      className="inline-flex items-center gap-1 rounded font-mono text-xs text-foreground hover:text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span className="truncate">{label}</span>
+      <ExternalLink className="size-3 shrink-0 opacity-60" />
+    </button>
+  )
+}
+
+// Strip protocol + .git suffix + git@ prefix so the cell stays short.
+function formatRepoLabel(url: string): string {
+  let label = url
+  label = label.replace(/^https?:\/\//, '')
+  label = label.replace(/^git@/, '')
+  label = label.replace(/:\d+\//, '/') // port like ":22/"
+  label = label.replace(/\.git$/, '')
+  label = label.replace(/^([^/:]+):/, '$1/') // git@host:owner/repo -> host/owner/repo
+  return label
+}
+
+// Best-effort conversion from a git remote URL to something a browser can
+// open. SSH-style refs (git@github.com:owner/repo.git) get rewritten to
+// https://github.com/owner/repo.
+function toBrowserURL(url: string): string {
+  if (/^https?:\/\//.test(url)) return url.replace(/\.git$/, '')
+  const m = url.match(/^git@([^:]+):(.+?)(\.git)?$/)
+  if (m) return `https://${m[1]}/${m[2]}`
+  return url
 }

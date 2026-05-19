@@ -84,6 +84,8 @@ export function InstallHelmRelease(arg1:kube.HelmInstallOptions):Promise<kube.He
 
 export function ListArgoApplicationResources(arg1:string,arg2:string,arg3:string):Promise<Array<kube.ArgoApplicationResource>>;
 
+export function ListArgoApplications(arg1:string,arg2:string):Promise<Array<kube.ArgoApplicationInfo>>;
+
 export function ListCRDs(arg1:string):Promise<Array<kube.CRDInfo>>;
 
 export function ListClusterWarningEvents(arg1:string,arg2:number):Promise<Array<kube.EventInfo>>;

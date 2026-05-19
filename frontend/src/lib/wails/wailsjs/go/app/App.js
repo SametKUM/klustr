@@ -166,6 +166,10 @@ export function ListArgoApplicationResources(arg1, arg2, arg3) {
   return window['go']['app']['App']['ListArgoApplicationResources'](arg1, arg2, arg3);
 }
 
+export function ListArgoApplications(arg1, arg2) {
+  return window['go']['app']['App']['ListArgoApplications'](arg1, arg2);
+}
+
 export function ListCRDs(arg1) {
   return window['go']['app']['App']['ListCRDs'](arg1);
 }
