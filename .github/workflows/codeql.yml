@@ -46,7 +46,7 @@ jobs:
           mkdir -p frontend/dist
           touch frontend/dist/.gitkeep
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
@@ -58,6 +58,6 @@ jobs:
               - frontend/node_modules/**
               - build/**
 
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
