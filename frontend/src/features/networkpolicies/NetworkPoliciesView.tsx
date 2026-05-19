@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type NetworkPolicyInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -15,15 +16,16 @@ export function NetworkPoliciesView() {
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('namespace', { header: 'Namespace' }),
+      columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('podSelector', {
         header: 'Pod Selector',
         cell: (info) => <span className="font-mono text-xs">{info.getValue()}</span>,
       }),
-      columnHelper.accessor('policyTypes', { header: 'Policy Types' }),
+      columnHelper.accessor('policyTypes', { header: 'Policy Types', size: COL_MD }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

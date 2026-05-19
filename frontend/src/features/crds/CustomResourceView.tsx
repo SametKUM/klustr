@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type CRDInfo, type CustomResourceInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore, crdKey } from '@/store/crds'
 import { useIsAggregated, useUIStore } from '@/store/ui'
@@ -48,7 +49,7 @@ export function CustomResourceView({ crd }: Props) {
   const columns = useMemo(() => {
     const cols = []
     if (crd.scope === 'Namespaced') {
-      cols.push(columnHelper.accessor('namespace', { header: 'Namespace' }))
+      cols.push(columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }))
     }
     cols.push(columnHelper.accessor('name', { header: 'Name' }))
     for (const pc of crd.printerColumns ?? []) {
@@ -56,6 +57,9 @@ export function CustomResourceView({ crd }: Props) {
         columnHelper.accessor((row) => row.cells?.[pc.name] ?? '', {
           id: `pc:${pc.name}`,
           header: pc.name,
+          ...(pc.type === 'date' || pc.type === 'boolean' || pc.type === 'integer' || pc.type === 'number'
+            ? { size: COL_SM }
+            : {}),
           cell: (info) => {
             const v = info.getValue()
             if (pc.type === 'date' && v) return formatAge(v as string)
@@ -68,6 +72,7 @@ export function CustomResourceView({ crd }: Props) {
     cols.push(
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

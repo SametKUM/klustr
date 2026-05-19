@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type NamespaceInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -24,10 +25,12 @@ export function NamespacesView() {
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('phase', {
         header: 'Status',
+        size: COL_SM,
         cell: (info) => <span className={phaseClass(info.getValue())}>{info.getValue()}</span>,
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

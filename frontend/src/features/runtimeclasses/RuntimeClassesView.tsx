@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type RuntimeClassInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -19,6 +20,7 @@ export function RuntimeClassesView() {
       columnHelper.accessor('handler', { header: 'Handler' }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

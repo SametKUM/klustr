@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type DeploymentInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -24,21 +25,23 @@ export function DeploymentsView() {
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('namespace', { header: 'Namespace' }),
+      columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('ready', {
         header: 'Ready',
+        size: COL_XS,
         cell: (info) => <span className={readyClass(info.getValue())}>{info.getValue()}</span>,
       }),
-      columnHelper.accessor('upToDate', { header: 'Up-to-date' }),
-      columnHelper.accessor('available', { header: 'Available' }),
-      columnHelper.accessor('strategy', { header: 'Strategy' }),
+      columnHelper.accessor('upToDate', { header: 'Up-to-date', size: COL_SM }),
+      columnHelper.accessor('available', { header: 'Available', size: COL_SM }),
+      columnHelper.accessor('strategy', { header: 'Strategy', size: COL_MD }),
       columnHelper.accessor('images', {
         header: 'Images',
         cell: (info) => <span className="font-mono text-xs">{info.getValue()}</span>,
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

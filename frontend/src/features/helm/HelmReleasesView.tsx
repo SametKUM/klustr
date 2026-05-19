@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type HelmReleaseInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useHelmStore } from '@/store/helm'
 import { useIsAggregated, useUIStore } from '@/store/ui'
@@ -18,18 +19,20 @@ export function HelmReleasesView() {
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('namespace', { header: 'Namespace' }),
+      columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('chartName', { header: 'Chart' }),
-      columnHelper.accessor('chartVersion', { header: 'Chart ver.' }),
-      columnHelper.accessor('appVersion', { header: 'App ver.' }),
-      columnHelper.accessor('status', { header: 'Status' }),
+      columnHelper.accessor('chartVersion', { header: 'Chart ver.', size: COL_SM }),
+      columnHelper.accessor('appVersion', { header: 'App ver.', size: COL_SM }),
+      columnHelper.accessor('status', { header: 'Status', size: COL_SM }),
       columnHelper.accessor('revision', {
         header: 'Rev',
+        size: COL_XS,
         cell: (info) => `#${info.getValue()}`,
       }),
       columnHelper.accessor('updated', {
         header: 'Updated',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

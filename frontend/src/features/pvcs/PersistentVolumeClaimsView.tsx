@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type PersistentVolumeClaimInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -22,18 +23,20 @@ export function PersistentVolumeClaimsView() {
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('namespace', { header: 'Namespace' }),
+      columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('status', {
         header: 'Status',
+        size: COL_SM,
         cell: (info) => <span className={phaseClass(info.getValue())}>{info.getValue()}</span>,
       }),
       columnHelper.accessor('volume', { header: 'Volume' }),
-      columnHelper.accessor('capacity', { header: 'Capacity' }),
-      columnHelper.accessor('accessModes', { header: 'Access Modes' }),
+      columnHelper.accessor('capacity', { header: 'Capacity', size: COL_SM }),
+      columnHelper.accessor('accessModes', { header: 'Access Modes', size: COL_MD }),
       columnHelper.accessor('storageClass', { header: 'Storage Class' }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

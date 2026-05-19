@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type NodeInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -28,17 +29,20 @@ export function NodesView() {
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('status', {
         header: 'Status',
+        size: COL_SM,
         cell: (info) => <span className={nodeStatusClass(info.getValue())}>{info.getValue()}</span>,
       }),
-      columnHelper.accessor('roles', { header: 'Roles' }),
-      columnHelper.accessor('version', { header: 'Version' }),
+      columnHelper.accessor('roles', { header: 'Roles', size: COL_MD }),
+      columnHelper.accessor('version', { header: 'Version', size: COL_SM }),
       columnHelper.accessor('osImage', { header: 'OS Image' }),
       columnHelper.accessor('internalIP', {
         header: 'Internal IP',
+        size: COL_MD,
         cell: (info) => <span className="font-mono text-xs">{info.getValue()}</span>,
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

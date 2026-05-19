@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type StorageClassInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -29,14 +30,16 @@ export function StorageClassesView() {
         ),
       }),
       columnHelper.accessor('provisioner', { header: 'Provisioner' }),
-      columnHelper.accessor('reclaimPolicy', { header: 'Reclaim' }),
-      columnHelper.accessor('volumeBindingMode', { header: 'Volume Binding' }),
+      columnHelper.accessor('reclaimPolicy', { header: 'Reclaim', size: COL_SM }),
+      columnHelper.accessor('volumeBindingMode', { header: 'Volume Binding', size: COL_SM }),
       columnHelper.accessor('allowExpansion', {
         header: 'Expand',
+        size: COL_XS,
         cell: (info) => (info.getValue() ? '✓' : '·'),
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

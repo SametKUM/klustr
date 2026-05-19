@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type JobInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -30,16 +31,18 @@ export function JobsView() {
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('namespace', { header: 'Namespace' }),
+      columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
-      columnHelper.accessor('completions', { header: 'Completions' }),
-      columnHelper.accessor('duration', { header: 'Duration' }),
+      columnHelper.accessor('completions', { header: 'Completions', size: COL_XS }),
+      columnHelper.accessor('duration', { header: 'Duration', size: COL_SM }),
       columnHelper.accessor('status', {
         header: 'Status',
+        size: COL_SM,
         cell: (info) => <span className={jobStatusClass(info.getValue())}>{info.getValue()}</span>,
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

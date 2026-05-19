@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type ServiceInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -15,15 +16,17 @@ export function ServicesView() {
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('namespace', { header: 'Namespace' }),
+      columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
-      columnHelper.accessor('type', { header: 'Type' }),
+      columnHelper.accessor('type', { header: 'Type', size: COL_SM }),
       columnHelper.accessor('clusterIP', {
         header: 'Cluster IP',
+        size: COL_MD,
         cell: (info) => <span className="font-mono text-xs">{info.getValue()}</span>,
       }),
       columnHelper.accessor('externalIP', {
         header: 'External IP',
+        size: COL_MD,
         cell: (info) => <span className="font-mono text-xs">{info.getValue()}</span>,
       }),
       columnHelper.accessor('ports', {
@@ -32,6 +35,7 @@ export function ServicesView() {
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

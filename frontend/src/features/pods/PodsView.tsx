@@ -4,6 +4,7 @@ import { api, type PodInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useActiveContexts, useUIStore } from '@/store/ui'
 import { selectMetricsAvailable, selectPodMetric, useMetrics } from '@/store/metrics'
@@ -79,24 +80,8 @@ export function PodsView() {
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('namespace', { header: 'Namespace' }),
+      columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
-      columnHelper.accessor('ready', { header: 'Ready' }),
-      columnHelper.accessor('status', {
-        header: 'Status',
-        cell: (info) => <span className={statusClass(info.getValue())}>{info.getValue()}</span>,
-      }),
-      columnHelper.accessor('restarts', {
-        header: 'Restarts',
-        cell: (info) => <RestartBadge value={info.getValue()} />,
-      }),
-      columnHelper.accessor('node', { header: 'Node' }),
-      columnHelper.accessor('podIP', { header: 'IP' }),
-      columnHelper.accessor('createdAt', {
-        header: 'Age',
-        cell: (info) => formatAge(info.getValue()),
-        sortingFn: 'datetime',
-      }),
       ...(metricsAvailable
         ? [
             columnHelper.display({
@@ -110,6 +95,25 @@ export function PodsView() {
             }),
           ]
         : []),
+      columnHelper.accessor('ready', { header: 'Ready', size: COL_XS }),
+      columnHelper.accessor('status', {
+        header: 'Status',
+        size: COL_SM,
+        cell: (info) => <span className={statusClass(info.getValue())}>{info.getValue()}</span>,
+      }),
+      columnHelper.accessor('restarts', {
+        header: 'Restarts',
+        size: COL_XS,
+        cell: (info) => <RestartBadge value={info.getValue()} />,
+      }),
+      columnHelper.accessor('node', { header: 'Node' }),
+      columnHelper.accessor('podIP', { header: 'IP', size: COL_SM }),
+      columnHelper.accessor('createdAt', {
+        header: 'Age',
+        size: COL_SM,
+        cell: (info) => formatAge(info.getValue()),
+        sortingFn: 'datetime',
+      }),
     ],
     [metricsAvailable],
   )

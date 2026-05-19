@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type WebhookConfigurationInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -16,9 +17,10 @@ export function MutatingWebhookConfigurationsView() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('name', { header: 'Name' }),
-      columnHelper.accessor('webhooks', { header: 'Webhooks' }),
+      columnHelper.accessor('webhooks', { header: 'Webhooks', size: COL_XS }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),

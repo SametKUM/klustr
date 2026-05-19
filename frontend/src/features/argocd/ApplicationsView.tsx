@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { api, type CustomResourceInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore, crdKey } from '@/store/crds'
 import { useIsAggregated, useUIStore } from '@/store/ui'
@@ -82,21 +83,24 @@ export function ApplicationsView() {
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('namespace', { header: 'Namespace' }),
+      columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor((r) => r.cells?.['Sync Status'] ?? '', {
         id: 'sync',
         header: 'Sync',
+        size: COL_SM,
         cell: (i) => <SyncPill value={i.getValue() as string} />,
       }),
       columnHelper.accessor((r) => r.cells?.['Health Status'] ?? '', {
         id: 'health',
         header: 'Health',
+        size: COL_SM,
         cell: (i) => <HealthPill value={i.getValue() as string} />,
       }),
       columnHelper.accessor((r) => r.cells?.Revision ?? '', {
         id: 'revision',
         header: 'Revision',
+        size: COL_SM,
         cell: (i) => {
           const v = i.getValue() as string
           return v ? <span className="font-mono text-xs">{v.slice(0, 8)}</span> : <span className="text-muted-foreground">—</span>
@@ -105,6 +109,7 @@ export function ApplicationsView() {
       columnHelper.accessor((r) => r.cells?.Project ?? '', {
         id: 'project',
         header: 'Project',
+        size: COL_MD,
         cell: (i) => {
           const v = i.getValue() as string
           return v ? <span>{v}</span> : <span className="text-muted-foreground">—</span>
@@ -113,6 +118,7 @@ export function ApplicationsView() {
       columnHelper.display({
         id: 'actions',
         header: 'Actions',
+        size: 170,
         cell: (i) => (
           <div className="flex items-center gap-1">
             <Button
@@ -145,6 +151,7 @@ export function ApplicationsView() {
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (i) => formatAge(i.getValue()),
         sortingFn: 'datetime',
       }),

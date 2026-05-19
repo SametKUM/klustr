@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type DaemonSetInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { COL_MD, COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -15,16 +16,17 @@ export function DaemonSetsView() {
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('namespace', { header: 'Namespace' }),
+      columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
-      columnHelper.accessor('desired', { header: 'Desired' }),
-      columnHelper.accessor('current', { header: 'Current' }),
-      columnHelper.accessor('ready', { header: 'Ready' }),
-      columnHelper.accessor('upToDate', { header: 'Up-to-date' }),
-      columnHelper.accessor('available', { header: 'Available' }),
+      columnHelper.accessor('desired', { header: 'Desired', size: COL_XS }),
+      columnHelper.accessor('current', { header: 'Current', size: COL_XS }),
+      columnHelper.accessor('ready', { header: 'Ready', size: COL_XS }),
+      columnHelper.accessor('upToDate', { header: 'Up-to-date', size: COL_SM }),
+      columnHelper.accessor('available', { header: 'Available', size: COL_SM }),
       columnHelper.accessor('nodeSelector', { header: 'Node Selector' }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
+        size: COL_SM,
         cell: (info) => formatAge(info.getValue()),
         sortingFn: 'datetime',
       }),
