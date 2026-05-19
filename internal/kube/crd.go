@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/jsonpath"
 	"sigs.k8s.io/yaml"
 )
 
@@ -33,14 +35,25 @@ const (
 // CRDInfo describes a CustomResourceDefinition surfaced to the frontend so it can
 // render a sidebar entry and start watching CR instances.
 type CRDInfo struct {
-	Kind       string   `json:"kind"`
-	Group      string   `json:"group"`
-	Version    string   `json:"version"`
-	Resource   string   `json:"resource"`
-	Singular   string   `json:"singular"`
-	ShortNames []string `json:"shortNames"`
-	Scope      string   `json:"scope"`
-	CreatedAt  string   `json:"createdAt"`
+	Kind           string          `json:"kind"`
+	Group          string          `json:"group"`
+	Version        string          `json:"version"`
+	Resource       string          `json:"resource"`
+	Singular       string          `json:"singular"`
+	ShortNames     []string        `json:"shortNames"`
+	Scope          string          `json:"scope"`
+	CreatedAt      string          `json:"createdAt"`
+	PrinterColumns []PrinterColumn `json:"printerColumns"`
+}
+
+// PrinterColumn mirrors the relevant fields of CRD additionalPrinterColumns so
+// the UI can render arbitrary type-specific columns (e.g. Argo's Sync/Health,
+// cert-manager's Ready/Secret/Issuer) without baking per-CRD knowledge into
+// Klustr.
+type PrinterColumn struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	JSONPath string `json:"jsonPath"`
 }
 
 // Namespaced reports whether instances of this CRD live in a namespace.
@@ -52,10 +65,13 @@ func (c CRDInfo) GVR() schema.GroupVersionResource {
 }
 
 // CustomResourceInfo is the row shape for the generic CR list view.
+// Cells carries the rendered string for each PrinterColumn the CRD declares,
+// keyed by column name. Empty when the CRD has no additionalPrinterColumns.
 type CustomResourceInfo struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	CreatedAt string `json:"createdAt"`
+	Name      string            `json:"name"`
+	Namespace string            `json:"namespace"`
+	CreatedAt string            `json:"createdAt"`
+	Cells     map[string]string `json:"cells"`
 }
 
 func crChangeKind(gvr schema.GroupVersionResource) string {
@@ -158,6 +174,7 @@ func crdInfoFromUnstructured(obj *unstructured.Unstructured) (CRDInfo, bool) {
 
 	versions, _, _ := unstructured.NestedSlice(obj.Object, "spec", "versions")
 	storageVersion := ""
+	var storageVersionEntry map[string]any
 	for _, v := range versions {
 		m, ok := v.(map[string]any)
 		if !ok {
@@ -168,6 +185,7 @@ func crdInfoFromUnstructured(obj *unstructured.Unstructured) (CRDInfo, bool) {
 		storage, _ := m["storage"].(bool)
 		if storage && served {
 			storageVersion = name
+			storageVersionEntry = m
 			break
 		}
 	}
@@ -182,6 +200,7 @@ func crdInfoFromUnstructured(obj *unstructured.Unstructured) (CRDInfo, bool) {
 			served, _ := m["served"].(bool)
 			if served && name != "" {
 				storageVersion = name
+				storageVersionEntry = m
 				break
 			}
 		}
@@ -195,15 +214,50 @@ func crdInfoFromUnstructured(obj *unstructured.Unstructured) (CRDInfo, bool) {
 	}
 	created := obj.GetCreationTimestamp().UTC().Format(time.RFC3339)
 	return CRDInfo{
-		Kind:       kind,
-		Group:      group,
-		Version:    storageVersion,
-		Resource:   plural,
-		Singular:   singular,
-		ShortNames: append([]string{}, shortNamesRaw...),
-		Scope:      scope,
-		CreatedAt:  created,
+		Kind:           kind,
+		Group:          group,
+		Version:        storageVersion,
+		Resource:       plural,
+		Singular:       singular,
+		ShortNames:     append([]string{}, shortNamesRaw...),
+		Scope:          scope,
+		CreatedAt:      created,
+		PrinterColumns: parsePrinterColumns(storageVersionEntry),
 	}, true
+}
+
+// parsePrinterColumns extracts additionalPrinterColumns from a CRD version
+// entry, skipping the "Age" column since the generic list view always renders
+// age from .metadata.creationTimestamp regardless.
+func parsePrinterColumns(versionEntry map[string]any) []PrinterColumn {
+	if versionEntry == nil {
+		return nil
+	}
+	raw, ok := versionEntry["additionalPrinterColumns"].([]any)
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	out := make([]PrinterColumn, 0, len(raw))
+	for _, item := range raw {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, _ := m["name"].(string)
+		typ, _ := m["type"].(string)
+		path, _ := m["jsonPath"].(string)
+		if name == "" || path == "" {
+			continue
+		}
+		if strings.EqualFold(name, "Age") {
+			continue
+		}
+		out = append(out, PrinterColumn{Name: name, Type: typ, JSONPath: path})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // LookupCRDByKind returns the CRDInfo whose Kind matches. When multiple CRDs
@@ -221,6 +275,17 @@ func (w *crdWatcher) LookupCRDByKind(kind string) (CRDInfo, bool) {
 func (w *crdWatcher) LookupCRDByGVK(gvk schema.GroupVersionKind) (CRDInfo, bool) {
 	for _, c := range w.CRDs() {
 		if c.Group == gvk.Group && c.Kind == gvk.Kind {
+			return c, true
+		}
+	}
+	return CRDInfo{}, false
+}
+
+// LookupCRDByGVR finds a CRD by its group/resource pair (version is taken from
+// the stored CRD info, which always reports the served storage version).
+func (w *crdWatcher) LookupCRDByGVR(gvr schema.GroupVersionResource) (CRDInfo, bool) {
+	for _, c := range w.CRDs() {
+		if c.Group == gvr.Group && c.Resource == gvr.Resource {
 			return c, true
 		}
 	}
@@ -272,6 +337,11 @@ func (w *crdWatcher) EnsureCRWatch(gvr schema.GroupVersionResource) error {
 // ListCustomResources reads the cached CR list for the given GVR. If the
 // informer for this GVR has not been started yet, it returns an empty slice —
 // callers should call EnsureCRWatch first.
+//
+// When the CRD declares additionalPrinterColumns, each row's Cells map is
+// populated by evaluating those JSONPath expressions against the CR so the
+// frontend can render type-specific columns (Sync / Health / Ready / …)
+// without needing per-CRD knowledge in Klustr.
 func (w *crdWatcher) ListCustomResources(gvr schema.GroupVersionResource, namespace string) []CustomResourceInfo {
 	w.crMu.Lock()
 	started := w.crWatches[gvr]
@@ -290,6 +360,11 @@ func (w *crdWatcher) ListCustomResources(gvr schema.GroupVersionResource, namesp
 	if err != nil {
 		return []CustomResourceInfo{}
 	}
+	var printerColumns []PrinterColumn
+	if info, found := w.LookupCRDByGVR(gvr); found {
+		printerColumns = info.PrinterColumns
+	}
+	evaluators := compileJSONPaths(printerColumns)
 	out := make([]CustomResourceInfo, 0, len(objs))
 	for _, raw := range objs {
 		obj, ok := raw.(*unstructured.Unstructured)
@@ -300,6 +375,7 @@ func (w *crdWatcher) ListCustomResources(gvr schema.GroupVersionResource, namesp
 			Name:      obj.GetName(),
 			Namespace: obj.GetNamespace(),
 			CreatedAt: obj.GetCreationTimestamp().UTC().Format(time.RFC3339),
+			Cells:     evaluateCells(evaluators, obj),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -308,6 +384,44 @@ func (w *crdWatcher) ListCustomResources(gvr schema.GroupVersionResource, namesp
 		}
 		return out[i].Name < out[j].Name
 	})
+	return out
+}
+
+type compiledPrinterColumn struct {
+	name string
+	jp   *jsonpath.JSONPath
+}
+
+func compileJSONPaths(columns []PrinterColumn) []compiledPrinterColumn {
+	if len(columns) == 0 {
+		return nil
+	}
+	out := make([]compiledPrinterColumn, 0, len(columns))
+	for _, c := range columns {
+		jp := jsonpath.New(c.Name).AllowMissingKeys(true)
+		// CRD jsonPath is unwrapped (e.g. ".status.sync.status"); the JSONPath
+		// parser expects template-style braces, so wrap before parsing.
+		if err := jp.Parse("{" + c.JSONPath + "}"); err != nil {
+			continue
+		}
+		out = append(out, compiledPrinterColumn{name: c.Name, jp: jp})
+	}
+	return out
+}
+
+func evaluateCells(evaluators []compiledPrinterColumn, obj *unstructured.Unstructured) map[string]string {
+	if len(evaluators) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(evaluators))
+	for _, e := range evaluators {
+		var buf bytes.Buffer
+		if err := e.jp.Execute(&buf, obj.Object); err != nil {
+			out[e.name] = ""
+			continue
+		}
+		out[e.name] = strings.TrimSpace(buf.String())
+	}
 	return out
 }
 

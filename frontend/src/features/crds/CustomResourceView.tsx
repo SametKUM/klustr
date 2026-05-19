@@ -51,6 +51,20 @@ export function CustomResourceView({ crd }: Props) {
       cols.push(columnHelper.accessor('namespace', { header: 'Namespace' }))
     }
     cols.push(columnHelper.accessor('name', { header: 'Name' }))
+    for (const pc of crd.printerColumns ?? []) {
+      cols.push(
+        columnHelper.accessor((row) => row.cells?.[pc.name] ?? '', {
+          id: `pc:${pc.name}`,
+          header: pc.name,
+          cell: (info) => {
+            const v = info.getValue()
+            if (pc.type === 'date' && v) return formatAge(v as string)
+            return v
+          },
+          ...(pc.type === 'date' ? { sortingFn: 'datetime' as const } : {}),
+        }),
+      )
+    }
     cols.push(
       columnHelper.accessor('createdAt', {
         header: 'Age',
@@ -59,7 +73,7 @@ export function CustomResourceView({ crd }: Props) {
       }),
     )
     return cols
-  }, [crd.scope])
+  }, [crd.scope, crd.printerColumns])
 
   const data = useMemo<ByContext<CustomResourceInfo>>(
     () => (selectedContext ? { [selectedContext]: customResources } : {}),
