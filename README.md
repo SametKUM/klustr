@@ -27,20 +27,23 @@
 
 ## What is Klustr?
 
-Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://wails.io/) (Go + native webview) and React. It uses your existing `~/.kube/config` and speaks the standard Kubernetes API directly — **nothing is deployed in the cluster**. Drop the binary in, point at any context, and you're looking at a live view of everything you have permission to see.
+Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://wails.io/) (Go + native webview) and React. It uses your existing `~/.kube/config` and speaks the standard Kubernetes API directly — **nothing is deployed in the cluster**. Drop the binary in, point at any context, and you're looking at a live view of everything you have permission to see — built-in resources, **Custom Resources (CRDs)**, and **Helm releases** included.
 
 ## Features
 
 - 🔌 **Pure client.** No CRDs, no in-cluster components, no extra RBAC. Works with whatever your kubeconfig already grants.
 - 🔁 **Live updates everywhere.** Resources stay fresh via `client-go` informers — never polled.
-- 🌐 **Multi-context.** Switch clusters in one click; pin a default for autoconnect.
+- 🌐 **Multi-context, multi-cluster.** Switch clusters in one click, or pick two-plus contexts and view them **aggregated** — every table, the cluster overview, workloads health, and events fan out across all selected clusters with a Context column. Pin a default for autoconnect.
+- 👥 **Context groups & tags.** Save named multi-context groups (e.g. `prod-fleet`) and color-tag contexts (prod / staging / dev) so the top bar reminds you which environment you're touching.
 - 📋 **Every built-in resource kind.** Pods, Deployments, StatefulSets, DaemonSets, ReplicaSets, ReplicationControllers, Jobs, CronJobs, HPAs, PDBs, Services, Endpoints, EndpointSlices, Ingresses, NetworkPolicies, ConfigMaps, Secrets, ResourceQuotas, LimitRanges, Leases, Mutating/ValidatingWebhookConfigurations, PVCs, PVs, StorageClasses, Nodes, Namespaces, IngressClasses, PriorityClasses, RuntimeClasses, and Events.
+- 🧩 **Custom Resources (CRDs).** CRDs are auto-discovered from the cluster on connect and slot into the sidebar grouped by API group. Browse instances live (watch-backed, no polling), inspect their YAML, and drill in from any owner reference — the same flow as built-in kinds, no per-CRD configuration.
+- ⎈ **Helm.** First-class Helm v3 support, talking to release Secrets directly through the informer cache so the list stays live without shelling out to `helm`. Browse releases, view revision history with diffs, install / upgrade / rollback / uninstall with a **dry-run preview** before any change hits the cluster, plus repo management and chart search across configured repositories.
 - 📜 **Logs and aggregated logs.** Stern-style multi-pod log streaming with per-pod ANSI colors, follow, save and regex.
 - 🖥️ **In-app exec.** Open a shell into any container over SPDY.
 - 🔧 **YAML edit with diff.** Monaco editor with a server-side dry-run diff before apply.
 - 🚀 **Scale and restart.** Replica controls with the current value pre-filled, +/- buttons and ↑/↓ keys; one-click rolling restart for Deployments / StatefulSets / DaemonSets.
 - 🔄 **Port-forwarding manager.** Suggested local ports, persistent header indicator, click-to-open in browser.
-- 🗺️ **Cluster overviews.** CPU / memory / pod donuts, workloads health bars, recent warnings at a glance.
+- 🗺️ **Cluster overviews.** CPU / memory / pod donuts, workloads health bars, recent warnings at a glance — single-cluster or fanned out across an aggregate.
 - 🧭 **Cross-resource navigation.** Drill from a workload into a related pod, jump to its node or controlling ReplicaSet, and back-arrow your way home.
 - 🎨 **Themes, command palette (`⌘P`), namespace search (`⌘N`), keyboard cheatsheet (`?`).**
 
@@ -75,8 +78,8 @@ Windows and Linux builds will be attached to releases once they've been validate
 ## Quick start
 
 1. Klustr reads `~/.kube/config` at launch.
-2. On first run, pick a context from the connection picker. Toggle **Auto-connect** on a card to pin it as the default.
-3. Browse via the sidebar, click any row for a detail dialog, or `⌘P` to fuzzy-search resources by name.
+2. On first run, pick a context — or check **two or more** to view them aggregated as one cluster. Save a recurring selection as a named **group** for one-click reconnect, and toggle **Auto-connect** on a card to pin it as the default.
+3. Browse via the sidebar, click any row for a detail dialog, or `⌘P` to fuzzy-search resources by name. The header's **Disconnect** button drops you back to the picker at any time.
 
 ## Build from source
 
@@ -108,10 +111,11 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] Logs, exec, port-forwarding
 - [x] YAML edit / apply with diff, scale, restart
 - [x] Cross-resource navigation (related pods, owner/node links, back stack)
+- [x] Custom Resource Definitions (CRDs)
+- [x] Helm support — release browser, dry-run diff, install / upgrade / rollback / uninstall, repo management
+- [x] Multi-cluster aggregated mode + named context groups
 - [ ] Notarized macOS build
 - [ ] Linux & Windows release distribution (after per-platform testing)
-- [ ] Custom Resource Definitions (CRDs)
-- [ ] Helm support — release browser, values diff, install / upgrade / rollback
 
 ## Contributing
 
