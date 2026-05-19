@@ -11,10 +11,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api, type ContainerPort, type PodDetail } from '@/lib/api'
 import { usePortForwards } from '@/store/portForwards'
 import type { SelectedResource } from '@/store/ui'
+import { BrowserOpenURL } from '@/lib/wails/wailsjs/runtime/runtime'
 
 type PortOption = ContainerPort & { containerName: string }
 
@@ -44,6 +46,7 @@ export function PortForwardDialog({ contextName, resource, open, onOpenChange }:
   const [remotePort, setRemotePort] = useState<number>(80)
   const [localPort, setLocalPort] = useState<number>(0)
   const [localPortTouched, setLocalPortTouched] = useState(false)
+  const [openInBrowser, setOpenInBrowser] = useState(true)
   const [detail, setDetail] = useState<PodDetail | null>(null)
 
   useEffect(() => {
@@ -92,6 +95,9 @@ export function PortForwardDialog({ contextName, resource, open, onOpenChange }:
     },
     onSuccess: (info) => {
       toast.success(`Forwarding localhost:${info.localPort} → ${resource.name}:${info.remotePort}`)
+      if (openInBrowser) {
+        BrowserOpenURL(`http://localhost:${info.localPort}`)
+      }
       onOpenChange(false)
     },
   })
@@ -103,6 +109,7 @@ export function PortForwardDialog({ contextName, resource, open, onOpenChange }:
         if (next) {
           start.reset()
           setLocalPortTouched(false)
+          setOpenInBrowser(true)
         } else {
           setDetail(null)
         }
@@ -183,6 +190,13 @@ export function PortForwardDialog({ contextName, resource, open, onOpenChange }:
             className="w-28 rounded border border-border bg-background px-2 py-1 text-sm"
           />
         </div>
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+          <Checkbox
+            checked={openInBrowser}
+            onChange={(e) => setOpenInBrowser(e.target.checked)}
+          />
+          Open in browser after starting
+        </label>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={start.isPending}>
             Cancel
