@@ -2,8 +2,10 @@ import type { ReactNode } from 'react'
 
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+    <section className="rounded-md border border-border bg-card/40 p-4">
+      <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </h3>
       <div className="space-y-1.5">{children}</div>
     </section>
   )
