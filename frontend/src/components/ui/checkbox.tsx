@@ -9,18 +9,18 @@ export const Checkbox = forwardRef<HTMLInputElement, Props>(function Checkbox(
   ref,
 ) {
   return (
-    <span className={cn('relative inline-flex shrink-0', className)}>
+    <span className={cn('relative inline-flex size-4 shrink-0', className)}>
       <input
         ref={ref}
         type="checkbox"
         checked={checked}
         disabled={disabled}
-        className="peer sr-only"
+        className="peer absolute inset-0 z-10 m-0 size-full cursor-pointer appearance-none opacity-0 disabled:cursor-not-allowed"
         {...props}
       />
       <span
         aria-hidden
-        className="flex size-4 items-center justify-center rounded-sm border border-input bg-background transition-colors peer-checked:border-primary peer-checked:bg-primary peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1"
+        className="flex size-4 items-center justify-center rounded-sm border border-input bg-background transition-colors peer-checked:border-primary peer-checked:bg-primary peer-disabled:opacity-50 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1"
       >
         <Check
           className={cn(

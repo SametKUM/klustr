@@ -10,14 +10,18 @@ import {
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Search, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import { onKubeChange } from '@/lib/events'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { useActiveContexts, useIsAggregated, useUIStore, type ResourceKind } from '@/store/ui'
 import { useTablePrefs } from '@/store/tablePrefs'
 import { type ByContext } from '@/store/resources'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ColumnControls } from './ColumnControls'
 import { RowContextMenu } from './RowContextMenu'
+import { BulkDeleteDialog, BulkRestartDialog, type BulkItem } from './BulkActionDialogs'
+import { isRestartable } from './RestartWorkloadButton'
 
 type RowIdentity = { namespace?: string; name?: string }
 
@@ -180,6 +184,12 @@ export function ResourceTable<T>({
   )
   const [dragColId, setDragColId] = useState<string | null>(null)
   const [dropTargetColId, setDropTargetColId] = useState<string | null>(null)
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkRestartOpen, setBulkRestartOpen] = useState(false)
+  useEffect(() => {
+    setSelectedKeys(new Set())
+  }, [activeContexts, selectedNamespaces, kind])
   const [, setTick] = useState(0)
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
@@ -336,6 +346,52 @@ export function ResourceTable<T>({
     getFilteredRowModel: getFilteredRowModel(),
   })
 
+  const visibleRows = table.getRowModel().rows
+  const visibleKeys = visibleRows
+    .map((r) => {
+      const tagged = r.original as Tagged<T>
+      const ident = tagged as unknown as RowIdentity
+      return ident.name ? identityKey(tagged[KLUSTR_CTX], ident) : null
+    })
+    .filter((k): k is string => k !== null)
+  const selectedItems: BulkItem[] = []
+  for (const r of visibleRows) {
+    const tagged = r.original as Tagged<T>
+    const ctx = tagged[KLUSTR_CTX]
+    const ident = tagged as unknown as RowIdentity
+    if (!ident.name) continue
+    const key = identityKey(ctx, ident)
+    if (!selectedKeys.has(key)) continue
+    selectedItems.push({
+      contextName: ctx,
+      kind,
+      namespace: ident.namespace ?? '',
+      name: ident.name,
+    })
+  }
+  const allVisibleSelected =
+    visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k))
+  const toggleRow = (key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+  const toggleAllVisible = () => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (allVisibleSelected) {
+        for (const k of visibleKeys) next.delete(k)
+      } else {
+        for (const k of visibleKeys) next.add(k)
+      }
+      return next
+    })
+  }
+  const clearSelection = () => setSelectedKeys(new Set())
+
   if (activeContexts.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
@@ -362,8 +418,42 @@ export function ResourceTable<T>({
       : ''
   const contextLabel = isAggregated ? ` across ${activeContexts.length} contexts` : ''
 
+  const canRestart = isRestartable(kind)
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
+      {selectedItems.length > 0 && (
+        <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs">
+          <span className="font-medium text-foreground">{selectedItems.length} selected</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setBulkDeleteOpen(true)}
+            className="h-7 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="size-3.5" />
+            Delete
+          </Button>
+          {canRestart && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setBulkRestartOpen(true)}
+              className="h-7 gap-1.5"
+            >
+              <RotateCcw className="size-3.5" />
+              Restart
+            </Button>
+          )}
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="ml-auto rounded px-2 py-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            Clear
+          </button>
+        </div>
+      )}
       <div className="flex items-center gap-3 border-b border-border px-4 py-2 text-xs text-muted-foreground">
         <span className="min-w-0">
           {countLabel}
@@ -405,6 +495,7 @@ export function ResourceTable<T>({
           style={{ width: '100%', minWidth: table.getTotalSize(), tableLayout: 'fixed' }}
         >
           <colgroup>
+            <col style={{ width: 36 }} />
             {table.getVisibleLeafColumns().map((col) => (
               <col
                 key={col.id}
@@ -419,6 +510,13 @@ export function ResourceTable<T>({
           <thead className="sticky top-0 z-10 bg-background">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id} className="border-b border-border">
+                <th className="px-2 py-2 align-middle">
+                  <Checkbox
+                    checked={allVisibleSelected}
+                    onChange={toggleAllVisible}
+                    aria-label="Select all visible"
+                  />
+                </th>
                 {hg.headers.map((h) => {
                   const sorted = h.column.getIsSorted()
                   const canSort = h.column.getCanSort()
@@ -517,7 +615,7 @@ export function ResourceTable<T>({
             {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={tableColumns.length + 1}
+                  colSpan={tableColumns.length + 2}
                   className="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
                   {!allLoaded
@@ -532,6 +630,8 @@ export function ResourceTable<T>({
                 const tagged = row.original as Tagged<T>
                 const ctx = tagged[KLUSTR_CTX]
                 const identity = tagged as unknown as RowIdentity
+                const rowKey = identity.name ? identityKey(ctx, identity) : null
+                const isSelected = rowKey !== null && selectedKeys.has(rowKey)
                 const flashing = flashKey !== null && flashKey === identityKey(ctx, identity)
                 const canPortForward =
                   kind === 'Pod' ? (tagged as { hasPorts?: boolean }).hasPorts === true : false
@@ -542,9 +642,22 @@ export function ResourceTable<T>({
                       'border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors',
                       onRowClick ? 'cursor-pointer select-none' : '',
                       flashing ? 'bg-emerald-100/60 dark:bg-emerald-400/15' : '',
+                      isSelected ? 'bg-primary/10' : '',
                     ].join(' ')}
                     onClick={onRowClick ? () => onRowClick(tagged as unknown as T, ctx) : undefined}
                   >
+                    <td
+                      className="px-2 py-1.5 align-middle"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {rowKey && (
+                        <Checkbox
+                          checked={isSelected}
+                          onChange={() => toggleRow(rowKey)}
+                          aria-label={`Select ${identity.name}`}
+                        />
+                      )}
+                    </td>
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
@@ -574,6 +687,18 @@ export function ResourceTable<T>({
           </tbody>
         </table>
       </div>
+      <BulkDeleteDialog
+        items={selectedItems}
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        onSuccess={clearSelection}
+      />
+      <BulkRestartDialog
+        items={selectedItems}
+        open={bulkRestartOpen}
+        onOpenChange={setBulkRestartOpen}
+        onSuccess={clearSelection}
+      />
     </div>
   )
 }
