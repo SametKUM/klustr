@@ -18,6 +18,7 @@ import { PortForwardButton } from '@/features/portforward/PortForwardButton'
 import type { ResourceKind } from '@/store/ui'
 import { PodOverviewBody } from '@/features/pods/PodOverviewBody'
 import { PodLogsTab } from '@/features/pods/PodLogsTab'
+import { ApplicationResourcesTab } from '@/features/argocd/ApplicationResourcesTab'
 import { PodExecTab } from '@/features/pods/PodExecTab'
 import { DeploymentDetailBody } from '@/features/deployments/DeploymentDetailBody'
 import { StatefulSetDetailBody } from '@/features/statefulsets/StatefulSetDetailBody'
@@ -264,11 +265,24 @@ function HelmReleaseTabs({
 }
 
 function CustomResourceTabs({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
+  const isArgoApp =
+    resource.kind === 'Application' && resource.gvr?.group === 'argoproj.io'
+  const [tab, setTab] = useState<string>(isArgoApp ? 'resources' : 'yaml')
   return (
-    <Tabs value="yaml" className="flex min-h-0 flex-1 flex-col">
+    <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
+        {isArgoApp && <TabsTrigger value="resources">Resources</TabsTrigger>}
         <TabsTrigger value="yaml">YAML</TabsTrigger>
       </TabsList>
+      {isArgoApp && (
+        <TabsContent value="resources" className="min-h-0 flex-1 p-0">
+          <ApplicationResourcesTab
+            contextName={contextName}
+            namespace={resource.namespace}
+            name={resource.name}
+          />
+        </TabsContent>
+      )}
       <TabsContent value="yaml" className="min-h-0 flex-1 p-0">
         <ResourceYAMLTab
           contextName={contextName}

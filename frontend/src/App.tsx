@@ -43,6 +43,7 @@ import { OverviewView } from '@/features/overview/OverviewView'
 import { WorkloadsOverviewView } from '@/features/overview/WorkloadsOverviewView'
 import { CustomResourceView } from '@/features/crds/CustomResourceView'
 import { CRDGroups } from '@/features/crds/CRDGroups'
+import { ApplicationsView } from '@/features/argocd/ApplicationsView'
 import { HelmReleasesView } from '@/features/helm/HelmReleasesView'
 import { HelmReposView } from '@/features/helm/HelmReposView'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
@@ -133,6 +134,11 @@ const RESOURCE_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   },
 ]
 
+const ARGO_GROUP: { label: string; items: NavItem[] } = {
+  label: 'Argo CD',
+  items: [{ label: 'Applications', view: 'argocdapplications' }],
+}
+
 function MainView() {
   const view = useUIStore((s) => s.selectedView)
   const selectedCRDKey = useUIStore((s) => s.selectedCRDKey)
@@ -218,6 +224,8 @@ function MainView() {
       return <HelmReleasesView />
     case 'helmrepos':
       return <HelmReposView />
+    case 'argocdapplications':
+      return <ApplicationsView />
     default:
       return (
         <div className="flex flex-1 items-center justify-center">
@@ -227,9 +235,12 @@ function MainView() {
   }
 }
 
-const NAV_VIEWS: ResourceView[] = RESOURCE_GROUPS.flatMap((g) =>
-  g.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
-)
+const NAV_VIEWS: ResourceView[] = [
+  ...RESOURCE_GROUPS.flatMap((g) =>
+    g.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
+  ),
+  ...ARGO_GROUP.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
+]
 
 function isEditableTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false
@@ -408,6 +419,50 @@ function App() {
                 </div>
               )
             })}
+            {crds.some((c) => c.group === 'argoproj.io' && c.resource === 'applications') && (
+              (() => {
+                const collapsed = collapsedNavGroups.includes(ARGO_GROUP.label)
+                return (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => toggleNavGroup(ARGO_GROUP.label)}
+                      aria-expanded={!collapsed}
+                      className="flex w-full items-center gap-1 px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-sidebar-foreground"
+                    >
+                      <ChevronRight
+                        className={`size-3 shrink-0 transition-transform ${collapsed ? '' : 'rotate-90'}`}
+                      />
+                      <span>{ARGO_GROUP.label}</span>
+                    </button>
+                    {!collapsed && (
+                      <ul className="flex flex-col">
+                        {ARGO_GROUP.items.map((item) => {
+                          const active =
+                            item.view !== undefined &&
+                            item.view === selectedView &&
+                            selectedCRDKey === null
+                          return (
+                            <li
+                              key={item.label}
+                              className={[
+                                'cursor-pointer rounded px-2 py-1 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                                active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
+                              ].join(' ')}
+                              onClick={() => {
+                                if (item.view) setSelectedView(item.view)
+                              }}
+                            >
+                              {item.label}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                )
+              })()
+            )}
             <CRDGroups
               crds={crds}
               expandedGroups={expandedCRDGroups}

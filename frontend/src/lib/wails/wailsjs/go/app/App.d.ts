@@ -82,6 +82,8 @@ export function HelmChartVersions(arg1:string,arg2:string):Promise<Array<string>
 
 export function InstallHelmRelease(arg1:kube.HelmInstallOptions):Promise<kube.HelmDryRunResult>;
 
+export function ListArgoApplicationResources(arg1:string,arg2:string,arg3:string):Promise<Array<kube.ArgoApplicationResource>>;
+
 export function ListCRDs(arg1:string):Promise<Array<kube.CRDInfo>>;
 
 export function ListClusterWarningEvents(arg1:string,arg2:number):Promise<Array<kube.EventInfo>>;
@@ -168,6 +170,8 @@ export function PodLogTargets(arg1:string,arg2:string,arg3:Record<string, string
 
 export function PodsForOwner(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Array<kube.PodInfo>>;
 
+export function RefreshArgoApplication(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
 export function RemoveHelmRepo(arg1:string):Promise<void>;
 
 export function ResizeExec(arg1:string,arg2:number,arg3:number):Promise<void>;
@@ -201,6 +205,8 @@ export function StopPodLogs(arg1:string):Promise<void>;
 export function StopPortForward(arg1:string):Promise<void>;
 
 export function StopWatch(arg1:string):Promise<void>;
+
+export function SyncArgoApplication(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean):Promise<void>;
 
 export function UninstallHelmRelease(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<void>;
 

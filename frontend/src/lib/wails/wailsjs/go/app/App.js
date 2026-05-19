@@ -162,6 +162,10 @@ export function InstallHelmRelease(arg1) {
   return window['go']['app']['App']['InstallHelmRelease'](arg1);
 }
 
+export function ListArgoApplicationResources(arg1, arg2, arg3) {
+  return window['go']['app']['App']['ListArgoApplicationResources'](arg1, arg2, arg3);
+}
+
 export function ListCRDs(arg1) {
   return window['go']['app']['App']['ListCRDs'](arg1);
 }
@@ -334,6 +338,10 @@ export function PodsForOwner(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['PodsForOwner'](arg1, arg2, arg3, arg4);
 }
 
+export function RefreshArgoApplication(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['RefreshArgoApplication'](arg1, arg2, arg3, arg4);
+}
+
 export function RemoveHelmRepo(arg1) {
   return window['go']['app']['App']['RemoveHelmRepo'](arg1);
 }
@@ -400,6 +408,10 @@ export function StopPortForward(arg1) {
 
 export function StopWatch(arg1) {
   return window['go']['app']['App']['StopWatch'](arg1);
+}
+
+export function SyncArgoApplication(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['SyncArgoApplication'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function UninstallHelmRelease(arg1, arg2, arg3, arg4) {

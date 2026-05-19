@@ -277,6 +277,7 @@ export type ResourceView =
   | 'namespaces'
   | 'helmreleases'
   | 'helmrepos'
+  | 'argocdapplications'
 
 export type ResourceKind =
   | 'Pod'

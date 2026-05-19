@@ -516,6 +516,18 @@ func (a *App) GetCustomResourceYAML(contextName, group, version, resource, names
 	return kube.MarshalCustomResourceYAML(obj)
 }
 
+func (a *App) SyncArgoApplication(contextName, namespace, name, revision string, prune bool) error {
+	return a.clients.SyncArgoApplication(a.ctx, contextName, namespace, name, revision, prune)
+}
+
+func (a *App) RefreshArgoApplication(contextName, namespace, name, mode string) error {
+	return a.clients.RefreshArgoApplication(a.ctx, contextName, namespace, name, mode)
+}
+
+func (a *App) ListArgoApplicationResources(contextName, namespace, name string) ([]kube.ArgoApplicationResource, error) {
+	return a.clients.ListArgoApplicationResources(a.ctx, contextName, namespace, name)
+}
+
 func (a *App) ListEvents(contextName, namespace, kind, name string) ([]kube.EventInfo, error) {
 	return a.clients.ListEvents(a.ctx, contextName, namespace, kind, name)
 }

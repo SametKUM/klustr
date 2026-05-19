@@ -4,6 +4,9 @@ import {
   DeleteResource,
   EnsureCustomResourceWatch,
   GetCustomResourceYAML,
+  SyncArgoApplication,
+  RefreshArgoApplication,
+  ListArgoApplicationResources,
   GetHelmRelease,
   HelmChartVersions,
   InstallHelmRelease,
@@ -206,6 +209,7 @@ export type HelmRepoInfo = kube.HelmRepoInfo
 export type HelmChartSearchResult = kube.HelmChartSearchResult
 export type HelmInstallOptions = kube.HelmInstallOptions
 export type HelmDryRunResult = kube.HelmDryRunResult
+export type ArgoApplicationResource = kube.ArgoApplicationResource
 
 export const api = {
   listContexts: (): Promise<Kubeconfig> => ListContexts(),
@@ -445,5 +449,24 @@ export const api = {
     name: string,
   ): Promise<string> =>
     GetCustomResourceYAML(contextName, group, version, resource, namespace, name),
+  syncArgoApplication: (
+    contextName: string,
+    namespace: string,
+    name: string,
+    revision: string,
+    prune: boolean,
+  ): Promise<void> => SyncArgoApplication(contextName, namespace, name, revision, prune),
+  refreshArgoApplication: (
+    contextName: string,
+    namespace: string,
+    name: string,
+    mode: string,
+  ): Promise<void> => RefreshArgoApplication(contextName, namespace, name, mode),
+  listArgoApplicationResources: (
+    contextName: string,
+    namespace: string,
+    name: string,
+  ): Promise<ArgoApplicationResource[]> =>
+    ListArgoApplicationResources(contextName, namespace, name),
   version: (): Promise<string> => Version(),
 }
