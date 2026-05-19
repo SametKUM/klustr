@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { api } from '@/lib/api'
 import { useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
 
-const CONFIRM_BY_NAME_KINDS: ReadonlySet<ResourceKind> = new Set<ResourceKind>([
+const CONFIRM_BY_TYPING_KINDS: ReadonlySet<ResourceKind> = new Set<ResourceKind>([
   'Namespace',
   'Node',
   'PersistentVolume',
@@ -30,6 +30,12 @@ const CONFIRM_BY_NAME_KINDS: ReadonlySet<ResourceKind> = new Set<ResourceKind>([
   'ReplicationController',
   'CronJob',
   'Job',
+  'HorizontalPodAutoscaler',
+  'PodDisruptionBudget',
+  'NetworkPolicy',
+  'Ingress',
+  'Service',
+  'Secret',
 ])
 
 type DialogProps = {
@@ -41,10 +47,10 @@ type DialogProps = {
 
 export function DeleteResourceDialog({ contextName, resource, open, onOpenChange }: DialogProps) {
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-  const [typedName, setTypedName] = useState('')
+  const [typed, setTyped] = useState('')
 
-  const requireName = CONFIRM_BY_NAME_KINDS.has(resource.kind as ResourceKind)
-  const nameMatches = typedName === resource.name
+  const requireConfirmation = CONFIRM_BY_TYPING_KINDS.has(resource.kind as ResourceKind)
+  const confirmed = typed === 'DELETE'
 
   const del = useMutation({
     mutationFn: async () => {
@@ -65,7 +71,7 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
       open={open}
       onOpenChange={(next) => {
         if (!next) {
-          setTypedName('')
+          setTyped('')
           del.reset()
         }
         onOpenChange(next)
@@ -92,34 +98,38 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {requireName && (
+        {requireConfirmation && (
           <div className="space-y-2">
-            <label htmlFor="delete-confirm-name" className="text-sm">
-              Type <span className="font-mono text-xs allow-select">{resource.name}</span> to confirm:
+            <label htmlFor="delete-confirm" className="text-sm">
+              Type{' '}
+              <span className="allow-select select-all cursor-text rounded bg-muted px-1 font-mono text-xs">
+                DELETE
+              </span>{' '}
+              to confirm:
             </label>
             <Input
-              id="delete-confirm-name"
+              id="delete-confirm"
               autoFocus
               autoComplete="off"
               spellCheck={false}
-              value={typedName}
-              onChange={(e) => setTypedName(e.target.value)}
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && nameMatches && !del.isPending) {
+                if (e.key === 'Enter' && confirmed && !del.isPending) {
                   e.preventDefault()
                   del.mutate()
                 }
               }}
               disabled={del.isPending}
               className="font-mono text-sm"
-              placeholder={resource.name}
+              placeholder="DELETE"
             />
           </div>
         )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={del.isPending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            disabled={del.isPending || (requireName && !nameMatches)}
+            disabled={del.isPending || (requireConfirmation && !confirmed)}
             onClick={(e) => {
               e.preventDefault()
               del.mutate()
