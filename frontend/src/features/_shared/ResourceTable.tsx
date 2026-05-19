@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -112,11 +112,74 @@ export function ResourceTable<T>({
   const [sorting, setSorting] = useState<SortingState>(defaultSort ?? [{ id: 'name', desc: false }])
   const [filter, setFilter] = useState('')
   const prefs = useTablePrefs((s) => s.byKind[kind])
-  const columnSizing = useMemo<ColumnSizingState>(() => prefs?.sizing ?? EMPTY_SIZING, [prefs?.sizing])
+  const persistedSizing = useMemo<ColumnSizingState>(
+    () => prefs?.sizing ?? EMPTY_SIZING,
+    [prefs?.sizing],
+  )
   const setOrder = useTablePrefs((s) => s.setOrder)
   const setHidden = useTablePrefs((s) => s.setHidden)
   const setSizing = useTablePrefs((s) => s.setSizing)
   const resetPrefs = useTablePrefs((s) => s.reset)
+  const [liveSizing, setLiveSizing] = useState<ColumnSizingState>(persistedSizing)
+  const liveSizingRef = useRef(liveSizing)
+  liveSizingRef.current = liveSizing
+  const isResizingRef = useRef(false)
+  const colRefs = useRef<Record<string, HTMLTableColElement | null>>({})
+  useEffect(() => {
+    if (isResizingRef.current) return
+    if (sizingEqual(liveSizingRef.current, persistedSizing)) return
+    setLiveSizing(persistedSizing)
+  }, [persistedSizing])
+  const startResize = useCallback(
+    (colId: string) => (e: React.MouseEvent | React.TouchEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const isTouch = 'touches' in e
+      const startX = isTouch
+        ? (e as React.TouchEvent).touches[0].clientX
+        : (e as React.MouseEvent).clientX
+      const el = colRefs.current[colId]
+      const handleEl = (e.currentTarget as HTMLElement) ?? null
+      const thEl = handleEl?.closest('th') as HTMLElement | null
+      const measured = thEl?.getBoundingClientRect().width ?? 0
+      const startWidth =
+        measured > 0 ? measured : (liveSizingRef.current[colId] ?? 160)
+      let last = startWidth
+      isResizingRef.current = true
+      if (handleEl) handleEl.dataset.resizing = 'true'
+
+      const onMove = (ev: MouseEvent | TouchEvent) => {
+        const x =
+          'touches' in ev
+            ? (ev as TouchEvent).touches[0].clientX
+            : (ev as MouseEvent).clientX
+        const w = Math.max(60, Math.round(startWidth + (x - startX)))
+        last = w
+        if (el) el.style.width = `${w}px`
+      }
+      const onEnd = () => {
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onEnd)
+        window.removeEventListener('touchmove', onMove)
+        window.removeEventListener('touchend', onEnd)
+        window.removeEventListener('touchcancel', onEnd)
+        isResizingRef.current = false
+        if (handleEl) delete handleEl.dataset.resizing
+        if (last === startWidth) return
+        const nextSizing: ColumnSizingState = { ...liveSizingRef.current, [colId]: last }
+        setLiveSizing(nextSizing)
+        setSizing(kind, nextSizing)
+      }
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onEnd)
+      window.addEventListener('touchmove', onMove, { passive: false })
+      window.addEventListener('touchend', onEnd)
+      window.addEventListener('touchcancel', onEnd)
+    },
+    [kind, setSizing],
+  )
+  const [dragColId, setDragColId] = useState<string | null>(null)
+  const [dropTargetColId, setDropTargetColId] = useState<string | null>(null)
   const [, setTick] = useState(0)
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
@@ -245,7 +308,7 @@ export function ResourceTable<T>({
       globalFilter: filter,
       columnOrder,
       columnVisibility,
-      columnSizing,
+      columnSizing: liveSizing,
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setFilter,
@@ -261,12 +324,12 @@ export function ResourceTable<T>({
       setHidden(kind, hidden)
     },
     onColumnSizingChange: (updater) => {
-      const next = typeof updater === 'function' ? updater(columnSizing) : updater
-      if (sizingEqual(columnSizing, next)) return
-      setSizing(kind, next)
+      setLiveSizing((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater
+        if (sizingEqual(prev, next)) return prev
+        return next
+      })
     },
-    enableColumnResizing: true,
-    columnResizeMode: 'onChange',
     defaultColumn: { minSize: 60, size: 160 },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -341,17 +404,77 @@ export function ResourceTable<T>({
           className="border-collapse text-sm"
           style={{ width: '100%', minWidth: table.getTotalSize(), tableLayout: 'fixed' }}
         >
+          <colgroup>
+            {table.getVisibleLeafColumns().map((col) => (
+              <col
+                key={col.id}
+                ref={(el) => {
+                  colRefs.current[col.id] = el
+                }}
+                style={{ width: col.getSize() }}
+              />
+            ))}
+            <col />
+          </colgroup>
           <thead className="sticky top-0 z-10 bg-background">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id} className="border-b border-border">
                 {hg.headers.map((h) => {
                   const sorted = h.column.getIsSorted()
                   const canSort = h.column.getCanSort()
+                  const colId = h.column.id
+                  const isDragging = dragColId === colId
+                  const isDropTarget =
+                    dragColId !== null && dropTargetColId === colId && dragColId !== colId
                   return (
                     <th
                       key={h.id}
-                      style={{ width: h.getSize() }}
-                      className="group relative select-none overflow-hidden px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                      draggable
+                      onDragStart={(e) => {
+                        if (isResizingRef.current) {
+                          e.preventDefault()
+                          return
+                        }
+                        setDragColId(colId)
+                        e.dataTransfer.effectAllowed = 'move'
+                        e.dataTransfer.setData('text/plain', colId)
+                      }}
+                      onDragOver={(e) => {
+                        if (!dragColId || dragColId === colId) return
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'move'
+                        if (dropTargetColId !== colId) setDropTargetColId(colId)
+                      }}
+                      onDragLeave={() => {
+                        if (dropTargetColId === colId) setDropTargetColId(null)
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        if (dragColId && dragColId !== colId) {
+                          const ids = table.getAllLeafColumns().map((c) => c.id)
+                          const from = ids.indexOf(dragColId)
+                          const to = ids.indexOf(colId)
+                          if (from >= 0 && to >= 0) {
+                            const next = ids.slice()
+                            next.splice(from, 1)
+                            next.splice(to, 0, dragColId)
+                            setOrder(kind, next)
+                          }
+                        }
+                        setDragColId(null)
+                        setDropTargetColId(null)
+                      }}
+                      onDragEnd={() => {
+                        setDragColId(null)
+                        setDropTargetColId(null)
+                      }}
+                      className={[
+                        'group relative select-none overflow-hidden px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground',
+                        isDragging ? 'opacity-40' : '',
+                        isDropTarget
+                          ? 'before:absolute before:left-0 before:top-0 before:h-full before:w-0.5 before:bg-primary before:content-[""]'
+                          : '',
+                      ].join(' ')}
                     >
                       <span
                         className={[
@@ -373,13 +496,14 @@ export function ResourceTable<T>({
                           ))}
                       </span>
                       <span
-                        onMouseDown={h.getResizeHandler()}
-                        onTouchStart={h.getResizeHandler()}
+                        draggable={false}
+                        onMouseDown={startResize(h.column.id)}
+                        onTouchStart={startResize(h.column.id)}
                         onClick={(e) => e.stopPropagation()}
                         className={[
                           'absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none',
-                          'opacity-0 group-hover:opacity-100',
-                          h.column.getIsResizing() ? 'bg-primary opacity-100' : 'bg-border',
+                          'bg-border opacity-0 group-hover:opacity-100',
+                          'data-[resizing=true]:bg-primary data-[resizing=true]:opacity-100',
                         ].join(' ')}
                       />
                     </th>
@@ -424,7 +548,6 @@ export function ResourceTable<T>({
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        style={{ width: cell.column.getSize() }}
                         className="overflow-hidden truncate whitespace-nowrap px-3 py-1.5 align-middle"
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
