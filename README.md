@@ -70,9 +70,10 @@ Download the latest darwin-arm64 tarball from the [Releases](https://github.com/
 ```bash
 tar -xzf klustr-*-darwin-arm64.tar.gz
 mv klustr.app /Applications/
-xattr -cr /Applications/klustr.app   # silence Gatekeeper (build is not notarized yet)
 open /Applications/klustr.app
 ```
+
+The build is signed with a Developer ID and notarized by Apple, so Gatekeeper opens it without the quarantine prompt.
 
 ### Windows / Linux
 

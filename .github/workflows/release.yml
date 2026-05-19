@@ -79,6 +79,50 @@ jobs:
             -trimpath \
             -clean
 
+      - name: Sign macOS app
+        if: startsWith(matrix.os, 'macos')
+        shell: bash
+        env:
+          P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN_PASS=$(openssl rand -hex 16)
+          KEYCHAIN=klustr-build.keychain
+          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          echo "$P12_BASE64" | base64 --decode > cert.p12
+          security import cert.p12 -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASS" "$KEYCHAIN" >/dev/null
+          rm -f cert.p12
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" | awk '/Developer ID Application/ { print $2; exit }')
+          if [ -z "$IDENTITY" ]; then
+            echo "No Developer ID Application identity found in keychain" >&2
+            exit 1
+          fi
+          codesign --deep --force --timestamp --options runtime \
+            --entitlements build/darwin/entitlements.plist \
+            --sign "$IDENTITY" build/bin/klustr.app
+          codesign --verify --deep --strict --verbose=2 build/bin/klustr.app
+
+      - name: Notarize macOS app
+        if: startsWith(matrix.os, 'macos')
+        shell: bash
+        env:
+          APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
+          TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
+          APPLE_PASSWORD: ${{ secrets.MACOS_NOTARY_PASSWORD }}
+        run: |
+          ditto -c -k --keepParent build/bin/klustr.app notarize.zip
+          xcrun notarytool submit notarize.zip \
+            --apple-id "$APPLE_ID" \
+            --team-id "$TEAM_ID" \
+            --password "$APPLE_PASSWORD" \
+            --wait
+          xcrun stapler staple build/bin/klustr.app
+          rm -f notarize.zip
+
       - name: Package macOS
         if: startsWith(matrix.os, 'macos')
         shell: bash
@@ -125,7 +169,7 @@ jobs:
           body: |
             ## Install (macOS Apple Silicon)
 
-            The build is not notarized yet — run these in your terminal:
+            The build is signed with a Developer ID and notarized by Apple, so Gatekeeper opens it without the quarantine prompt.
 
             ```bash
             # Download
@@ -134,9 +178,6 @@ jobs:
             # Extract and move into /Applications
             tar -xzf klustr-${{ github.ref_name }}-darwin-arm64.tar.gz
             mv klustr.app /Applications/
-
-            # Clear the quarantine attribute so Gatekeeper lets it run
-            xattr -cr /Applications/klustr.app
 
             # Launch
             open /Applications/klustr.app
