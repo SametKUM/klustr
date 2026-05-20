@@ -90,6 +90,16 @@ import {
   ListJobs,
   ListNamespaces,
   ListNodes,
+  ListServiceAccounts,
+  GetServiceAccount,
+  ListRoles,
+  GetRole,
+  ListRoleBindings,
+  GetRoleBinding,
+  ListClusterRoles,
+  GetClusterRole,
+  ListClusterRoleBindings,
+  GetClusterRoleBinding,
   ListPods,
   PodsForOwner,
   ListSecrets,
@@ -143,6 +153,11 @@ export type JobInfo = kube.JobInfo
 export type CronJobInfo = kube.CronJobInfo
 export type IngressInfo = kube.IngressInfo
 export type NodeInfo = kube.NodeInfo
+export type ServiceAccountInfo = kube.ServiceAccountInfo
+export type RoleInfo = kube.RoleInfo
+export type RoleBindingInfo = kube.RoleBindingInfo
+export type ClusterRoleInfo = kube.ClusterRoleInfo
+export type ClusterRoleBindingInfo = kube.ClusterRoleBindingInfo
 export type PodDetail = kube.PodDetail
 export type ContainerDetail = kube.ContainerDetail
 export type ContainerEnvVar = kube.ContainerEnvVar
@@ -194,6 +209,15 @@ export type IngressTLSDetail = kube.IngressTLSDetail
 export type NodeDetail = kube.NodeDetail
 export type NodeTaintDetail = kube.NodeTaintDetail
 export type NamespaceDetail = kube.NamespaceDetail
+export type ServiceAccountDetail = kube.ServiceAccountDetail
+export type ObjectRefDetail = kube.ObjectRefDetail
+export type RoleDetail = kube.RoleDetail
+export type RoleBindingDetail = kube.RoleBindingDetail
+export type ClusterRoleDetail = kube.ClusterRoleDetail
+export type ClusterRoleBindingDetail = kube.ClusterRoleBindingDetail
+export type PolicyRuleDetail = kube.PolicyRuleDetail
+export type SubjectDetail = kube.SubjectDetail
+export type RoleRefDetail = kube.RoleRefDetail
 export type PortForwardInfo = kube.PortForwardInfo
 export type PodLogTarget = kube.PodLogTarget
 export type EventInfo = kube.EventInfo
@@ -276,6 +300,24 @@ export const api = {
   listIngresses: (name: string, namespace: string): Promise<IngressInfo[]> =>
     ListIngresses(name, namespace),
   listNodes: (name: string): Promise<NodeInfo[]> => ListNodes(name),
+  listServiceAccounts: (name: string, namespace: string): Promise<ServiceAccountInfo[]> =>
+    ListServiceAccounts(name, namespace),
+  listRoles: (name: string, namespace: string): Promise<RoleInfo[]> =>
+    ListRoles(name, namespace),
+  listRoleBindings: (name: string, namespace: string): Promise<RoleBindingInfo[]> =>
+    ListRoleBindings(name, namespace),
+  listClusterRoles: (name: string): Promise<ClusterRoleInfo[]> => ListClusterRoles(name),
+  listClusterRoleBindings: (name: string): Promise<ClusterRoleBindingInfo[]> =>
+    ListClusterRoleBindings(name),
+  getServiceAccount: (ctx: string, ns: string, name: string): Promise<ServiceAccountDetail> =>
+    GetServiceAccount(ctx, ns, name),
+  getRole: (ctx: string, ns: string, name: string): Promise<RoleDetail> => GetRole(ctx, ns, name),
+  getRoleBinding: (ctx: string, ns: string, name: string): Promise<RoleBindingDetail> =>
+    GetRoleBinding(ctx, ns, name),
+  getClusterRole: (ctx: string, name: string): Promise<ClusterRoleDetail> =>
+    GetClusterRole(ctx, name),
+  getClusterRoleBinding: (ctx: string, name: string): Promise<ClusterRoleBindingDetail> =>
+    GetClusterRoleBinding(ctx, name),
   getPod: (contextName: string, namespace: string, name: string): Promise<PodDetail> =>
     GetPod(contextName, namespace, name),
   startPodLogs: (

@@ -275,6 +275,11 @@ export type ResourceView =
   | 'ingresses'
   | 'nodes'
   | 'namespaces'
+  | 'serviceaccounts'
+  | 'roles'
+  | 'rolebindings'
+  | 'clusterroles'
+  | 'clusterrolebindings'
   | 'helmreleases'
   | 'helmrepos'
   | 'argocdapplications'
@@ -310,6 +315,11 @@ export type ResourceKind =
   | 'Ingress'
   | 'Node'
   | 'Namespace'
+  | 'ServiceAccount'
+  | 'Role'
+  | 'RoleBinding'
+  | 'ClusterRole'
+  | 'ClusterRoleBinding'
 
 export type SelectedResourceGVR = {
   group: string

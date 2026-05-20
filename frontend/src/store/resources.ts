@@ -29,6 +29,11 @@ import type {
   SecretInfo,
   ServiceInfo,
   StatefulSetInfo,
+  ServiceAccountInfo,
+  RoleInfo,
+  RoleBindingInfo,
+  ClusterRoleInfo,
+  ClusterRoleBindingInfo,
 } from '@/lib/api'
 
 export type ByContext<T> = Record<string, T[]>
@@ -64,6 +69,11 @@ type ResourcesState = {
   cronJobs: ByContext<CronJobInfo>
   ingresses: ByContext<IngressInfo>
   nodes: ByContext<NodeInfo>
+  serviceAccounts: ByContext<ServiceAccountInfo>
+  roles: ByContext<RoleInfo>
+  roleBindings: ByContext<RoleBindingInfo>
+  clusterRoles: ByContext<ClusterRoleInfo>
+  clusterRoleBindings: ByContext<ClusterRoleBindingInfo>
   setNamespaces: (ctx: string, list: NamespaceInfo[]) => void
   setPods: (ctx: string, list: PodInfo[]) => void
   setDeployments: (ctx: string, list: DeploymentInfo[]) => void
@@ -94,6 +104,11 @@ type ResourcesState = {
   setCronJobs: (ctx: string, list: CronJobInfo[]) => void
   setIngresses: (ctx: string, list: IngressInfo[]) => void
   setNodes: (ctx: string, list: NodeInfo[]) => void
+  setServiceAccounts: (ctx: string, list: ServiceAccountInfo[]) => void
+  setRoles: (ctx: string, list: RoleInfo[]) => void
+  setRoleBindings: (ctx: string, list: RoleBindingInfo[]) => void
+  setClusterRoles: (ctx: string, list: ClusterRoleInfo[]) => void
+  setClusterRoleBindings: (ctx: string, list: ClusterRoleBindingInfo[]) => void
   clearContext: (ctx: string) => void
   reset: () => void
 }
@@ -129,6 +144,11 @@ const KIND_KEYS = [
   'cronJobs',
   'ingresses',
   'nodes',
+  'serviceAccounts',
+  'roles',
+  'roleBindings',
+  'clusterRoles',
+  'clusterRoleBindings',
 ] as const
 
 type KindKey = (typeof KIND_KEYS)[number]
@@ -216,6 +236,15 @@ export const useResources = create<ResourcesState>((set) => ({
   setCronJobs: (ctx, list) => set((s) => ({ cronJobs: withCtx(s.cronJobs, ctx, list) })),
   setIngresses: (ctx, list) => set((s) => ({ ingresses: withCtx(s.ingresses, ctx, list) })),
   setNodes: (ctx, list) => set((s) => ({ nodes: withCtx(s.nodes, ctx, list) })),
+  setServiceAccounts: (ctx, list) =>
+    set((s) => ({ serviceAccounts: withCtx(s.serviceAccounts, ctx, list) })),
+  setRoles: (ctx, list) => set((s) => ({ roles: withCtx(s.roles, ctx, list) })),
+  setRoleBindings: (ctx, list) =>
+    set((s) => ({ roleBindings: withCtx(s.roleBindings, ctx, list) })),
+  setClusterRoles: (ctx, list) =>
+    set((s) => ({ clusterRoles: withCtx(s.clusterRoles, ctx, list) })),
+  setClusterRoleBindings: (ctx, list) =>
+    set((s) => ({ clusterRoleBindings: withCtx(s.clusterRoleBindings, ctx, list) })),
   clearContext: (ctx) =>
     set((s) => {
       const next = {} as Partial<Record<KindKey, ByContext<unknown>>>
