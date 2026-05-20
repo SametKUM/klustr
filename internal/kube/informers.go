@@ -16,6 +16,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic"
@@ -379,6 +380,42 @@ type NodeInfo struct {
 	CreatedAt  string `json:"createdAt"`
 }
 
+type ServiceAccountInfo struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Secrets   int    `json:"secrets"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type RoleInfo struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Rules     int    `json:"rules"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type RoleBindingInfo struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	RoleRef   string `json:"roleRef"`
+	Subjects  int    `json:"subjects"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type ClusterRoleInfo struct {
+	Name        string `json:"name"`
+	Rules       int    `json:"rules"`
+	Aggregation bool   `json:"aggregation"`
+	CreatedAt   string `json:"createdAt"`
+}
+
+type ClusterRoleBindingInfo struct {
+	Name      string `json:"name"`
+	RoleRef   string `json:"roleRef"`
+	Subjects  int    `json:"subjects"`
+	CreatedAt string `json:"createdAt"`
+}
+
 type ChangeFunc func(kind string)
 
 type contextWatcher struct {
@@ -711,6 +748,56 @@ func (w *contextWatcher) start(parent context.Context) error {
 		return err
 	}
 
+	serviceAccounts := w.factory.Core().V1().ServiceAccounts().Informer()
+	if _, err := serviceAccounts.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(any) { w.touch("ServiceAccount") },
+		UpdateFunc: func(any, any) { w.touch("ServiceAccount") },
+		DeleteFunc: func(any) { w.touch("ServiceAccount") },
+	}); err != nil {
+		cancel()
+		return err
+	}
+
+	roles := w.factory.Rbac().V1().Roles().Informer()
+	if _, err := roles.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(any) { w.touch("Role") },
+		UpdateFunc: func(any, any) { w.touch("Role") },
+		DeleteFunc: func(any) { w.touch("Role") },
+	}); err != nil {
+		cancel()
+		return err
+	}
+
+	roleBindings := w.factory.Rbac().V1().RoleBindings().Informer()
+	if _, err := roleBindings.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(any) { w.touch("RoleBinding") },
+		UpdateFunc: func(any, any) { w.touch("RoleBinding") },
+		DeleteFunc: func(any) { w.touch("RoleBinding") },
+	}); err != nil {
+		cancel()
+		return err
+	}
+
+	clusterRoles := w.factory.Rbac().V1().ClusterRoles().Informer()
+	if _, err := clusterRoles.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(any) { w.touch("ClusterRole") },
+		UpdateFunc: func(any, any) { w.touch("ClusterRole") },
+		DeleteFunc: func(any) { w.touch("ClusterRole") },
+	}); err != nil {
+		cancel()
+		return err
+	}
+
+	clusterRoleBindings := w.factory.Rbac().V1().ClusterRoleBindings().Informer()
+	if _, err := clusterRoleBindings.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(any) { w.touch("ClusterRoleBinding") },
+		UpdateFunc: func(any, any) { w.touch("ClusterRoleBinding") },
+		DeleteFunc: func(any) { w.touch("ClusterRoleBinding") },
+	}); err != nil {
+		cancel()
+		return err
+	}
+
 	w.factory.Start(ctx.Done())
 	go func() {
 		w.factory.WaitForCacheSync(ctx.Done())
@@ -723,6 +810,7 @@ func (w *contextWatcher) start(parent context.Context) error {
 			"PriorityClass", "RuntimeClass", "Lease",
 			"MutatingWebhookConfiguration", "ValidatingWebhookConfiguration",
 			"Endpoints", "ReplicationController",
+			"ServiceAccount", "Role", "RoleBinding", "ClusterRole", "ClusterRoleBinding",
 		} {
 			w.touch(kind)
 		}
@@ -2183,6 +2271,126 @@ func (w *contextWatcher) Nodes() []NodeInfo {
 			OSImage:    n.Status.NodeInfo.OSImage,
 			InternalIP: nodeInternalIP(n),
 			CreatedAt:  n.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) ServiceAccounts(namespace string) []ServiceAccountInfo {
+	lister := w.factory.Core().V1().ServiceAccounts().Lister()
+	var (
+		sas []*corev1.ServiceAccount
+		err error
+	)
+	if namespace == "" {
+		sas, err = lister.List(labels.Everything())
+	} else {
+		sas, err = lister.ServiceAccounts(namespace).List(labels.Everything())
+	}
+	if err != nil {
+		return []ServiceAccountInfo{}
+	}
+	out := make([]ServiceAccountInfo, 0, len(sas))
+	for _, s := range sas {
+		out = append(out, ServiceAccountInfo{
+			Name:      s.Name,
+			Namespace: s.Namespace,
+			Secrets:   len(s.Secrets),
+			CreatedAt: s.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	return out
+}
+
+func (w *contextWatcher) Roles(namespace string) []RoleInfo {
+	lister := w.factory.Rbac().V1().Roles().Lister()
+	var (
+		roles []*rbacv1.Role
+		err   error
+	)
+	if namespace == "" {
+		roles, err = lister.List(labels.Everything())
+	} else {
+		roles, err = lister.Roles(namespace).List(labels.Everything())
+	}
+	if err != nil {
+		return []RoleInfo{}
+	}
+	out := make([]RoleInfo, 0, len(roles))
+	for _, r := range roles {
+		out = append(out, RoleInfo{
+			Name:      r.Name,
+			Namespace: r.Namespace,
+			Rules:     len(r.Rules),
+			CreatedAt: r.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	return out
+}
+
+func (w *contextWatcher) RoleBindings(namespace string) []RoleBindingInfo {
+	lister := w.factory.Rbac().V1().RoleBindings().Lister()
+	var (
+		bindings []*rbacv1.RoleBinding
+		err      error
+	)
+	if namespace == "" {
+		bindings, err = lister.List(labels.Everything())
+	} else {
+		bindings, err = lister.RoleBindings(namespace).List(labels.Everything())
+	}
+	if err != nil {
+		return []RoleBindingInfo{}
+	}
+	out := make([]RoleBindingInfo, 0, len(bindings))
+	for _, b := range bindings {
+		ref := b.RoleRef.Kind + "/" + b.RoleRef.Name
+		out = append(out, RoleBindingInfo{
+			Name:      b.Name,
+			Namespace: b.Namespace,
+			RoleRef:   ref,
+			Subjects:  len(b.Subjects),
+			CreatedAt: b.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	return out
+}
+
+func (w *contextWatcher) ClusterRoles() []ClusterRoleInfo {
+	list, err := w.factory.Rbac().V1().ClusterRoles().Lister().List(labels.Everything())
+	if err != nil {
+		return []ClusterRoleInfo{}
+	}
+	out := make([]ClusterRoleInfo, 0, len(list))
+	for _, r := range list {
+		out = append(out, ClusterRoleInfo{
+			Name:        r.Name,
+			Rules:       len(r.Rules),
+			Aggregation: r.AggregationRule != nil,
+			CreatedAt:   r.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) ClusterRoleBindings() []ClusterRoleBindingInfo {
+	list, err := w.factory.Rbac().V1().ClusterRoleBindings().Lister().List(labels.Everything())
+	if err != nil {
+		return []ClusterRoleBindingInfo{}
+	}
+	out := make([]ClusterRoleBindingInfo, 0, len(list))
+	for _, b := range list {
+		ref := b.RoleRef.Kind + "/" + b.RoleRef.Name
+		out = append(out, ClusterRoleBindingInfo{
+			Name:      b.Name,
+			RoleRef:   ref,
+			Subjects:  len(b.Subjects),
+			CreatedAt: b.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })

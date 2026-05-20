@@ -46,6 +46,12 @@ var kindToGVR = map[string]schema.GroupVersionResource{
 	"ValidatingWebhookConfiguration": {Group: "admissionregistration.k8s.io", Version: "v1", Resource: "validatingwebhookconfigurations"},
 	"Endpoints":              {Group: "", Version: "v1", Resource: "endpoints"},
 	"ReplicationController":  {Group: "", Version: "v1", Resource: "replicationcontrollers"},
+
+	"ServiceAccount":     {Group: "", Version: "v1", Resource: "serviceaccounts"},
+	"Role":               {Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "roles"},
+	"RoleBinding":        {Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "rolebindings"},
+	"ClusterRole":        {Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "clusterroles"},
+	"ClusterRoleBinding": {Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "clusterrolebindings"},
 }
 
 func resourceForKind(kind string) (schema.GroupVersionResource, error) {

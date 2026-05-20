@@ -444,6 +444,46 @@ func (a *App) ListNodes(name string) []kube.NodeInfo {
 	return a.clients.Nodes(name)
 }
 
+func (a *App) ListServiceAccounts(name, namespace string) []kube.ServiceAccountInfo {
+	return a.clients.ServiceAccounts(name, namespace)
+}
+
+func (a *App) GetServiceAccount(contextName, namespace, name string) (*kube.ServiceAccountDetail, error) {
+	return a.clients.ServiceAccount(contextName, namespace, name)
+}
+
+func (a *App) ListRoles(name, namespace string) []kube.RoleInfo {
+	return a.clients.Roles(name, namespace)
+}
+
+func (a *App) GetRole(contextName, namespace, name string) (*kube.RoleDetail, error) {
+	return a.clients.Role(contextName, namespace, name)
+}
+
+func (a *App) ListRoleBindings(name, namespace string) []kube.RoleBindingInfo {
+	return a.clients.RoleBindings(name, namespace)
+}
+
+func (a *App) GetRoleBinding(contextName, namespace, name string) (*kube.RoleBindingDetail, error) {
+	return a.clients.RoleBinding(contextName, namespace, name)
+}
+
+func (a *App) ListClusterRoles(name string) []kube.ClusterRoleInfo {
+	return a.clients.ClusterRoles(name)
+}
+
+func (a *App) GetClusterRole(contextName, name string) (*kube.ClusterRoleDetail, error) {
+	return a.clients.ClusterRole(contextName, name)
+}
+
+func (a *App) ListClusterRoleBindings(name string) []kube.ClusterRoleBindingInfo {
+	return a.clients.ClusterRoleBindings(name)
+}
+
+func (a *App) GetClusterRoleBinding(contextName, name string) (*kube.ClusterRoleBindingDetail, error) {
+	return a.clients.ClusterRoleBinding(contextName, name)
+}
+
 func (a *App) ListHelmReleases(contextName, namespace string) ([]kube.HelmReleaseInfo, error) {
 	return a.clients.HelmReleases(contextName, namespace)
 }
