@@ -238,6 +238,10 @@ func (a *App) ScaleResource(contextName, kind, namespace, name string, replicas 
 	return a.clients.ScaleResource(a.ctx, contextName, kind, namespace, name, int32(replicas))
 }
 
+func (a *App) PatchHPAReplicas(contextName, namespace, name string, minReplicas, maxReplicas int) error {
+	return a.clients.PatchHPAReplicas(a.ctx, contextName, namespace, name, int32(minReplicas), int32(maxReplicas))
+}
+
 func (a *App) RestartWorkload(contextName, kind, namespace, name string) error {
 	return a.clients.RestartWorkload(a.ctx, contextName, kind, namespace, name)
 }

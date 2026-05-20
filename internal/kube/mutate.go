@@ -223,6 +223,37 @@ func (m *ClientManager) RestartWorkload(ctx context.Context, contextName, kind, 
 	return err
 }
 
+func (m *ClientManager) PatchHPAReplicas(ctx context.Context, contextName, namespace, name string, minReplicas, maxReplicas int32) error {
+	if maxReplicas < 1 {
+		return fmt.Errorf("maxReplicas must be >= 1")
+	}
+	if minReplicas < 1 {
+		return fmt.Errorf("minReplicas must be >= 1")
+	}
+	if minReplicas > maxReplicas {
+		return fmt.Errorf("minReplicas (%d) cannot exceed maxReplicas (%d)", minReplicas, maxReplicas)
+	}
+	cs, err := m.Clientset(contextName)
+	if err != nil {
+		return err
+	}
+	patch := map[string]any{
+		"spec": map[string]any{
+			"minReplicas": minReplicas,
+			"maxReplicas": maxReplicas,
+		},
+	}
+	data, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+	_, err = cs.AutoscalingV2().HorizontalPodAutoscalers(namespace).Patch(
+		ctx, name, types.MergePatchType, data,
+		metav1.PatchOptions{FieldManager: "klustr"},
+	)
+	return err
+}
+
 func (m *ClientManager) ScaleResource(ctx context.Context, contextName, kind, namespace, name string, replicas int32) error {
 	cs, err := m.Clientset(contextName)
 	if err != nil {
