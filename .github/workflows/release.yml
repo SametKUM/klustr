@@ -114,12 +114,71 @@ jobs:
           TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
           APPLE_PASSWORD: ${{ secrets.MACOS_NOTARY_PASSWORD }}
         run: |
+          set -e
           ditto -c -k --keepParent build/bin/klustr.app notarize.zip
-          xcrun notarytool submit notarize.zip \
+
+          SUBMIT_JSON=$(xcrun notarytool submit notarize.zip \
             --apple-id "$APPLE_ID" \
             --team-id "$TEAM_ID" \
             --password "$APPLE_PASSWORD" \
-            --wait
+            --output-format json)
+          echo "Submit response: $SUBMIT_JSON"
+          SUBMISSION_ID=$(echo "$SUBMIT_JSON" | jq -r '.id')
+          if [ -z "$SUBMISSION_ID" ] || [ "$SUBMISSION_ID" = "null" ]; then
+            echo "Failed to obtain submission id" >&2
+            exit 1
+          fi
+          echo "Submission id: $SUBMISSION_ID"
+
+          MAX_WAIT=3600
+          INTERVAL=30
+          ELAPSED=0
+          FAILS=0
+          while true; do
+            if INFO_JSON=$(xcrun notarytool info "$SUBMISSION_ID" \
+                --apple-id "$APPLE_ID" \
+                --team-id "$TEAM_ID" \
+                --password "$APPLE_PASSWORD" \
+                --output-format json 2>&1); then
+              FAILS=0
+              STATUS=$(echo "$INFO_JSON" | jq -r '.status // "Unknown"')
+              echo "[${ELAPSED}s] status=$STATUS"
+              case "$STATUS" in
+                Accepted)
+                  break
+                  ;;
+                "In Progress")
+                  ;;
+                Invalid|Rejected)
+                  echo "Notarization rejected with status: $STATUS"
+                  xcrun notarytool log "$SUBMISSION_ID" \
+                    --apple-id "$APPLE_ID" \
+                    --team-id "$TEAM_ID" \
+                    --password "$APPLE_PASSWORD" || true
+                  exit 1
+                  ;;
+                *)
+                  echo "Unexpected status: $STATUS"
+                  echo "$INFO_JSON"
+                  exit 1
+                  ;;
+              esac
+            else
+              FAILS=$((FAILS + 1))
+              echo "[${ELAPSED}s] notarytool info failed (transient $FAILS/5): $INFO_JSON"
+              if [ "$FAILS" -ge 5 ]; then
+                echo "Too many consecutive transient failures, giving up" >&2
+                exit 1
+              fi
+            fi
+            if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
+              echo "Timed out after ${MAX_WAIT}s waiting for Apple" >&2
+              exit 1
+            fi
+            sleep "$INTERVAL"
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
           xcrun stapler staple build/bin/klustr.app
           rm -f notarize.zip
 
