@@ -79,29 +79,23 @@ jobs:
             -trimpath \
             -clean
 
+      - name: Import code-signing certificate
+        if: startsWith(matrix.os, 'macos')
+        uses: Apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          p12-password: ${{ secrets.MACOS_CERT_PASSWORD }}
+
       - name: Sign macOS app
         if: startsWith(matrix.os, 'macos')
         shell: bash
-        env:
-          P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
-          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
         run: |
-          KEYCHAIN_PASS=$(openssl rand -hex 16)
-          KEYCHAIN=klustr-build.keychain
-          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
-          security default-keychain -s "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
-          security set-keychain-settings -lut 3600 "$KEYCHAIN"
-          echo "$P12_BASE64" | base64 --decode > cert.p12
-          security import cert.p12 -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASS" "$KEYCHAIN" >/dev/null
-          rm -f cert.p12
-          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" | awk '/Developer ID Application/ { print $2; exit }')
+          IDENTITY=$(security find-identity -v -p codesigning | awk '/Developer ID Application/ { print $2; exit }')
           if [ -z "$IDENTITY" ]; then
             echo "No Developer ID Application identity found in keychain" >&2
             exit 1
           fi
-          codesign --deep --force --timestamp --options runtime \
+          codesign --force --timestamp --options runtime \
             --entitlements build/darwin/entitlements.plist \
             --sign "$IDENTITY" build/bin/klustr.app
           codesign --verify --deep --strict --verbose=2 build/bin/klustr.app
