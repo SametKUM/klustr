@@ -107,6 +107,7 @@ import {
   ListStatefulSets,
   PingContext,
   ResizeExec,
+  PatchHPAReplicas,
   RestartWorkload,
   ScaleResource,
   SendExecInput,
@@ -406,6 +407,13 @@ export const api = {
     DeleteResource(ctx, kind, ns, name),
   scaleResource: (ctx: string, kind: string, ns: string, name: string, replicas: number): Promise<void> =>
     ScaleResource(ctx, kind, ns, name, replicas),
+  patchHPAReplicas: (
+    ctx: string,
+    ns: string,
+    name: string,
+    minReplicas: number,
+    maxReplicas: number,
+  ): Promise<void> => PatchHPAReplicas(ctx, ns, name, minReplicas, maxReplicas),
   restartWorkload: (ctx: string, kind: string, ns: string, name: string): Promise<void> =>
     RestartWorkload(ctx, kind, ns, name),
   startPortForward: (

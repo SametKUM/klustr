@@ -1,8 +1,20 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { Loader2, Minus, Pencil, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { api, type HPAMetricTarget, type HorizontalPodAutoscalerDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
+import { Button } from '@/components/ui/button'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
+
+const HARD_MAX_REPLICAS = 1000
 
 export function HorizontalPodAutoscalerDetailBody({
   contextName,
@@ -24,8 +36,13 @@ export function HorizontalPodAutoscalerDetailBody({
     <div className="space-y-6">
       <Section title="Status">
         <Field label="Reference">{detail.reference}</Field>
-        <Field label="Min Replicas">{detail.minReplicas}</Field>
-        <Field label="Max Replicas">{detail.maxReplicas}</Field>
+        <ReplicaBoundsEditor
+          contextName={contextName}
+          namespace={namespace}
+          name={name}
+          minReplicas={detail.minReplicas}
+          maxReplicas={detail.maxReplicas}
+        />
         <Field label="Current Replicas">{detail.currentReplicas}</Field>
         <Field label="Desired Replicas">{detail.desiredReplicas}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
@@ -66,6 +83,179 @@ export function HorizontalPodAutoscalerDetailBody({
       <MaybeSection title="Labels" items={detail.labels} render={() => <Chips items={detail.labels} />} />
       <MaybeSection title="Annotations" items={detail.annotations} render={() => <Chips items={detail.annotations} />} />
     </div>
+  )
+}
+
+function ReplicaBoundsEditor({
+  contextName,
+  namespace,
+  name,
+  minReplicas,
+  maxReplicas,
+}: {
+  contextName: string | null
+  namespace: string
+  name: string
+  minReplicas: number
+  maxReplicas: number
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draftMin, setDraftMin] = useState(minReplicas)
+  const [draftMax, setDraftMax] = useState(maxReplicas)
+
+  const startEditing = () => {
+    setDraftMin(minReplicas)
+    setDraftMax(maxReplicas)
+    setEditing(true)
+  }
+
+  const patch = useMutation({
+    mutationFn: async () => {
+      if (!contextName) throw new Error('no context')
+      await api.patchHPAReplicas(contextName, namespace, name, draftMin, draftMax)
+    },
+    onSuccess: () => {
+      toast.success(`Updated min/max for hpa/${name}`)
+      setEditing(false)
+    },
+    onError: (e: unknown) => {
+      toast.error(`Update failed: ${String(e)}`)
+    },
+  })
+
+  const dirty = draftMin !== minReplicas || draftMax !== maxReplicas
+  const validation = validate(draftMin, draftMax)
+  const canSave = dirty && validation === null && !patch.isPending
+
+  if (!editing) {
+    return (
+      <Field label="Replicas">
+        <div className="group flex items-center gap-2">
+          <span className="font-mono tabular-nums">
+            <span className="text-muted-foreground">min</span> {minReplicas}
+            <span className="px-1.5 text-muted-foreground">→</span>
+            <span className="text-muted-foreground">max</span> {maxReplicas}
+          </span>
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label="Edit min/max replicas"
+            onClick={startEditing}
+            className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+          >
+            <Pencil className="size-3" />
+          </Button>
+        </div>
+      </Field>
+    )
+  }
+
+  return (
+    <Field label="Replicas">
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <LabeledNumberInput
+            label="Min"
+            value={draftMin}
+            onChange={setDraftMin}
+            disabled={patch.isPending}
+            ariaLabel="Minimum replicas"
+          />
+          <span className="text-muted-foreground">→</span>
+          <LabeledNumberInput
+            label="Max"
+            value={draftMax}
+            onChange={setDraftMax}
+            disabled={patch.isPending}
+            ariaLabel="Maximum replicas"
+          />
+          <div className="ml-1 flex items-center gap-1">
+            <Button size="xs" onClick={() => patch.mutate()} disabled={!canSave}>
+              {patch.isPending && <Loader2 className="size-3 animate-spin" />}
+              Save
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => setEditing(false)}
+              disabled={patch.isPending}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+        {validation && <div className="text-xs text-destructive">{validation}</div>}
+      </div>
+    </Field>
+  )
+}
+
+function validate(min: number, max: number): string | null {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return 'Values must be numbers'
+  if (min < 1) return 'Min must be ≥ 1'
+  if (max < 1) return 'Max must be ≥ 1'
+  if (min > max) return 'Min cannot exceed Max'
+  return null
+}
+
+function LabeledNumberInput({
+  label,
+  value,
+  onChange,
+  disabled,
+  ariaLabel,
+}: {
+  label: string
+  value: number
+  onChange: (n: number) => void
+  disabled?: boolean
+  ariaLabel: string
+}) {
+  const clamp = (n: number) => Math.min(HARD_MAX_REPLICAS, Math.max(1, n))
+  const bump = (delta: number) => onChange(clamp(value + delta))
+  return (
+    <InputGroup className="h-7 w-[150px]">
+      <InputGroupAddon align="inline-start" className="gap-1.5">
+        <InputGroupButton
+          size="icon-xs"
+          aria-label={`Decrement ${label}`}
+          onClick={() => bump(-1)}
+          disabled={disabled || value <= 1}
+        >
+          <Minus />
+        </InputGroupButton>
+        <span className="text-[10px] font-semibold uppercase tracking-wide">{label}</span>
+      </InputGroupAddon>
+      <InputGroupInput
+        aria-label={ariaLabel}
+        type="number"
+        min={1}
+        max={HARD_MAX_REPLICAS}
+        value={Number.isFinite(value) ? value : ''}
+        disabled={disabled}
+        onChange={(e) => onChange(clamp(Number.parseInt(e.target.value, 10) || 0))}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            bump(1)
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            bump(-1)
+          }
+        }}
+        className="h-full px-1.5 text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
+      <InputGroupAddon align="inline-end">
+        <InputGroupButton
+          size="icon-xs"
+          aria-label={`Increment ${label}`}
+          onClick={() => bump(1)}
+          disabled={disabled || value >= HARD_MAX_REPLICAS}
+        >
+          <Plus />
+        </InputGroupButton>
+      </InputGroupAddon>
+    </InputGroup>
   )
 }
 
