@@ -22,6 +22,14 @@ export function GetClusterOverview(arg1) {
   return window['go']['app']['App']['GetClusterOverview'](arg1);
 }
 
+export function GetClusterRole(arg1, arg2) {
+  return window['go']['app']['App']['GetClusterRole'](arg1, arg2);
+}
+
+export function GetClusterRoleBinding(arg1, arg2) {
+  return window['go']['app']['App']['GetClusterRoleBinding'](arg1, arg2);
+}
+
 export function GetConfigMap(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetConfigMap'](arg1, arg2, arg3);
 }
@@ -130,6 +138,14 @@ export function GetResourceYAML(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['GetResourceYAML'](arg1, arg2, arg3, arg4);
 }
 
+export function GetRole(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetRole'](arg1, arg2, arg3);
+}
+
+export function GetRoleBinding(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetRoleBinding'](arg1, arg2, arg3);
+}
+
 export function GetRuntimeClass(arg1, arg2) {
   return window['go']['app']['App']['GetRuntimeClass'](arg1, arg2);
 }
@@ -140,6 +156,10 @@ export function GetSecret(arg1, arg2, arg3) {
 
 export function GetService(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetService'](arg1, arg2, arg3);
+}
+
+export function GetServiceAccount(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetServiceAccount'](arg1, arg2, arg3);
 }
 
 export function GetStatefulSet(arg1, arg2, arg3) {
@@ -172,6 +192,14 @@ export function ListArgoApplications(arg1, arg2) {
 
 export function ListCRDs(arg1) {
   return window['go']['app']['App']['ListCRDs'](arg1);
+}
+
+export function ListClusterRoleBindings(arg1) {
+  return window['go']['app']['App']['ListClusterRoleBindings'](arg1);
+}
+
+export function ListClusterRoles(arg1) {
+  return window['go']['app']['App']['ListClusterRoles'](arg1);
 }
 
 export function ListClusterWarningEvents(arg1, arg2) {
@@ -306,12 +334,24 @@ export function ListResourceQuotas(arg1, arg2) {
   return window['go']['app']['App']['ListResourceQuotas'](arg1, arg2);
 }
 
+export function ListRoleBindings(arg1, arg2) {
+  return window['go']['app']['App']['ListRoleBindings'](arg1, arg2);
+}
+
+export function ListRoles(arg1, arg2) {
+  return window['go']['app']['App']['ListRoles'](arg1, arg2);
+}
+
 export function ListRuntimeClasses(arg1) {
   return window['go']['app']['App']['ListRuntimeClasses'](arg1);
 }
 
 export function ListSecrets(arg1, arg2) {
   return window['go']['app']['App']['ListSecrets'](arg1, arg2);
+}
+
+export function ListServiceAccounts(arg1, arg2) {
+  return window['go']['app']['App']['ListServiceAccounts'](arg1, arg2);
 }
 
 export function ListServices(arg1, arg2) {

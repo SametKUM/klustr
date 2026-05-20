@@ -204,6 +204,180 @@ export namespace kube {
 	}
 	
 	
+	export class SubjectDetail {
+	    kind: string;
+	    name: string;
+	    namespace: string;
+	    apiGroup: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SubjectDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.apiGroup = source["apiGroup"];
+	    }
+	}
+	export class RoleRefDetail {
+	    kind: string;
+	    name: string;
+	    apiGroup: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RoleRefDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	        this.apiGroup = source["apiGroup"];
+	    }
+	}
+	export class ClusterRoleBindingDetail {
+	    name: string;
+	    uid: string;
+	    roleRef: RoleRefDetail;
+	    subjects: SubjectDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ClusterRoleBindingDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uid = source["uid"];
+	        this.roleRef = this.convertValues(source["roleRef"], RoleRefDetail);
+	        this.subjects = this.convertValues(source["subjects"], SubjectDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ClusterRoleBindingInfo {
+	    name: string;
+	    roleRef: string;
+	    subjects: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ClusterRoleBindingInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.roleRef = source["roleRef"];
+	        this.subjects = source["subjects"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class PolicyRuleDetail {
+	    verbs: string[];
+	    apiGroups: string[];
+	    resources: string[];
+	    resourceNames: string[];
+	    nonResourceURLs: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PolicyRuleDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.verbs = source["verbs"];
+	        this.apiGroups = source["apiGroups"];
+	        this.resources = source["resources"];
+	        this.resourceNames = source["resourceNames"];
+	        this.nonResourceURLs = source["nonResourceURLs"];
+	    }
+	}
+	export class ClusterRoleDetail {
+	    name: string;
+	    uid: string;
+	    rules: PolicyRuleDetail[];
+	    aggregationLabel: Record<string, string>;
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ClusterRoleDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uid = source["uid"];
+	        this.rules = this.convertValues(source["rules"], PolicyRuleDetail);
+	        this.aggregationLabel = source["aggregationLabel"];
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ClusterRoleInfo {
+	    name: string;
+	    rules: number;
+	    aggregation: boolean;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ClusterRoleInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.rules = source["rules"];
+	        this.aggregation = source["aggregation"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class ConditionDetail {
 	    type: string;
 	    status: string;
@@ -1950,6 +2124,22 @@ export namespace kube {
 	    }
 	}
 	
+	export class ObjectRefDetail {
+	    kind: string;
+	    namespace: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ObjectRefDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	    }
+	}
 	export class OwnerRef {
 	    kind: string;
 	    name: string;
@@ -2330,6 +2520,7 @@ export namespace kube {
 	        this.memB = source["memB"];
 	    }
 	}
+	
 	export class PortForwardInfo {
 	    id: string;
 	    context: string;
@@ -2646,6 +2837,131 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class RoleBindingDetail {
+	    name: string;
+	    namespace: string;
+	    uid: string;
+	    roleRef: RoleRefDetail;
+	    subjects: SubjectDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RoleBindingDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.uid = source["uid"];
+	        this.roleRef = this.convertValues(source["roleRef"], RoleRefDetail);
+	        this.subjects = this.convertValues(source["subjects"], SubjectDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class RoleBindingInfo {
+	    name: string;
+	    namespace: string;
+	    roleRef: string;
+	    subjects: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RoleBindingInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.roleRef = source["roleRef"];
+	        this.subjects = source["subjects"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class RoleDetail {
+	    name: string;
+	    namespace: string;
+	    uid: string;
+	    rules: PolicyRuleDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RoleDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.uid = source["uid"];
+	        this.rules = this.convertValues(source["rules"], PolicyRuleDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class RoleInfo {
+	    name: string;
+	    namespace: string;
+	    rules: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RoleInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.rules = source["rules"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
 	export class RuntimeClassDetail {
 	    name: string;
 	    uid: string;
@@ -2779,6 +3095,70 @@ export namespace kube {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.gitVersion = source["gitVersion"];
 	        this.platform = source["platform"];
+	    }
+	}
+	export class ServiceAccountDetail {
+	    name: string;
+	    namespace: string;
+	    uid: string;
+	    automountServiceAccountToken: string;
+	    secrets: ObjectRefDetail[];
+	    imagePullSecrets: ObjectRefDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServiceAccountDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.uid = source["uid"];
+	        this.automountServiceAccountToken = source["automountServiceAccountToken"];
+	        this.secrets = this.convertValues(source["secrets"], ObjectRefDetail);
+	        this.imagePullSecrets = this.convertValues(source["imagePullSecrets"], ObjectRefDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ServiceAccountInfo {
+	    name: string;
+	    namespace: string;
+	    secrets: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServiceAccountInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.secrets = source["secrets"];
+	        this.createdAt = source["createdAt"];
 	    }
 	}
 	export class ServicePortDetail {
@@ -3012,6 +3392,7 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	
 	export class WebhookSummary {
 	    name: string;
 	    clientCfg: string;

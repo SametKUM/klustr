@@ -12,6 +12,10 @@ export function EnsureCustomResourceWatch(arg1:string,arg2:string,arg3:string,ar
 
 export function GetClusterOverview(arg1:string):Promise<kube.ClusterOverview>;
 
+export function GetClusterRole(arg1:string,arg2:string):Promise<kube.ClusterRoleDetail>;
+
+export function GetClusterRoleBinding(arg1:string,arg2:string):Promise<kube.ClusterRoleBindingDetail>;
+
 export function GetConfigMap(arg1:string,arg2:string,arg3:string):Promise<kube.ConfigMapDetail>;
 
 export function GetCronJob(arg1:string,arg2:string,arg3:string):Promise<kube.CronJobDetail>;
@@ -66,11 +70,17 @@ export function GetResourceQuota(arg1:string,arg2:string,arg3:string):Promise<ku
 
 export function GetResourceYAML(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
+export function GetRole(arg1:string,arg2:string,arg3:string):Promise<kube.RoleDetail>;
+
+export function GetRoleBinding(arg1:string,arg2:string,arg3:string):Promise<kube.RoleBindingDetail>;
+
 export function GetRuntimeClass(arg1:string,arg2:string):Promise<kube.RuntimeClassDetail>;
 
 export function GetSecret(arg1:string,arg2:string,arg3:string):Promise<kube.SecretDetail>;
 
 export function GetService(arg1:string,arg2:string,arg3:string):Promise<kube.ServiceDetail>;
+
+export function GetServiceAccount(arg1:string,arg2:string,arg3:string):Promise<kube.ServiceAccountDetail>;
 
 export function GetStatefulSet(arg1:string,arg2:string,arg3:string):Promise<kube.StatefulSetDetail>;
 
@@ -87,6 +97,10 @@ export function ListArgoApplicationResources(arg1:string,arg2:string,arg3:string
 export function ListArgoApplications(arg1:string,arg2:string):Promise<Array<kube.ArgoApplicationInfo>>;
 
 export function ListCRDs(arg1:string):Promise<Array<kube.CRDInfo>>;
+
+export function ListClusterRoleBindings(arg1:string):Promise<Array<kube.ClusterRoleBindingInfo>>;
+
+export function ListClusterRoles(arg1:string):Promise<Array<kube.ClusterRoleInfo>>;
 
 export function ListClusterWarningEvents(arg1:string,arg2:number):Promise<Array<kube.EventInfo>>;
 
@@ -154,9 +168,15 @@ export function ListReplicationControllers(arg1:string,arg2:string):Promise<Arra
 
 export function ListResourceQuotas(arg1:string,arg2:string):Promise<Array<kube.ResourceQuotaInfo>>;
 
+export function ListRoleBindings(arg1:string,arg2:string):Promise<Array<kube.RoleBindingInfo>>;
+
+export function ListRoles(arg1:string,arg2:string):Promise<Array<kube.RoleInfo>>;
+
 export function ListRuntimeClasses(arg1:string):Promise<Array<kube.RuntimeClassInfo>>;
 
 export function ListSecrets(arg1:string,arg2:string):Promise<Array<kube.SecretInfo>>;
+
+export function ListServiceAccounts(arg1:string,arg2:string):Promise<Array<kube.ServiceAccountInfo>>;
 
 export function ListServices(arg1:string,arg2:string):Promise<Array<kube.ServiceInfo>>;
 
