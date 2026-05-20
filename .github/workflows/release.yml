@@ -98,7 +98,7 @@ jobs:
           codesign --force --timestamp --options runtime \
             --entitlements build/darwin/entitlements.plist \
             --sign "$IDENTITY" build/bin/klustr.app
-          codesign --verify --deep --strict --verbose=2 build/bin/klustr.app
+          codesign --verify --strict --verbose=2 build/bin/klustr.app
 
       - name: Notarize macOS app
         if: startsWith(matrix.os, 'macos')
