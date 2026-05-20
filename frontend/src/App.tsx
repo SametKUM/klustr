@@ -39,6 +39,11 @@ import { CronJobsView } from '@/features/cronjobs/CronJobsView'
 import { IngressesView } from '@/features/ingresses/IngressesView'
 import { NodesView } from '@/features/nodes/NodesView'
 import { NamespacesView } from '@/features/namespaces/NamespacesView'
+import { ServiceAccountsView } from '@/features/serviceaccounts/ServiceAccountsView'
+import { RolesView } from '@/features/roles/RolesView'
+import { RoleBindingsView } from '@/features/rolebindings/RoleBindingsView'
+import { ClusterRolesView } from '@/features/clusterroles/ClusterRolesView'
+import { ClusterRoleBindingsView } from '@/features/clusterrolebindings/ClusterRoleBindingsView'
 import { OverviewView } from '@/features/overview/OverviewView'
 import { WorkloadsOverviewView } from '@/features/overview/WorkloadsOverviewView'
 import { CustomResourceView } from '@/features/crds/CustomResourceView'
@@ -123,6 +128,16 @@ const RESOURCE_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { label: 'PersistentVolumeClaims', view: 'persistentvolumeclaims' },
       { label: 'PersistentVolumes', view: 'persistentvolumes' },
       { label: 'StorageClasses', view: 'storageclasses' },
+    ],
+  },
+  {
+    label: 'Access Control',
+    items: [
+      { label: 'Service Accounts', view: 'serviceaccounts' },
+      { label: 'Cluster Roles', view: 'clusterroles' },
+      { label: 'Roles', view: 'roles' },
+      { label: 'Cluster Role Bindings', view: 'clusterrolebindings' },
+      { label: 'Role Bindings', view: 'rolebindings' },
     ],
   },
   {
@@ -220,6 +235,16 @@ function MainView() {
       return <NodesView />
     case 'namespaces':
       return <NamespacesView />
+    case 'serviceaccounts':
+      return <ServiceAccountsView />
+    case 'roles':
+      return <RolesView />
+    case 'rolebindings':
+      return <RoleBindingsView />
+    case 'clusterroles':
+      return <ClusterRolesView />
+    case 'clusterrolebindings':
+      return <ClusterRoleBindingsView />
     case 'helmreleases':
       return <HelmReleasesView />
     case 'helmrepos':

@@ -48,6 +48,11 @@ import { SecretDetailBody } from '@/features/secrets/SecretDetailBody'
 import { IngressDetailBody } from '@/features/ingresses/IngressDetailBody'
 import { NodeDetailBody } from '@/features/nodes/NodeDetailBody'
 import { NamespaceDetailBody } from '@/features/namespaces/NamespaceDetailBody'
+import { ServiceAccountDetailBody } from '@/features/serviceaccounts/ServiceAccountDetailBody'
+import { RoleDetailBody } from '@/features/roles/RoleDetailBody'
+import { RoleBindingDetailBody } from '@/features/rolebindings/RoleBindingDetailBody'
+import { ClusterRoleDetailBody } from '@/features/clusterroles/ClusterRoleDetailBody'
+import { ClusterRoleBindingDetailBody } from '@/features/clusterrolebindings/ClusterRoleBindingDetailBody'
 import { HelmReleaseDetailBody } from '@/features/helm/HelmReleaseDetailBody'
 import { HelmInstallDialog } from '@/features/helm/HelmInstallDialog'
 import { HelmRollbackDialog } from '@/features/helm/HelmRollbackDialog'
@@ -509,6 +514,16 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
       return <NodeDetailBody contextName={contextName} name={resource.name} />
     case 'Namespace':
       return <NamespaceDetailBody contextName={contextName} name={resource.name} />
+    case 'ServiceAccount':
+      return <ServiceAccountDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'Role':
+      return <RoleDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'RoleBinding':
+      return <RoleBindingDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'ClusterRole':
+      return <ClusterRoleDetailBody contextName={contextName} name={resource.name} />
+    case 'ClusterRoleBinding':
+      return <ClusterRoleBindingDetailBody contextName={contextName} name={resource.name} />
     default:
       return null
   }
