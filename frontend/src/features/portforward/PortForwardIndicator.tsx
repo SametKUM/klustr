@@ -44,13 +44,13 @@ export function PortForwardIndicator() {
                 title={`Open http://localhost:${pf.localPort} in browser`}
                 className="group flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left hover:text-primary"
               >
-                <span className="flex items-center gap-1 truncate font-mono">
-                  <span className="truncate">
+                <span className="flex w-full min-w-0 items-center gap-1 font-mono">
+                  <span className="min-w-0 flex-1 truncate">
                     localhost:{pf.localPort} → {pf.podName}:{pf.remotePort}
                   </span>
-                  <ExternalLink className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <ExternalLink className="size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
                 </span>
-                <span className="text-[10px] text-muted-foreground">
+                <span className="max-w-full truncate text-[10px] text-muted-foreground">
                   {pf.namespace} · {pf.context}
                 </span>
               </button>
@@ -60,6 +60,7 @@ export function PortForwardIndicator() {
                 aria-label="Stop port-forward"
                 disabled={stop.isPending}
                 onClick={() => stop.mutate(pf.id)}
+                className="shrink-0"
               >
                 <X />
               </Button>
