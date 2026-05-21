@@ -248,6 +248,9 @@ export function PodLogsTab({ detail, contextName }: Props) {
             <Filter className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground/70" />
             <input
               type="text"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
               value={filterValue}
               onChange={(e) => setFilterValue(e.target.value)}
               placeholder={useRegex ? 'Regex filter…' : 'Substring filter…'}

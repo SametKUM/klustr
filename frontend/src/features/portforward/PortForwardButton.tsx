@@ -169,6 +169,9 @@ export function PortForwardDialog({ contextName, resource, open, onOpenChange }:
           <label className="w-28 text-sm text-muted-foreground">Local port</label>
           <input
             type="number"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             min={0}
             max={65535}
             value={localPort}
@@ -183,6 +186,9 @@ export function PortForwardDialog({ contextName, resource, open, onOpenChange }:
           <label className="w-28 text-sm text-muted-foreground">Remote port</label>
           <input
             type="number"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             min={1}
             max={65535}
             value={remotePort}

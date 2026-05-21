@@ -131,6 +131,9 @@ export function HelmInstallDialog({
             <Field label="Release name">
               <input
                 type="text"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={mode === 'upgrade'}
@@ -140,6 +143,9 @@ export function HelmInstallDialog({
             <Field label="Namespace">
               <input
                 type="text"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
                 value={namespace}
                 onChange={(e) => setNamespace(e.target.value)}
                 disabled={mode === 'upgrade'}
@@ -149,6 +155,9 @@ export function HelmInstallDialog({
             <Field label="Chart (repo/name or path)">
               <input
                 type="text"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
                 value={chartRef}
                 onChange={(e) => setChartRef(e.target.value)}
                 placeholder="e.g. bitnami/redis or ./mychart"
@@ -158,6 +167,9 @@ export function HelmInstallDialog({
             <Field label="Chart version (optional)">
               <input
                 type="text"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
                 value={chartVersion}
                 onChange={(e) => setChartVersion(e.target.value)}
                 placeholder="latest"

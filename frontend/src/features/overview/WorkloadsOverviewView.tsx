@@ -313,6 +313,9 @@ export function WorkloadsOverviewView() {
         </div>
         <input
           type="text"
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search events…"

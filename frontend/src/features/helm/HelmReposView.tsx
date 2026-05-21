@@ -103,6 +103,9 @@ export function HelmReposView() {
         <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs">
           <input
             type="text"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             value={newRepoName}
             onChange={(e) => setNewRepoName(e.target.value)}
             placeholder="name (e.g. bitnami)"
@@ -110,6 +113,9 @@ export function HelmReposView() {
           />
           <input
             type="text"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             value={newRepoURL}
             onChange={(e) => setNewRepoURL(e.target.value)}
             placeholder="https://charts.bitnami.com/bitnami"
@@ -160,6 +166,9 @@ export function HelmReposView() {
             <SearchIcon className="size-3 text-muted-foreground" />
             <input
               type="text"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value)

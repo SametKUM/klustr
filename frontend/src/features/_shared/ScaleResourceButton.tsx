@@ -124,6 +124,9 @@ export function ScaleResourceButton({ contextName, resource }: Props) {
             <input
               id="scale-replicas-input"
               type="number"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
               min={MIN_REPLICAS}
               max={MAX_REPLICAS}
               value={loading ? '' : replicas}

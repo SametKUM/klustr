@@ -465,6 +465,9 @@ export function ResourceTable<T>({
           <input
             ref={filterRef}
             type="text"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             onKeyDown={(e) => {
