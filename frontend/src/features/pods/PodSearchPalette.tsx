@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Box } from 'lucide-react'
 import {
   CommandDialog,
@@ -10,31 +10,51 @@ import {
 } from '@/components/ui/command'
 import { api, type PodInfo } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
-import { useUIStore } from '@/store/ui'
+import { useResources } from '@/store/resources'
+import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
+
+type Hit = PodInfo & { __ctx: string }
 
 export function PodSearchPalette() {
   const [open, setOpen] = useState(false)
-  const selectedContext = useUIStore((s) => s.selectedContext)
+  const activeContexts = useActiveContexts()
+  const isAggregated = useIsAggregated()
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
   const setSelectedView = useUIStore((s) => s.setSelectedView)
-  const [pods, setPods] = useState<PodInfo[]>([])
 
+  const podsByCtx = useResources((s) => s.pods)
+  const setPods = useResources((s) => s.setPods)
+
+  // Refresh pods in every active context on open. Stores fill when the user
+  // visits the Pods view; the palette must not depend on that having happened.
   useEffect(() => {
-    if (!selectedContext) {
-      setPods([])
-      return
-    }
-    const reload = () => {
+    if (!open || activeContexts.length === 0) return
+    let cancelled = false
+    for (const ctx of activeContexts) {
       api
-        .listPods(selectedContext, '')
-        .then((list) => setPods(list ?? []))
-        .catch(() => setPods([]))
+        .listPods(ctx, '')
+        .then((list) => {
+          if (!cancelled) setPods(ctx, list ?? [])
+        })
+        .catch(() => {})
     }
-    reload()
-    return onKubeChange('Pod', (ctx) => {
-      if (ctx === selectedContext) reload()
+    return () => {
+      cancelled = true
+    }
+  }, [open, activeContexts, setPods])
+
+  // Keep the live cache fresh while the dialog is open.
+  useEffect(() => {
+    if (!open || activeContexts.length === 0) return
+    const unsub = onKubeChange('Pod', (ctx) => {
+      if (!activeContexts.includes(ctx)) return
+      api
+        .listPods(ctx, '')
+        .then((list) => setPods(ctx, list ?? []))
+        .catch(() => {})
     })
-  }, [selectedContext])
+    return unsub
+  }, [open, activeContexts, setPods])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -47,27 +67,49 @@ export function PodSearchPalette() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const hits: Hit[] = useMemo(() => {
+    const out: Hit[] = []
+    for (const ctx of activeContexts) {
+      for (const p of podsByCtx[ctx] ?? []) {
+        out.push({ ...p, __ctx: ctx })
+      }
+    }
+    out.sort((a, b) => a.namespace.localeCompare(b.namespace) || a.name.localeCompare(b.name))
+    return out
+  }, [podsByCtx, activeContexts])
+
   return (
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
       title="Pod search"
-      description="Jump to any pod across the cluster"
+      description="Jump to any pod across active contexts"
     >
-      <CommandInput placeholder="Search pods (namespace, name)…" />
+      <CommandInput
+        placeholder={
+          isAggregated
+            ? `Search pods across ${activeContexts.length} contexts…`
+            : 'Search pods (namespace, name)…'
+        }
+      />
       <CommandList>
         <CommandEmpty>
-          {selectedContext ? 'No matching pods.' : 'Select a context first.'}
+          {activeContexts.length === 0 ? 'Select a context first.' : 'No matching pods.'}
         </CommandEmpty>
-        {pods.length > 0 && (
-          <CommandGroup heading={`Pods (${pods.length})`}>
-            {pods.map((p) => (
+        {hits.length > 0 && (
+          <CommandGroup heading={`Pods (${hits.length})`}>
+            {hits.map((p) => (
               <CommandItem
-                key={`${p.namespace}/${p.name}`}
-                value={`${p.namespace}/${p.name}`}
+                key={`${p.__ctx}/${p.namespace}/${p.name}`}
+                value={`${p.namespace} ${p.name} ${p.__ctx}`}
                 onSelect={() => {
                   setSelectedView('pods')
-                  setSelectedResource({ kind: 'Pod', namespace: p.namespace, name: p.name })
+                  setSelectedResource({
+                    kind: 'Pod',
+                    namespace: p.namespace,
+                    name: p.name,
+                    context: p.__ctx,
+                  })
                   setOpen(false)
                 }}
               >
@@ -78,6 +120,11 @@ export function PodSearchPalette() {
                     {p.namespace} · {p.status} · {p.ready}
                   </div>
                 </div>
+                {isAggregated && (
+                  <span className="ml-2 shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                    {p.__ctx}
+                  </span>
+                )}
               </CommandItem>
             ))}
           </CommandGroup>
