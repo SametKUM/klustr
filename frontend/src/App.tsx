@@ -52,6 +52,7 @@ import { ApplicationsView } from '@/features/argocd/ApplicationsView'
 import { HelmReleasesView } from '@/features/helm/HelmReleasesView'
 import { HelmReposView } from '@/features/helm/HelmReposView'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
+import { ARGO_GROUP, RESOURCE_GROUPS } from '@/features/_shared/resourceGroups'
 import { RowActionDialogs } from '@/features/_shared/RowActionDialogs'
 import { KeyboardShortcutsDialog } from '@/features/_shared/KeyboardShortcutsDialog'
 import { CommandPalette } from '@/features/_shared/CommandPalette'
@@ -69,90 +70,6 @@ import { useCRDStore } from '@/store/crds'
 import { useHelmStore } from '@/store/helm'
 import { usePortForwards } from '@/store/portForwards'
 
-type NavItem = { label: string; view?: ResourceView }
-
-const RESOURCE_GROUPS: Array<{ label: string; items: NavItem[] }> = [
-  {
-    label: 'Cluster',
-    items: [
-      { label: 'Overview', view: 'overview' },
-      { label: 'Nodes', view: 'nodes' },
-      { label: 'Namespaces', view: 'namespaces' },
-      { label: 'Events', view: 'events' },
-    ],
-  },
-  {
-    label: 'Workloads',
-    items: [
-      { label: 'Overview', view: 'workloadsoverview' },
-      { label: 'Pods', view: 'pods' },
-      { label: 'Deployments', view: 'deployments' },
-      { label: 'StatefulSets', view: 'statefulsets' },
-      { label: 'DaemonSets', view: 'daemonsets' },
-      { label: 'ReplicaSets', view: 'replicasets' },
-      { label: 'ReplicationControllers', view: 'replicationcontrollers' },
-      { label: 'Jobs', view: 'jobs' },
-      { label: 'CronJobs', view: 'cronjobs' },
-    ],
-  },
-  {
-    label: 'Config',
-    items: [
-      { label: 'ConfigMaps', view: 'configmaps' },
-      { label: 'Secrets', view: 'secrets' },
-      { label: 'HorizontalPodAutoscalers', view: 'horizontalpodautoscalers' },
-      { label: 'PodDisruptionBudgets', view: 'poddisruptionbudgets' },
-      { label: 'ResourceQuotas', view: 'resourcequotas' },
-      { label: 'LimitRanges', view: 'limitranges' },
-      { label: 'PriorityClasses', view: 'priorityclasses' },
-      { label: 'RuntimeClasses', view: 'runtimeclasses' },
-      { label: 'Leases', view: 'leases' },
-      { label: 'MutatingWebhooks', view: 'mutatingwebhookconfigurations' },
-      { label: 'ValidatingWebhooks', view: 'validatingwebhookconfigurations' },
-    ],
-  },
-  {
-    label: 'Network',
-    items: [
-      { label: 'Services', view: 'services' },
-      { label: 'Ingresses', view: 'ingresses' },
-      { label: 'NetworkPolicies', view: 'networkpolicies' },
-      { label: 'EndpointSlices', view: 'endpointslices' },
-      { label: 'Endpoints', view: 'endpoints' },
-      { label: 'IngressClasses', view: 'ingressclasses' },
-    ],
-  },
-  {
-    label: 'Storage',
-    items: [
-      { label: 'PersistentVolumeClaims', view: 'persistentvolumeclaims' },
-      { label: 'PersistentVolumes', view: 'persistentvolumes' },
-      { label: 'StorageClasses', view: 'storageclasses' },
-    ],
-  },
-  {
-    label: 'Access Control',
-    items: [
-      { label: 'Service Accounts', view: 'serviceaccounts' },
-      { label: 'Cluster Roles', view: 'clusterroles' },
-      { label: 'Roles', view: 'roles' },
-      { label: 'Cluster Role Bindings', view: 'clusterrolebindings' },
-      { label: 'Role Bindings', view: 'rolebindings' },
-    ],
-  },
-  {
-    label: 'Helm',
-    items: [
-      { label: 'Releases', view: 'helmreleases' },
-      { label: 'Repositories', view: 'helmrepos' },
-    ],
-  },
-]
-
-const ARGO_GROUP: { label: string; items: NavItem[] } = {
-  label: 'Argo CD',
-  items: [{ label: 'Applications', view: 'argocdapplications' }],
-}
 
 function MainView() {
   const view = useUIStore((s) => s.selectedView)
