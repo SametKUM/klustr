@@ -283,6 +283,11 @@ export type ResourceView =
   | 'helmreleases'
   | 'helmrepos'
   | 'argocdapplications'
+  | 'gateways'
+  | 'httproutes'
+  | 'grpcroutes'
+  | 'gatewayclasses'
+  | 'referencegrants'
 
 export type ResourceKind =
   | 'Pod'
@@ -317,9 +322,13 @@ export type ResourceKind =
   | 'Namespace'
   | 'ServiceAccount'
   | 'Role'
-  | 'RoleBinding'
-  | 'ClusterRole'
+  | 'RoleBinding'  | 'ClusterRole'
   | 'ClusterRoleBinding'
+  | 'Gateway'
+  | 'HTTPRoute'
+  | 'GRPCRoute'
+  | 'GatewayClass'
+  | 'ReferenceGrant'
 
 export type SelectedResourceGVR = {
   group: string

@@ -34,6 +34,11 @@ import type {
   RoleBindingInfo,
   ClusterRoleInfo,
   ClusterRoleBindingInfo,
+  GatewayInfo,
+  HTTPRouteInfo,
+  GRPCRouteInfo,
+  GatewayClassInfo,
+  ReferenceGrantInfo,
 } from '@/lib/api'
 
 export type ByContext<T> = Record<string, T[]>
@@ -74,6 +79,11 @@ type ResourcesState = {
   roleBindings: ByContext<RoleBindingInfo>
   clusterRoles: ByContext<ClusterRoleInfo>
   clusterRoleBindings: ByContext<ClusterRoleBindingInfo>
+  gateways: ByContext<GatewayInfo>
+  httpRoutes: ByContext<HTTPRouteInfo>
+  grpcRoutes: ByContext<GRPCRouteInfo>
+  gatewayClasses: ByContext<GatewayClassInfo>
+  referenceGrants: ByContext<ReferenceGrantInfo>
   setNamespaces: (ctx: string, list: NamespaceInfo[]) => void
   setPods: (ctx: string, list: PodInfo[]) => void
   setDeployments: (ctx: string, list: DeploymentInfo[]) => void
@@ -109,6 +119,11 @@ type ResourcesState = {
   setRoleBindings: (ctx: string, list: RoleBindingInfo[]) => void
   setClusterRoles: (ctx: string, list: ClusterRoleInfo[]) => void
   setClusterRoleBindings: (ctx: string, list: ClusterRoleBindingInfo[]) => void
+  setGateways: (ctx: string, list: GatewayInfo[]) => void
+  setHTTPRoutes: (ctx: string, list: HTTPRouteInfo[]) => void
+  setGRPCRoutes: (ctx: string, list: GRPCRouteInfo[]) => void
+  setGatewayClasses: (ctx: string, list: GatewayClassInfo[]) => void
+  setReferenceGrants: (ctx: string, list: ReferenceGrantInfo[]) => void
   clearContext: (ctx: string) => void
   reset: () => void
 }
@@ -149,6 +164,11 @@ const KIND_KEYS = [
   'roleBindings',
   'clusterRoles',
   'clusterRoleBindings',
+  'gateways',
+  'httpRoutes',
+  'grpcRoutes',
+  'gatewayClasses',
+  'referenceGrants',
 ] as const
 
 type KindKey = (typeof KIND_KEYS)[number]
@@ -245,6 +265,13 @@ export const useResources = create<ResourcesState>((set) => ({
     set((s) => ({ clusterRoles: withCtx(s.clusterRoles, ctx, list) })),
   setClusterRoleBindings: (ctx, list) =>
     set((s) => ({ clusterRoleBindings: withCtx(s.clusterRoleBindings, ctx, list) })),
+  setGateways: (ctx, list) => set((s) => ({ gateways: withCtx(s.gateways, ctx, list) })),
+  setHTTPRoutes: (ctx, list) => set((s) => ({ httpRoutes: withCtx(s.httpRoutes, ctx, list) })),
+  setGRPCRoutes: (ctx, list) => set((s) => ({ grpcRoutes: withCtx(s.grpcRoutes, ctx, list) })),
+  setGatewayClasses: (ctx, list) =>
+    set((s) => ({ gatewayClasses: withCtx(s.gatewayClasses, ctx, list) })),
+  setReferenceGrants: (ctx, list) =>
+    set((s) => ({ referenceGrants: withCtx(s.referenceGrants, ctx, list) })),
   clearContext: (ctx) =>
     set((s) => {
       const next = {} as Partial<Record<KindKey, ByContext<unknown>>>

@@ -86,6 +86,16 @@ import {
   ListEndpoints,
   ListReplicationControllers,
   ListDeployments,
+  ListGateways,
+  GetGateway,
+  ListHTTPRoutes,
+  GetHTTPRoute,
+  ListGRPCRoutes,
+  GetGRPCRoute,
+  ListGatewayClasses,
+  GetGatewayClass,
+  ListReferenceGrants,
+  GetReferenceGrant,
   ListIngresses,
   ListJobs,
   ListNamespaces,
@@ -246,6 +256,26 @@ export type HelmDryRunResult = kube.HelmDryRunResult
 export type ArgoApplicationResource = kube.ArgoApplicationResource
 export type ArgoApplicationInfo = kube.ArgoApplicationInfo
 export type WorkloadRevision = kube.WorkloadRevision
+export type GatewayInfo = kube.GatewayInfo
+export type GatewayDetail = kube.GatewayDetail
+export type ListenerDetail = kube.ListenerDetail
+export type HTTPRouteInfo = kube.HTTPRouteInfo
+export type HTTPRouteDetail = kube.HTTPRouteDetail
+export type HTTPRouteRuleDetail = kube.HTTPRouteRuleDetail
+export type HTTPRouteMatchDetail = kube.HTTPRouteMatchDetail
+export type GRPCRouteInfo = kube.GRPCRouteInfo
+export type GRPCRouteDetail = kube.GRPCRouteDetail
+export type GRPCRouteRuleDetail = kube.GRPCRouteRuleDetail
+export type GRPCRouteMatchDetail = kube.GRPCRouteMatchDetail
+export type GatewayClassInfo = kube.GatewayClassInfo
+export type GatewayClassDetail = kube.GatewayClassDetail
+export type ParentRefDetail = kube.ParentRefDetail
+export type BackendRefDetail = kube.BackendRefDetail
+export type RouteParentStatusDetail = kube.RouteParentStatusDetail
+export type ReferenceGrantInfo = kube.ReferenceGrantInfo
+export type ReferenceGrantDetail = kube.ReferenceGrantDetail
+export type ReferenceGrantFromDetail = kube.ReferenceGrantFromDetail
+export type ReferenceGrantToDetail = kube.ReferenceGrantToDetail
 
 export const api = {
   listContexts: (): Promise<Kubeconfig> => ListContexts(),
@@ -309,6 +339,25 @@ export const api = {
     ListCronJobs(name, namespace),
   listIngresses: (name: string, namespace: string): Promise<IngressInfo[]> =>
     ListIngresses(name, namespace),
+  listGateways: (name: string, namespace: string): Promise<GatewayInfo[]> =>
+    ListGateways(name, namespace),
+  getGateway: (ctx: string, ns: string, name: string): Promise<GatewayDetail> =>
+    GetGateway(ctx, ns, name),
+  listHTTPRoutes: (name: string, namespace: string): Promise<HTTPRouteInfo[]> =>
+    ListHTTPRoutes(name, namespace),
+  getHTTPRoute: (ctx: string, ns: string, name: string): Promise<HTTPRouteDetail> =>
+    GetHTTPRoute(ctx, ns, name),
+  listGRPCRoutes: (name: string, namespace: string): Promise<GRPCRouteInfo[]> =>
+    ListGRPCRoutes(name, namespace),
+  getGRPCRoute: (ctx: string, ns: string, name: string): Promise<GRPCRouteDetail> =>
+    GetGRPCRoute(ctx, ns, name),
+  listGatewayClasses: (name: string): Promise<GatewayClassInfo[]> => ListGatewayClasses(name),
+  getGatewayClass: (ctx: string, name: string): Promise<GatewayClassDetail> =>
+    GetGatewayClass(ctx, name),
+  listReferenceGrants: (name: string, namespace: string): Promise<ReferenceGrantInfo[]> =>
+    ListReferenceGrants(name, namespace),
+  getReferenceGrant: (ctx: string, ns: string, name: string): Promise<ReferenceGrantDetail> =>
+    GetReferenceGrant(ctx, ns, name),
   listNodes: (name: string): Promise<NodeInfo[]> => ListNodes(name),
   listServiceAccounts: (name: string, namespace: string): Promise<ServiceAccountInfo[]> =>
     ListServiceAccounts(name, namespace),
