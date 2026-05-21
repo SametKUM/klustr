@@ -3475,6 +3475,27 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	
+	export class WorkloadRevision {
+	    revision: number;
+	    createdAt: string;
+	    changeCause: string;
+	    active: boolean;
+	    images: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new WorkloadRevision(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.revision = source["revision"];
+	        this.createdAt = source["createdAt"];
+	        this.changeCause = source["changeCause"];
+	        this.active = source["active"];
+	        this.images = source["images"];
+	    }
+	}
 
 }
 

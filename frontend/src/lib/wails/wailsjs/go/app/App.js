@@ -174,6 +174,10 @@ export function GetValidatingWebhookConfiguration(arg1, arg2) {
   return window['go']['app']['App']['GetValidatingWebhookConfiguration'](arg1, arg2);
 }
 
+export function GetWorkloadRevisionTemplate(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['GetWorkloadRevisionTemplate'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function HelmChartVersions(arg1, arg2) {
   return window['go']['app']['App']['HelmChartVersions'](arg1, arg2);
 }
@@ -222,8 +226,16 @@ export function ListCustomResources(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['ListCustomResources'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function ListDaemonSetRevisions(arg1, arg2, arg3) {
+  return window['go']['app']['App']['ListDaemonSetRevisions'](arg1, arg2, arg3);
+}
+
 export function ListDaemonSets(arg1, arg2) {
   return window['go']['app']['App']['ListDaemonSets'](arg1, arg2);
+}
+
+export function ListDeploymentRevisions(arg1, arg2, arg3) {
+  return window['go']['app']['App']['ListDeploymentRevisions'](arg1, arg2, arg3);
 }
 
 export function ListDeployments(arg1, arg2) {
@@ -358,6 +370,10 @@ export function ListServices(arg1, arg2) {
   return window['go']['app']['App']['ListServices'](arg1, arg2);
 }
 
+export function ListStatefulSetRevisions(arg1, arg2, arg3) {
+  return window['go']['app']['App']['ListStatefulSetRevisions'](arg1, arg2, arg3);
+}
+
 export function ListStatefulSets(arg1, arg2) {
   return window['go']['app']['App']['ListStatefulSets'](arg1, arg2);
 }
@@ -410,8 +426,20 @@ export function RevealSecretValue(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['RevealSecretValue'](arg1, arg2, arg3, arg4);
 }
 
+export function RollbackDaemonSet(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['RollbackDaemonSet'](arg1, arg2, arg3, arg4);
+}
+
+export function RollbackDeployment(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['RollbackDeployment'](arg1, arg2, arg3, arg4);
+}
+
 export function RollbackHelmRelease(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['RollbackHelmRelease'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function RollbackStatefulSet(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['RollbackStatefulSet'](arg1, arg2, arg3, arg4);
 }
 
 export function SaveTextFile(arg1, arg2) {

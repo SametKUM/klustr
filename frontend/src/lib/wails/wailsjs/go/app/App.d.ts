@@ -88,6 +88,8 @@ export function GetStorageClass(arg1:string,arg2:string):Promise<kube.StorageCla
 
 export function GetValidatingWebhookConfiguration(arg1:string,arg2:string):Promise<kube.WebhookConfigurationDetail>;
 
+export function GetWorkloadRevisionTemplate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number):Promise<string>;
+
 export function HelmChartVersions(arg1:string,arg2:string):Promise<Array<string>>;
 
 export function InstallHelmRelease(arg1:kube.HelmInstallOptions):Promise<kube.HelmDryRunResult>;
@@ -112,7 +114,11 @@ export function ListCronJobs(arg1:string,arg2:string):Promise<Array<kube.CronJob
 
 export function ListCustomResources(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<Array<kube.CustomResourceInfo>>;
 
+export function ListDaemonSetRevisions(arg1:string,arg2:string,arg3:string):Promise<Array<kube.WorkloadRevision>>;
+
 export function ListDaemonSets(arg1:string,arg2:string):Promise<Array<kube.DaemonSetInfo>>;
+
+export function ListDeploymentRevisions(arg1:string,arg2:string,arg3:string):Promise<Array<kube.WorkloadRevision>>;
 
 export function ListDeployments(arg1:string,arg2:string):Promise<Array<kube.DeploymentInfo>>;
 
@@ -180,6 +186,8 @@ export function ListServiceAccounts(arg1:string,arg2:string):Promise<Array<kube.
 
 export function ListServices(arg1:string,arg2:string):Promise<Array<kube.ServiceInfo>>;
 
+export function ListStatefulSetRevisions(arg1:string,arg2:string,arg3:string):Promise<Array<kube.WorkloadRevision>>;
+
 export function ListStatefulSets(arg1:string,arg2:string):Promise<Array<kube.StatefulSetInfo>>;
 
 export function ListStorageClasses(arg1:string):Promise<Array<kube.StorageClassInfo>>;
@@ -206,7 +214,13 @@ export function RestartWorkload(arg1:string,arg2:string,arg3:string,arg4:string)
 
 export function RevealSecretValue(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
+export function RollbackDaemonSet(arg1:string,arg2:string,arg3:string,arg4:number):Promise<void>;
+
+export function RollbackDeployment(arg1:string,arg2:string,arg3:string,arg4:number):Promise<void>;
+
 export function RollbackHelmRelease(arg1:string,arg2:string,arg3:string,arg4:number,arg5:boolean):Promise<void>;
+
+export function RollbackStatefulSet(arg1:string,arg2:string,arg3:string,arg4:number):Promise<void>;
 
 export function SaveTextFile(arg1:string,arg2:string):Promise<string>;
 
