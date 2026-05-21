@@ -48,6 +48,11 @@ import { ServiceDetailBody } from '@/features/services/ServiceDetailBody'
 import { ConfigMapDetailBody } from '@/features/configmaps/ConfigMapDetailBody'
 import { SecretDetailBody } from '@/features/secrets/SecretDetailBody'
 import { IngressDetailBody } from '@/features/ingresses/IngressDetailBody'
+import { GatewayDetailBody } from '@/features/gateways/GatewayDetailBody'
+import { HTTPRouteDetailBody } from '@/features/httproutes/HTTPRouteDetailBody'
+import { GRPCRouteDetailBody } from '@/features/grpcroutes/GRPCRouteDetailBody'
+import { GatewayClassDetailBody } from '@/features/gatewayclasses/GatewayClassDetailBody'
+import { ReferenceGrantDetailBody } from '@/features/referencegrants/ReferenceGrantDetailBody'
 import { NodeDetailBody } from '@/features/nodes/NodeDetailBody'
 import { NamespaceDetailBody } from '@/features/namespaces/NamespaceDetailBody'
 import { ServiceAccountDetailBody } from '@/features/serviceaccounts/ServiceAccountDetailBody'
@@ -543,6 +548,16 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
       return <ClusterRoleDetailBody contextName={contextName} name={resource.name} />
     case 'ClusterRoleBinding':
       return <ClusterRoleBindingDetailBody contextName={contextName} name={resource.name} />
+    case 'Gateway':
+      return <GatewayDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'HTTPRoute':
+      return <HTTPRouteDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'GRPCRoute':
+      return <GRPCRouteDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'GatewayClass':
+      return <GatewayClassDetailBody contextName={contextName} name={resource.name} />
+    case 'ReferenceGrant':
+      return <ReferenceGrantDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
     default:
       return null
   }

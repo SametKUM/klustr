@@ -85,3 +85,14 @@ export const ARGO_GROUP: ResourceGroup = {
   label: 'Argo CD',
   items: [{ label: 'Applications', view: 'argocdapplications' }],
 }
+
+export const GATEWAY_GROUP: ResourceGroup = {
+  label: 'Gateway API',
+  items: [
+    { label: 'Gateways', view: 'gateways' },
+    { label: 'HTTPRoutes', view: 'httproutes' },
+    { label: 'GRPCRoutes', view: 'grpcroutes' },
+    { label: 'GatewayClasses', view: 'gatewayclasses' },
+    { label: 'ReferenceGrants', view: 'referencegrants' },
+  ],
+}
