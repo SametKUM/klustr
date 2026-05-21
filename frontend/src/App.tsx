@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ContextSwitcher } from '@/features/contexts/ContextSwitcher'
@@ -57,7 +57,7 @@ import { GRPCRoutesView } from '@/features/grpcroutes/GRPCRoutesView'
 import { GatewayClassesView } from '@/features/gatewayclasses/GatewayClassesView'
 import { ReferenceGrantsView } from '@/features/referencegrants/ReferenceGrantsView'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
-import { ARGO_GROUP, GATEWAY_GROUP, HELM_GROUP, RESOURCE_GROUPS } from '@/features/_shared/resourceGroups'
+import { ARGO_GROUP, GATEWAY_GROUP, HELM_GROUP, RESOURCE_GROUPS, type ResourceGroup } from '@/features/_shared/resourceGroups'
 import { RowActionDialogs } from '@/features/_shared/RowActionDialogs'
 import { KeyboardShortcutsDialog } from '@/features/_shared/KeyboardShortcutsDialog'
 import { CommandPalette } from '@/features/_shared/CommandPalette'
@@ -192,14 +192,9 @@ function MainView() {
   }
 }
 
-const NAV_VIEWS: ResourceView[] = [
-  ...RESOURCE_GROUPS.flatMap((g) =>
-    g.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
-  ),
-  ...GATEWAY_GROUP.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
-  ...ARGO_GROUP.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
-  ...HELM_GROUP.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
-]
+function groupViews(group: ResourceGroup): ResourceView[] {
+  return group.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined)
+}
 
 function isEditableTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false
@@ -236,6 +231,24 @@ function App() {
   const resetHelm = useHelmStore((s) => s.reset)
   const selectedCRDKey = useUIStore((s) => s.selectedCRDKey)
   const setSelectedCRD = useUIStore((s) => s.setSelectedCRD)
+  const activeNavItemRef = useRef<HTMLLIElement | null>(null)
+
+  const hasGatewayAPI = crds.some((c) => c.group === 'gateway.networking.k8s.io')
+  const hasArgoApplications = crds.some(
+    (c) => c.group === 'argoproj.io' && c.resource === 'applications',
+  )
+  const navViews = useMemo<ResourceView[]>(() => {
+    return [
+      ...RESOURCE_GROUPS.flatMap(groupViews),
+      ...(hasGatewayAPI ? groupViews(GATEWAY_GROUP) : []),
+      ...(hasArgoApplications ? groupViews(ARGO_GROUP) : []),
+      ...groupViews(HELM_GROUP),
+    ]
+  }, [hasGatewayAPI, hasArgoApplications])
+
+  useEffect(() => {
+    activeNavItemRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [selectedView, selectedCRDKey])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -243,15 +256,15 @@ function App() {
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
       if (isEditableTarget(e.target)) return
       e.preventDefault()
-      const current = NAV_VIEWS.indexOf(selectedView)
+      const current = navViews.indexOf(selectedView)
       const start = current >= 0 ? current : 0
       const delta = e.key === 'ArrowDown' ? 1 : -1
-      const next = (start + delta + NAV_VIEWS.length) % NAV_VIEWS.length
-      setSelectedView(NAV_VIEWS[next])
+      const next = (start + delta + navViews.length) % navViews.length
+      setSelectedView(navViews[next])
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selectedView, setSelectedView])
+  }, [navViews, selectedView, setSelectedView])
 
   useEffect(() => {
     const reload = () => {
@@ -357,6 +370,7 @@ function App() {
                         return (
                           <li
                             key={item.label}
+                            ref={active ? activeNavItemRef : undefined}
                             aria-disabled={!enabled}
                             className={[
                               'rounded px-2 py-1 text-sm',
@@ -404,6 +418,7 @@ function App() {
                           return (
                             <li
                               key={item.label}
+                              ref={active ? activeNavItemRef : undefined}
                               className={[
                                 'cursor-pointer rounded px-2 py-1 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                                 active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
@@ -448,6 +463,7 @@ function App() {
                           return (
                             <li
                               key={item.label}
+                              ref={active ? activeNavItemRef : undefined}
                               className={[
                                 'cursor-pointer rounded px-2 py-1 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                                 active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
