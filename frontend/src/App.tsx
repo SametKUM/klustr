@@ -57,7 +57,7 @@ import { GRPCRoutesView } from '@/features/grpcroutes/GRPCRoutesView'
 import { GatewayClassesView } from '@/features/gatewayclasses/GatewayClassesView'
 import { ReferenceGrantsView } from '@/features/referencegrants/ReferenceGrantsView'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
-import { ARGO_GROUP, GATEWAY_GROUP, RESOURCE_GROUPS } from '@/features/_shared/resourceGroups'
+import { ARGO_GROUP, GATEWAY_GROUP, HELM_GROUP, RESOURCE_GROUPS } from '@/features/_shared/resourceGroups'
 import { RowActionDialogs } from '@/features/_shared/RowActionDialogs'
 import { KeyboardShortcutsDialog } from '@/features/_shared/KeyboardShortcutsDialog'
 import { CommandPalette } from '@/features/_shared/CommandPalette'
@@ -198,6 +198,7 @@ const NAV_VIEWS: ResourceView[] = [
   ),
   ...GATEWAY_GROUP.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
   ...ARGO_GROUP.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
+  ...HELM_GROUP.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined),
 ]
 
 function isEditableTarget(t: EventTarget | null): boolean {
@@ -465,6 +466,48 @@ function App() {
                 )
               })()
             )}
+            {(() => {
+              const collapsed = collapsedNavGroups.includes(HELM_GROUP.label)
+              return (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => toggleNavGroup(HELM_GROUP.label)}
+                    aria-expanded={!collapsed}
+                    className="flex w-full items-center gap-1 px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-sidebar-foreground"
+                  >
+                    <ChevronRight
+                      className={`size-3 shrink-0 transition-transform ${collapsed ? '' : 'rotate-90'}`}
+                    />
+                    <span>{HELM_GROUP.label}</span>
+                  </button>
+                  {!collapsed && (
+                    <ul className="flex flex-col">
+                      {HELM_GROUP.items.map((item) => {
+                        const active =
+                          item.view !== undefined &&
+                          item.view === selectedView &&
+                          selectedCRDKey === null
+                        return (
+                          <li
+                            key={item.label}
+                            className={[
+                              'cursor-pointer rounded px-2 py-1 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                              active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
+                            ].join(' ')}
+                            onClick={() => {
+                              if (item.view) setSelectedView(item.view)
+                            }}
+                          >
+                            {item.label}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )
+            })()}
             <CRDGroups
               crds={crds}
               expandedGroups={expandedCRDGroups}

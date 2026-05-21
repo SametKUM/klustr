@@ -72,14 +72,15 @@ export const RESOURCE_GROUPS: ResourceGroup[] = [
       { label: 'Role Bindings', view: 'rolebindings' },
     ],
   },
-  {
-    label: 'Helm',
-    items: [
-      { label: 'Releases', view: 'helmreleases' },
-      { label: 'Repositories', view: 'helmrepos' },
-    ],
-  },
 ]
+
+export const HELM_GROUP: ResourceGroup = {
+  label: 'Helm',
+  items: [
+    { label: 'Releases', view: 'helmreleases' },
+    { label: 'Repositories', view: 'helmrepos' },
+  ],
+}
 
 export const ARGO_GROUP: ResourceGroup = {
   label: 'Argo CD',
