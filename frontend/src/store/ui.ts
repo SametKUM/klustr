@@ -335,7 +335,7 @@ export type SelectedResource = {
   context?: string
 }
 
-export type DetailTab = 'overview' | 'logs' | 'exec' | 'events' | 'yaml'
+export type DetailTab = 'overview' | 'logs' | 'exec' | 'events' | 'history' | 'yaml'
 
 export type PendingAction =
   | { kind: 'delete'; resource: SelectedResource }

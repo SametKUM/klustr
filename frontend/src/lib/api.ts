@@ -107,6 +107,13 @@ import {
   ListStatefulSets,
   PingContext,
   ResizeExec,
+  ListDeploymentRevisions,
+  ListStatefulSetRevisions,
+  ListDaemonSetRevisions,
+  RollbackDeployment,
+  RollbackStatefulSet,
+  RollbackDaemonSet,
+  GetWorkloadRevisionTemplate,
   PatchDeploymentPaused,
   PatchHPAReplicas,
   RestartWorkload,
@@ -238,6 +245,7 @@ export type HelmInstallOptions = kube.HelmInstallOptions
 export type HelmDryRunResult = kube.HelmDryRunResult
 export type ArgoApplicationResource = kube.ArgoApplicationResource
 export type ArgoApplicationInfo = kube.ArgoApplicationInfo
+export type WorkloadRevision = kube.WorkloadRevision
 
 export const api = {
   listContexts: (): Promise<Kubeconfig> => ListContexts(),
@@ -417,6 +425,25 @@ export const api = {
   ): Promise<void> => PatchHPAReplicas(ctx, ns, name, minReplicas, maxReplicas),
   patchDeploymentPaused: (ctx: string, ns: string, name: string, paused: boolean): Promise<void> =>
     PatchDeploymentPaused(ctx, ns, name, paused),
+  listDeploymentRevisions: (ctx: string, ns: string, name: string): Promise<WorkloadRevision[]> =>
+    ListDeploymentRevisions(ctx, ns, name),
+  listStatefulSetRevisions: (ctx: string, ns: string, name: string): Promise<WorkloadRevision[]> =>
+    ListStatefulSetRevisions(ctx, ns, name),
+  listDaemonSetRevisions: (ctx: string, ns: string, name: string): Promise<WorkloadRevision[]> =>
+    ListDaemonSetRevisions(ctx, ns, name),
+  rollbackDeployment: (ctx: string, ns: string, name: string, toRevision: number): Promise<void> =>
+    RollbackDeployment(ctx, ns, name, toRevision),
+  rollbackStatefulSet: (ctx: string, ns: string, name: string, toRevision: number): Promise<void> =>
+    RollbackStatefulSet(ctx, ns, name, toRevision),
+  rollbackDaemonSet: (ctx: string, ns: string, name: string, toRevision: number): Promise<void> =>
+    RollbackDaemonSet(ctx, ns, name, toRevision),
+  getWorkloadRevisionTemplate: (
+    ctx: string,
+    kind: string,
+    ns: string,
+    name: string,
+    revision: number,
+  ): Promise<string> => GetWorkloadRevisionTemplate(ctx, kind, ns, name, revision),
   restartWorkload: (ctx: string, kind: string, ns: string, name: string): Promise<void> =>
     RestartWorkload(ctx, kind, ns, name),
   startPortForward: (

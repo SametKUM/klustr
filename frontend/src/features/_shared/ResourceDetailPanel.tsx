@@ -13,6 +13,7 @@ import { MultiPodLogsTab } from './MultiPodLogsTab'
 import { EventsTab } from './EventsTab'
 import { DeleteResourceButton } from './DeleteResourceButton'
 import { PauseDeploymentButton, isPausable } from './PauseDeploymentButton'
+import { RolloutHistoryTab } from './RolloutHistoryTab'
 import { RestartWorkloadButton, isRestartable } from './RestartWorkloadButton'
 import { ScaleResourceButton, isScalable } from './ScaleResourceButton'
 import { PortForwardButton } from '@/features/portforward/PortForwardButton'
@@ -147,6 +148,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
 }
 
 const WORKLOAD_LOG_KINDS: ResourceKind[] = ['Deployment', 'StatefulSet', 'DaemonSet']
+const ROLLOUT_HISTORY_KINDS: ResourceKind[] = ['Deployment', 'StatefulSet', 'DaemonSet']
 
 const EVENT_BEARING_KINDS: ResourceKind[] = [
   'Pod',
@@ -308,10 +310,12 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
 function NonPodTabs({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
   const hasAggregatedLogs = (WORKLOAD_LOG_KINDS as readonly string[]).includes(resource.kind)
   const hasEvents = (EVENT_BEARING_KINDS as readonly string[]).includes(resource.kind)
+  const hasHistory = (ROLLOUT_HISTORY_KINDS as readonly string[]).includes(resource.kind)
   const requestedTab = useUIStore((s) => s.requestedTab)
   const allowed: DetailTab[] = ['overview']
   if (hasAggregatedLogs) allowed.push('logs')
   if (hasEvents) allowed.push('events')
+  if (hasHistory) allowed.push('history')
   allowed.push('yaml')
   const initialTab: DetailTab =
     requestedTab && allowed.includes(requestedTab) ? requestedTab : 'overview'
@@ -322,6 +326,7 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
         <TabsTrigger value="overview">Overview</TabsTrigger>
         {hasAggregatedLogs && <TabsTrigger value="logs">Logs</TabsTrigger>}
         {hasEvents && <TabsTrigger value="events">Events</TabsTrigger>}
+        {hasHistory && <TabsTrigger value="history">History</TabsTrigger>}
         <TabsTrigger value="yaml">YAML</TabsTrigger>
       </TabsList>
       <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
@@ -338,6 +343,16 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
             contextName={contextName}
             namespace={resource.namespace}
             kind={resource.kind}
+            name={resource.name}
+          />
+        </TabsContent>
+      )}
+      {hasHistory && (
+        <TabsContent value="history" className="min-h-0 flex-1 p-0">
+          <RolloutHistoryTab
+            contextName={contextName}
+            kind={resource.kind as 'Deployment' | 'StatefulSet' | 'DaemonSet'}
+            namespace={resource.namespace}
             name={resource.name}
           />
         </TabsContent>
