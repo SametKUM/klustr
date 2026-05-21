@@ -640,3 +640,47 @@ func (a *App) SaveTextFile(defaultName, content string) (string, error) {
 	}
 	return path, nil
 }
+
+// ---------------------------------------------------------------------------
+// Gateway API bindings.
+// ---------------------------------------------------------------------------
+
+func (a *App) ListGateways(name, namespace string) []kube.GatewayInfo {
+	return a.clients.Gateways(name, namespace)
+}
+
+func (a *App) GetGateway(contextName, namespace, name string) (*kube.GatewayDetail, error) {
+	return a.clients.Gateway(contextName, namespace, name)
+}
+
+func (a *App) ListHTTPRoutes(name, namespace string) []kube.HTTPRouteInfo {
+	return a.clients.HTTPRoutes(name, namespace)
+}
+
+func (a *App) GetHTTPRoute(contextName, namespace, name string) (*kube.HTTPRouteDetail, error) {
+	return a.clients.HTTPRoute(contextName, namespace, name)
+}
+
+func (a *App) ListGRPCRoutes(name, namespace string) []kube.GRPCRouteInfo {
+	return a.clients.GRPCRoutes(name, namespace)
+}
+
+func (a *App) GetGRPCRoute(contextName, namespace, name string) (*kube.GRPCRouteDetail, error) {
+	return a.clients.GRPCRoute(contextName, namespace, name)
+}
+
+func (a *App) ListGatewayClasses(name string) []kube.GatewayClassInfo {
+	return a.clients.GatewayClasses(name)
+}
+
+func (a *App) GetGatewayClass(contextName, name string) (*kube.GatewayClassDetail, error) {
+	return a.clients.GatewayClass(contextName, name)
+}
+
+func (a *App) ListReferenceGrants(name, namespace string) []kube.ReferenceGrantInfo {
+	return a.clients.ReferenceGrants(name, namespace)
+}
+
+func (a *App) GetReferenceGrant(contextName, namespace, name string) (*kube.ReferenceGrantDetail, error) {
+	return a.clients.ReferenceGrant(contextName, namespace, name)
+}

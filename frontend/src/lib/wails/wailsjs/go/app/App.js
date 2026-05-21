@@ -58,6 +58,22 @@ export function GetEndpoints(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetEndpoints'](arg1, arg2, arg3);
 }
 
+export function GetGRPCRoute(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetGRPCRoute'](arg1, arg2, arg3);
+}
+
+export function GetGateway(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetGateway'](arg1, arg2, arg3);
+}
+
+export function GetGatewayClass(arg1, arg2) {
+  return window['go']['app']['App']['GetGatewayClass'](arg1, arg2);
+}
+
+export function GetHTTPRoute(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetHTTPRoute'](arg1, arg2, arg3);
+}
+
 export function GetHelmRelease(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetHelmRelease'](arg1, arg2, arg3);
 }
@@ -120,6 +136,10 @@ export function GetPodDisruptionBudget(arg1, arg2, arg3) {
 
 export function GetPriorityClass(arg1, arg2) {
   return window['go']['app']['App']['GetPriorityClass'](arg1, arg2);
+}
+
+export function GetReferenceGrant(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetReferenceGrant'](arg1, arg2, arg3);
 }
 
 export function GetReplicaSet(arg1, arg2, arg3) {
@@ -254,6 +274,22 @@ export function ListEvents(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['ListEvents'](arg1, arg2, arg3, arg4);
 }
 
+export function ListGRPCRoutes(arg1, arg2) {
+  return window['go']['app']['App']['ListGRPCRoutes'](arg1, arg2);
+}
+
+export function ListGatewayClasses(arg1) {
+  return window['go']['app']['App']['ListGatewayClasses'](arg1);
+}
+
+export function ListGateways(arg1, arg2) {
+  return window['go']['app']['App']['ListGateways'](arg1, arg2);
+}
+
+export function ListHTTPRoutes(arg1, arg2) {
+  return window['go']['app']['App']['ListHTTPRoutes'](arg1, arg2);
+}
+
 export function ListHelmReleaseHistory(arg1, arg2, arg3) {
   return window['go']['app']['App']['ListHelmReleaseHistory'](arg1, arg2, arg3);
 }
@@ -332,6 +368,10 @@ export function ListPortForwards() {
 
 export function ListPriorityClasses(arg1) {
   return window['go']['app']['App']['ListPriorityClasses'](arg1);
+}
+
+export function ListReferenceGrants(arg1, arg2) {
+  return window['go']['app']['App']['ListReferenceGrants'](arg1, arg2);
 }
 
 export function ListReplicaSets(arg1, arg2) {

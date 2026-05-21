@@ -30,6 +30,14 @@ export function GetEndpointSlice(arg1:string,arg2:string,arg3:string):Promise<ku
 
 export function GetEndpoints(arg1:string,arg2:string,arg3:string):Promise<kube.EndpointsDetail>;
 
+export function GetGRPCRoute(arg1:string,arg2:string,arg3:string):Promise<kube.GRPCRouteDetail>;
+
+export function GetGateway(arg1:string,arg2:string,arg3:string):Promise<kube.GatewayDetail>;
+
+export function GetGatewayClass(arg1:string,arg2:string):Promise<kube.GatewayClassDetail>;
+
+export function GetHTTPRoute(arg1:string,arg2:string,arg3:string):Promise<kube.HTTPRouteDetail>;
+
 export function GetHelmRelease(arg1:string,arg2:string,arg3:string):Promise<kube.HelmReleaseDetail>;
 
 export function GetHorizontalPodAutoscaler(arg1:string,arg2:string,arg3:string):Promise<kube.HorizontalPodAutoscalerDetail>;
@@ -61,6 +69,8 @@ export function GetPod(arg1:string,arg2:string,arg3:string):Promise<kube.PodDeta
 export function GetPodDisruptionBudget(arg1:string,arg2:string,arg3:string):Promise<kube.PodDisruptionBudgetDetail>;
 
 export function GetPriorityClass(arg1:string,arg2:string):Promise<kube.PriorityClassDetail>;
+
+export function GetReferenceGrant(arg1:string,arg2:string,arg3:string):Promise<kube.ReferenceGrantDetail>;
 
 export function GetReplicaSet(arg1:string,arg2:string,arg3:string):Promise<kube.ReplicaSetDetail>;
 
@@ -128,6 +138,14 @@ export function ListEndpoints(arg1:string,arg2:string):Promise<Array<kube.Endpoi
 
 export function ListEvents(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Array<kube.EventInfo>>;
 
+export function ListGRPCRoutes(arg1:string,arg2:string):Promise<Array<kube.GRPCRouteInfo>>;
+
+export function ListGatewayClasses(arg1:string):Promise<Array<kube.GatewayClassInfo>>;
+
+export function ListGateways(arg1:string,arg2:string):Promise<Array<kube.GatewayInfo>>;
+
+export function ListHTTPRoutes(arg1:string,arg2:string):Promise<Array<kube.HTTPRouteInfo>>;
+
 export function ListHelmReleaseHistory(arg1:string,arg2:string,arg3:string):Promise<Array<kube.HelmRevisionInfo>>;
 
 export function ListHelmReleases(arg1:string,arg2:string):Promise<Array<kube.HelmReleaseInfo>>;
@@ -167,6 +185,8 @@ export function ListPods(arg1:string,arg2:string):Promise<Array<kube.PodInfo>>;
 export function ListPortForwards():Promise<Array<kube.PortForwardInfo>>;
 
 export function ListPriorityClasses(arg1:string):Promise<Array<kube.PriorityClassInfo>>;
+
+export function ListReferenceGrants(arg1:string,arg2:string):Promise<Array<kube.ReferenceGrantInfo>>;
 
 export function ListReplicaSets(arg1:string,arg2:string):Promise<Array<kube.ReplicaSetInfo>>;
 

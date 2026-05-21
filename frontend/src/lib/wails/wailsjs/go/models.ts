@@ -62,6 +62,28 @@ export namespace kube {
 	        this.message = source["message"];
 	    }
 	}
+	export class BackendRefDetail {
+	    group: string;
+	    kind: string;
+	    namespace: string;
+	    name: string;
+	    port: number;
+	    weight: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new BackendRefDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.group = source["group"];
+	        this.kind = source["kind"];
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	        this.port = source["port"];
+	        this.weight = source["weight"];
+	    }
+	}
 	export class PrinterColumn {
 	    name: string;
 	    type: string;
@@ -1205,6 +1227,362 @@ export namespace kube {
 		    return a;
 		}
 	}
+	export class RouteParentStatusDetail {
+	    parent: ParentRefDetail;
+	    controller: string;
+	    conditions: ConditionDetail[];
+	
+	    static createFrom(source: any = {}) {
+	        return new RouteParentStatusDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.parent = this.convertValues(source["parent"], ParentRefDetail);
+	        this.controller = source["controller"];
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class GRPCRouteMatchDetail {
+	    methodType: string;
+	    service: string;
+	    method: string;
+	    headers: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new GRPCRouteMatchDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.methodType = source["methodType"];
+	        this.service = source["service"];
+	        this.method = source["method"];
+	        this.headers = source["headers"];
+	    }
+	}
+	export class GRPCRouteRuleDetail {
+	    matches: GRPCRouteMatchDetail[];
+	    backends: BackendRefDetail[];
+	
+	    static createFrom(source: any = {}) {
+	        return new GRPCRouteRuleDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.matches = this.convertValues(source["matches"], GRPCRouteMatchDetail);
+	        this.backends = this.convertValues(source["backends"], BackendRefDetail);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ParentRefDetail {
+	    group: string;
+	    kind: string;
+	    namespace: string;
+	    name: string;
+	    sectionName: string;
+	    port: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ParentRefDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.group = source["group"];
+	        this.kind = source["kind"];
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	        this.sectionName = source["sectionName"];
+	        this.port = source["port"];
+	    }
+	}
+	export class GRPCRouteDetail {
+	    name: string;
+	    namespace: string;
+	    uid: string;
+	    hostnames: string[];
+	    parents: ParentRefDetail[];
+	    rules: GRPCRouteRuleDetail[];
+	    status: RouteParentStatusDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GRPCRouteDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.uid = source["uid"];
+	        this.hostnames = source["hostnames"];
+	        this.parents = this.convertValues(source["parents"], ParentRefDetail);
+	        this.rules = this.convertValues(source["rules"], GRPCRouteRuleDetail);
+	        this.status = this.convertValues(source["status"], RouteParentStatusDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class GRPCRouteInfo {
+	    name: string;
+	    namespace: string;
+	    hostnames: string;
+	    parents: string;
+	    rules: number;
+	    accepted: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GRPCRouteInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.hostnames = source["hostnames"];
+	        this.parents = source["parents"];
+	        this.rules = source["rules"];
+	        this.accepted = source["accepted"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	
+	export class GatewayClassDetail {
+	    name: string;
+	    uid: string;
+	    controller: string;
+	    description: string;
+	    conditions: ConditionDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GatewayClassDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uid = source["uid"];
+	        this.controller = source["controller"];
+	        this.description = source["description"];
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class GatewayClassInfo {
+	    name: string;
+	    controller: string;
+	    accepted: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GatewayClassInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.controller = source["controller"];
+	        this.accepted = source["accepted"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class ListenerDetail {
+	    name: string;
+	    hostname: string;
+	    protocol: string;
+	    port: number;
+	    allowedNamespaces: string;
+	    attachedRoutes: number;
+	    conditions: ConditionDetail[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ListenerDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.hostname = source["hostname"];
+	        this.protocol = source["protocol"];
+	        this.port = source["port"];
+	        this.allowedNamespaces = source["allowedNamespaces"];
+	        this.attachedRoutes = source["attachedRoutes"];
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class GatewayDetail {
+	    name: string;
+	    namespace: string;
+	    uid: string;
+	    class: string;
+	    addresses: string[];
+	    listeners: ListenerDetail[];
+	    conditions: ConditionDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GatewayDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.uid = source["uid"];
+	        this.class = source["class"];
+	        this.addresses = source["addresses"];
+	        this.listeners = this.convertValues(source["listeners"], ListenerDetail);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class GatewayInfo {
+	    name: string;
+	    namespace: string;
+	    class: string;
+	    addresses: string;
+	    listeners: string;
+	    programmed: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GatewayInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.class = source["class"];
+	        this.addresses = source["addresses"];
+	        this.listeners = source["listeners"];
+	        this.programmed = source["programmed"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class HPAMetricTarget {
 	    name: string;
 	    current: number;
@@ -1223,6 +1601,132 @@ export namespace kube {
 	        this.text = source["text"];
 	    }
 	}
+	export class HTTPRouteMatchDetail {
+	    pathType: string;
+	    path: string;
+	    method: string;
+	    headers: string[];
+	    queryParams: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new HTTPRouteMatchDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pathType = source["pathType"];
+	        this.path = source["path"];
+	        this.method = source["method"];
+	        this.headers = source["headers"];
+	        this.queryParams = source["queryParams"];
+	    }
+	}
+	export class HTTPRouteRuleDetail {
+	    matches: HTTPRouteMatchDetail[];
+	    backends: BackendRefDetail[];
+	
+	    static createFrom(source: any = {}) {
+	        return new HTTPRouteRuleDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.matches = this.convertValues(source["matches"], HTTPRouteMatchDetail);
+	        this.backends = this.convertValues(source["backends"], BackendRefDetail);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class HTTPRouteDetail {
+	    name: string;
+	    namespace: string;
+	    uid: string;
+	    hostnames: string[];
+	    parents: ParentRefDetail[];
+	    rules: HTTPRouteRuleDetail[];
+	    status: RouteParentStatusDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HTTPRouteDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.uid = source["uid"];
+	        this.hostnames = source["hostnames"];
+	        this.parents = this.convertValues(source["parents"], ParentRefDetail);
+	        this.rules = this.convertValues(source["rules"], HTTPRouteRuleDetail);
+	        this.status = this.convertValues(source["status"], RouteParentStatusDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class HTTPRouteInfo {
+	    name: string;
+	    namespace: string;
+	    hostnames: string;
+	    parents: string;
+	    rules: number;
+	    accepted: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HTTPRouteInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.hostnames = source["hostnames"];
+	        this.parents = source["parents"];
+	        this.rules = source["rules"];
+	        this.accepted = source["accepted"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	
 	export class HelmChartSearchResult {
 	    repo: string;
 	    name: string;
@@ -1935,6 +2439,7 @@ export namespace kube {
 	    }
 	}
 	
+	
 	export class NamespaceDetail {
 	    name: string;
 	    uid: string;
@@ -2158,6 +2663,7 @@ export namespace kube {
 	        this.name = source["name"];
 	    }
 	}
+	
 	export class PersistentVolumeClaimDetail {
 	    name: string;
 	    namespace: string;
@@ -2600,6 +3106,104 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class ReferenceGrantToDetail {
+	    group: string;
+	    kind: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReferenceGrantToDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.group = source["group"];
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	    }
+	}
+	export class ReferenceGrantFromDetail {
+	    group: string;
+	    kind: string;
+	    namespace: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReferenceGrantFromDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.group = source["group"];
+	        this.kind = source["kind"];
+	        this.namespace = source["namespace"];
+	    }
+	}
+	export class ReferenceGrantDetail {
+	    name: string;
+	    namespace: string;
+	    uid: string;
+	    from: ReferenceGrantFromDetail[];
+	    to: ReferenceGrantToDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReferenceGrantDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.uid = source["uid"];
+	        this.from = this.convertValues(source["from"], ReferenceGrantFromDetail);
+	        this.to = this.convertValues(source["to"], ReferenceGrantToDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class ReferenceGrantInfo {
+	    name: string;
+	    namespace: string;
+	    from: string;
+	    to: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReferenceGrantInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.from = source["from"];
+	        this.to = source["to"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
 	export class ReplicaSetDetail {
 	    name: string;
 	    namespace: string;
@@ -2965,6 +3569,7 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	
 	
 	export class RuntimeClassDetail {
 	    name: string;
