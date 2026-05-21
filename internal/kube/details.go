@@ -30,6 +30,7 @@ type DeploymentDetail struct {
 	Updated     int32              `json:"updated"`
 	Available   int32              `json:"available"`
 	Unavailable int32              `json:"unavailable"`
+	Paused      bool               `json:"paused"`
 	Selector    map[string]string  `json:"selector"`
 	Containers  []ContainerSummary `json:"containers"`
 	Conditions  []ConditionDetail  `json:"conditions"`
@@ -618,6 +619,7 @@ func (w *contextWatcher) Deployment(namespace, name string) (*DeploymentDetail, 
 		Updated:     d.Status.UpdatedReplicas,
 		Available:   d.Status.AvailableReplicas,
 		Unavailable: d.Status.UnavailableReplicas,
+		Paused:      d.Spec.Paused,
 		Selector:    matchLabels(d.Spec.Selector),
 		Containers:  containerSummaries(d.Spec.Template.Spec.Containers),
 		Conditions:  deploymentConditions(d.Status.Conditions),

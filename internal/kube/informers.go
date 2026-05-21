@@ -292,6 +292,7 @@ type DeploymentInfo struct {
 	Available int32  `json:"available"`
 	Strategy  string `json:"strategy"`
 	Images    string `json:"images"`
+	Paused    bool   `json:"paused"`
 	CreatedAt string `json:"createdAt"`
 }
 
@@ -1317,6 +1318,7 @@ func (w *contextWatcher) Deployments(namespace string) []DeploymentInfo {
 			Available: d.Status.AvailableReplicas,
 			Strategy:  strategy,
 			Images:    strings.Join(images, ", "),
+			Paused:    d.Spec.Paused,
 			CreatedAt: d.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}

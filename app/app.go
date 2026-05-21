@@ -242,6 +242,10 @@ func (a *App) PatchHPAReplicas(contextName, namespace, name string, minReplicas,
 	return a.clients.PatchHPAReplicas(a.ctx, contextName, namespace, name, int32(minReplicas), int32(maxReplicas))
 }
 
+func (a *App) PatchDeploymentPaused(contextName, namespace, name string, paused bool) error {
+	return a.clients.PatchDeploymentPaused(a.ctx, contextName, namespace, name, paused)
+}
+
 func (a *App) RestartWorkload(contextName, kind, namespace, name string) error {
 	return a.clients.RestartWorkload(a.ctx, contextName, kind, namespace, name)
 }

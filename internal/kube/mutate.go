@@ -223,6 +223,27 @@ func (m *ClientManager) RestartWorkload(ctx context.Context, contextName, kind, 
 	return err
 }
 
+func (m *ClientManager) PatchDeploymentPaused(ctx context.Context, contextName, namespace, name string, paused bool) error {
+	cs, err := m.Clientset(contextName)
+	if err != nil {
+		return err
+	}
+	patch := map[string]any{
+		"spec": map[string]any{
+			"paused": paused,
+		},
+	}
+	data, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+	_, err = cs.AppsV1().Deployments(namespace).Patch(
+		ctx, name, types.MergePatchType, data,
+		metav1.PatchOptions{FieldManager: "klustr"},
+	)
+	return err
+}
+
 func (m *ClientManager) PatchHPAReplicas(ctx context.Context, contextName, namespace, name string, minReplicas, maxReplicas int32) error {
 	if maxReplicas < 1 {
 		return fmt.Errorf("maxReplicas must be >= 1")
