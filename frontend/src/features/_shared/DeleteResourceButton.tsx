@@ -80,24 +80,17 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {resource.kind}?</AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-2">
-              <p>
-                This will issue <code className="font-mono text-xs">DELETE</code> against{' '}
-                <span className="font-mono text-xs allow-select">{resource.kind.toLowerCase()}/{resource.name}</span>
-                {resource.namespace ? (
-                  <> in namespace <span className="font-mono text-xs allow-select">{resource.namespace}</span></>
-                ) : null}
-                . The cluster's default propagation policy applies.
-              </p>
-              {del.error && (
-                <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
-                  {String(del.error)}
-                </p>
-              )}
-            </div>
+          <AlertDialogDescription>
+            This will issue DELETE against {resource.kind.toLowerCase()}/{resource.name}
+            {resource.namespace ? ` in namespace ${resource.namespace}` : ''}. The cluster's default
+            propagation policy applies.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {del.error && (
+          <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
+            {String(del.error)}
+          </p>
+        )}
         {requireConfirmation && (
           <div className="space-y-2">
             <label htmlFor="delete-confirm" className="text-sm">
@@ -122,7 +115,6 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
               }}
               disabled={del.isPending}
               className="font-mono text-sm"
-              placeholder="DELETE"
             />
           </div>
         )}

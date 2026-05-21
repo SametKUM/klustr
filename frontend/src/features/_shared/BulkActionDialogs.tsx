@@ -104,47 +104,43 @@ export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: Dialo
           <AlertDialogTitle>
             Delete {items.length} {label}?
           </AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-3">
-              <p>
-                This issues <code className="font-mono text-xs">DELETE</code> against each item via
-                the Kubernetes API. This cannot be undone.
-              </p>
-              <ul className="max-h-40 overflow-auto rounded border border-border bg-muted/30 p-2 font-mono text-xs">
-                {shown.map((it) => (
-                  <li key={`${it.contextName}/${it.namespace}/${it.name}`} className="truncate">
-                    {it.namespace ? `${it.namespace}/` : ''}
-                    {it.name}
-                  </li>
-                ))}
-                {rest > 0 && (
-                  <li className="text-muted-foreground">… and {rest} more</li>
-                )}
-              </ul>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">
-                  Type{' '}
-                  <span className="allow-select select-all cursor-text rounded bg-muted px-1 font-mono">
-                    DELETE
-                  </span>{' '}
-                  to confirm.
-                </p>
-                <Input
-                  autoFocus
-                  value={typed}
-                  onChange={(e) => setTyped(e.target.value)}
-                  placeholder="DELETE"
-                  className="font-mono"
-                />
-              </div>
-              {del.error && (
-                <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
-                  {String(del.error)}
-                </p>
-              )}
-            </div>
+          <AlertDialogDescription>
+            This issues DELETE against each item via the Kubernetes API. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="space-y-3 text-sm">
+          <ul className="max-h-40 overflow-auto rounded border border-border bg-muted/30 p-2 font-mono text-xs">
+            {shown.map((it) => (
+              <li key={`${it.contextName}/${it.namespace}/${it.name}`} className="truncate">
+                {it.namespace ? `${it.namespace}/` : ''}
+                {it.name}
+              </li>
+            ))}
+            {rest > 0 && (
+              <li className="text-muted-foreground">… and {rest} more</li>
+            )}
+          </ul>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              Type{' '}
+              <span className="allow-select select-all cursor-text rounded bg-muted px-1 font-mono">
+                DELETE
+              </span>{' '}
+              to confirm.
+            </p>
+            <Input
+              autoFocus
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              className="font-mono"
+            />
+          </div>
+          {del.error && (
+            <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
+              {String(del.error)}
+            </p>
+          )}
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={del.isPending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
@@ -193,32 +189,29 @@ export function BulkRestartDialog({ items, open, onOpenChange, onSuccess }: Dial
           <AlertDialogTitle>
             Restart {items.length} {label}?
           </AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-3">
-              <p>
-                Triggers a rolling restart on each workload by patching{' '}
-                <code className="font-mono text-xs">spec.template.metadata.annotations</code> —
-                equivalent to <code className="font-mono text-xs">kubectl rollout restart</code>.
-              </p>
-              <ul className="max-h-40 overflow-auto rounded border border-border bg-muted/30 p-2 font-mono text-xs">
-                {shown.map((it) => (
-                  <li key={`${it.contextName}/${it.namespace}/${it.name}`} className="truncate">
-                    {it.namespace ? `${it.namespace}/` : ''}
-                    {it.name}
-                  </li>
-                ))}
-                {rest > 0 && (
-                  <li className="text-muted-foreground">… and {rest} more</li>
-                )}
-              </ul>
-              {restart.error && (
-                <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
-                  {String(restart.error)}
-                </p>
-              )}
-            </div>
+          <AlertDialogDescription>
+            Triggers a rolling restart on each workload by patching
+            spec.template.metadata.annotations — equivalent to kubectl rollout restart.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="space-y-3 text-sm">
+          <ul className="max-h-40 overflow-auto rounded border border-border bg-muted/30 p-2 font-mono text-xs">
+            {shown.map((it) => (
+              <li key={`${it.contextName}/${it.namespace}/${it.name}`} className="truncate">
+                {it.namespace ? `${it.namespace}/` : ''}
+                {it.name}
+              </li>
+            ))}
+            {rest > 0 && (
+              <li className="text-muted-foreground">… and {rest} more</li>
+            )}
+          </ul>
+          {restart.error && (
+            <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
+              {String(restart.error)}
+            </p>
+          )}
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={restart.isPending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
