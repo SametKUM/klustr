@@ -246,6 +246,34 @@ func (a *App) PatchDeploymentPaused(contextName, namespace, name string, paused 
 	return a.clients.PatchDeploymentPaused(a.ctx, contextName, namespace, name, paused)
 }
 
+func (a *App) ListDeploymentRevisions(contextName, namespace, name string) ([]kube.WorkloadRevision, error) {
+	return a.clients.DeploymentRevisions(contextName, namespace, name)
+}
+
+func (a *App) ListStatefulSetRevisions(contextName, namespace, name string) ([]kube.WorkloadRevision, error) {
+	return a.clients.StatefulSetRevisions(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) ListDaemonSetRevisions(contextName, namespace, name string) ([]kube.WorkloadRevision, error) {
+	return a.clients.DaemonSetRevisions(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) RollbackDeployment(contextName, namespace, name string, toRevision int) error {
+	return a.clients.RollbackDeployment(a.ctx, contextName, namespace, name, int32(toRevision))
+}
+
+func (a *App) RollbackStatefulSet(contextName, namespace, name string, toRevision int) error {
+	return a.clients.RollbackStatefulSet(a.ctx, contextName, namespace, name, int32(toRevision))
+}
+
+func (a *App) RollbackDaemonSet(contextName, namespace, name string, toRevision int) error {
+	return a.clients.RollbackDaemonSet(a.ctx, contextName, namespace, name, int32(toRevision))
+}
+
+func (a *App) GetWorkloadRevisionTemplate(contextName, kind, namespace, name string, revision int) (string, error) {
+	return a.clients.WorkloadRevisionTemplate(a.ctx, contextName, kind, namespace, name, int32(revision))
+}
+
 func (a *App) RestartWorkload(contextName, kind, namespace, name string) error {
 	return a.clients.RestartWorkload(a.ctx, contextName, kind, namespace, name)
 }
