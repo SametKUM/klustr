@@ -837,6 +837,7 @@ export namespace kube {
 	    updated: number;
 	    available: number;
 	    unavailable: number;
+	    paused: boolean;
 	    selector: Record<string, string>;
 	    containers: ContainerSummary[];
 	    conditions: ConditionDetail[];
@@ -859,6 +860,7 @@ export namespace kube {
 	        this.updated = source["updated"];
 	        this.available = source["available"];
 	        this.unavailable = source["unavailable"];
+	        this.paused = source["paused"];
 	        this.selector = source["selector"];
 	        this.containers = this.convertValues(source["containers"], ContainerSummary);
 	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
@@ -893,6 +895,7 @@ export namespace kube {
 	    available: number;
 	    strategy: string;
 	    images: string;
+	    paused: boolean;
 	    createdAt: string;
 	
 	    static createFrom(source: any = {}) {
@@ -908,6 +911,7 @@ export namespace kube {
 	        this.available = source["available"];
 	        this.strategy = source["strategy"];
 	        this.images = source["images"];
+	        this.paused = source["paused"];
 	        this.createdAt = source["createdAt"];
 	    }
 	}

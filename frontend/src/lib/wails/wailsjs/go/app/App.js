@@ -370,6 +370,10 @@ export function ListValidatingWebhookConfigurations(arg1) {
   return window['go']['app']['App']['ListValidatingWebhookConfigurations'](arg1);
 }
 
+export function PatchDeploymentPaused(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['PatchDeploymentPaused'](arg1, arg2, arg3, arg4);
+}
+
 export function PatchHPAReplicas(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['PatchHPAReplicas'](arg1, arg2, arg3, arg4, arg5);
 }

@@ -186,6 +186,8 @@ export function ListStorageClasses(arg1:string):Promise<Array<kube.StorageClassI
 
 export function ListValidatingWebhookConfigurations(arg1:string):Promise<Array<kube.WebhookConfigurationInfo>>;
 
+export function PatchDeploymentPaused(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<void>;
+
 export function PatchHPAReplicas(arg1:string,arg2:string,arg3:string,arg4:number,arg5:number):Promise<void>;
 
 export function PingContext(arg1:string):Promise<kube.ServerVersion>;
