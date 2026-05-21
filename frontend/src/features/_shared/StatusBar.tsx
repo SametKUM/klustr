@@ -4,25 +4,24 @@ import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
 import { usePortForwards } from '@/store/portForwards'
 import { api } from '@/lib/api'
 
-type ConnStatus = 'idle' | 'connecting' | 'connected' | 'error'
+type Health = {
+  status: 'pinging' | 'ok' | 'slow' | 'stale' | 'error'
+  latencyMs: number
+  error: string | null
+  version: string | null
+  lastPingAt: number
+}
+
+const PING_INTERVAL_MS = 25_000
+const SLOW_THRESHOLD_MS = 300
+const STALE_THRESHOLD_MS = 60_000
 
 export function StatusBar() {
   const activeContexts = useActiveContexts()
   const isAggregated = useIsAggregated()
-  const selectedContext = useUIStore((s) => s.selectedContext)
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const portForwards = usePortForwards((s) => s.list)
-  const contextText = isAggregated
-    ? `${activeContexts.length} contexts`
-    : (selectedContext ?? 'no context')
-  const namespaceText =
-    selectedNamespaces.length === 0
-      ? 'all namespaces'
-      : selectedNamespaces.length === 1
-        ? selectedNamespaces[0]
-        : `${selectedNamespaces.length} namespaces`
-  const [serverVersion, setServerVersion] = useState<string | null>(null)
-  const [status, setStatus] = useState<ConnStatus>('idle')
+  const [healthByCtx, setHealthByCtx] = useState<Record<string, Health>>({})
   const [appVersion, setAppVersion] = useState<string | null>(null)
 
   useEffect(() => {
@@ -32,76 +31,156 @@ export function StatusBar() {
       .then((v) => {
         if (!cancelled) setAppVersion(v)
       })
-      .catch(() => {
-        /* ignore */
-      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
   }, [])
 
   useEffect(() => {
-    if (!selectedContext) {
-      setServerVersion(null)
-      setStatus('idle')
+    if (activeContexts.length === 0) {
+      setHealthByCtx({})
       return
     }
     let cancelled = false
-    setStatus('connecting')
-    api
-      .pingContext(selectedContext)
-      .then((v) => {
-        if (cancelled) return
-        setServerVersion(v.gitVersion)
-        setStatus('connected')
+    const intervals: number[] = []
+
+    const ping = (ctx: string) => {
+      const start = performance.now()
+      setHealthByCtx((prev) => ({
+        ...prev,
+        [ctx]: prev[ctx]
+          ? { ...prev[ctx], status: 'pinging' }
+          : { status: 'pinging', latencyMs: -1, error: null, version: null, lastPingAt: 0 },
+      }))
+      api
+        .pingContext(ctx)
+        .then((v) => {
+          if (cancelled) return
+          const ms = Math.round(performance.now() - start)
+          setHealthByCtx((prev) => ({
+            ...prev,
+            [ctx]: {
+              status: ms > SLOW_THRESHOLD_MS ? 'slow' : 'ok',
+              latencyMs: ms,
+              error: null,
+              version: v.gitVersion,
+              lastPingAt: Date.now(),
+            },
+          }))
+        })
+        .catch((e: unknown) => {
+          if (cancelled) return
+          setHealthByCtx((prev) => ({
+            ...prev,
+            [ctx]: {
+              status: 'error',
+              latencyMs: -1,
+              error: String(e),
+              version: prev[ctx]?.version ?? null,
+              lastPingAt: Date.now(),
+            },
+          }))
+        })
+    }
+
+    for (const ctx of activeContexts) {
+      ping(ctx)
+      intervals.push(window.setInterval(() => ping(ctx), PING_INTERVAL_MS))
+    }
+
+    // Mark stale health for contexts whose last ping was too old.
+    const staleChecker = window.setInterval(() => {
+      setHealthByCtx((prev) => {
+        let changed = false
+        const next = { ...prev }
+        const now = Date.now()
+        for (const [ctx, h] of Object.entries(prev)) {
+          if (!activeContexts.includes(ctx)) continue
+          if (h.status === 'ok' || h.status === 'slow') {
+            if (now - h.lastPingAt > STALE_THRESHOLD_MS) {
+              next[ctx] = { ...h, status: 'stale' }
+              changed = true
+            }
+          }
+        }
+        return changed ? next : prev
       })
-      .catch(() => {
-        if (cancelled) return
-        setServerVersion(null)
-        setStatus('error')
-      })
+    }, 10_000)
+
     return () => {
       cancelled = true
+      for (const id of intervals) window.clearInterval(id)
+      window.clearInterval(staleChecker)
     }
-  }, [selectedContext])
+  }, [activeContexts])
 
-  const dotClass =
-    status === 'connected'
-      ? 'bg-emerald-500'
-      : status === 'connecting'
-        ? 'bg-amber-500 animate-pulse'
-        : status === 'error'
-          ? 'bg-destructive'
-          : 'bg-muted-foreground/40'
+  const namespaceText =
+    selectedNamespaces.length === 0
+      ? 'all namespaces'
+      : selectedNamespaces.length === 1
+        ? selectedNamespaces[0]
+        : `${selectedNamespaces.length} namespaces`
 
   return (
     <footer className="flex h-6 shrink-0 items-center gap-3 border-t border-border bg-background px-3 text-[10px] text-muted-foreground">
-      <span
-        className="inline-flex items-center gap-1.5"
-        title={isAggregated ? activeContexts.join(', ') : undefined}
-      >
-        <span
-          aria-label={`Cluster ${status}`}
-          className={['inline-block size-2 rounded-full', dotClass].join(' ')}
-        />
-        <Boxes className="size-3" />
-        {contextText}
-      </span>
+      {activeContexts.length === 0 ? (
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            aria-label="No context"
+            className="inline-block size-2 rounded-full bg-muted-foreground/40"
+          />
+          <Boxes className="size-3" />
+          no context
+        </span>
+      ) : (
+        activeContexts.map((ctx, i) => {
+          const h = healthByCtx[ctx]
+          const status = h?.status ?? 'pinging'
+          const dotClass =
+            status === 'ok'
+              ? 'bg-emerald-500'
+              : status === 'slow' || status === 'stale'
+                ? 'bg-amber-500'
+                : status === 'error'
+                  ? 'bg-destructive'
+                  : 'bg-muted-foreground/40 animate-pulse'
+          const tooltip = h?.error
+            ? `${ctx}: ${h.error}`
+            : h?.version
+              ? status === 'stale'
+                ? `${ctx}: stale (last ${h.version}, ${h.latencyMs}ms)`
+                : `${ctx}: ${h.version} · ${h.latencyMs}ms`
+              : `${ctx}: pinging…`
+          return (
+            <span key={ctx} className="inline-flex items-center gap-1.5" title={tooltip}>
+              <span
+                aria-label={`${ctx} ${status}`}
+                className={['inline-block size-2 rounded-full', dotClass].join(' ')}
+              />
+              {i === 0 && <Boxes className="size-3" />}
+              <span className="font-medium">{ctx}</span>
+              {h && h.latencyMs >= 0 && status !== 'error' && (
+                <span className="font-mono text-muted-foreground/70">{h.latencyMs}ms</span>
+              )}
+              {status === 'error' && (
+                <span className="font-mono text-destructive">offline</span>
+              )}
+            </span>
+          )
+        })
+      )}
       {activeContexts.length > 0 && (
         <span
           className="inline-flex items-center gap-1.5"
-          title={
-            selectedNamespaces.length > 1 ? selectedNamespaces.join(', ') : undefined
-          }
+          title={selectedNamespaces.length > 1 ? selectedNamespaces.join(', ') : undefined}
         >
           <Folder className="size-3" />
           {namespaceText}
         </span>
       )}
-      {serverVersion && (
-        <span className="font-mono">
-          Kubernetes {serverVersion}
-        </span>
+      {!isAggregated && activeContexts.length === 1 && healthByCtx[activeContexts[0]]?.version && (
+        <span className="font-mono">Kubernetes {healthByCtx[activeContexts[0]].version}</span>
       )}
       {portForwards.length > 0 && (
         <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
