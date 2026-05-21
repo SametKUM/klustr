@@ -100,22 +100,25 @@ jobs:
             --sign "$IDENTITY" build/bin/klustr.app
           codesign --verify --strict --verbose=2 build/bin/klustr.app
 
-      - name: Notarize macOS app
-        if: startsWith(matrix.os, 'macos')
-        shell: bash
-        env:
-          APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
-          TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
-          APPLE_PASSWORD: ${{ secrets.MACOS_NOTARY_PASSWORD }}
-        run: |
-          ditto -c -k --keepParent build/bin/klustr.app notarize.zip
-          xcrun notarytool submit notarize.zip \
-            --apple-id "$APPLE_ID" \
-            --team-id "$TEAM_ID" \
-            --password "$APPLE_PASSWORD" \
-            --wait
-          xcrun stapler staple build/bin/klustr.app
-          rm -f notarize.zip
+      # Notarization temporarily disabled while Apple Developer Support
+      # case 102895649796 is open — new-account submissions sit in the
+      # notary queue indefinitely. Re-enable by uncommenting this step.
+      # - name: Notarize macOS app
+      #   if: startsWith(matrix.os, 'macos')
+      #   shell: bash
+      #   env:
+      #     APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
+      #     TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
+      #     APPLE_PASSWORD: ${{ secrets.MACOS_NOTARY_PASSWORD }}
+      #   run: |
+      #     ditto -c -k --keepParent build/bin/klustr.app notarize.zip
+      #     xcrun notarytool submit notarize.zip \
+      #       --apple-id "$APPLE_ID" \
+      #       --team-id "$TEAM_ID" \
+      #       --password "$APPLE_PASSWORD" \
+      #       --wait
+      #     xcrun stapler staple build/bin/klustr.app
+      #     rm -f notarize.zip
 
       - name: Package macOS
         if: startsWith(matrix.os, 'macos')
@@ -163,7 +166,7 @@ jobs:
           body: |
             ## Install (macOS Apple Silicon)
 
-            The build is signed with a Developer ID and notarized by Apple, so Gatekeeper opens it without the quarantine prompt.
+            The build is signed with a Developer ID Application certificate. Apple notarization is temporarily skipped, so the first launch requires clearing the quarantine attribute (one-time):
 
             ```bash
             # Download
@@ -172,6 +175,9 @@ jobs:
             # Extract and move into /Applications
             tar -xzf klustr-${{ github.ref_name }}-darwin-arm64.tar.gz
             mv klustr.app /Applications/
+
+            # Strip quarantine so Gatekeeper opens it directly
+            xattr -cr /Applications/klustr.app
 
             # Launch
             open /Applications/klustr.app
