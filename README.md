@@ -33,20 +33,21 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 
 - 🔌 **Pure client.** No CRDs, no in-cluster components, no extra RBAC. Works with whatever your kubeconfig already grants.
 - 🔁 **Live updates everywhere.** Resources stay fresh via `client-go` informers — never polled.
-- 🌐 **Multi-context, multi-cluster.** Switch clusters in one click, or pick two-plus contexts and view them **aggregated** — every table, the cluster overview, workloads health, and events fan out across all selected clusters with a Context column. Pin a default for autoconnect.
+- 🌐 **Multi-context, multi-cluster.** Switch clusters in one click, or pick two-plus contexts and view them **aggregated** — every table, the cluster overview, workloads health, and events fan out across all selected clusters with a Context column. Pin a default for autoconnect. Each active context is **pinged every ~25 s** in the status bar with its own coloured dot, latency, and tooltip — slow pings turn amber, failures (timeout, 401, refused) light up red with the real error.
 - 👥 **Context groups & tags.** Save named multi-context groups (e.g. `prod-fleet`) and color-tag contexts (prod / staging / dev) so the top bar reminds you which environment you're touching.
-- 📋 **Every built-in resource kind.** Pods, Deployments, StatefulSets, DaemonSets, ReplicaSets, ReplicationControllers, Jobs, CronJobs, HPAs, PDBs, Services, Endpoints, EndpointSlices, Ingresses, NetworkPolicies, ConfigMaps, Secrets, ResourceQuotas, LimitRanges, Leases, Mutating/ValidatingWebhookConfigurations, PVCs, PVs, StorageClasses, Nodes, Namespaces, IngressClasses, PriorityClasses, RuntimeClasses, and Events.
+- 📋 **Every built-in resource kind.** Pods, Deployments, StatefulSets, DaemonSets, ReplicaSets, ReplicationControllers, Jobs, CronJobs, HPAs, PDBs, Services, Endpoints, EndpointSlices, Ingresses, NetworkPolicies, ConfigMaps, Secrets, ResourceQuotas, LimitRanges, Leases, Mutating/ValidatingWebhookConfigurations, PVCs, PVs, StorageClasses, Nodes, Namespaces, IngressClasses, PriorityClasses, RuntimeClasses, Events, and the full **RBAC** set (ServiceAccounts, Roles, RoleBindings, ClusterRoles, ClusterRoleBindings) under a dedicated Access Control sidebar group.
 - 🧩 **Custom Resources (CRDs).** CRDs are auto-discovered from the cluster on connect and slot into the sidebar grouped by API group. Browse instances live (watch-backed, no polling), inspect their YAML, and drill in from any owner reference — the same flow as built-in kinds, no per-CRD configuration.
 - ⎈ **Helm.** First-class Helm v3 support, talking to release Secrets directly through the informer cache so the list stays live without shelling out to `helm`. Browse releases, view revision history with diffs, install / upgrade / rollback / uninstall with a **dry-run preview** before any change hits the cluster, plus repo management and chart search across configured repositories.
 - 🚢 **Argo CD.** A dedicated sidebar section (auto-detected from the `applications.argoproj.io` CRD) with colored Sync / Health pills, an **Auto-sync** indicator, shortened revision SHA and a **clickable repo URL** that opens in your browser. Per-row **Sync** and **Refresh** buttons hit the Application directly through the Kubernetes API — same triggers `argocd app sync` uses — so you don't need an Argo CD login, an exposed `argocd-server` or the `argocd` CLI on PATH. The Application detail dialog opens on a **Resources** tab listing every managed object; click any row to drill into its detail and use the back-arrow to return.
 - 📜 **Logs and aggregated logs.** Stern-style multi-pod log streaming with per-pod ANSI colors, follow, save and regex.
 - 🖥️ **In-app exec.** Open a shell into any container over SPDY.
 - 🔧 **YAML edit with diff.** Monaco editor with a server-side dry-run diff before apply.
-- 🚀 **Scale and restart.** Replica controls with the current value pre-filled, +/- buttons and ↑/↓ keys; one-click rolling restart for Deployments / StatefulSets / DaemonSets.
+- 🚀 **Scale, restart, pause/resume.** Replica controls with the current value pre-filled, +/- buttons and ↑/↓ keys; one-click rolling restart for Deployments / StatefulSets / DaemonSets; inline **pause / resume** with a `Paused` badge for Deployments; **HPA min/max replicas** editable straight on the HPA detail page.
+- ⏪ **Rollout history & rollback.** A **History** tab on Deployments / StatefulSets / DaemonSets lists revisions with author, time and change cause; pick any past revision for a side-by-side template diff and roll back with one click — same path `kubectl rollout undo` uses, no CLI required.
 - 🔄 **Port-forwarding manager.** Suggested local ports, persistent header indicator, click-to-open in browser.
 - 🗺️ **Cluster overviews.** CPU / memory / pod donuts, workloads health bars, recent warnings at a glance — single-cluster or fanned out across an aggregate.
 - 🧭 **Cross-resource navigation.** Drill from a workload into a related pod, jump to its node or controlling ReplicaSet, and back-arrow your way home.
-- 🎨 **Themes, command palette (`⌘P`), namespace search (`⌘N`), keyboard cheatsheet (`?`).**
+- 🎨 **Themes, command palette (`⌘P`), namespace search (`⌘N`), keyboard cheatsheet (`?`).** The palette is derived from the sidebar groups so every kind (RBAC, Helm, Argo CD, CRDs …) shows up automatically, and it can search pods across **all active contexts** and toggle contexts in and out of aggregated mode without leaving the keyboard.
 
 ## Screenshots
 
@@ -70,10 +71,11 @@ Download the latest darwin-arm64 tarball from the [Releases](https://github.com/
 ```bash
 tar -xzf klustr-*-darwin-arm64.tar.gz
 mv klustr.app /Applications/
+xattr -cr /Applications/klustr.app   # silence Gatekeeper until notarization is restored
 open /Applications/klustr.app
 ```
 
-The build is signed with a Developer ID and notarized by Apple, so Gatekeeper opens it without the quarantine prompt.
+The build is signed with a Developer ID. Notarization is temporarily disabled while an Apple Developer support case is open, so first launch needs the `xattr` step above to clear the quarantine attribute. The roadmap item below tracks bringing notarization back.
 
 ### Windows / Linux
 
@@ -111,14 +113,15 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 
 ## Roadmap
 
-- [x] Every built-in resource kind
+- [x] Every built-in resource kind (incl. full RBAC: ServiceAccounts, Roles, RoleBindings, ClusterRoles, ClusterRoleBindings)
 - [x] Logs, exec, port-forwarding
-- [x] YAML edit / apply with diff, scale, restart
+- [x] YAML edit / apply with diff, scale, restart, deployment pause/resume, HPA inline edit
+- [x] Rollout history with revision diff and one-click rollback (Deployments / StatefulSets / DaemonSets)
 - [x] Cross-resource navigation (related pods, owner/node links, back stack)
 - [x] Custom Resource Definitions (CRDs)
 - [x] Helm support — release browser, dry-run diff, install / upgrade / rollback / uninstall, repo management
-- [x] Multi-cluster aggregated mode + named context groups
-- [ ] Notarized macOS build
+- [x] Multi-cluster aggregated mode + named context groups + per-context health ping
+- [ ] Notarized macOS build (signing is in place; notarization is paused pending an open Apple Developer support case)
 - [ ] Linux & Windows release distribution (after per-platform testing)
 
 ## Contributing
