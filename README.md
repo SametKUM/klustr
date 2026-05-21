@@ -27,7 +27,7 @@
 
 ## What is Klustr?
 
-Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://wails.io/) (Go + native webview) and React. It uses your existing `~/.kube/config` and speaks the standard Kubernetes API directly — **nothing is deployed in the cluster**. Drop the binary in, point at any context, and you're looking at a live view of everything you have permission to see — built-in resources, **Custom Resources (CRDs)**, **Helm releases**, and **Argo CD Applications** included. No extra logins, no `argocd` or `helm` CLI required — only your kubeconfig.
+Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://wails.io/) (Go + native webview) and React. It uses your existing `~/.kube/config` and speaks the standard Kubernetes API directly — **nothing is deployed in the cluster**. Drop the binary in, point at any context, and you're looking at a live view of everything you have permission to see — built-in resources, **Custom Resources (CRDs)**, **Helm releases**, **Argo CD Applications**, and **Gateway API** routes included. No extra logins, no `argocd` or `helm` CLI required — only your kubeconfig.
 
 ## Features
 
@@ -39,6 +39,7 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 - 🧩 **Custom Resources (CRDs).** CRDs are auto-discovered from the cluster on connect and slot into the sidebar grouped by API group. Browse instances live (watch-backed, no polling), inspect their YAML, and drill in from any owner reference — the same flow as built-in kinds, no per-CRD configuration.
 - ⎈ **Helm.** First-class Helm v3 support, talking to release Secrets directly through the informer cache so the list stays live without shelling out to `helm`. Browse releases, view revision history with diffs, install / upgrade / rollback / uninstall with a **dry-run preview** before any change hits the cluster, plus repo management and chart search across configured repositories.
 - 🚢 **Argo CD.** A dedicated sidebar section (auto-detected from the `applications.argoproj.io` CRD) with colored Sync / Health pills, an **Auto-sync** indicator, shortened revision SHA and a **clickable repo URL** that opens in your browser. Per-row **Sync** and **Refresh** buttons hit the Application directly through the Kubernetes API — same triggers `argocd app sync` uses — so you don't need an Argo CD login, an exposed `argocd-server` or the `argocd` CLI on PATH. The Application detail dialog opens on a **Resources** tab listing every managed object; click any row to drill into its detail and use the back-arrow to return.
+- 🌉 **Gateway API.** Auto-detected from the `gateway.networking.k8s.io` CRDs and slotted into a dedicated sidebar group: **Gateways, HTTPRoutes, GRPCRoutes, GatewayClasses, ReferenceGrants**. Backed by the typed `sigs.k8s.io/gateway-api` informer factory (not the dynamic client) so lists update live without polling. Tables surface colored **Programmed / Accepted** pills sourced from status conditions; detail dialogs render the full **listener table**, per-rule **match → backend → weight** matrix and the **RouteParentStatus** block, so a misrouted parent or `ResolvedRefs=False / RefNotPermitted` backend is one click away. Vendor-neutral — works with Envoy Gateway, Cilium Gateway, Istio, Contour, NGINX Gateway Fabric, or whatever conformant implementation the cluster runs.
 - 📜 **Logs and aggregated logs.** Stern-style multi-pod log streaming with per-pod ANSI colors, follow, save and regex.
 - 🖥️ **In-app exec.** Open a shell into any container over SPDY.
 - 🔧 **YAML edit with diff.** Monaco editor with a server-side dry-run diff before apply.
@@ -102,7 +103,7 @@ wails build -trimpath -clean
 | Layer | Choice |
 |---|---|
 | Desktop | Wails v2 (Go + native webview) |
-| Backend | Go 1.26 + `client-go` (typed clientset + dynamic) |
+| Backend | Go 1.26 + `client-go` (typed clientset + dynamic) + `sigs.k8s.io/gateway-api` |
 | Frontend | React 19 · TypeScript · Vite |
 | UI | Tailwind CSS · shadcn/ui |
 | State | Zustand (real-time) · TanStack Query (mutations only) |
@@ -120,6 +121,7 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] Cross-resource navigation (related pods, owner/node links, back stack)
 - [x] Custom Resource Definitions (CRDs)
 - [x] Helm support — release browser, dry-run diff, install / upgrade / rollback / uninstall, repo management
+- [x] Gateway API — Gateways, HTTPRoutes, GRPCRoutes, GatewayClasses, ReferenceGrants (typed informers, status pills, listener / rule / RouteParentStatus tables)
 - [x] Multi-cluster aggregated mode + named context groups + per-context health ping
 - [ ] Notarized macOS build (signing is in place; notarization is paused pending an open Apple Developer support case)
 - [ ] Linux & Windows release distribution (after per-platform testing)
