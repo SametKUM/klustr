@@ -23,6 +23,9 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	gwclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+	gwinformers "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 )
 
 const debounceWindow = 100 * time.Millisecond
@@ -420,24 +423,29 @@ type ClusterRoleBindingInfo struct {
 type ChangeFunc func(kind string)
 
 type contextWatcher struct {
-	factory  informers.SharedInformerFactory
-	dyn      dynamic.Interface
-	crd      *crdWatcher
-	onChange ChangeFunc
-	cancel   context.CancelFunc
+	factory   informers.SharedInformerFactory
+	gwFactory gwinformers.SharedInformerFactory
+	dyn       dynamic.Interface
+	crd       *crdWatcher
+	onChange  ChangeFunc
+	cancel    context.CancelFunc
 
 	mu      sync.Mutex
 	pending map[string]struct{}
 	timer   *time.Timer
 }
 
-func newContextWatcher(cs *kubernetes.Clientset, dyn dynamic.Interface, onChange ChangeFunc) *contextWatcher {
-	return &contextWatcher{
+func newContextWatcher(cs *kubernetes.Clientset, gw gwclient.Interface, dyn dynamic.Interface, onChange ChangeFunc) *contextWatcher {
+	w := &contextWatcher{
 		factory:  informers.NewSharedInformerFactory(cs, 0),
 		dyn:      dyn,
 		onChange: onChange,
 		pending:  make(map[string]struct{}),
 	}
+	if gw != nil && hasGatewayAPIGroup(cs.Discovery()) {
+		w.gwFactory = gwinformers.NewSharedInformerFactory(gw, 0)
+	}
+	return w
 }
 
 func (w *contextWatcher) start(parent context.Context) error {
@@ -795,6 +803,11 @@ func (w *contextWatcher) start(parent context.Context) error {
 		UpdateFunc: func(any, any) { w.touch("ClusterRoleBinding") },
 		DeleteFunc: func(any) { w.touch("ClusterRoleBinding") },
 	}); err != nil {
+		cancel()
+		return err
+	}
+
+	if err := w.startGatewayInformers(ctx); err != nil {
 		cancel()
 		return err
 	}

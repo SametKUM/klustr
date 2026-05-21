@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	gwclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 )
 
 const pingTimeout = 5 * time.Second
@@ -134,6 +135,14 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	if err != nil {
 		return err
 	}
+	cfg, err := m.restConfig(contextName)
+	if err != nil {
+		return err
+	}
+	gw, err := gwclient.NewForConfig(cfg)
+	if err != nil {
+		return err
+	}
 
 	m.mu.Lock()
 	if existing, ok := m.watchers[contextName]; ok {
@@ -144,7 +153,7 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	cb := m.onChange
 	m.mu.Unlock()
 
-	w := newContextWatcher(cs, dyn, func(kind string) {
+	w := newContextWatcher(cs, gw, dyn, func(kind string) {
 		if cb != nil {
 			cb(ContextChange{Context: contextName, Kind: kind})
 		}
@@ -1042,4 +1051,98 @@ func (m *ClientManager) HelmChartVersions(repoName, chartName string) ([]string,
 		return nil, fmt.Errorf("helm subsystem unavailable")
 	}
 	return m.helm.ChartVersions(repoName, chartName)
+}
+
+// ---------------------------------------------------------------------------
+// Gateway API forwarders.
+// ---------------------------------------------------------------------------
+
+func (m *ClientManager) Gateways(contextName, namespace string) []GatewayInfo {
+	m.mu.Lock()
+	w, ok := m.watchers[contextName]
+	m.mu.Unlock()
+	if !ok {
+		return []GatewayInfo{}
+	}
+	return w.Gateways(namespace)
+}
+
+func (m *ClientManager) Gateway(contextName, namespace, name string) (*GatewayDetail, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.Gateway(namespace, name)
+}
+
+func (m *ClientManager) HTTPRoutes(contextName, namespace string) []HTTPRouteInfo {
+	m.mu.Lock()
+	w, ok := m.watchers[contextName]
+	m.mu.Unlock()
+	if !ok {
+		return []HTTPRouteInfo{}
+	}
+	return w.HTTPRoutes(namespace)
+}
+
+func (m *ClientManager) HTTPRoute(contextName, namespace, name string) (*HTTPRouteDetail, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.HTTPRoute(namespace, name)
+}
+
+func (m *ClientManager) GRPCRoutes(contextName, namespace string) []GRPCRouteInfo {
+	m.mu.Lock()
+	w, ok := m.watchers[contextName]
+	m.mu.Unlock()
+	if !ok {
+		return []GRPCRouteInfo{}
+	}
+	return w.GRPCRoutes(namespace)
+}
+
+func (m *ClientManager) GRPCRoute(contextName, namespace, name string) (*GRPCRouteDetail, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.GRPCRoute(namespace, name)
+}
+
+func (m *ClientManager) GatewayClasses(contextName string) []GatewayClassInfo {
+	m.mu.Lock()
+	w, ok := m.watchers[contextName]
+	m.mu.Unlock()
+	if !ok {
+		return []GatewayClassInfo{}
+	}
+	return w.GatewayClasses()
+}
+
+func (m *ClientManager) GatewayClass(contextName, name string) (*GatewayClassDetail, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.GatewayClass(name)
+}
+
+func (m *ClientManager) ReferenceGrants(contextName, namespace string) []ReferenceGrantInfo {
+	m.mu.Lock()
+	w, ok := m.watchers[contextName]
+	m.mu.Unlock()
+	if !ok {
+		return []ReferenceGrantInfo{}
+	}
+	return w.ReferenceGrants(namespace)
+}
+
+func (m *ClientManager) ReferenceGrant(contextName, namespace, name string) (*ReferenceGrantDetail, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.ReferenceGrant(namespace, name)
 }
