@@ -24,6 +24,20 @@ export function DeploymentDetailBody({
       <div className="grid gap-6 sm:grid-cols-2">
         <Section title="Status">
           <Field label="Strategy">{detail.strategy}</Field>
+          <Field label="Rollout">
+            {detail.paused ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                  paused
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  template changes are queued until resumed
+                </span>
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">active</span>
+            )}
+          </Field>
           <Field label="Replicas">{`${detail.ready}/${detail.replicas} ready · ${detail.updated} updated · ${detail.available} available · ${detail.unavailable} unavailable`}</Field>
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>

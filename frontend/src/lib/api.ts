@@ -107,6 +107,7 @@ import {
   ListStatefulSets,
   PingContext,
   ResizeExec,
+  PatchDeploymentPaused,
   PatchHPAReplicas,
   RestartWorkload,
   ScaleResource,
@@ -414,6 +415,8 @@ export const api = {
     minReplicas: number,
     maxReplicas: number,
   ): Promise<void> => PatchHPAReplicas(ctx, ns, name, minReplicas, maxReplicas),
+  patchDeploymentPaused: (ctx: string, ns: string, name: string, paused: boolean): Promise<void> =>
+    PatchDeploymentPaused(ctx, ns, name, paused),
   restartWorkload: (ctx: string, kind: string, ns: string, name: string): Promise<void> =>
     RestartWorkload(ctx, kind, ns, name),
   startPortForward: (

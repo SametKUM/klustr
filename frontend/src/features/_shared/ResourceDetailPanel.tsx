@@ -12,6 +12,7 @@ import { ResourceYAMLTab } from './ResourceYAMLTab'
 import { MultiPodLogsTab } from './MultiPodLogsTab'
 import { EventsTab } from './EventsTab'
 import { DeleteResourceButton } from './DeleteResourceButton'
+import { PauseDeploymentButton, isPausable } from './PauseDeploymentButton'
 import { RestartWorkloadButton, isRestartable } from './RestartWorkloadButton'
 import { ScaleResourceButton, isScalable } from './ScaleResourceButton'
 import { PortForwardButton } from '@/features/portforward/PortForwardButton'
@@ -119,6 +120,9 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
             <div className="flex shrink-0 items-center gap-2 pt-1">
               {resource.kind === 'Pod' && (
                 <PortForwardButton contextName={contextName} resource={resource} />
+              )}
+              {isPausable(resource.kind) && (
+                <PauseDeploymentButton contextName={contextName} resource={resource} />
               )}
               {isRestartable(resource.kind) && (
                 <RestartWorkloadButton contextName={contextName} resource={resource} />

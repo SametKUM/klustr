@@ -26,7 +26,19 @@ export function DeploymentsView() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
-      columnHelper.accessor('name', { header: 'Name' }),
+      columnHelper.accessor('name', {
+        header: 'Name',
+        cell: (info) => (
+          <span className="inline-flex items-center gap-1.5">
+            {info.getValue()}
+            {info.row.original.paused && (
+              <span className="rounded bg-amber-500/15 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                paused
+              </span>
+            )}
+          </span>
+        ),
+      }),
       columnHelper.accessor('ready', {
         header: 'Ready',
         size: COL_XS,
