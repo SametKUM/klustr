@@ -14,8 +14,42 @@ permissions:
   contents: write
 
 jobs:
+  # Skip the build when several tags are pushed together (e.g. `git push
+  # --atomic origin v0.17.0 v0.18.0 v0.19.0`): each tag fires its own run,
+  # but only the highest-semver tag's run should produce a release. The
+  # others self-abort here. workflow_dispatch is always treated as latest
+  # so manual reruns aren't accidentally blocked.
+  is_latest:
+    name: Check tag is latest
+    runs-on: ubuntu-latest
+    outputs:
+      is_latest: ${{ steps.check.outputs.is_latest }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - id: check
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          latest=$(git tag --sort=-v:refname --list 'v*' | head -n1)
+          echo "Highest tag: ${latest}"
+          echo "This run:    ${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_REF_NAME}" == "${latest}" ]]; then
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping: a newer tag (${latest}) exists."
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Build ${{ matrix.label }}
+    needs: is_latest
+    if: needs.is_latest.outputs.is_latest == 'true'
     strategy:
       fail-fast: false
       matrix:
