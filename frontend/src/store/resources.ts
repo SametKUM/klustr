@@ -18,6 +18,7 @@ import type {
   RuntimeClassInfo,
   LeaseInfo,
   WebhookConfigurationInfo,
+  APIServiceInfo,
   EndpointsInfo,
   ReplicationControllerInfo,
   DeploymentInfo,
@@ -68,6 +69,7 @@ type ResourcesState = {
   leases: ByContext<LeaseInfo>
   mutatingWebhookConfigurations: ByContext<WebhookConfigurationInfo>
   validatingWebhookConfigurations: ByContext<WebhookConfigurationInfo>
+  apiServices: ByContext<APIServiceInfo>
   endpoints: ByContext<EndpointsInfo>
   replicationControllers: ByContext<ReplicationControllerInfo>
   jobs: ByContext<JobInfo>
@@ -108,6 +110,7 @@ type ResourcesState = {
   setLeases: (ctx: string, list: LeaseInfo[]) => void
   setMutatingWebhookConfigurations: (ctx: string, list: WebhookConfigurationInfo[]) => void
   setValidatingWebhookConfigurations: (ctx: string, list: WebhookConfigurationInfo[]) => void
+  setAPIServices: (ctx: string, list: APIServiceInfo[]) => void
   setEndpoints: (ctx: string, list: EndpointsInfo[]) => void
   setReplicationControllers: (ctx: string, list: ReplicationControllerInfo[]) => void
   setJobs: (ctx: string, list: JobInfo[]) => void
@@ -153,6 +156,7 @@ const KIND_KEYS = [
   'leases',
   'mutatingWebhookConfigurations',
   'validatingWebhookConfigurations',
+  'apiServices',
   'endpoints',
   'replicationControllers',
   'jobs',
@@ -249,6 +253,7 @@ export const useResources = create<ResourcesState>((set) => ({
     set((s) => ({
       validatingWebhookConfigurations: withCtx(s.validatingWebhookConfigurations, ctx, list),
     })),
+  setAPIServices: (ctx, list) => set((s) => ({ apiServices: withCtx(s.apiServices, ctx, list) })),
   setEndpoints: (ctx, list) => set((s) => ({ endpoints: withCtx(s.endpoints, ctx, list) })),
   setReplicationControllers: (ctx, list) =>
     set((s) => ({ replicationControllers: withCtx(s.replicationControllers, ctx, list) })),

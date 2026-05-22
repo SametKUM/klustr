@@ -38,6 +38,7 @@ import { LimitRangeDetailBody } from '@/features/limitranges/LimitRangeDetailBod
 import { IngressClassDetailBody } from '@/features/ingressclasses/IngressClassDetailBody'
 import { PriorityClassDetailBody } from '@/features/priorityclasses/PriorityClassDetailBody'
 import { RuntimeClassDetailBody } from '@/features/runtimeclasses/RuntimeClassDetailBody'
+import { APIServiceDetailBody } from '@/features/apiservices/APIServiceDetailBody'
 import { LeaseDetailBody } from '@/features/leases/LeaseDetailBody'
 import { WebhookConfigurationDetailBody } from '@/features/webhooks/WebhookConfigurationDetailBody'
 import { EndpointsDetailBody } from '@/features/endpoints/EndpointsDetailBody'
@@ -498,6 +499,8 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
       return <PriorityClassDetailBody contextName={contextName} name={resource.name} />
     case 'RuntimeClass':
       return <RuntimeClassDetailBody contextName={contextName} name={resource.name} />
+    case 'APIService':
+      return <APIServiceDetailBody contextName={contextName} name={resource.name} />
     case 'Lease':
       return <LeaseDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
     case 'MutatingWebhookConfiguration':

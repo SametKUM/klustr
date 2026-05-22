@@ -86,6 +86,8 @@ import {
   ListLeases,
   ListMutatingWebhookConfigurations,
   ListValidatingWebhookConfigurations,
+  ListAPIServices,
+  GetAPIService,
   ListEndpoints,
   ListReplicationControllers,
   ListDeployments,
@@ -172,6 +174,8 @@ export type PriorityClassInfo = kube.PriorityClassInfo
 export type RuntimeClassInfo = kube.RuntimeClassInfo
 export type LeaseInfo = kube.LeaseInfo
 export type WebhookConfigurationInfo = kube.WebhookConfigurationInfo
+export type APIServiceInfo = kube.APIServiceInfo
+export type APIServiceDetail = kube.APIServiceDetail
 export type EndpointsInfo = kube.EndpointsInfo
 export type ReplicationControllerInfo = kube.ReplicationControllerInfo
 export type JobInfo = kube.JobInfo
@@ -339,6 +343,8 @@ export const api = {
     ListMutatingWebhookConfigurations(name),
   listValidatingWebhookConfigurations: (name: string): Promise<WebhookConfigurationInfo[]> =>
     ListValidatingWebhookConfigurations(name),
+  listAPIServices: (name: string): Promise<APIServiceInfo[]> => ListAPIServices(name),
+  getAPIService: (ctx: string, name: string): Promise<APIServiceDetail> => GetAPIService(ctx, name),
   listEndpoints: (name: string, namespace: string): Promise<EndpointsInfo[]> =>
     ListEndpoints(name, namespace),
   listReplicationControllers: (name: string, namespace: string): Promise<ReplicationControllerInfo[]> =>

@@ -28,6 +28,7 @@ import { LimitRangesView } from '@/features/limitranges/LimitRangesView'
 import { IngressClassesView } from '@/features/ingressclasses/IngressClassesView'
 import { PriorityClassesView } from '@/features/priorityclasses/PriorityClassesView'
 import { RuntimeClassesView } from '@/features/runtimeclasses/RuntimeClassesView'
+import { APIServicesView } from '@/features/apiservices/APIServicesView'
 import { LeasesView } from '@/features/leases/LeasesView'
 import { MutatingWebhookConfigurationsView } from '@/features/webhooks/MutatingWebhookConfigurationsView'
 import { ValidatingWebhookConfigurationsView } from '@/features/webhooks/ValidatingWebhookConfigurationsView'
@@ -139,6 +140,8 @@ function MainView() {
       return <PriorityClassesView />
     case 'runtimeclasses':
       return <RuntimeClassesView />
+    case 'apiservices':
+      return <APIServicesView />
     case 'leases':
       return <LeasesView />
     case 'mutatingwebhookconfigurations':
