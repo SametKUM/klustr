@@ -20,8 +20,6 @@ Cross-platform Kubernetes desktop client. Multi-context cluster management with 
 | Tests | `go test` (backend) + Vitest (frontend) |
 | CI release builds | GitHub Actions matrix on hosted runners (macOS, Windows, Linux) |
 
-Decision rationale lives in the project chat history; this file is the contract going forward.
-
 ## Project Structure
 
 ```
