@@ -128,7 +128,11 @@ type NetworkPolicyDetail struct {
 }
 
 func (w *contextWatcher) Service(namespace, name string) (*ServiceDetail, error) {
-	s, err := w.factory.Core().V1().Services().Lister().Services(namespace).Get(name)
+	f := w.factoryFor("Service")
+	if f == nil {
+		return nil, errKindNoAccess("Service")
+	}
+	s, err := f.Core().V1().Services().Lister().Services(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +177,11 @@ func (w *contextWatcher) Service(namespace, name string) (*ServiceDetail, error)
 }
 
 func (w *contextWatcher) Endpoints(namespace, name string) (*EndpointsDetail, error) {
-	e, err := w.factory.Core().V1().Endpoints().Lister().Endpoints(namespace).Get(name)
+	f := w.factoryFor("Endpoints")
+	if f == nil {
+		return nil, errKindNoAccess("Endpoints")
+	}
+	e, err := f.Core().V1().Endpoints().Lister().Endpoints(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +220,11 @@ func (w *contextWatcher) Endpoints(namespace, name string) (*EndpointsDetail, er
 }
 
 func (w *contextWatcher) EndpointSlice(namespace, name string) (*EndpointSliceDetail, error) {
-	s, err := w.factory.Discovery().V1().EndpointSlices().Lister().EndpointSlices(namespace).Get(name)
+	f := w.factoryFor("EndpointSlice")
+	if f == nil {
+		return nil, errKindNoAccess("EndpointSlice")
+	}
+	s, err := f.Discovery().V1().EndpointSlices().Lister().EndpointSlices(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +280,11 @@ func (w *contextWatcher) EndpointSlice(namespace, name string) (*EndpointSliceDe
 }
 
 func (w *contextWatcher) Ingress(namespace, name string) (*IngressDetail, error) {
-	ing, err := w.factory.Networking().V1().Ingresses().Lister().Ingresses(namespace).Get(name)
+	f := w.factoryFor("Ingress")
+	if f == nil {
+		return nil, errKindNoAccess("Ingress")
+	}
+	ing, err := f.Networking().V1().Ingresses().Lister().Ingresses(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +348,11 @@ func (w *contextWatcher) Ingress(namespace, name string) (*IngressDetail, error)
 }
 
 func (w *contextWatcher) NetworkPolicy(namespace, name string) (*NetworkPolicyDetail, error) {
-	p, err := w.factory.Networking().V1().NetworkPolicies().Lister().NetworkPolicies(namespace).Get(name)
+	f := w.factoryFor("NetworkPolicy")
+	if f == nil {
+		return nil, errKindNoAccess("NetworkPolicy")
+	}
+	p, err := f.Networking().V1().NetworkPolicies().Lister().NetworkPolicies(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}

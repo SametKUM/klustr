@@ -85,7 +85,11 @@ type CronJobInfo struct {
 }
 
 func (w *contextWatcher) Deployments(namespace string) []DeploymentInfo {
-	lister := w.factory.Apps().V1().Deployments().Lister()
+	f := w.factoryFor("Deployment")
+	if f == nil {
+		return []DeploymentInfo{}
+	}
+	lister := f.Apps().V1().Deployments().Lister()
 	var (
 		deps []*appsv1.Deployment
 		err  error
@@ -129,7 +133,11 @@ func (w *contextWatcher) Deployments(namespace string) []DeploymentInfo {
 }
 
 func (w *contextWatcher) StatefulSets(namespace string) []StatefulSetInfo {
-	lister := w.factory.Apps().V1().StatefulSets().Lister()
+	f := w.factoryFor("StatefulSet")
+	if f == nil {
+		return []StatefulSetInfo{}
+	}
+	lister := f.Apps().V1().StatefulSets().Lister()
 	var (
 		sets []*appsv1.StatefulSet
 		err  error
@@ -166,7 +174,11 @@ func (w *contextWatcher) StatefulSets(namespace string) []StatefulSetInfo {
 }
 
 func (w *contextWatcher) DaemonSets(namespace string) []DaemonSetInfo {
-	lister := w.factory.Apps().V1().DaemonSets().Lister()
+	f := w.factoryFor("DaemonSet")
+	if f == nil {
+		return []DaemonSetInfo{}
+	}
+	lister := f.Apps().V1().DaemonSets().Lister()
 	var (
 		sets []*appsv1.DaemonSet
 		err  error
@@ -198,7 +210,11 @@ func (w *contextWatcher) DaemonSets(namespace string) []DaemonSetInfo {
 }
 
 func (w *contextWatcher) ReplicaSets(namespace string) []ReplicaSetInfo {
-	lister := w.factory.Apps().V1().ReplicaSets().Lister()
+	f := w.factoryFor("ReplicaSet")
+	if f == nil {
+		return []ReplicaSetInfo{}
+	}
+	lister := f.Apps().V1().ReplicaSets().Lister()
 	var (
 		sets []*appsv1.ReplicaSet
 		err  error
@@ -244,7 +260,11 @@ func (w *contextWatcher) ReplicaSets(namespace string) []ReplicaSetInfo {
 }
 
 func (w *contextWatcher) ReplicationControllers(namespace string) []ReplicationControllerInfo {
-	lister := w.factory.Core().V1().ReplicationControllers().Lister()
+	f := w.factoryFor("ReplicationController")
+	if f == nil {
+		return []ReplicationControllerInfo{}
+	}
+	lister := f.Core().V1().ReplicationControllers().Lister()
 	var (
 		rcs []*corev1.ReplicationController
 		err error
@@ -282,7 +302,11 @@ func (w *contextWatcher) ReplicationControllers(namespace string) []ReplicationC
 }
 
 func (w *contextWatcher) Jobs(namespace string) []JobInfo {
-	lister := w.factory.Batch().V1().Jobs().Lister()
+	f := w.factoryFor("Job")
+	if f == nil {
+		return []JobInfo{}
+	}
+	lister := f.Batch().V1().Jobs().Lister()
 	var (
 		jobs []*batchv1.Job
 		err  error
@@ -315,7 +339,11 @@ func (w *contextWatcher) Jobs(namespace string) []JobInfo {
 }
 
 func (w *contextWatcher) CronJobs(namespace string) []CronJobInfo {
-	lister := w.factory.Batch().V1().CronJobs().Lister()
+	f := w.factoryFor("CronJob")
+	if f == nil {
+		return []CronJobInfo{}
+	}
+	lister := f.Batch().V1().CronJobs().Lister()
 	var (
 		cjs []*batchv1.CronJob
 		err error

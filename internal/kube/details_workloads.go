@@ -133,7 +133,11 @@ type CronJobDetail struct {
 }
 
 func (w *contextWatcher) Deployment(namespace, name string) (*DeploymentDetail, error) {
-	d, err := w.factory.Apps().V1().Deployments().Lister().Deployments(namespace).Get(name)
+	f := w.factoryFor("Deployment")
+	if f == nil {
+		return nil, errKindNoAccess("Deployment")
+	}
+	d, err := f.Apps().V1().Deployments().Lister().Deployments(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +170,11 @@ func (w *contextWatcher) Deployment(namespace, name string) (*DeploymentDetail, 
 }
 
 func (w *contextWatcher) StatefulSet(namespace, name string) (*StatefulSetDetail, error) {
-	s, err := w.factory.Apps().V1().StatefulSets().Lister().StatefulSets(namespace).Get(name)
+	f := w.factoryFor("StatefulSet")
+	if f == nil {
+		return nil, errKindNoAccess("StatefulSet")
+	}
+	s, err := f.Apps().V1().StatefulSets().Lister().StatefulSets(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +200,11 @@ func (w *contextWatcher) StatefulSet(namespace, name string) (*StatefulSetDetail
 }
 
 func (w *contextWatcher) ReplicationController(namespace, name string) (*ReplicationControllerDetail, error) {
-	r, err := w.factory.Core().V1().ReplicationControllers().Lister().ReplicationControllers(namespace).Get(name)
+	f := w.factoryFor("ReplicationController")
+	if f == nil {
+		return nil, errKindNoAccess("ReplicationController")
+	}
+	r, err := f.Core().V1().ReplicationControllers().Lister().ReplicationControllers(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +229,11 @@ func (w *contextWatcher) ReplicationController(namespace, name string) (*Replica
 }
 
 func (w *contextWatcher) ReplicaSet(namespace, name string) (*ReplicaSetDetail, error) {
-	r, err := w.factory.Apps().V1().ReplicaSets().Lister().ReplicaSets(namespace).Get(name)
+	f := w.factoryFor("ReplicaSet")
+	if f == nil {
+		return nil, errKindNoAccess("ReplicaSet")
+	}
+	r, err := f.Apps().V1().ReplicaSets().Lister().ReplicaSets(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +273,11 @@ func (w *contextWatcher) ReplicaSet(namespace, name string) (*ReplicaSetDetail, 
 }
 
 func (w *contextWatcher) DaemonSet(namespace, name string) (*DaemonSetDetail, error) {
-	d, err := w.factory.Apps().V1().DaemonSets().Lister().DaemonSets(namespace).Get(name)
+	f := w.factoryFor("DaemonSet")
+	if f == nil {
+		return nil, errKindNoAccess("DaemonSet")
+	}
+	d, err := f.Apps().V1().DaemonSets().Lister().DaemonSets(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +302,11 @@ func (w *contextWatcher) DaemonSet(namespace, name string) (*DaemonSetDetail, er
 }
 
 func (w *contextWatcher) Job(namespace, name string) (*JobDetail, error) {
-	j, err := w.factory.Batch().V1().Jobs().Lister().Jobs(namespace).Get(name)
+	f := w.factoryFor("Job")
+	if f == nil {
+		return nil, errKindNoAccess("Job")
+	}
+	j, err := f.Batch().V1().Jobs().Lister().Jobs(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +352,11 @@ func (w *contextWatcher) Job(namespace, name string) (*JobDetail, error) {
 }
 
 func (w *contextWatcher) CronJob(namespace, name string) (*CronJobDetail, error) {
-	c, err := w.factory.Batch().V1().CronJobs().Lister().CronJobs(namespace).Get(name)
+	f := w.factoryFor("CronJob")
+	if f == nil {
+		return nil, errKindNoAccess("CronJob")
+	}
+	c, err := f.Batch().V1().CronJobs().Lister().CronJobs(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}

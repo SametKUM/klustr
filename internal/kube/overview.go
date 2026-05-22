@@ -49,7 +49,10 @@ func (m *ClientManager) GetClusterOverview(ctx context.Context, contextName stri
 		Memory: ClusterResource{Usage: -1},
 	}
 
-	nodes, _ := w.factory.Core().V1().Nodes().Lister().List(labels.Everything())
+	var nodes []*corev1.Node
+	if f := w.factoryFor("Node"); f != nil {
+		nodes, _ = f.Core().V1().Nodes().Lister().List(labels.Everything())
+	}
 	for _, n := range nodes {
 		if q, ok := n.Status.Capacity[corev1.ResourceCPU]; ok {
 			overview.CPU.Capacity += q.MilliValue()
@@ -72,7 +75,10 @@ func (m *ClientManager) GetClusterOverview(ctx context.Context, contextName stri
 		overview.NodeCount++
 	}
 
-	pods, _ := w.factory.Core().V1().Pods().Lister().List(labels.Everything())
+	var pods []*corev1.Pod
+	if f := w.factoryFor("Pod"); f != nil {
+		pods, _ = f.Core().V1().Pods().Lister().List(labels.Everything())
+	}
 	for _, p := range pods {
 		if p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed {
 			continue
@@ -85,8 +91,10 @@ func (m *ClientManager) GetClusterOverview(ctx context.Context, contextName stri
 		overview.Pods.Usage++
 	}
 
-	namespaces, _ := w.factory.Core().V1().Namespaces().Lister().List(labels.Everything())
-	overview.NamespaceCount = len(namespaces)
+	if f := w.factoryFor("Namespace"); f != nil {
+		namespaces, _ := f.Core().V1().Namespaces().Lister().List(labels.Everything())
+		overview.NamespaceCount = len(namespaces)
+	}
 
 	mc, err := m.metricsClient(contextName)
 	if err != nil {

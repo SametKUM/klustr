@@ -40,7 +40,11 @@ type HorizontalPodAutoscalerInfo struct {
 }
 
 func (w *contextWatcher) PodDisruptionBudgets(namespace string) []PodDisruptionBudgetInfo {
-	lister := w.factory.Policy().V1().PodDisruptionBudgets().Lister()
+	f := w.factoryFor("PodDisruptionBudget")
+	if f == nil {
+		return []PodDisruptionBudgetInfo{}
+	}
+	lister := f.Policy().V1().PodDisruptionBudgets().Lister()
 	var (
 		pdbs []*policyv1.PodDisruptionBudget
 		err  error
@@ -79,7 +83,11 @@ func (w *contextWatcher) PodDisruptionBudgets(namespace string) []PodDisruptionB
 }
 
 func (w *contextWatcher) HorizontalPodAutoscalers(namespace string) []HorizontalPodAutoscalerInfo {
-	lister := w.factory.Autoscaling().V2().HorizontalPodAutoscalers().Lister()
+	f := w.factoryFor("HorizontalPodAutoscaler")
+	if f == nil {
+		return []HorizontalPodAutoscalerInfo{}
+	}
+	lister := f.Autoscaling().V2().HorizontalPodAutoscalers().Lister()
 	var (
 		hpas []*autoscalingv2.HorizontalPodAutoscaler
 		err  error

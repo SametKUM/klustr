@@ -42,7 +42,11 @@ type PersistentVolumeClaimInfo struct {
 }
 
 func (w *contextWatcher) StorageClasses() []StorageClassInfo {
-	scs, err := w.factory.Storage().V1().StorageClasses().Lister().List(labels.Everything())
+	f := w.factoryFor("StorageClass")
+	if f == nil {
+		return []StorageClassInfo{}
+	}
+	scs, err := f.Storage().V1().StorageClasses().Lister().List(labels.Everything())
 	if err != nil {
 		return []StorageClassInfo{}
 	}
@@ -76,7 +80,11 @@ func (w *contextWatcher) StorageClasses() []StorageClassInfo {
 }
 
 func (w *contextWatcher) PersistentVolumes() []PersistentVolumeInfo {
-	pvs, err := w.factory.Core().V1().PersistentVolumes().Lister().List(labels.Everything())
+	f := w.factoryFor("PersistentVolume")
+	if f == nil {
+		return []PersistentVolumeInfo{}
+	}
+	pvs, err := f.Core().V1().PersistentVolumes().Lister().List(labels.Everything())
 	if err != nil {
 		return []PersistentVolumeInfo{}
 	}
@@ -110,7 +118,11 @@ func (w *contextWatcher) PersistentVolumes() []PersistentVolumeInfo {
 }
 
 func (w *contextWatcher) PersistentVolumeClaims(namespace string) []PersistentVolumeClaimInfo {
-	lister := w.factory.Core().V1().PersistentVolumeClaims().Lister()
+	f := w.factoryFor("PersistentVolumeClaim")
+	if f == nil {
+		return []PersistentVolumeClaimInfo{}
+	}
+	lister := f.Core().V1().PersistentVolumeClaims().Lister()
 	var (
 		pvcs []*corev1.PersistentVolumeClaim
 		err  error

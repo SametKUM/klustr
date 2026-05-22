@@ -261,22 +261,28 @@ func (w *contextWatcher) ListAccessSubjects() []AccessSubject {
 		}
 	}
 
-	if sas, err := w.factory.Core().V1().ServiceAccounts().Lister().List(labels.Everything()); err == nil {
-		for _, sa := range sas {
-			add(AccessSubject{Kind: rbacv1.ServiceAccountKind, Name: sa.Name, Namespace: sa.Namespace})
-		}
-	}
-	if rbs, err := w.factory.Rbac().V1().RoleBindings().Lister().List(labels.Everything()); err == nil {
-		for _, b := range rbs {
-			for _, s := range b.Subjects {
-				add(AccessSubject{Kind: s.Kind, Name: s.Name, Namespace: s.Namespace})
+	if f := w.factoryFor("ServiceAccount"); f != nil {
+		if sas, err := f.Core().V1().ServiceAccounts().Lister().List(labels.Everything()); err == nil {
+			for _, sa := range sas {
+				add(AccessSubject{Kind: rbacv1.ServiceAccountKind, Name: sa.Name, Namespace: sa.Namespace})
 			}
 		}
 	}
-	if crbs, err := w.factory.Rbac().V1().ClusterRoleBindings().Lister().List(labels.Everything()); err == nil {
-		for _, b := range crbs {
-			for _, s := range b.Subjects {
-				add(AccessSubject{Kind: s.Kind, Name: s.Name, Namespace: s.Namespace})
+	if f := w.factoryFor("RoleBinding"); f != nil {
+		if rbs, err := f.Rbac().V1().RoleBindings().Lister().List(labels.Everything()); err == nil {
+			for _, b := range rbs {
+				for _, s := range b.Subjects {
+					add(AccessSubject{Kind: s.Kind, Name: s.Name, Namespace: s.Namespace})
+				}
+			}
+		}
+	}
+	if f := w.factoryFor("ClusterRoleBinding"); f != nil {
+		if crbs, err := f.Rbac().V1().ClusterRoleBindings().Lister().List(labels.Everything()); err == nil {
+			for _, b := range crbs {
+				for _, s := range b.Subjects {
+					add(AccessSubject{Kind: s.Kind, Name: s.Name, Namespace: s.Namespace})
+				}
 			}
 		}
 	}
@@ -312,17 +318,25 @@ func subjectKindRank(k string) int {
 
 func (w *contextWatcher) GetSubjectAccess(sub AccessSubject) *SubjectAccess {
 	in := RBACReviewInputs{}
-	if list, err := w.factory.Rbac().V1().Roles().Lister().List(labels.Everything()); err == nil {
-		in.Roles = list
+	if f := w.factoryFor("Role"); f != nil {
+		if list, err := f.Rbac().V1().Roles().Lister().List(labels.Everything()); err == nil {
+			in.Roles = list
+		}
 	}
-	if list, err := w.factory.Rbac().V1().RoleBindings().Lister().List(labels.Everything()); err == nil {
-		in.RoleBindings = list
+	if f := w.factoryFor("RoleBinding"); f != nil {
+		if list, err := f.Rbac().V1().RoleBindings().Lister().List(labels.Everything()); err == nil {
+			in.RoleBindings = list
+		}
 	}
-	if list, err := w.factory.Rbac().V1().ClusterRoles().Lister().List(labels.Everything()); err == nil {
-		in.ClusterRoles = list
+	if f := w.factoryFor("ClusterRole"); f != nil {
+		if list, err := f.Rbac().V1().ClusterRoles().Lister().List(labels.Everything()); err == nil {
+			in.ClusterRoles = list
+		}
 	}
-	if list, err := w.factory.Rbac().V1().ClusterRoleBindings().Lister().List(labels.Everything()); err == nil {
-		in.ClusterRoleBindings = list
+	if f := w.factoryFor("ClusterRoleBinding"); f != nil {
+		if list, err := f.Rbac().V1().ClusterRoleBindings().Lister().List(labels.Everything()); err == nil {
+			in.ClusterRoleBindings = list
+		}
 	}
 	return ComputeSubjectAccess(sub, in)
 }

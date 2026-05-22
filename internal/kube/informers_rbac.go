@@ -46,7 +46,11 @@ type ClusterRoleBindingInfo struct {
 }
 
 func (w *contextWatcher) ServiceAccounts(namespace string) []ServiceAccountInfo {
-	lister := w.factory.Core().V1().ServiceAccounts().Lister()
+	f := w.factoryFor("ServiceAccount")
+	if f == nil {
+		return []ServiceAccountInfo{}
+	}
+	lister := f.Core().V1().ServiceAccounts().Lister()
 	var (
 		sas []*corev1.ServiceAccount
 		err error
@@ -73,7 +77,11 @@ func (w *contextWatcher) ServiceAccounts(namespace string) []ServiceAccountInfo 
 }
 
 func (w *contextWatcher) Roles(namespace string) []RoleInfo {
-	lister := w.factory.Rbac().V1().Roles().Lister()
+	f := w.factoryFor("Role")
+	if f == nil {
+		return []RoleInfo{}
+	}
+	lister := f.Rbac().V1().Roles().Lister()
 	var (
 		roles []*rbacv1.Role
 		err   error
@@ -100,7 +108,11 @@ func (w *contextWatcher) Roles(namespace string) []RoleInfo {
 }
 
 func (w *contextWatcher) RoleBindings(namespace string) []RoleBindingInfo {
-	lister := w.factory.Rbac().V1().RoleBindings().Lister()
+	f := w.factoryFor("RoleBinding")
+	if f == nil {
+		return []RoleBindingInfo{}
+	}
+	lister := f.Rbac().V1().RoleBindings().Lister()
 	var (
 		bindings []*rbacv1.RoleBinding
 		err      error
@@ -129,7 +141,11 @@ func (w *contextWatcher) RoleBindings(namespace string) []RoleBindingInfo {
 }
 
 func (w *contextWatcher) ClusterRoles() []ClusterRoleInfo {
-	list, err := w.factory.Rbac().V1().ClusterRoles().Lister().List(labels.Everything())
+	f := w.factoryFor("ClusterRole")
+	if f == nil {
+		return []ClusterRoleInfo{}
+	}
+	list, err := f.Rbac().V1().ClusterRoles().Lister().List(labels.Everything())
 	if err != nil {
 		return []ClusterRoleInfo{}
 	}
@@ -147,7 +163,11 @@ func (w *contextWatcher) ClusterRoles() []ClusterRoleInfo {
 }
 
 func (w *contextWatcher) ClusterRoleBindings() []ClusterRoleBindingInfo {
-	list, err := w.factory.Rbac().V1().ClusterRoleBindings().Lister().List(labels.Everything())
+	f := w.factoryFor("ClusterRoleBinding")
+	if f == nil {
+		return []ClusterRoleBindingInfo{}
+	}
+	list, err := f.Rbac().V1().ClusterRoleBindings().Lister().List(labels.Everything())
 	if err != nil {
 		return []ClusterRoleBindingInfo{}
 	}

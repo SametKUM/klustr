@@ -86,6 +86,15 @@ func (m *ClientManager) Clientset(contextName string) (*kubernetes.Clientset, er
 	if err != nil {
 		return nil, err
 	}
+	// Client-go defaults to QPS=5 / Burst=10, which throttles the 30+
+	// parallel SelfSubjectAccessReview calls discoverAccess fires on connect
+	// — some probes wait >1s and time out, getting recorded as AccessDenied
+	// even when the user does have access. Klustr is a single-user desktop
+	// client, so the conservative defaults are wrong; raise them so the
+	// access discovery completes in one round-trip and per-resource
+	// mutations don't queue behind each other either.
+	cfg.QPS = 50
+	cfg.Burst = 100
 	cs, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -149,6 +158,7 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	if err != nil {
 		return err
 	}
+	defaultNS := m.contextDefaultNamespace(contextName)
 
 	m.mu.Lock()
 	if existing, ok := m.watchers[contextName]; ok {
@@ -159,7 +169,7 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	cb := m.onChange
 	m.mu.Unlock()
 
-	w := newContextWatcher(cs, gw, dyn, func(kind string) {
+	w := newContextWatcher(cs, gw, dyn, defaultNS, func(kind string) {
 		if cb != nil {
 			cb(ContextChange{Context: contextName, Kind: kind})
 		}
@@ -195,9 +205,36 @@ func (m *ClientManager) watcher(contextName string) (*contextWatcher, bool) {
 	return w, ok
 }
 
+// AccessibleKinds returns the list of built-in kinds the current user has
+// list/watch access to in this context (cluster-wide or namespaced). The
+// frontend uses this to hide sidebar entries the user can't see.
+func (m *ClientManager) AccessibleKinds(contextName string) []string {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return []string{}
+	}
+	return w.access.AccessibleKinds()
+}
+
 func (m *ClientManager) restConfig(contextName string) (*rest.Config, error) {
 	overrides := &clientcmd.ConfigOverrides{CurrentContext: contextName}
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(m.rules, overrides).ClientConfig()
+}
+
+// contextDefaultNamespace returns the `namespace:` field of the kubeconfig
+// context — usually empty for admin contexts, populated for restricted ones
+// like the access-review test SAs. It's the seed value contextWatcher uses
+// when probing scoped list access for kinds the user lacks cluster-wide.
+func (m *ClientManager) contextDefaultNamespace(contextName string) string {
+	raw, err := m.rules.Load()
+	if err != nil {
+		return ""
+	}
+	c, ok := raw.Contexts[contextName]
+	if !ok || c == nil {
+		return ""
+	}
+	return c.Namespace
 }
 
 // ---- Logs / Exec ------------------------------------------------------

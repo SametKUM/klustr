@@ -38,13 +38,24 @@ type ConditionDetail struct {
 
 type ChangeFunc func(kind string)
 
-// contextWatcher owns the per-context SharedInformerFactory plus the
+// contextWatcher owns up to two SharedInformerFactories — one all-namespaces
+// (`factory`) and one optional namespaced fallback (`scoped`) — plus the
 // Gateway-API factory, a debounce queue and the lifecycle context. The
-// per-kind type definitions and lister methods live in informers_<group>.go
+// access map decides which factory each kind belongs to so a restricted
+// user (e.g., the kubeconfig user only has list+watch in namespace `prod`)
+// still gets live data for the kinds they CAN see, without the all-ns
+// list call that would 403 and silently leave the cache empty.
+//
+// Per-kind type definitions and lister methods live in informers_<group>.go
 // files; the handler registration that wires up every kind stays here in
-// start() to keep the wiring auditable in one place.
+// start() so the routing table is auditable in one place.
 type contextWatcher struct {
-	factory   informers.SharedInformerFactory
+	factory   informers.SharedInformerFactory // cluster-wide; nil when user has no cluster-wide list at all
+	scoped    informers.SharedInformerFactory // namespaced fallback; nil when no kind needs it
+	scopedNS  string                          // namespace `scoped` is bound to (informers.WithNamespace)
+	access    *contextAccess                  // per-kind routing decisions; nil ⇒ assume cluster-wide
+	defaultNS string                          // kubeconfig context.namespace, used as the scoped probe target
+	cs        kubernetes.Interface            // kept around for SelfSubjectAccessReview
 	gwFactory gwinformers.SharedInformerFactory
 	dyn       dynamic.Interface
 	crd       *crdWatcher
@@ -56,12 +67,13 @@ type contextWatcher struct {
 	timer   *time.Timer
 }
 
-func newContextWatcher(cs *kubernetes.Clientset, gw gwclient.Interface, dyn dynamic.Interface, onChange ChangeFunc) *contextWatcher {
+func newContextWatcher(cs *kubernetes.Clientset, gw gwclient.Interface, dyn dynamic.Interface, defaultNS string, onChange ChangeFunc) *contextWatcher {
 	w := &contextWatcher{
-		factory:  informers.NewSharedInformerFactory(cs, 0),
-		dyn:      dyn,
-		onChange: onChange,
-		pending:  make(map[string]struct{}),
+		cs:        cs,
+		dyn:       dyn,
+		defaultNS: defaultNS,
+		onChange:  onChange,
+		pending:   make(map[string]struct{}),
 	}
 	if gw != nil && hasGatewayAPIGroup(cs.Discovery()) {
 		w.gwFactory = gwinformers.NewSharedInformerFactory(gw, 0)
@@ -69,361 +81,52 @@ func newContextWatcher(cs *kubernetes.Clientset, gw gwclient.Interface, dyn dyna
 	return w
 }
 
+// factoryFor returns the informer factory that owns the given kind, or nil
+// when the user has no access. Listers and detail Get paths call this so a
+// single helper carries the routing logic instead of every method making
+// the cluster-vs-scoped decision inline.
+func (w *contextWatcher) factoryFor(kind string) informers.SharedInformerFactory {
+	if w.access == nil {
+		return w.factory
+	}
+	switch w.access.For(kind).Mode {
+	case AccessCluster:
+		return w.factory
+	case AccessNamespaced:
+		return w.scoped
+	default:
+		return nil
+	}
+}
+
 func (w *contextWatcher) start(parent context.Context) error {
 	ctx, cancel := context.WithCancel(parent)
 	w.cancel = cancel
+
+	w.access = discoverAccess(ctx, w.cs, w.defaultNS)
+	if w.access.HasAnyClusterWide() {
+		w.factory = informers.NewSharedInformerFactory(w.cs.(*kubernetes.Clientset), 0)
+	}
+	if scopedNS := w.access.ScopedNamespace(); scopedNS != "" {
+		w.scopedNS = scopedNS
+		w.scoped = informers.NewSharedInformerFactoryWithOptions(
+			w.cs.(*kubernetes.Clientset), 0,
+			informers.WithNamespace(scopedNS),
+		)
+	}
+
 	w.crd = newCRDWatcher(w.dyn, ctx.Done(), w.touch)
-	if err := w.crd.start(); err != nil {
-		cancel()
-		return err
+	// Skip the cluster-wide CRD watcher when the user can't list CRDs —
+	// otherwise client-go's reflector retries on a tight loop and floods
+	// the log with 403s.
+	if canList(ctx, w.cs, crdGVR, "") {
+		if err := w.crd.start(); err != nil {
+			cancel()
+			return err
+		}
 	}
 
-	ns := w.factory.Core().V1().Namespaces().Informer()
-	if _, err := ns.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Namespace") },
-		UpdateFunc: func(any, any) { w.touch("Namespace") },
-		DeleteFunc: func(any) { w.touch("Namespace") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	pods := w.factory.Core().V1().Pods().Informer()
-	if _, err := pods.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Pod") },
-		UpdateFunc: func(any, any) { w.touch("Pod") },
-		DeleteFunc: func(any) { w.touch("Pod") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	deployments := w.factory.Apps().V1().Deployments().Informer()
-	if _, err := deployments.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Deployment") },
-		UpdateFunc: func(any, any) { w.touch("Deployment") },
-		DeleteFunc: func(any) { w.touch("Deployment") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	services := w.factory.Core().V1().Services().Informer()
-	if _, err := services.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Service") },
-		UpdateFunc: func(any, any) { w.touch("Service") },
-		DeleteFunc: func(any) { w.touch("Service") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	configMaps := w.factory.Core().V1().ConfigMaps().Informer()
-	if _, err := configMaps.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("ConfigMap") },
-		UpdateFunc: func(any, any) { w.touch("ConfigMap") },
-		DeleteFunc: func(any) { w.touch("ConfigMap") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	secrets := w.factory.Core().V1().Secrets().Informer()
-	if _, err := secrets.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj any) { w.touch("Secret"); maybeTouchHelm(obj, w) },
-		UpdateFunc: func(_, obj any) { w.touch("Secret"); maybeTouchHelm(obj, w) },
-		DeleteFunc: func(obj any) { w.touch("Secret"); maybeTouchHelm(obj, w) },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	statefulSets := w.factory.Apps().V1().StatefulSets().Informer()
-	if _, err := statefulSets.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("StatefulSet") },
-		UpdateFunc: func(any, any) { w.touch("StatefulSet") },
-		DeleteFunc: func(any) { w.touch("StatefulSet") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	daemonSets := w.factory.Apps().V1().DaemonSets().Informer()
-	if _, err := daemonSets.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("DaemonSet") },
-		UpdateFunc: func(any, any) { w.touch("DaemonSet") },
-		DeleteFunc: func(any) { w.touch("DaemonSet") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	jobs := w.factory.Batch().V1().Jobs().Informer()
-	if _, err := jobs.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Job") },
-		UpdateFunc: func(any, any) { w.touch("Job") },
-		DeleteFunc: func(any) { w.touch("Job") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	cronJobs := w.factory.Batch().V1().CronJobs().Informer()
-	if _, err := cronJobs.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("CronJob") },
-		UpdateFunc: func(any, any) { w.touch("CronJob") },
-		DeleteFunc: func(any) { w.touch("CronJob") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	rcs := w.factory.Core().V1().ReplicationControllers().Informer()
-	if _, err := rcs.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("ReplicationController") },
-		UpdateFunc: func(any, any) { w.touch("ReplicationController") },
-		DeleteFunc: func(any) { w.touch("ReplicationController") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	endpoints := w.factory.Core().V1().Endpoints().Informer()
-	if _, err := endpoints.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Endpoints") },
-		UpdateFunc: func(any, any) { w.touch("Endpoints") },
-		DeleteFunc: func(any) { w.touch("Endpoints") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	vwh := w.factory.Admissionregistration().V1().ValidatingWebhookConfigurations().Informer()
-	if _, err := vwh.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("ValidatingWebhookConfiguration") },
-		UpdateFunc: func(any, any) { w.touch("ValidatingWebhookConfiguration") },
-		DeleteFunc: func(any) { w.touch("ValidatingWebhookConfiguration") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	mwh := w.factory.Admissionregistration().V1().MutatingWebhookConfigurations().Informer()
-	if _, err := mwh.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("MutatingWebhookConfiguration") },
-		UpdateFunc: func(any, any) { w.touch("MutatingWebhookConfiguration") },
-		DeleteFunc: func(any) { w.touch("MutatingWebhookConfiguration") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	leases := w.factory.Coordination().V1().Leases().Informer()
-	if _, err := leases.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Lease") },
-		UpdateFunc: func(any, any) { w.touch("Lease") },
-		DeleteFunc: func(any) { w.touch("Lease") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	runtimeClasses := w.factory.Node().V1().RuntimeClasses().Informer()
-	if _, err := runtimeClasses.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("RuntimeClass") },
-		UpdateFunc: func(any, any) { w.touch("RuntimeClass") },
-		DeleteFunc: func(any) { w.touch("RuntimeClass") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	priorityClasses := w.factory.Scheduling().V1().PriorityClasses().Informer()
-	if _, err := priorityClasses.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("PriorityClass") },
-		UpdateFunc: func(any, any) { w.touch("PriorityClass") },
-		DeleteFunc: func(any) { w.touch("PriorityClass") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	ingressClasses := w.factory.Networking().V1().IngressClasses().Informer()
-	if _, err := ingressClasses.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("IngressClass") },
-		UpdateFunc: func(any, any) { w.touch("IngressClass") },
-		DeleteFunc: func(any) { w.touch("IngressClass") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	limitRanges := w.factory.Core().V1().LimitRanges().Informer()
-	if _, err := limitRanges.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("LimitRange") },
-		UpdateFunc: func(any, any) { w.touch("LimitRange") },
-		DeleteFunc: func(any) { w.touch("LimitRange") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	resourceQuotas := w.factory.Core().V1().ResourceQuotas().Informer()
-	if _, err := resourceQuotas.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("ResourceQuota") },
-		UpdateFunc: func(any, any) { w.touch("ResourceQuota") },
-		DeleteFunc: func(any) { w.touch("ResourceQuota") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	endpointSlices := w.factory.Discovery().V1().EndpointSlices().Informer()
-	if _, err := endpointSlices.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("EndpointSlice") },
-		UpdateFunc: func(any, any) { w.touch("EndpointSlice") },
-		DeleteFunc: func(any) { w.touch("EndpointSlice") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	pdbs := w.factory.Policy().V1().PodDisruptionBudgets().Informer()
-	if _, err := pdbs.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("PodDisruptionBudget") },
-		UpdateFunc: func(any, any) { w.touch("PodDisruptionBudget") },
-		DeleteFunc: func(any) { w.touch("PodDisruptionBudget") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	hpas := w.factory.Autoscaling().V2().HorizontalPodAutoscalers().Informer()
-	if _, err := hpas.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("HorizontalPodAutoscaler") },
-		UpdateFunc: func(any, any) { w.touch("HorizontalPodAutoscaler") },
-		DeleteFunc: func(any) { w.touch("HorizontalPodAutoscaler") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	netpols := w.factory.Networking().V1().NetworkPolicies().Informer()
-	if _, err := netpols.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("NetworkPolicy") },
-		UpdateFunc: func(any, any) { w.touch("NetworkPolicy") },
-		DeleteFunc: func(any) { w.touch("NetworkPolicy") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	storageClasses := w.factory.Storage().V1().StorageClasses().Informer()
-	if _, err := storageClasses.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("StorageClass") },
-		UpdateFunc: func(any, any) { w.touch("StorageClass") },
-		DeleteFunc: func(any) { w.touch("StorageClass") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	pvs := w.factory.Core().V1().PersistentVolumes().Informer()
-	if _, err := pvs.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("PersistentVolume") },
-		UpdateFunc: func(any, any) { w.touch("PersistentVolume") },
-		DeleteFunc: func(any) { w.touch("PersistentVolume") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	pvcs := w.factory.Core().V1().PersistentVolumeClaims().Informer()
-	if _, err := pvcs.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("PersistentVolumeClaim") },
-		UpdateFunc: func(any, any) { w.touch("PersistentVolumeClaim") },
-		DeleteFunc: func(any) { w.touch("PersistentVolumeClaim") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	replicaSets := w.factory.Apps().V1().ReplicaSets().Informer()
-	if _, err := replicaSets.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("ReplicaSet") },
-		UpdateFunc: func(any, any) { w.touch("ReplicaSet") },
-		DeleteFunc: func(any) { w.touch("ReplicaSet") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	ingresses := w.factory.Networking().V1().Ingresses().Informer()
-	if _, err := ingresses.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Ingress") },
-		UpdateFunc: func(any, any) { w.touch("Ingress") },
-		DeleteFunc: func(any) { w.touch("Ingress") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	nodes := w.factory.Core().V1().Nodes().Informer()
-	if _, err := nodes.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Node") },
-		UpdateFunc: func(any, any) { w.touch("Node") },
-		DeleteFunc: func(any) { w.touch("Node") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	serviceAccounts := w.factory.Core().V1().ServiceAccounts().Informer()
-	if _, err := serviceAccounts.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("ServiceAccount") },
-		UpdateFunc: func(any, any) { w.touch("ServiceAccount") },
-		DeleteFunc: func(any) { w.touch("ServiceAccount") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	roles := w.factory.Rbac().V1().Roles().Informer()
-	if _, err := roles.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Role") },
-		UpdateFunc: func(any, any) { w.touch("Role") },
-		DeleteFunc: func(any) { w.touch("Role") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	roleBindings := w.factory.Rbac().V1().RoleBindings().Informer()
-	if _, err := roleBindings.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("RoleBinding") },
-		UpdateFunc: func(any, any) { w.touch("RoleBinding") },
-		DeleteFunc: func(any) { w.touch("RoleBinding") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	clusterRoles := w.factory.Rbac().V1().ClusterRoles().Informer()
-	if _, err := clusterRoles.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("ClusterRole") },
-		UpdateFunc: func(any, any) { w.touch("ClusterRole") },
-		DeleteFunc: func(any) { w.touch("ClusterRole") },
-	}); err != nil {
-		cancel()
-		return err
-	}
-
-	clusterRoleBindings := w.factory.Rbac().V1().ClusterRoleBindings().Informer()
-	if _, err := clusterRoleBindings.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("ClusterRoleBinding") },
-		UpdateFunc: func(any, any) { w.touch("ClusterRoleBinding") },
-		DeleteFunc: func(any) { w.touch("ClusterRoleBinding") },
-	}); err != nil {
+	if err := w.registerHandlers(); err != nil {
 		cancel()
 		return err
 	}
@@ -433,24 +136,193 @@ func (w *contextWatcher) start(parent context.Context) error {
 		return err
 	}
 
-	w.factory.Start(ctx.Done())
+	if w.factory != nil {
+		w.factory.Start(ctx.Done())
+	}
+	if w.scoped != nil {
+		w.scoped.Start(ctx.Done())
+	}
 	go func() {
-		w.factory.WaitForCacheSync(ctx.Done())
-		for _, kind := range []string{
-			"Namespace", "Pod", "Deployment", "Service", "ConfigMap", "Secret",
-			"StatefulSet", "DaemonSet", "Job", "CronJob", "Ingress", "Node",
-			"ReplicaSet", "PersistentVolumeClaim", "PersistentVolume", "StorageClass",
-			"NetworkPolicy", "HorizontalPodAutoscaler", "PodDisruptionBudget",
-			"EndpointSlice", "ResourceQuota", "LimitRange", "IngressClass",
-			"PriorityClass", "RuntimeClass", "Lease",
-			"MutatingWebhookConfiguration", "ValidatingWebhookConfiguration",
-			"Endpoints", "ReplicationController",
-			"ServiceAccount", "Role", "RoleBinding", "ClusterRole", "ClusterRoleBinding",
-		} {
+		if w.factory != nil {
+			w.factory.WaitForCacheSync(ctx.Done())
+		}
+		if w.scoped != nil {
+			w.scoped.WaitForCacheSync(ctx.Done())
+		}
+		for kind := range w.access.kinds {
 			w.touch(kind)
 		}
 	}()
 	return nil
+}
+
+// registerHandlers wires the standard touch callback into every kind's
+// informer using the factory the access table points at. The Secret block
+// adds a Helm-release piggyback that's special-cased inline.
+func (w *contextWatcher) registerHandlers() error {
+	type binding struct {
+		kind     string
+		informer func(informers.SharedInformerFactory) cache.SharedIndexInformer
+	}
+	bindings := []binding{
+		{"Pod", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().Pods().Informer()
+		}},
+		{"Namespace", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().Namespaces().Informer()
+		}},
+		{"Deployment", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Apps().V1().Deployments().Informer()
+		}},
+		{"Service", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().Services().Informer()
+		}},
+		{"ConfigMap", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().ConfigMaps().Informer()
+		}},
+		{"StatefulSet", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Apps().V1().StatefulSets().Informer()
+		}},
+		{"DaemonSet", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Apps().V1().DaemonSets().Informer()
+		}},
+		{"Job", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Batch().V1().Jobs().Informer()
+		}},
+		{"CronJob", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Batch().V1().CronJobs().Informer()
+		}},
+		{"ReplicationController", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().ReplicationControllers().Informer()
+		}},
+		{"Endpoints", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().Endpoints().Informer()
+		}},
+		{"ValidatingWebhookConfiguration", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Admissionregistration().V1().ValidatingWebhookConfigurations().Informer()
+		}},
+		{"MutatingWebhookConfiguration", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Admissionregistration().V1().MutatingWebhookConfigurations().Informer()
+		}},
+		{"Lease", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Coordination().V1().Leases().Informer()
+		}},
+		{"RuntimeClass", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Node().V1().RuntimeClasses().Informer()
+		}},
+		{"PriorityClass", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Scheduling().V1().PriorityClasses().Informer()
+		}},
+		{"IngressClass", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Networking().V1().IngressClasses().Informer()
+		}},
+		{"LimitRange", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().LimitRanges().Informer()
+		}},
+		{"ResourceQuota", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().ResourceQuotas().Informer()
+		}},
+		{"EndpointSlice", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Discovery().V1().EndpointSlices().Informer()
+		}},
+		{"PodDisruptionBudget", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Policy().V1().PodDisruptionBudgets().Informer()
+		}},
+		{"HorizontalPodAutoscaler", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Autoscaling().V2().HorizontalPodAutoscalers().Informer()
+		}},
+		{"NetworkPolicy", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Networking().V1().NetworkPolicies().Informer()
+		}},
+		{"StorageClass", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Storage().V1().StorageClasses().Informer()
+		}},
+		{"PersistentVolume", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().PersistentVolumes().Informer()
+		}},
+		{"PersistentVolumeClaim", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().PersistentVolumeClaims().Informer()
+		}},
+		{"ReplicaSet", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Apps().V1().ReplicaSets().Informer()
+		}},
+		{"Ingress", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Networking().V1().Ingresses().Informer()
+		}},
+		{"Node", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().Nodes().Informer()
+		}},
+		{"ServiceAccount", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().ServiceAccounts().Informer()
+		}},
+		{"Role", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Rbac().V1().Roles().Informer()
+		}},
+		{"RoleBinding", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Rbac().V1().RoleBindings().Informer()
+		}},
+		{"ClusterRole", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Rbac().V1().ClusterRoles().Informer()
+		}},
+		{"ClusterRoleBinding", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Rbac().V1().ClusterRoleBindings().Informer()
+		}},
+	}
+
+	for _, b := range bindings {
+		if err := w.registerKind(b.kind, b.informer, nil); err != nil {
+			return err
+		}
+	}
+
+	// Secret carries a Helm-release piggyback so the Helm UI updates when a
+	// release Secret lands; that's why this binding sits outside the table.
+	if err := w.registerKind("Secret",
+		func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().Secrets().Informer()
+		},
+		func(obj any) { maybeTouchHelm(obj, w) },
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// registerKind looks up the kind's factory via the access map and, if the
+// user has any access at all, attaches the standard touch callback plus an
+// optional sidecar (currently used by Secret → Helm). Skips silently when
+// access is denied so the per-kind UI shows up empty rather than erroring.
+func (w *contextWatcher) registerKind(
+	kind string,
+	pick func(informers.SharedInformerFactory) cache.SharedIndexInformer,
+	sidecar func(obj any),
+) error {
+	f := w.factoryFor(kind)
+	if f == nil {
+		return nil
+	}
+	informer := pick(f)
+	handler := cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(obj any) { w.touch(kind); callIf(sidecar, obj) },
+		UpdateFunc: func(_, obj any) { w.touch(kind); callIf(sidecar, obj) },
+		DeleteFunc: func(obj any) { w.touch(kind); callIf(sidecar, obj) },
+	}
+	_, err := informer.AddEventHandler(handler)
+	return err
+}
+
+func callIf(fn func(obj any), obj any) {
+	if fn != nil {
+		fn(obj)
+	}
+}
+
+// errKindNoAccess is the canonical error returned by Get methods when the
+// caller's RBAC doesn't include the kind. Returned to the frontend so the
+// UI can show "Forbidden" instead of a generic load failure.
+func errKindNoAccess(kind string) error {
+	return fmt.Errorf("no list/watch access for %s in this context", kind)
 }
 
 func (w *contextWatcher) stop() {

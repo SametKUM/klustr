@@ -38,7 +38,11 @@ type HorizontalPodAutoscalerDetail struct {
 }
 
 func (w *contextWatcher) PodDisruptionBudget(namespace, name string) (*PodDisruptionBudgetDetail, error) {
-	p, err := w.factory.Policy().V1().PodDisruptionBudgets().Lister().PodDisruptionBudgets(namespace).Get(name)
+	f := w.factoryFor("PodDisruptionBudget")
+	if f == nil {
+		return nil, errKindNoAccess("PodDisruptionBudget")
+	}
+	p, err := f.Policy().V1().PodDisruptionBudgets().Lister().PodDisruptionBudgets(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +82,11 @@ func (w *contextWatcher) PodDisruptionBudget(namespace, name string) (*PodDisrup
 }
 
 func (w *contextWatcher) HorizontalPodAutoscaler(namespace, name string) (*HorizontalPodAutoscalerDetail, error) {
-	h, err := w.factory.Autoscaling().V2().HorizontalPodAutoscalers().Lister().HorizontalPodAutoscalers(namespace).Get(name)
+	f := w.factoryFor("HorizontalPodAutoscaler")
+	if f == nil {
+		return nil, errKindNoAccess("HorizontalPodAutoscaler")
+	}
+	h, err := f.Autoscaling().V2().HorizontalPodAutoscalers().Lister().HorizontalPodAutoscalers(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}

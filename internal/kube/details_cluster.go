@@ -128,7 +128,11 @@ type ResourceQuotaDetail struct {
 }
 
 func (w *contextWatcher) Node(name string) (*NodeDetail, error) {
-	n, err := w.factory.Core().V1().Nodes().Lister().Get(name)
+	f := w.factoryFor("Node")
+	if f == nil {
+		return nil, errKindNoAccess("Node")
+	}
+	n, err := f.Core().V1().Nodes().Lister().Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +172,11 @@ func (w *contextWatcher) Node(name string) (*NodeDetail, error) {
 }
 
 func (w *contextWatcher) Namespace(name string) (*NamespaceDetail, error) {
-	n, err := w.factory.Core().V1().Namespaces().Lister().Get(name)
+	f := w.factoryFor("Namespace")
+	if f == nil {
+		return nil, errKindNoAccess("Namespace")
+	}
+	n, err := f.Core().V1().Namespaces().Lister().Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +191,11 @@ func (w *contextWatcher) Namespace(name string) (*NamespaceDetail, error) {
 }
 
 func (w *contextWatcher) Lease(namespace, name string) (*LeaseDetail, error) {
-	l, err := w.factory.Coordination().V1().Leases().Lister().Leases(namespace).Get(name)
+	f := w.factoryFor("Lease")
+	if f == nil {
+		return nil, errKindNoAccess("Lease")
+	}
+	l, err := f.Coordination().V1().Leases().Lister().Leases(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +235,11 @@ func (w *contextWatcher) Lease(namespace, name string) (*LeaseDetail, error) {
 }
 
 func (w *contextWatcher) RuntimeClass(name string) (*RuntimeClassDetail, error) {
-	r, err := w.factory.Node().V1().RuntimeClasses().Lister().Get(name)
+	f := w.factoryFor("RuntimeClass")
+	if f == nil {
+		return nil, errKindNoAccess("RuntimeClass")
+	}
+	r, err := f.Node().V1().RuntimeClasses().Lister().Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +266,11 @@ func (w *contextWatcher) RuntimeClass(name string) (*RuntimeClassDetail, error) 
 }
 
 func (w *contextWatcher) PriorityClass(name string) (*PriorityClassDetail, error) {
-	p, err := w.factory.Scheduling().V1().PriorityClasses().Lister().Get(name)
+	f := w.factoryFor("PriorityClass")
+	if f == nil {
+		return nil, errKindNoAccess("PriorityClass")
+	}
+	p, err := f.Scheduling().V1().PriorityClasses().Lister().Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +292,11 @@ func (w *contextWatcher) PriorityClass(name string) (*PriorityClassDetail, error
 }
 
 func (w *contextWatcher) IngressClass(name string) (*IngressClassDetail, error) {
-	c, err := w.factory.Networking().V1().IngressClasses().Lister().Get(name)
+	f := w.factoryFor("IngressClass")
+	if f == nil {
+		return nil, errKindNoAccess("IngressClass")
+	}
+	c, err := f.Networking().V1().IngressClasses().Lister().Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +317,11 @@ func (w *contextWatcher) IngressClass(name string) (*IngressClassDetail, error) 
 }
 
 func (w *contextWatcher) LimitRange(namespace, name string) (*LimitRangeDetail, error) {
-	l, err := w.factory.Core().V1().LimitRanges().Lister().LimitRanges(namespace).Get(name)
+	f := w.factoryFor("LimitRange")
+	if f == nil {
+		return nil, errKindNoAccess("LimitRange")
+	}
+	l, err := f.Core().V1().LimitRanges().Lister().LimitRanges(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +348,11 @@ func (w *contextWatcher) LimitRange(namespace, name string) (*LimitRangeDetail, 
 }
 
 func (w *contextWatcher) ResourceQuota(namespace, name string) (*ResourceQuotaDetail, error) {
-	q, err := w.factory.Core().V1().ResourceQuotas().Lister().ResourceQuotas(namespace).Get(name)
+	f := w.factoryFor("ResourceQuota")
+	if f == nil {
+		return nil, errKindNoAccess("ResourceQuota")
+	}
+	q, err := f.Core().V1().ResourceQuotas().Lister().ResourceQuotas(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}

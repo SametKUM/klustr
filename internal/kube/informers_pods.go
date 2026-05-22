@@ -93,7 +93,11 @@ type PodDetail struct {
 }
 
 func (w *contextWatcher) Pod(namespace, name string) (*PodDetail, error) {
-	p, err := w.factory.Core().V1().Pods().Lister().Pods(namespace).Get(name)
+	f := w.factoryFor("Pod")
+	if f == nil {
+		return nil, errKindNoAccess("Pod")
+	}
+	p, err := f.Core().V1().Pods().Lister().Pods(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -325,8 +329,12 @@ func (w *contextWatcher) PodLogTargets(namespace string, selector map[string]str
 	if len(selector) == 0 {
 		return []PodLogTarget{}
 	}
+	f := w.factoryFor("Pod")
+	if f == nil {
+		return []PodLogTarget{}
+	}
 	sel := labels.SelectorFromSet(labels.Set(selector))
-	lister := w.factory.Core().V1().Pods().Lister()
+	lister := f.Core().V1().Pods().Lister()
 	var (
 		pods []*corev1.Pod
 		err  error
@@ -352,7 +360,11 @@ func (w *contextWatcher) PodLogTargets(namespace string, selector map[string]str
 }
 
 func (w *contextWatcher) Pods(namespace string) []PodInfo {
-	lister := w.factory.Core().V1().Pods().Lister()
+	f := w.factoryFor("Pod")
+	if f == nil {
+		return []PodInfo{}
+	}
+	lister := f.Core().V1().Pods().Lister()
 	var (
 		pods []*corev1.Pod
 		err  error
@@ -373,7 +385,11 @@ func (w *contextWatcher) PodsOnNode(nodeName string) []PodInfo {
 	if nodeName == "" {
 		return []PodInfo{}
 	}
-	all, err := w.factory.Core().V1().Pods().Lister().List(labels.Everything())
+	f := w.factoryFor("Pod")
+	if f == nil {
+		return []PodInfo{}
+	}
+	all, err := f.Core().V1().Pods().Lister().List(labels.Everything())
 	if err != nil {
 		return []PodInfo{}
 	}
@@ -394,25 +410,41 @@ func (w *contextWatcher) PodsForOwner(kind, namespace, name string) ([]PodInfo, 
 	case "Node":
 		return w.PodsOnNode(name), nil
 	case "Deployment":
-		d, err := w.factory.Apps().V1().Deployments().Lister().Deployments(namespace).Get(name)
+		f := w.factoryFor("Deployment")
+		if f == nil {
+			return nil, errKindNoAccess("Deployment")
+		}
+		d, err := f.Apps().V1().Deployments().Lister().Deployments(namespace).Get(name)
 		if err != nil {
 			return nil, err
 		}
 		return w.PodsForSelector(namespace, d.Spec.Selector), nil
 	case "StatefulSet":
-		s, err := w.factory.Apps().V1().StatefulSets().Lister().StatefulSets(namespace).Get(name)
+		f := w.factoryFor("StatefulSet")
+		if f == nil {
+			return nil, errKindNoAccess("StatefulSet")
+		}
+		s, err := f.Apps().V1().StatefulSets().Lister().StatefulSets(namespace).Get(name)
 		if err != nil {
 			return nil, err
 		}
 		return w.PodsForSelector(namespace, s.Spec.Selector), nil
 	case "DaemonSet":
-		d, err := w.factory.Apps().V1().DaemonSets().Lister().DaemonSets(namespace).Get(name)
+		f := w.factoryFor("DaemonSet")
+		if f == nil {
+			return nil, errKindNoAccess("DaemonSet")
+		}
+		d, err := f.Apps().V1().DaemonSets().Lister().DaemonSets(namespace).Get(name)
 		if err != nil {
 			return nil, err
 		}
 		return w.PodsForSelector(namespace, d.Spec.Selector), nil
 	case "ReplicaSet":
-		r, err := w.factory.Apps().V1().ReplicaSets().Lister().ReplicaSets(namespace).Get(name)
+		f := w.factoryFor("ReplicaSet")
+		if f == nil {
+			return nil, errKindNoAccess("ReplicaSet")
+		}
+		r, err := f.Apps().V1().ReplicaSets().Lister().ReplicaSets(namespace).Get(name)
 		if err != nil {
 			return nil, err
 		}
@@ -433,7 +465,11 @@ func (w *contextWatcher) PodsForSelector(namespace string, sel *metav1.LabelSele
 	if err != nil {
 		return []PodInfo{}
 	}
-	lister := w.factory.Core().V1().Pods().Lister()
+	f := w.factoryFor("Pod")
+	if f == nil {
+		return []PodInfo{}
+	}
+	lister := f.Core().V1().Pods().Lister()
 	var (
 		pods    []*corev1.Pod
 		listErr error

@@ -230,7 +230,11 @@ func (w *contextWatcher) helmReleaseSecrets(namespace, name string) ([]*corev1.S
 }
 
 func (w *contextWatcher) helmAllSecrets(namespace string) ([]*corev1.Secret, error) {
-	lister := w.factory.Core().V1().Secrets().Lister()
+	f := w.factoryFor("Secret")
+	if f == nil {
+		return nil, nil
+	}
+	lister := f.Core().V1().Secrets().Lister()
 	var raw []*corev1.Secret
 	var err error
 	if namespace == "" {

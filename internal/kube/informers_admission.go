@@ -14,7 +14,11 @@ type WebhookConfigurationInfo struct {
 }
 
 func (w *contextWatcher) ValidatingWebhookConfigurations() []WebhookConfigurationInfo {
-	whs, err := w.factory.Admissionregistration().V1().ValidatingWebhookConfigurations().Lister().List(labels.Everything())
+	f := w.factoryFor("ValidatingWebhookConfiguration")
+	if f == nil {
+		return []WebhookConfigurationInfo{}
+	}
+	whs, err := f.Admissionregistration().V1().ValidatingWebhookConfigurations().Lister().List(labels.Everything())
 	if err != nil {
 		return []WebhookConfigurationInfo{}
 	}
@@ -31,7 +35,11 @@ func (w *contextWatcher) ValidatingWebhookConfigurations() []WebhookConfiguratio
 }
 
 func (w *contextWatcher) MutatingWebhookConfigurations() []WebhookConfigurationInfo {
-	whs, err := w.factory.Admissionregistration().V1().MutatingWebhookConfigurations().Lister().List(labels.Everything())
+	f := w.factoryFor("MutatingWebhookConfiguration")
+	if f == nil {
+		return []WebhookConfigurationInfo{}
+	}
+	whs, err := f.Admissionregistration().V1().MutatingWebhookConfigurations().Lister().List(labels.Everything())
 	if err != nil {
 		return []WebhookConfigurationInfo{}
 	}

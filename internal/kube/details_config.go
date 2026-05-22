@@ -34,7 +34,11 @@ type SecretDetail struct {
 }
 
 func (w *contextWatcher) ConfigMap(namespace, name string) (*ConfigMapDetail, error) {
-	c, err := w.factory.Core().V1().ConfigMaps().Lister().ConfigMaps(namespace).Get(name)
+	f := w.factoryFor("ConfigMap")
+	if f == nil {
+		return nil, errKindNoAccess("ConfigMap")
+	}
+	c, err := f.Core().V1().ConfigMaps().Lister().ConfigMaps(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +60,11 @@ func (w *contextWatcher) ConfigMap(namespace, name string) (*ConfigMapDetail, er
 }
 
 func (w *contextWatcher) Secret(namespace, name string) (*SecretDetail, error) {
-	s, err := w.factory.Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
+	f := w.factoryFor("Secret")
+	if f == nil {
+		return nil, errKindNoAccess("Secret")
+	}
+	s, err := f.Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +89,11 @@ func (w *contextWatcher) Secret(namespace, name string) (*SecretDetail, error) {
 // Secret. Values are only fetched when the user explicitly asks the UI
 // to reveal them — never as part of a list or detail load.
 func (w *contextWatcher) SecretValue(namespace, name, key string) (string, error) {
-	s, err := w.factory.Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
+	f := w.factoryFor("Secret")
+	if f == nil {
+		return "", errKindNoAccess("Secret")
+	}
+	s, err := f.Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
 	if err != nil {
 		return "", err
 	}

@@ -224,6 +224,16 @@ func (w *contextWatcher) startGatewayInformers(ctx context.Context) error {
 	if w.gwFactory == nil {
 		return nil
 	}
+	// Gateway API uses a single typed factory across all five kinds. If the
+	// user can't list any of them cluster-wide we'd loop-spam the log just
+	// like the built-in factories would; drop the whole factory in that
+	// case. A future enhancement could route per-kind like the built-in
+	// factory does.
+	gvr := kindToGVR["Gateway"]
+	if !canList(ctx, w.cs, gvr, "") {
+		w.gwFactory = nil
+		return nil
+	}
 	gateways := w.gwFactory.Gateway().V1().Gateways().Informer()
 	if _, err := gateways.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(any) { w.touch("Gateway") },

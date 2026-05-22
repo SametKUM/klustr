@@ -24,7 +24,11 @@ type SecretInfo struct {
 }
 
 func (w *contextWatcher) ConfigMaps(namespace string) []ConfigMapInfo {
-	lister := w.factory.Core().V1().ConfigMaps().Lister()
+	f := w.factoryFor("ConfigMap")
+	if f == nil {
+		return []ConfigMapInfo{}
+	}
+	lister := f.Core().V1().ConfigMaps().Lister()
 	var (
 		cms []*corev1.ConfigMap
 		err error
@@ -56,7 +60,11 @@ func (w *contextWatcher) ConfigMaps(namespace string) []ConfigMapInfo {
 }
 
 func (w *contextWatcher) Secrets(namespace string) []SecretInfo {
-	lister := w.factory.Core().V1().Secrets().Lister()
+	f := w.factoryFor("Secret")
+	if f == nil {
+		return []SecretInfo{}
+	}
+	lister := f.Core().V1().Secrets().Lister()
 	var (
 		secs []*corev1.Secret
 		err  error

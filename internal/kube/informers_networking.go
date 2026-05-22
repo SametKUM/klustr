@@ -58,7 +58,11 @@ type NetworkPolicyInfo struct {
 }
 
 func (w *contextWatcher) Services(namespace string) []ServiceInfo {
-	lister := w.factory.Core().V1().Services().Lister()
+	f := w.factoryFor("Service")
+	if f == nil {
+		return []ServiceInfo{}
+	}
+	lister := f.Core().V1().Services().Lister()
 	var (
 		svcs []*corev1.Service
 		err  error
@@ -93,7 +97,11 @@ func (w *contextWatcher) Services(namespace string) []ServiceInfo {
 }
 
 func (w *contextWatcher) ListEndpoints(namespace string) []EndpointsInfo {
-	lister := w.factory.Core().V1().Endpoints().Lister()
+	f := w.factoryFor("Endpoints")
+	if f == nil {
+		return []EndpointsInfo{}
+	}
+	lister := f.Core().V1().Endpoints().Lister()
 	var (
 		eps []*corev1.Endpoints
 		err error
@@ -132,7 +140,11 @@ func (w *contextWatcher) ListEndpoints(namespace string) []EndpointsInfo {
 }
 
 func (w *contextWatcher) EndpointSlices(namespace string) []EndpointSliceInfo {
-	lister := w.factory.Discovery().V1().EndpointSlices().Lister()
+	f := w.factoryFor("EndpointSlice")
+	if f == nil {
+		return []EndpointSliceInfo{}
+	}
+	lister := f.Discovery().V1().EndpointSlices().Lister()
 	var (
 		slices []*discoveryv1.EndpointSlice
 		err    error
@@ -174,7 +186,11 @@ func (w *contextWatcher) EndpointSlices(namespace string) []EndpointSliceInfo {
 }
 
 func (w *contextWatcher) Ingresses(namespace string) []IngressInfo {
-	lister := w.factory.Networking().V1().Ingresses().Lister()
+	f := w.factoryFor("Ingress")
+	if f == nil {
+		return []IngressInfo{}
+	}
+	lister := f.Networking().V1().Ingresses().Lister()
 	var (
 		ings []*networkingv1.Ingress
 		err  error
@@ -226,7 +242,11 @@ func (w *contextWatcher) Ingresses(namespace string) []IngressInfo {
 }
 
 func (w *contextWatcher) NetworkPolicies(namespace string) []NetworkPolicyInfo {
-	lister := w.factory.Networking().V1().NetworkPolicies().Lister()
+	f := w.factoryFor("NetworkPolicy")
+	if f == nil {
+		return []NetworkPolicyInfo{}
+	}
+	lister := f.Networking().V1().NetworkPolicies().Lister()
 	var (
 		policies []*networkingv1.NetworkPolicy
 		err      error

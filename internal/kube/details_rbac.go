@@ -87,7 +87,11 @@ type ClusterRoleBindingDetail struct {
 }
 
 func (w *contextWatcher) ServiceAccount(namespace, name string) (*ServiceAccountDetail, error) {
-	s, err := w.factory.Core().V1().ServiceAccounts().Lister().ServiceAccounts(namespace).Get(name)
+	f := w.factoryFor("ServiceAccount")
+	if f == nil {
+		return nil, errKindNoAccess("ServiceAccount")
+	}
+	s, err := f.Core().V1().ServiceAccounts().Lister().ServiceAccounts(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +125,11 @@ func (w *contextWatcher) ServiceAccount(namespace, name string) (*ServiceAccount
 }
 
 func (w *contextWatcher) Role(namespace, name string) (*RoleDetail, error) {
-	r, err := w.factory.Rbac().V1().Roles().Lister().Roles(namespace).Get(name)
+	f := w.factoryFor("Role")
+	if f == nil {
+		return nil, errKindNoAccess("Role")
+	}
+	r, err := f.Rbac().V1().Roles().Lister().Roles(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +145,11 @@ func (w *contextWatcher) Role(namespace, name string) (*RoleDetail, error) {
 }
 
 func (w *contextWatcher) RoleBinding(namespace, name string) (*RoleBindingDetail, error) {
-	b, err := w.factory.Rbac().V1().RoleBindings().Lister().RoleBindings(namespace).Get(name)
+	f := w.factoryFor("RoleBinding")
+	if f == nil {
+		return nil, errKindNoAccess("RoleBinding")
+	}
+	b, err := f.Rbac().V1().RoleBindings().Lister().RoleBindings(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +170,11 @@ func (w *contextWatcher) RoleBinding(namespace, name string) (*RoleBindingDetail
 }
 
 func (w *contextWatcher) ClusterRole(name string) (*ClusterRoleDetail, error) {
-	r, err := w.factory.Rbac().V1().ClusterRoles().Lister().Get(name)
+	f := w.factoryFor("ClusterRole")
+	if f == nil {
+		return nil, errKindNoAccess("ClusterRole")
+	}
+	r, err := f.Rbac().V1().ClusterRoles().Lister().Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +202,11 @@ func (w *contextWatcher) ClusterRole(name string) (*ClusterRoleDetail, error) {
 }
 
 func (w *contextWatcher) ClusterRoleBinding(name string) (*ClusterRoleBindingDetail, error) {
-	b, err := w.factory.Rbac().V1().ClusterRoleBindings().Lister().Get(name)
+	f := w.factoryFor("ClusterRoleBinding")
+	if f == nil {
+		return nil, errKindNoAccess("ClusterRoleBinding")
+	}
+	b, err := f.Rbac().V1().ClusterRoleBindings().Lister().Get(name)
 	if err != nil {
 		return nil, err
 	}

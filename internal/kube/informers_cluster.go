@@ -71,7 +71,17 @@ type ResourceQuotaInfo struct {
 }
 
 func (w *contextWatcher) Namespaces() []NamespaceInfo {
-	list, err := w.factory.Core().V1().Namespaces().Lister().List(labels.Everything())
+	f := w.factoryFor("Namespace")
+	if f == nil {
+		// Restricted user with no cluster-wide list — fall back to the
+		// kubeconfig-supplied default namespace so the selector has at
+		// least one row.
+		if w.defaultNS != "" {
+			return []NamespaceInfo{{Name: w.defaultNS, Phase: "Active"}}
+		}
+		return []NamespaceInfo{}
+	}
+	list, err := f.Core().V1().Namespaces().Lister().List(labels.Everything())
 	if err != nil {
 		return []NamespaceInfo{}
 	}
@@ -88,7 +98,11 @@ func (w *contextWatcher) Namespaces() []NamespaceInfo {
 }
 
 func (w *contextWatcher) Nodes() []NodeInfo {
-	list, err := w.factory.Core().V1().Nodes().Lister().List(labels.Everything())
+	f := w.factoryFor("Node")
+	if f == nil {
+		return []NodeInfo{}
+	}
+	list, err := f.Core().V1().Nodes().Lister().List(labels.Everything())
 	if err != nil {
 		return []NodeInfo{}
 	}
@@ -109,7 +123,11 @@ func (w *contextWatcher) Nodes() []NodeInfo {
 }
 
 func (w *contextWatcher) Leases(namespace string) []LeaseInfo {
-	lister := w.factory.Coordination().V1().Leases().Lister()
+	f := w.factoryFor("Lease")
+	if f == nil {
+		return []LeaseInfo{}
+	}
+	lister := f.Coordination().V1().Leases().Lister()
 	var (
 		leases []*coordv1.Lease
 		err    error
@@ -140,7 +158,11 @@ func (w *contextWatcher) Leases(namespace string) []LeaseInfo {
 }
 
 func (w *contextWatcher) RuntimeClasses() []RuntimeClassInfo {
-	rcs, err := w.factory.Node().V1().RuntimeClasses().Lister().List(labels.Everything())
+	f := w.factoryFor("RuntimeClass")
+	if f == nil {
+		return []RuntimeClassInfo{}
+	}
+	rcs, err := f.Node().V1().RuntimeClasses().Lister().List(labels.Everything())
 	if err != nil {
 		return []RuntimeClassInfo{}
 	}
@@ -157,7 +179,11 @@ func (w *contextWatcher) RuntimeClasses() []RuntimeClassInfo {
 }
 
 func (w *contextWatcher) PriorityClasses() []PriorityClassInfo {
-	pcs, err := w.factory.Scheduling().V1().PriorityClasses().Lister().List(labels.Everything())
+	f := w.factoryFor("PriorityClass")
+	if f == nil {
+		return []PriorityClassInfo{}
+	}
+	pcs, err := f.Scheduling().V1().PriorityClasses().Lister().List(labels.Everything())
 	if err != nil {
 		return []PriorityClassInfo{}
 	}
@@ -176,7 +202,11 @@ func (w *contextWatcher) PriorityClasses() []PriorityClassInfo {
 }
 
 func (w *contextWatcher) IngressClasses() []IngressClassInfo {
-	classes, err := w.factory.Networking().V1().IngressClasses().Lister().List(labels.Everything())
+	f := w.factoryFor("IngressClass")
+	if f == nil {
+		return []IngressClassInfo{}
+	}
+	classes, err := f.Networking().V1().IngressClasses().Lister().List(labels.Everything())
 	if err != nil {
 		return []IngressClassInfo{}
 	}
@@ -194,7 +224,11 @@ func (w *contextWatcher) IngressClasses() []IngressClassInfo {
 }
 
 func (w *contextWatcher) LimitRanges(namespace string) []LimitRangeInfo {
-	lister := w.factory.Core().V1().LimitRanges().Lister()
+	f := w.factoryFor("LimitRange")
+	if f == nil {
+		return []LimitRangeInfo{}
+	}
+	lister := f.Core().V1().LimitRanges().Lister()
 	var (
 		lrs []*corev1.LimitRange
 		err error
@@ -221,7 +255,11 @@ func (w *contextWatcher) LimitRanges(namespace string) []LimitRangeInfo {
 }
 
 func (w *contextWatcher) ResourceQuotas(namespace string) []ResourceQuotaInfo {
-	lister := w.factory.Core().V1().ResourceQuotas().Lister()
+	f := w.factoryFor("ResourceQuota")
+	if f == nil {
+		return []ResourceQuotaInfo{}
+	}
+	lister := f.Core().V1().ResourceQuotas().Lister()
 	var (
 		qs  []*corev1.ResourceQuota
 		err error

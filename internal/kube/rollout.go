@@ -45,11 +45,19 @@ func isOwnedBy(refs []metav1.OwnerReference, kind, name string) bool {
 // are ordered newest-first. The currently-active revision is flagged so
 // the UI can disable rollback to "self".
 func (w *contextWatcher) DeploymentRevisions(namespace, name string) ([]WorkloadRevision, error) {
-	d, err := w.factory.Apps().V1().Deployments().Lister().Deployments(namespace).Get(name)
+	depF := w.factoryFor("Deployment")
+	rsF := w.factoryFor("ReplicaSet")
+	if depF == nil {
+		return nil, errKindNoAccess("Deployment")
+	}
+	if rsF == nil {
+		return nil, errKindNoAccess("ReplicaSet")
+	}
+	d, err := depF.Apps().V1().Deployments().Lister().Deployments(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
-	rsAll, err := w.factory.Apps().V1().ReplicaSets().Lister().ReplicaSets(namespace).List(labels.Everything())
+	rsAll, err := rsF.Apps().V1().ReplicaSets().Lister().ReplicaSets(namespace).List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
