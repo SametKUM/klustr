@@ -35,12 +35,29 @@ function applyThemeClasses(theme: ThemeDefinition) {
 const COLLAPSED_NAV_GROUPS_KEY = 'klustr-collapsed-nav-groups'
 const EXPANDED_CRD_GROUPS_KEY = 'klustr-expanded-crd-groups'
 const SIDEBAR_MODE_KEY = 'klustr-sidebar-mode'
+const SIDEBAR_WIDTH_KEY = 'klustr-sidebar-width'
 
 export type SidebarMode = 'expanded' | 'icons'
+
+export const SIDEBAR_WIDTH_MIN = 200
+export const SIDEBAR_WIDTH_MAX = 400
+export const SIDEBAR_WIDTH_DEFAULT = 256
 
 function readSidebarMode(): SidebarMode {
   const raw = localStorage.getItem(SIDEBAR_MODE_KEY)
   return raw === 'icons' ? 'icons' : 'expanded'
+}
+
+function clampSidebarWidth(value: number): number {
+  return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, value))
+}
+
+function readSidebarWidth(): number {
+  const raw = localStorage.getItem(SIDEBAR_WIDTH_KEY)
+  if (!raw) return SIDEBAR_WIDTH_DEFAULT
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed)) return SIDEBAR_WIDTH_DEFAULT
+  return clampSidebarWidth(parsed)
 }
 
 function readStringArray(key: string): string[] {
@@ -373,6 +390,7 @@ type UIState = {
   pendingAction: PendingAction | null
   themeId: ThemeId
   sidebarMode: SidebarMode
+  sidebarWidth: number
   collapsedNavGroups: string[]
   expandedCRDGroups: string[]
   defaultContext: string | null
@@ -394,6 +412,7 @@ type UIState = {
   setPendingAction: (action: PendingAction | null) => void
   setTheme: (id: ThemeId) => void
   toggleSidebarMode: () => void
+  setSidebarWidth: (px: number) => void
   toggleNavGroup: (label: string) => void
   toggleCRDGroup: (label: string) => void
   setDefaultContext: (name: string | null) => void
@@ -485,6 +504,7 @@ export const useUIStore = create<UIState>((set) => {
     pendingAction: null,
     themeId: initialThemeId,
     sidebarMode: readSidebarMode(),
+    sidebarWidth: readSidebarWidth(),
     collapsedNavGroups: readCollapsedNavGroups(),
     expandedCRDGroups: readExpandedCRDGroups(),
     defaultContext: initialDefaultContext,
@@ -589,6 +609,13 @@ export const useUIStore = create<UIState>((set) => {
         const next: SidebarMode = s.sidebarMode === 'expanded' ? 'icons' : 'expanded'
         localStorage.setItem(SIDEBAR_MODE_KEY, next)
         return { sidebarMode: next }
+      }),
+    setSidebarWidth: (px) =>
+      set((s) => {
+        const next = clampSidebarWidth(px)
+        if (next === s.sidebarWidth) return s
+        localStorage.setItem(SIDEBAR_WIDTH_KEY, String(next))
+        return { sidebarWidth: next }
       }),
     toggleNavGroup: (label) =>
       set((s) => {
