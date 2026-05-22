@@ -524,6 +524,14 @@ func (a *App) ListAccessSubjects(contextName string) []kube.AccessSubject {
 	return a.clients.AccessSubjects(contextName)
 }
 
+func (a *App) ListAccessibleKinds(contextName string) []string {
+	out := a.clients.AccessibleKinds(contextName)
+	if out == nil {
+		return []string{}
+	}
+	return out
+}
+
 func (a *App) GetSubjectAccess(contextName, kind, namespace, name string) (*kube.SubjectAccess, error) {
 	return a.clients.SubjectAccess(contextName, kind, namespace, name)
 }

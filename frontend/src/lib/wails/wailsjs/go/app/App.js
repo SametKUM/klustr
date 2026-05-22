@@ -222,6 +222,10 @@ export function ListAccessSubjects(arg1) {
   return window['go']['app']['App']['ListAccessSubjects'](arg1);
 }
 
+export function ListAccessibleKinds(arg1) {
+  return window['go']['app']['App']['ListAccessibleKinds'](arg1);
+}
+
 export function ListArgoApplicationResources(arg1, arg2, arg3) {
   return window['go']['app']['App']['ListArgoApplicationResources'](arg1, arg2, arg3);
 }

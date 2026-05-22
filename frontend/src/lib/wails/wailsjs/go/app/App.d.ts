@@ -112,6 +112,8 @@ export function IsMetricsServerKlustrManaged(arg1:string):Promise<boolean>;
 
 export function ListAccessSubjects(arg1:string):Promise<Array<kube.AccessSubject>>;
 
+export function ListAccessibleKinds(arg1:string):Promise<Array<string>>;
+
 export function ListArgoApplicationResources(arg1:string,arg2:string,arg3:string):Promise<Array<kube.ArgoApplicationResource>>;
 
 export function ListArgoApplications(arg1:string,arg2:string):Promise<Array<kube.ArgoApplicationInfo>>;
