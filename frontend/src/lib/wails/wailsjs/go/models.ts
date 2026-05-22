@@ -1,5 +1,101 @@
 export namespace kube {
 	
+	export class ConditionDetail {
+	    type: string;
+	    status: string;
+	    reason: string;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConditionDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.status = source["status"];
+	        this.reason = source["reason"];
+	        this.message = source["message"];
+	    }
+	}
+	export class APIServiceDetail {
+	    name: string;
+	    uid: string;
+	    group: string;
+	    version: string;
+	    service: string;
+	    groupPriorityMinimum: number;
+	    versionPriority: number;
+	    insecureSkipTLSVerify: boolean;
+	    hasCABundle: boolean;
+	    conditions: ConditionDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new APIServiceDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uid = source["uid"];
+	        this.group = source["group"];
+	        this.version = source["version"];
+	        this.service = source["service"];
+	        this.groupPriorityMinimum = source["groupPriorityMinimum"];
+	        this.versionPriority = source["versionPriority"];
+	        this.insecureSkipTLSVerify = source["insecureSkipTLSVerify"];
+	        this.hasCABundle = source["hasCABundle"];
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class APIServiceInfo {
+	    name: string;
+	    group: string;
+	    version: string;
+	    service: string;
+	    available: string;
+	    message: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new APIServiceInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.group = source["group"];
+	        this.version = source["version"];
+	        this.service = source["service"];
+	        this.available = source["available"];
+	        this.message = source["message"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class AccessSubject {
 	    kind: string;
 	    name: string;
@@ -416,24 +512,7 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
-	export class ConditionDetail {
-	    type: string;
-	    status: string;
-	    reason: string;
-	    message: string;
 	
-	    static createFrom(source: any = {}) {
-	        return new ConditionDetail(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.type = source["type"];
-	        this.status = source["status"];
-	        this.reason = source["reason"];
-	        this.message = source["message"];
-	    }
-	}
 	export class ConfigMapDetail {
 	    name: string;
 	    namespace: string;

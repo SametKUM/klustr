@@ -444,6 +444,14 @@ func (a *App) ListLeases(name, namespace string) []kube.LeaseInfo {
 	return a.clients.Leases(name, namespace)
 }
 
+func (a *App) ListAPIServices(name string) []kube.APIServiceInfo {
+	return a.clients.APIServices(name)
+}
+
+func (a *App) GetAPIService(contextName, name string) (*kube.APIServiceDetail, error) {
+	return a.clients.APIService(contextName, name)
+}
+
 func (a *App) ListMutatingWebhookConfigurations(name string) []kube.WebhookConfigurationInfo {
 	return a.clients.MutatingWebhookConfigurations(name)
 }

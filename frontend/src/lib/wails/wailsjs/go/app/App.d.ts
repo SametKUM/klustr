@@ -12,6 +12,8 @@ export function EnsureCustomResourceWatch(arg1:string,arg2:string,arg3:string,ar
 
 export function FetchMetricsServerManifest():Promise<string>;
 
+export function GetAPIService(arg1:string,arg2:string):Promise<kube.APIServiceDetail>;
+
 export function GetClusterOverview(arg1:string):Promise<kube.ClusterOverview>;
 
 export function GetClusterRole(arg1:string,arg2:string):Promise<kube.ClusterRoleDetail>;
@@ -109,6 +111,8 @@ export function HelmChartVersions(arg1:string,arg2:string):Promise<Array<string>
 export function InstallHelmRelease(arg1:kube.HelmInstallOptions):Promise<kube.HelmDryRunResult>;
 
 export function IsMetricsServerKlustrManaged(arg1:string):Promise<boolean>;
+
+export function ListAPIServices(arg1:string):Promise<Array<kube.APIServiceInfo>>;
 
 export function ListAccessSubjects(arg1:string):Promise<Array<kube.AccessSubject>>;
 

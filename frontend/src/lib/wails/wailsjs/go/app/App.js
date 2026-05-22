@@ -22,6 +22,10 @@ export function FetchMetricsServerManifest() {
   return window['go']['app']['App']['FetchMetricsServerManifest']();
 }
 
+export function GetAPIService(arg1, arg2) {
+  return window['go']['app']['App']['GetAPIService'](arg1, arg2);
+}
+
 export function GetClusterOverview(arg1) {
   return window['go']['app']['App']['GetClusterOverview'](arg1);
 }
@@ -216,6 +220,10 @@ export function InstallHelmRelease(arg1) {
 
 export function IsMetricsServerKlustrManaged(arg1) {
   return window['go']['app']['App']['IsMetricsServerKlustrManaged'](arg1);
+}
+
+export function ListAPIServices(arg1) {
+  return window['go']['app']['App']['ListAPIServices'](arg1);
 }
 
 export function ListAccessSubjects(arg1) {
