@@ -684,3 +684,15 @@ func (a *App) ListReferenceGrants(name, namespace string) []kube.ReferenceGrantI
 func (a *App) GetReferenceGrant(contextName, namespace, name string) (*kube.ReferenceGrantDetail, error) {
 	return a.clients.ReferenceGrant(contextName, namespace, name)
 }
+
+func (a *App) FetchMetricsServerManifest() (string, error) {
+	return kube.FetchMetricsServerManifest(a.ctx)
+}
+
+func (a *App) RecommendInsecureKubeletTLS(contextName string) (bool, error) {
+	return a.clients.RecommendInsecureKubeletTLS(a.ctx, contextName)
+}
+
+func (a *App) IsMetricsServerKlustrManaged(contextName string) (bool, error) {
+	return a.clients.IsMetricsServerKlustrManaged(a.ctx, contextName)
+}

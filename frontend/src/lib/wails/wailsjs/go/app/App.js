@@ -18,6 +18,10 @@ export function EnsureCustomResourceWatch(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['EnsureCustomResourceWatch'](arg1, arg2, arg3, arg4);
 }
 
+export function FetchMetricsServerManifest() {
+  return window['go']['app']['App']['FetchMetricsServerManifest']();
+}
+
 export function GetClusterOverview(arg1) {
   return window['go']['app']['App']['GetClusterOverview'](arg1);
 }
@@ -204,6 +208,10 @@ export function HelmChartVersions(arg1, arg2) {
 
 export function InstallHelmRelease(arg1) {
   return window['go']['app']['App']['InstallHelmRelease'](arg1);
+}
+
+export function IsMetricsServerKlustrManaged(arg1) {
+  return window['go']['app']['App']['IsMetricsServerKlustrManaged'](arg1);
 }
 
 export function ListArgoApplicationResources(arg1, arg2, arg3) {
@@ -444,6 +452,10 @@ export function PodLogTargets(arg1, arg2, arg3) {
 
 export function PodsForOwner(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['PodsForOwner'](arg1, arg2, arg3, arg4);
+}
+
+export function RecommendInsecureKubeletTLS(arg1) {
+  return window['go']['app']['App']['RecommendInsecureKubeletTLS'](arg1);
 }
 
 export function RefreshArgoApplication(arg1, arg2, arg3, arg4) {

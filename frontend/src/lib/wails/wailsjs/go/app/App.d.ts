@@ -10,6 +10,8 @@ export function DeleteResource(arg1:string,arg2:string,arg3:string,arg4:string):
 
 export function EnsureCustomResourceWatch(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
+export function FetchMetricsServerManifest():Promise<string>;
+
 export function GetClusterOverview(arg1:string):Promise<kube.ClusterOverview>;
 
 export function GetClusterRole(arg1:string,arg2:string):Promise<kube.ClusterRoleDetail>;
@@ -103,6 +105,8 @@ export function GetWorkloadRevisionTemplate(arg1:string,arg2:string,arg3:string,
 export function HelmChartVersions(arg1:string,arg2:string):Promise<Array<string>>;
 
 export function InstallHelmRelease(arg1:kube.HelmInstallOptions):Promise<kube.HelmDryRunResult>;
+
+export function IsMetricsServerKlustrManaged(arg1:string):Promise<boolean>;
 
 export function ListArgoApplicationResources(arg1:string,arg2:string,arg3:string):Promise<Array<kube.ArgoApplicationResource>>;
 
@@ -223,6 +227,8 @@ export function PingContext(arg1:string):Promise<kube.ServerVersion>;
 export function PodLogTargets(arg1:string,arg2:string,arg3:Record<string, string>):Promise<Array<kube.PodLogTarget>>;
 
 export function PodsForOwner(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Array<kube.PodInfo>>;
+
+export function RecommendInsecureKubeletTLS(arg1:string):Promise<boolean>;
 
 export function RefreshArgoApplication(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 

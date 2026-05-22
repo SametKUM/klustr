@@ -1,6 +1,9 @@
 import {
   AddHelmRepo,
   ApplyResourceYAML,
+  FetchMetricsServerManifest,
+  IsMetricsServerKlustrManaged,
+  RecommendInsecureKubeletTLS,
   DeleteResource,
   EnsureCustomResourceWatch,
   GetCustomResourceYAML,
@@ -461,6 +464,11 @@ export const api = {
     GetResourceYAML(ctx, kind, ns, name),
   applyResourceYAML: (ctx: string, yamlBody: string): Promise<void> =>
     ApplyResourceYAML(ctx, yamlBody),
+  fetchMetricsServerManifest: (): Promise<string> => FetchMetricsServerManifest(),
+  recommendInsecureKubeletTLS: (ctx: string): Promise<boolean> =>
+    RecommendInsecureKubeletTLS(ctx),
+  isMetricsServerKlustrManaged: (ctx: string): Promise<boolean> =>
+    IsMetricsServerKlustrManaged(ctx),
   deleteResource: (ctx: string, kind: string, ns: string, name: string): Promise<void> =>
     DeleteResource(ctx, kind, ns, name),
   scaleResource: (ctx: string, kind: string, ns: string, name: string, replicas: number): Promise<void> =>
