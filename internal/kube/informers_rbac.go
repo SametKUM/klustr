@@ -4,8 +4,9 @@ import (
 	"sort"
 	"time"
 
-	rbacv1 "k8s.io/api/rbac/v1"
+	certv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
@@ -43,6 +44,14 @@ type ClusterRoleBindingInfo struct {
 	RoleRef   string `json:"roleRef"`
 	Subjects  int    `json:"subjects"`
 	CreatedAt string `json:"createdAt"`
+}
+
+type CertificateSigningRequestInfo struct {
+	Name       string `json:"name"`
+	SignerName string `json:"signerName"`
+	Requester  string `json:"requester"`
+	Condition  string `json:"condition"`
+	CreatedAt  string `json:"createdAt"`
 }
 
 func (w *contextWatcher) ServiceAccounts(namespace string) []ServiceAccountInfo {
@@ -160,6 +169,62 @@ func (w *contextWatcher) ClusterRoles() []ClusterRoleInfo {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
+}
+
+func (w *contextWatcher) CertificateSigningRequests() []CertificateSigningRequestInfo {
+	f := w.factoryFor("CertificateSigningRequest")
+	if f == nil {
+		return []CertificateSigningRequestInfo{}
+	}
+	list, err := f.Certificates().V1().CertificateSigningRequests().Lister().List(labels.Everything())
+	if err != nil {
+		return []CertificateSigningRequestInfo{}
+	}
+	out := make([]CertificateSigningRequestInfo, 0, len(list))
+	for _, c := range list {
+		out = append(out, CertificateSigningRequestInfo{
+			Name:       c.Name,
+			SignerName: c.Spec.SignerName,
+			Requester:  c.Spec.Username,
+			Condition:  csrCondition(c),
+			CreatedAt:  c.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+// csrCondition reports the effective state of a CSR: Issued (cert present
+// wins, since signers only write status.certificate after success), Denied,
+// Failed, Approved, or Pending. The Approved row is what the user sees right
+// after clicking Approve, before the signer mints the cert.
+func csrCondition(c *certv1.CertificateSigningRequest) string {
+	if len(c.Status.Certificate) > 0 {
+		return "Issued"
+	}
+	denied, failed, approved := false, false, false
+	for _, cond := range c.Status.Conditions {
+		if cond.Status != corev1.ConditionTrue {
+			continue
+		}
+		switch cond.Type {
+		case certv1.CertificateDenied:
+			denied = true
+		case certv1.CertificateFailed:
+			failed = true
+		case certv1.CertificateApproved:
+			approved = true
+		}
+	}
+	switch {
+	case denied:
+		return "Denied"
+	case failed:
+		return "Failed"
+	case approved:
+		return "Approved"
+	}
+	return "Pending"
 }
 
 func (w *contextWatcher) ClusterRoleBindings() []ClusterRoleBindingInfo {

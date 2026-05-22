@@ -275,6 +275,9 @@ func (w *contextWatcher) registerHandlers() error {
 		{"ClusterRoleBinding", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
 			return f.Rbac().V1().ClusterRoleBindings().Informer()
 		}},
+		{"CertificateSigningRequest", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Certificates().V1().CertificateSigningRequests().Informer()
+		}},
 	}
 
 	for _, b := range bindings {

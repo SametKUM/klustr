@@ -82,6 +82,22 @@ func (m *ClientManager) ClusterRoleBinding(contextName, name string) (*ClusterRo
 	return w.ClusterRoleBinding(name)
 }
 
+func (m *ClientManager) CertificateSigningRequests(contextName string) []CertificateSigningRequestInfo {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return []CertificateSigningRequestInfo{}
+	}
+	return w.CertificateSigningRequests()
+}
+
+func (m *ClientManager) CertificateSigningRequest(contextName, name string) (*CertificateSigningRequestDetail, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.CertificateSigningRequest(name)
+}
+
 func (m *ClientManager) AccessSubjects(contextName string) []AccessSubject {
 	w, ok := m.watcher(contextName)
 	if !ok {

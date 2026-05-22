@@ -55,6 +55,8 @@ var kindToGVR = map[string]schema.GroupVersionResource{
 
 	"APIService": {Group: "apiregistration.k8s.io", Version: "v1", Resource: "apiservices"},
 
+	"CertificateSigningRequest": {Group: "certificates.k8s.io", Version: "v1", Resource: "certificatesigningrequests"},
+
 	"Gateway":        {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"},
 	"HTTPRoute":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"},
 	"GRPCRoute":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "grpcroutes"},

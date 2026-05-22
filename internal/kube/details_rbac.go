@@ -86,6 +86,23 @@ type ClusterRoleBindingDetail struct {
 	CreatedAt   string            `json:"createdAt"`
 }
 
+type CertificateSigningRequestDetail struct {
+	Name              string            `json:"name"`
+	UID               string            `json:"uid"`
+	SignerName        string            `json:"signerName"`
+	Requester         string            `json:"requester"`
+	RequesterUID      string            `json:"requesterUID"`
+	Groups            []string          `json:"groups"`
+	Usages            []string          `json:"usages"`
+	ExpirationSeconds int32             `json:"expirationSeconds"`
+	Condition         string            `json:"condition"`
+	Issued            bool              `json:"issued"`
+	Conditions        []ConditionDetail `json:"conditions"`
+	Labels            map[string]string `json:"labels"`
+	Annotations       map[string]string `json:"annotations"`
+	CreatedAt         string            `json:"createdAt"`
+}
+
 func (w *contextWatcher) ServiceAccount(namespace, name string) (*ServiceAccountDetail, error) {
 	f := w.factoryFor("ServiceAccount")
 	if f == nil {
@@ -222,6 +239,50 @@ func (w *contextWatcher) ClusterRoleBinding(name string) (*ClusterRoleBindingDet
 		Labels:      b.Labels,
 		Annotations: b.Annotations,
 		CreatedAt:   b.CreationTimestamp.UTC().Format(time.RFC3339),
+	}, nil
+}
+
+func (w *contextWatcher) CertificateSigningRequest(name string) (*CertificateSigningRequestDetail, error) {
+	f := w.factoryFor("CertificateSigningRequest")
+	if f == nil {
+		return nil, errKindNoAccess("CertificateSigningRequest")
+	}
+	c, err := f.Certificates().V1().CertificateSigningRequests().Lister().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	usages := make([]string, 0, len(c.Spec.Usages))
+	for _, u := range c.Spec.Usages {
+		usages = append(usages, string(u))
+	}
+	conds := make([]ConditionDetail, 0, len(c.Status.Conditions))
+	for _, cond := range c.Status.Conditions {
+		conds = append(conds, ConditionDetail{
+			Type:    string(cond.Type),
+			Status:  string(cond.Status),
+			Reason:  cond.Reason,
+			Message: cond.Message,
+		})
+	}
+	exp := int32(0)
+	if c.Spec.ExpirationSeconds != nil {
+		exp = *c.Spec.ExpirationSeconds
+	}
+	return &CertificateSigningRequestDetail{
+		Name:              c.Name,
+		UID:               string(c.UID),
+		SignerName:        c.Spec.SignerName,
+		Requester:         c.Spec.Username,
+		RequesterUID:      c.Spec.UID,
+		Groups:            append([]string{}, c.Spec.Groups...),
+		Usages:            usages,
+		ExpirationSeconds: exp,
+		Condition:         csrCondition(c),
+		Issued:            len(c.Status.Certificate) > 0,
+		Conditions:        conds,
+		Labels:            c.Labels,
+		Annotations:       c.Annotations,
+		CreatedAt:         c.CreationTimestamp.UTC().Format(time.RFC3339),
 	}, nil
 }
 
