@@ -29,6 +29,7 @@ import { IngressClassesView } from '@/features/ingressclasses/IngressClassesView
 import { PriorityClassesView } from '@/features/priorityclasses/PriorityClassesView'
 import { RuntimeClassesView } from '@/features/runtimeclasses/RuntimeClassesView'
 import { APIServicesView } from '@/features/apiservices/APIServicesView'
+import { CSRsView } from '@/features/csrs/CSRsView'
 import { LeasesView } from '@/features/leases/LeasesView'
 import { MutatingWebhookConfigurationsView } from '@/features/webhooks/MutatingWebhookConfigurationsView'
 import { ValidatingWebhookConfigurationsView } from '@/features/webhooks/ValidatingWebhookConfigurationsView'
@@ -142,6 +143,8 @@ function MainView() {
       return <RuntimeClassesView />
     case 'apiservices':
       return <APIServicesView />
+    case 'certificatesigningrequests':
+      return <CSRsView />
     case 'leases':
       return <LeasesView />
     case 'mutatingwebhookconfigurations':

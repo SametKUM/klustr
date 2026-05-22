@@ -39,6 +39,7 @@ import { IngressClassDetailBody } from '@/features/ingressclasses/IngressClassDe
 import { PriorityClassDetailBody } from '@/features/priorityclasses/PriorityClassDetailBody'
 import { RuntimeClassDetailBody } from '@/features/runtimeclasses/RuntimeClassDetailBody'
 import { APIServiceDetailBody } from '@/features/apiservices/APIServiceDetailBody'
+import { CSRDetailBody } from '@/features/csrs/CSRDetailBody'
 import { LeaseDetailBody } from '@/features/leases/LeaseDetailBody'
 import { WebhookConfigurationDetailBody } from '@/features/webhooks/WebhookConfigurationDetailBody'
 import { EndpointsDetailBody } from '@/features/endpoints/EndpointsDetailBody'
@@ -501,6 +502,8 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
       return <RuntimeClassDetailBody contextName={contextName} name={resource.name} />
     case 'APIService':
       return <APIServiceDetailBody contextName={contextName} name={resource.name} />
+    case 'CertificateSigningRequest':
+      return <CSRDetailBody contextName={contextName} name={resource.name} />
     case 'Lease':
       return <LeaseDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
     case 'MutatingWebhookConfiguration':

@@ -37,6 +37,7 @@ import {
   Ruler,
   ScanSearch,
   Scale,
+  ScrollText,
   Server,
   Settings2,
   Shield,
@@ -140,6 +141,12 @@ export const RESOURCE_GROUPS: ResourceGroup[] = [
       { label: 'Roles', view: 'roles', icon: Shield, kind: 'Role' },
       { label: 'Cluster Role Bindings', view: 'clusterrolebindings', icon: Link2, kind: 'ClusterRoleBinding' },
       { label: 'Role Bindings', view: 'rolebindings', icon: Link, kind: 'RoleBinding' },
+      {
+        label: 'CSRs',
+        view: 'certificatesigningrequests',
+        icon: ScrollText,
+        kind: 'CertificateSigningRequest',
+      },
     ],
   },
 ]

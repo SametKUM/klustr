@@ -35,6 +35,7 @@ import type {
   RoleBindingInfo,
   ClusterRoleInfo,
   ClusterRoleBindingInfo,
+  CertificateSigningRequestInfo,
   GatewayInfo,
   HTTPRouteInfo,
   GRPCRouteInfo,
@@ -81,6 +82,7 @@ type ResourcesState = {
   roleBindings: ByContext<RoleBindingInfo>
   clusterRoles: ByContext<ClusterRoleInfo>
   clusterRoleBindings: ByContext<ClusterRoleBindingInfo>
+  certificateSigningRequests: ByContext<CertificateSigningRequestInfo>
   gateways: ByContext<GatewayInfo>
   httpRoutes: ByContext<HTTPRouteInfo>
   grpcRoutes: ByContext<GRPCRouteInfo>
@@ -122,6 +124,7 @@ type ResourcesState = {
   setRoleBindings: (ctx: string, list: RoleBindingInfo[]) => void
   setClusterRoles: (ctx: string, list: ClusterRoleInfo[]) => void
   setClusterRoleBindings: (ctx: string, list: ClusterRoleBindingInfo[]) => void
+  setCertificateSigningRequests: (ctx: string, list: CertificateSigningRequestInfo[]) => void
   setGateways: (ctx: string, list: GatewayInfo[]) => void
   setHTTPRoutes: (ctx: string, list: HTTPRouteInfo[]) => void
   setGRPCRoutes: (ctx: string, list: GRPCRouteInfo[]) => void
@@ -168,6 +171,7 @@ const KIND_KEYS = [
   'roleBindings',
   'clusterRoles',
   'clusterRoleBindings',
+  'certificateSigningRequests',
   'gateways',
   'httpRoutes',
   'grpcRoutes',
@@ -270,6 +274,8 @@ export const useResources = create<ResourcesState>((set) => ({
     set((s) => ({ clusterRoles: withCtx(s.clusterRoles, ctx, list) })),
   setClusterRoleBindings: (ctx, list) =>
     set((s) => ({ clusterRoleBindings: withCtx(s.clusterRoleBindings, ctx, list) })),
+  setCertificateSigningRequests: (ctx, list) =>
+    set((s) => ({ certificateSigningRequests: withCtx(s.certificateSigningRequests, ctx, list) })),
   setGateways: (ctx, list) => set((s) => ({ gateways: withCtx(s.gateways, ctx, list) })),
   setHTTPRoutes: (ctx, list) => set((s) => ({ httpRoutes: withCtx(s.httpRoutes, ctx, list) })),
   setGRPCRoutes: (ctx, list) => set((s) => ({ grpcRoutes: withCtx(s.grpcRoutes, ctx, list) })),

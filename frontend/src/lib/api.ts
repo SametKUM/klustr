@@ -115,6 +115,10 @@ import {
   GetClusterRole,
   ListClusterRoleBindings,
   GetClusterRoleBinding,
+  ListCertificateSigningRequests,
+  GetCertificateSigningRequest,
+  ApproveCertificateSigningRequest,
+  DenyCertificateSigningRequest,
   ListAccessSubjects,
   GetSubjectAccess,
   ListAccessibleKinds,
@@ -187,6 +191,8 @@ export type RoleInfo = kube.RoleInfo
 export type RoleBindingInfo = kube.RoleBindingInfo
 export type ClusterRoleInfo = kube.ClusterRoleInfo
 export type ClusterRoleBindingInfo = kube.ClusterRoleBindingInfo
+export type CertificateSigningRequestInfo = kube.CertificateSigningRequestInfo
+export type CertificateSigningRequestDetail = kube.CertificateSigningRequestDetail
 export type PodDetail = kube.PodDetail
 export type ContainerDetail = kube.ContainerDetail
 export type ContainerEnvVar = kube.ContainerEnvVar
@@ -392,6 +398,16 @@ export const api = {
     GetClusterRole(ctx, name),
   getClusterRoleBinding: (ctx: string, name: string): Promise<ClusterRoleBindingDetail> =>
     GetClusterRoleBinding(ctx, name),
+  listCertificateSigningRequests: (name: string): Promise<CertificateSigningRequestInfo[]> =>
+    ListCertificateSigningRequests(name),
+  getCertificateSigningRequest: (
+    ctx: string,
+    name: string,
+  ): Promise<CertificateSigningRequestDetail> => GetCertificateSigningRequest(ctx, name),
+  approveCertificateSigningRequest: (ctx: string, name: string, message: string): Promise<void> =>
+    ApproveCertificateSigningRequest(ctx, name, message),
+  denyCertificateSigningRequest: (ctx: string, name: string, message: string): Promise<void> =>
+    DenyCertificateSigningRequest(ctx, name, message),
   listAccessSubjects: (ctx: string): Promise<AccessSubject[]> => ListAccessSubjects(ctx),
   getSubjectAccess: (
     ctx: string,
