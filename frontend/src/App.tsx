@@ -59,6 +59,7 @@ import { ReferenceGrantsView } from '@/features/referencegrants/ReferenceGrantsV
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
 import { ARGO_GROUP, GATEWAY_GROUP, HELM_GROUP, RESOURCE_GROUPS, type ResourceGroup } from '@/features/_shared/resourceGroups'
 import { SidebarGroup } from '@/features/_shared/SidebarGroup'
+import { SidebarResizeHandle } from '@/features/_shared/SidebarResizeHandle'
 import { RowActionDialogs } from '@/features/_shared/RowActionDialogs'
 import { KeyboardShortcutsDialog } from '@/features/_shared/KeyboardShortcutsDialog'
 import { CommandPalette } from '@/features/_shared/CommandPalette'
@@ -214,6 +215,8 @@ function App() {
   const toggleNavGroup = useUIStore((s) => s.toggleNavGroup)
   const sidebarMode = useUIStore((s) => s.sidebarMode)
   const toggleSidebarMode = useUIStore((s) => s.toggleSidebarMode)
+  const sidebarWidth = useUIStore((s) => s.sidebarWidth)
+  const setSidebarWidth = useUIStore((s) => s.setSidebarWidth)
   const expandedCRDGroups = useUIStore((s) => s.expandedCRDGroups)
   const toggleCRDGroup = useUIStore((s) => s.toggleCRDGroup)
   const primaryTagId = useUIStore((s) =>
@@ -349,8 +352,9 @@ function App() {
 
       <div className="flex flex-1 overflow-hidden">
         <aside
+          style={sidebarMode === 'expanded' ? { width: sidebarWidth } : undefined}
           className={`${
-            sidebarMode === 'icons' ? 'w-12' : 'w-56'
+            sidebarMode === 'icons' ? 'w-12' : ''
           } relative flex shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground`}
         >
           {sidebarMode === 'icons' && (
@@ -417,6 +421,9 @@ function App() {
               />
             )}
           </nav>
+          {sidebarMode === 'expanded' && (
+            <SidebarResizeHandle width={sidebarWidth} onResize={setSidebarWidth} />
+          )}
         </aside>
 
         <main className="flex flex-1 overflow-hidden">
