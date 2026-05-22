@@ -379,7 +379,7 @@ function App() {
                   type="button"
                   onClick={toggleSidebarMode}
                   aria-label="Collapse sidebar"
-                  className="absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  className="absolute right-1 top-1 z-10 flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 >
                   <PanelLeftClose className="size-4" aria-hidden />
                 </button>
