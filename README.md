@@ -138,7 +138,7 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 
 ## Contributing
 
-Bug reports and pull requests are welcome.
+Bug reports and focused pull requests are welcome.
 
 - Read [`CLAUDE.md`](CLAUDE.md) first — it's the architecture + conventions contract.
 - Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `refactor:` …) and prefer small, logically scoped commits.
@@ -148,6 +148,8 @@ Bug reports and pull requests are welcome.
   cd frontend && npm test && npm run lint && npm run typecheck
   ```
 - New user-facing features should include a screenshot or short clip in the PR description.
+
+Full guide: [`CONTRIBUTING.md`](CONTRIBUTING.md). Bug reports go through the [`bug_report.yml`](.github/ISSUE_TEMPLATE/bug_report.yml) issue template so the version / OS / cluster details we need actually land in the report.
 
 ## License
 

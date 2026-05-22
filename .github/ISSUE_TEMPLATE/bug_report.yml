@@ -1,0 +1,55 @@
+name: Bug report
+description: Something is broken in Klustr.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Klustr version
+      placeholder: e.g. v0.14.1 (see the status bar)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux
+        - Windows
+    validations:
+      required: true
+
+  - type: input
+    id: k8s-version
+    attributes:
+      label: Kubernetes server version
+      description: From `kubectl version`.
+      placeholder: e.g. v1.31.0
+    validations:
+      required: true
+
+  - type: input
+    id: cluster-type
+    attributes:
+      label: Cluster type
+      placeholder: kind / k3d / EKS / GKE / AKS / on-prem / …
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, what you expected, and the numbered steps to reproduce. Paste error toasts verbatim.
+    validations:
+      required: true
+
+  - type: textarea
+    id: extras
+    attributes:
+      label: Screenshots, recordings, or console output
+      description: Drag images or clips here. Console.app / journalctl / Event Viewer lines welcome.

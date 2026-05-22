@@ -289,7 +289,7 @@ The test surface is **headless unit tests only** — Vitest+jsdom for frontend, 
 - Returning nil slices from Go: the JSON encoder emits `null` and React `.length` access blows up. Use `append([]string{}, src...)`.
 - Passing a fresh object literal into TanStack `state.columnSizing` (or similar controlled props) every render — TanStack fires the change handler and the controlled store ping-pongs into an infinite loop.
 - Adding global stores beyond the documented layers — current legal set is `resources`, `metrics`, `portForwards`, `crds`, `helm`, `namespaceFavorites`, `ui`, `tablePrefs`. Anything new needs a reason in the PR.
-- Generating boilerplate docs (CHANGELOG, CONTRIBUTING, CODE_OF_CONDUCT) before they're needed.
+- Generating boilerplate docs (CHANGELOG, CODE_OF_CONDUCT, SECURITY, PR templates) before they're needed. The contributor-facing surface today is `CONTRIBUTING.md` and a single `.github/ISSUE_TEMPLATE/bug_report.yml`.
 - Marketing-style copy or emoji in UI strings unless explicitly requested.
 - Editing auto-generated Wails bindings.
 - Staging anything under `hack/`. That directory is the user's local fixtures and is curated by hand.
