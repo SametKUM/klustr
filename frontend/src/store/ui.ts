@@ -34,6 +34,14 @@ function applyThemeClasses(theme: ThemeDefinition) {
 
 const COLLAPSED_NAV_GROUPS_KEY = 'klustr-collapsed-nav-groups'
 const EXPANDED_CRD_GROUPS_KEY = 'klustr-expanded-crd-groups'
+const SIDEBAR_MODE_KEY = 'klustr-sidebar-mode'
+
+export type SidebarMode = 'expanded' | 'icons'
+
+function readSidebarMode(): SidebarMode {
+  const raw = localStorage.getItem(SIDEBAR_MODE_KEY)
+  return raw === 'icons' ? 'icons' : 'expanded'
+}
 
 function readStringArray(key: string): string[] {
   try {
@@ -364,6 +372,7 @@ type UIState = {
   requestedTab: DetailTab | null
   pendingAction: PendingAction | null
   themeId: ThemeId
+  sidebarMode: SidebarMode
   collapsedNavGroups: string[]
   expandedCRDGroups: string[]
   defaultContext: string | null
@@ -384,6 +393,7 @@ type UIState = {
   goBackResource: () => void
   setPendingAction: (action: PendingAction | null) => void
   setTheme: (id: ThemeId) => void
+  toggleSidebarMode: () => void
   toggleNavGroup: (label: string) => void
   toggleCRDGroup: (label: string) => void
   setDefaultContext: (name: string | null) => void
@@ -474,6 +484,7 @@ export const useUIStore = create<UIState>((set) => {
     requestedTab: null,
     pendingAction: null,
     themeId: initialThemeId,
+    sidebarMode: readSidebarMode(),
     collapsedNavGroups: readCollapsedNavGroups(),
     expandedCRDGroups: readExpandedCRDGroups(),
     defaultContext: initialDefaultContext,
@@ -573,6 +584,12 @@ export const useUIStore = create<UIState>((set) => {
       localStorage.setItem(THEME_STORAGE_KEY, id)
       set({ themeId: id })
     },
+    toggleSidebarMode: () =>
+      set((s) => {
+        const next: SidebarMode = s.sidebarMode === 'expanded' ? 'icons' : 'expanded'
+        localStorage.setItem(SIDEBAR_MODE_KEY, next)
+        return { sidebarMode: next }
+      }),
     toggleNavGroup: (label) =>
       set((s) => {
         const next = s.collapsedNavGroups.includes(label)
