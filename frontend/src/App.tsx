@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ContextSwitcher } from '@/features/contexts/ContextSwitcher'
 import { ContextTagPicker } from '@/features/contexts/ContextTagPicker'
@@ -58,6 +58,7 @@ import { GatewayClassesView } from '@/features/gatewayclasses/GatewayClassesView
 import { ReferenceGrantsView } from '@/features/referencegrants/ReferenceGrantsView'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
 import { ARGO_GROUP, GATEWAY_GROUP, HELM_GROUP, RESOURCE_GROUPS, type ResourceGroup } from '@/features/_shared/resourceGroups'
+import { SidebarGroup } from '@/features/_shared/SidebarGroup'
 import { RowActionDialogs } from '@/features/_shared/RowActionDialogs'
 import { KeyboardShortcutsDialog } from '@/features/_shared/KeyboardShortcutsDialog'
 import { CommandPalette } from '@/features/_shared/CommandPalette'
@@ -66,7 +67,7 @@ import { StatusBar } from '@/features/_shared/StatusBar'
 import { PodSearchPalette } from '@/features/pods/PodSearchPalette'
 import { PortForwardIndicator } from '@/features/portforward/PortForwardIndicator'
 import { Toaster } from '@/components/ui/sonner'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import { onKubeChange, onPFUpdate } from '@/lib/events'
 import { useActiveContexts, useUIStore, type ResourceView } from '@/store/ui'
@@ -211,6 +212,8 @@ function App() {
   const selectedResource = useUIStore((s) => s.selectedResource)
   const collapsedNavGroups = useUIStore((s) => s.collapsedNavGroups)
   const toggleNavGroup = useUIStore((s) => s.toggleNavGroup)
+  const sidebarMode = useUIStore((s) => s.sidebarMode)
+  const toggleSidebarMode = useUIStore((s) => s.toggleSidebarMode)
   const expandedCRDGroups = useUIStore((s) => s.expandedCRDGroups)
   const toggleCRDGroup = useUIStore((s) => s.toggleCRDGroup)
   const primaryTagId = useUIStore((s) =>
@@ -237,14 +240,17 @@ function App() {
   const hasArgoApplications = crds.some(
     (c) => c.group === 'argoproj.io' && c.resource === 'applications',
   )
-  const navViews = useMemo<ResourceView[]>(() => {
+  const visibleGroups = useMemo<ResourceGroup[]>(() => {
     return [
-      ...RESOURCE_GROUPS.flatMap(groupViews),
-      ...(hasGatewayAPI ? groupViews(GATEWAY_GROUP) : []),
-      ...(hasArgoApplications ? groupViews(ARGO_GROUP) : []),
-      ...groupViews(HELM_GROUP),
+      ...RESOURCE_GROUPS,
+      ...(hasGatewayAPI ? [GATEWAY_GROUP] : []),
+      ...(hasArgoApplications ? [ARGO_GROUP] : []),
+      HELM_GROUP,
     ]
   }, [hasGatewayAPI, hasArgoApplications])
+  const navViews = useMemo<ResourceView[]>(() => visibleGroups.flatMap(groupViews), [
+    visibleGroups,
+  ])
 
   useEffect(() => {
     activeNavItemRef.current?.scrollIntoView({ block: 'nearest' })
@@ -342,195 +348,74 @@ function App() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-56 shrink-0 overflow-y-auto border-r border-border bg-sidebar text-sidebar-foreground">
-          <nav className="flex flex-col gap-3 p-3">
-            {RESOURCE_GROUPS.map((group) => {
-              const collapsed = collapsedNavGroups.includes(group.label)
-              return (
-                <div key={group.label}>
+        <aside
+          className={`${
+            sidebarMode === 'icons' ? 'w-12' : 'w-56'
+          } relative flex shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground`}
+        >
+          {sidebarMode === 'icons' && (
+            <div className="flex shrink-0 justify-center p-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => toggleNavGroup(group.label)}
-                    aria-expanded={!collapsed}
-                    className="flex w-full items-center gap-1 px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-sidebar-foreground"
+                    onClick={toggleSidebarMode}
+                    aria-label="Expand sidebar"
+                    className="flex size-8 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   >
-                    <ChevronRight
-                      className={`size-3 shrink-0 transition-transform ${collapsed ? '' : 'rotate-90'}`}
-                    />
-                    <span>{group.label}</span>
+                    <PanelLeftOpen className="size-4" aria-hidden />
                   </button>
-                  {!collapsed && (
-                    <ul className="flex flex-col">
-                      {group.items.map((item) => {
-                        const active =
-                          item.view !== undefined &&
-                          item.view === selectedView &&
-                          selectedCRDKey === null
-                        const enabled = item.view !== undefined
-                        return (
-                          <li
-                            key={item.label}
-                            ref={active ? activeNavItemRef : undefined}
-                            aria-disabled={!enabled}
-                            className={[
-                              'rounded px-2 py-1 text-sm',
-                              enabled
-                                ? 'cursor-pointer text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                                : 'cursor-default text-muted-foreground/60',
-                              active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
-                            ].join(' ')}
-                            onClick={() => {
-                              if (item.view) setSelectedView(item.view)
-                            }}
-                          >
-                            {item.label}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </div>
-              )
-            })}
-            {crds.some((c) => c.group === 'gateway.networking.k8s.io') && (
-              (() => {
-                const collapsed = collapsedNavGroups.includes(GATEWAY_GROUP.label)
-                return (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => toggleNavGroup(GATEWAY_GROUP.label)}
-                      aria-expanded={!collapsed}
-                      className="flex w-full items-center gap-1 px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-sidebar-foreground"
-                    >
-                      <ChevronRight
-                        className={`size-3 shrink-0 transition-transform ${collapsed ? '' : 'rotate-90'}`}
-                      />
-                      <span>{GATEWAY_GROUP.label}</span>
-                    </button>
-                    {!collapsed && (
-                      <ul className="flex flex-col">
-                        {GATEWAY_GROUP.items.map((item) => {
-                          const active =
-                            item.view !== undefined &&
-                            item.view === selectedView &&
-                            selectedCRDKey === null
-                          return (
-                            <li
-                              key={item.label}
-                              ref={active ? activeNavItemRef : undefined}
-                              className={[
-                                'cursor-pointer rounded px-2 py-1 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                                active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
-                              ].join(' ')}
-                              onClick={() => {
-                                if (item.view) setSelectedView(item.view)
-                              }}
-                            >
-                              {item.label}
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                )
-              })()
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={6}>
+                  Expand sidebar
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+          {sidebarMode === 'expanded' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleSidebarMode}
+                  aria-label="Collapse sidebar"
+                  className="absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                >
+                  <PanelLeftClose className="size-4" aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={6}>
+                Collapse sidebar
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <nav
+            className={`flex flex-1 flex-col overflow-y-auto ${
+              sidebarMode === 'icons' ? 'items-center gap-1 p-1' : 'gap-3 p-3'
+            }`}
+          >
+            {visibleGroups.map((group) => (
+              <SidebarGroup
+                key={group.label}
+                group={group}
+                mode={sidebarMode}
+                collapsed={collapsedNavGroups.includes(group.label)}
+                onToggleCollapse={() => toggleNavGroup(group.label)}
+                selectedView={selectedView}
+                selectedCRDKey={selectedCRDKey}
+                onSelectView={setSelectedView}
+                activeItemRef={activeNavItemRef}
+              />
+            ))}
+            {sidebarMode === 'expanded' && (
+              <CRDGroups
+                crds={crds}
+                expandedGroups={expandedCRDGroups}
+                toggleGroup={toggleCRDGroup}
+                selectedCRDKey={selectedCRDKey}
+                onSelect={setSelectedCRD}
+              />
             )}
-            {crds.some((c) => c.group === 'argoproj.io' && c.resource === 'applications') && (
-              (() => {
-                const collapsed = collapsedNavGroups.includes(ARGO_GROUP.label)
-                return (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => toggleNavGroup(ARGO_GROUP.label)}
-                      aria-expanded={!collapsed}
-                      className="flex w-full items-center gap-1 px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-sidebar-foreground"
-                    >
-                      <ChevronRight
-                        className={`size-3 shrink-0 transition-transform ${collapsed ? '' : 'rotate-90'}`}
-                      />
-                      <span>{ARGO_GROUP.label}</span>
-                    </button>
-                    {!collapsed && (
-                      <ul className="flex flex-col">
-                        {ARGO_GROUP.items.map((item) => {
-                          const active =
-                            item.view !== undefined &&
-                            item.view === selectedView &&
-                            selectedCRDKey === null
-                          return (
-                            <li
-                              key={item.label}
-                              ref={active ? activeNavItemRef : undefined}
-                              className={[
-                                'cursor-pointer rounded px-2 py-1 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                                active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
-                              ].join(' ')}
-                              onClick={() => {
-                                if (item.view) setSelectedView(item.view)
-                              }}
-                            >
-                              {item.label}
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                )
-              })()
-            )}
-            {(() => {
-              const collapsed = collapsedNavGroups.includes(HELM_GROUP.label)
-              return (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => toggleNavGroup(HELM_GROUP.label)}
-                    aria-expanded={!collapsed}
-                    className="flex w-full items-center gap-1 px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-sidebar-foreground"
-                  >
-                    <ChevronRight
-                      className={`size-3 shrink-0 transition-transform ${collapsed ? '' : 'rotate-90'}`}
-                    />
-                    <span>{HELM_GROUP.label}</span>
-                  </button>
-                  {!collapsed && (
-                    <ul className="flex flex-col">
-                      {HELM_GROUP.items.map((item) => {
-                        const active =
-                          item.view !== undefined &&
-                          item.view === selectedView &&
-                          selectedCRDKey === null
-                        return (
-                          <li
-                            key={item.label}
-                            className={[
-                              'cursor-pointer rounded px-2 py-1 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                              active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
-                            ].join(' ')}
-                            onClick={() => {
-                              if (item.view) setSelectedView(item.view)
-                            }}
-                          >
-                            {item.label}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </div>
-              )
-            })()}
-            <CRDGroups
-              crds={crds}
-              expandedGroups={expandedCRDGroups}
-              toggleGroup={toggleCRDGroup}
-              selectedCRDKey={selectedCRDKey}
-              onSelect={setSelectedCRD}
-            />
           </nav>
         </aside>
 
