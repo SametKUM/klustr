@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Loader2, Pause, Play } from 'lucide-react'
+import { Pause, Play } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api, type DeploymentDetail } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
@@ -77,7 +78,7 @@ export function PauseDeploymentButton({ contextName, resource }: Props) {
           onClick={() => toggle.mutate()}
           disabled={paused === null || toggle.isPending}
         >
-          {toggle.isPending ? <Loader2 className="animate-spin" /> : <Icon />}
+          {toggle.isPending ? <Spinner size="lg" muted={false} /> : <Icon />}
           {label}
         </Button>
       </TooltipTrigger>

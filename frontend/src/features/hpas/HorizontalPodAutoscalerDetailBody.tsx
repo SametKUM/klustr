@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Loader2, Minus, Pencil, Plus } from 'lucide-react'
+import { Minus, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, type HPAMetricTarget, type HorizontalPodAutoscalerDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import {
   InputGroup,
   InputGroupAddon,
@@ -171,7 +172,7 @@ function ReplicaBoundsEditor({
           />
           <div className="ml-1 flex items-center gap-1">
             <Button size="xs" onClick={() => patch.mutate()} disabled={!canSave}>
-              {patch.isPending && <Loader2 className="size-3 animate-spin" />}
+              {patch.isPending && <Spinner size="sm" />}
               Save
             </Button>
             <Button

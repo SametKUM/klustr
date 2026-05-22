@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react'
-import { Check, Copy, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Check, Copy, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { api, type SecretDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
@@ -67,7 +68,7 @@ function SecretValueRow({
         )}
         {state.status === 'loading' && (
           <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <Loader2 className="size-3 animate-spin" />
+            <Spinner size="sm" />
             Reading…
           </span>
         )}

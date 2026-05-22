@@ -4,7 +4,6 @@ import {
   ArrowRight,
   Check,
   Layers,
-  Loader2,
   Pencil,
   Plus,
   RefreshCcw,
@@ -15,6 +14,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import {
   Dialog,
   DialogContent,
@@ -192,7 +192,7 @@ export function ConnectionsScreen() {
           <div>
             {state.kind === 'loading' && (
               <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
+                <Spinner size="lg" />
                 Loading kubeconfig…
               </div>
             )}

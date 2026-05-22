@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { History, Loader2, RotateCcw } from 'lucide-react'
+import { History, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Td, Th } from '@/features/_shared/DetailPrimitives'
 import { api, type WorkloadRevision } from '@/lib/api'
 import { formatAge } from '@/lib/time'
@@ -154,7 +155,7 @@ export function RolloutHistoryTab({ contextName, kind, namespace, name }: Props)
   if (loading && revisions.length === 0) {
     return (
       <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground">
-        <Loader2 className="size-3.5 animate-spin" />
+        <Spinner />
         Loading rollout history…
       </div>
     )
@@ -265,7 +266,7 @@ export function RolloutHistoryTab({ contextName, kind, namespace, name }: Props)
               </div>
             ) : diffLoading ? (
               <div className="absolute inset-0 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="size-3.5 animate-spin" />
+                <Spinner />
                 Loading diff…
               </div>
             ) : (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Loader2, Minus, Plus, Sliders } from 'lucide-react'
+import { Minus, Plus, Sliders } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import type { ResourceKind, SelectedResource } from '@/store/ui'
@@ -157,7 +158,7 @@ export function ScaleResourceButton({ contextName, resource }: Props) {
               <Plus />
             </Button>
           </div>
-          {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+          {loading && <Spinner size="lg" />}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={scale.isPending}>

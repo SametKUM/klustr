@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Boxes, CheckCircle2, Loader2, OctagonX, Sparkles } from 'lucide-react'
+import { Boxes, CheckCircle2, OctagonX, Sparkles } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { api, type ServerVersion } from '@/lib/api'
 import { useUIStore } from '@/store/ui'
 
@@ -42,7 +43,7 @@ export function ConnectionStatus() {
   if (status.kind === 'pinging') {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
+        <Spinner size="lg" />
         Connecting to {selected}…
       </div>
     )
