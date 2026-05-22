@@ -8,16 +8,30 @@ import (
 
 func TestResourceForKind(t *testing.T) {
 	cases := []struct {
-		kind     string
-		wantRes  string
-		wantOK   bool
+		kind    string
+		wantGrp string
+		wantRes string
+		wantOK  bool
 	}{
-		{"Pod", "pods", true},
-		{"Deployment", "deployments", true},
-		{"HorizontalPodAutoscaler", "horizontalpodautoscalers", true},
-		{"Lease", "leases", true},
-		{"NotAKind", "", false},
-		{"", "", false},
+		{"Pod", "", "pods", true},
+		{"Deployment", "apps", "deployments", true},
+		{"HorizontalPodAutoscaler", "autoscaling", "horizontalpodautoscalers", true},
+		{"Lease", "coordination.k8s.io", "leases", true},
+		{"ServiceAccount", "", "serviceaccounts", true},
+		{"Role", "rbac.authorization.k8s.io", "roles", true},
+		{"RoleBinding", "rbac.authorization.k8s.io", "rolebindings", true},
+		{"ClusterRole", "rbac.authorization.k8s.io", "clusterroles", true},
+		{"ClusterRoleBinding", "rbac.authorization.k8s.io", "clusterrolebindings", true},
+		{"APIService", "apiregistration.k8s.io", "apiservices", true},
+		{"Gateway", "gateway.networking.k8s.io", "gateways", true},
+		{"HTTPRoute", "gateway.networking.k8s.io", "httproutes", true},
+		{"GRPCRoute", "gateway.networking.k8s.io", "grpcroutes", true},
+		{"GatewayClass", "gateway.networking.k8s.io", "gatewayclasses", true},
+		{"ReferenceGrant", "gateway.networking.k8s.io", "referencegrants", true},
+		{"MutatingWebhookConfiguration", "admissionregistration.k8s.io", "mutatingwebhookconfigurations", true},
+		{"ValidatingWebhookConfiguration", "admissionregistration.k8s.io", "validatingwebhookconfigurations", true},
+		{"NotAKind", "", "", false},
+		{"", "", "", false},
 	}
 
 	for _, tc := range cases {
@@ -29,6 +43,9 @@ func TestResourceForKind(t *testing.T) {
 				}
 				if gvr.Resource != tc.wantRes {
 					t.Fatalf("got resource %q, want %q", gvr.Resource, tc.wantRes)
+				}
+				if gvr.Group != tc.wantGrp {
+					t.Fatalf("got group %q, want %q", gvr.Group, tc.wantGrp)
 				}
 			} else if err == nil {
 				t.Fatalf("expected error for kind %q, got nil", tc.kind)
