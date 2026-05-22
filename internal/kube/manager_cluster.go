@@ -114,6 +114,22 @@ func (m *ClientManager) LimitRange(contextName, namespace, name string) (*LimitR
 	return w.LimitRange(namespace, name)
 }
 
+func (m *ClientManager) APIServices(contextName string) []APIServiceInfo {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return []APIServiceInfo{}
+	}
+	return w.APIServices()
+}
+
+func (m *ClientManager) APIService(contextName, name string) (*APIServiceDetail, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.APIService(name)
+}
+
 func (m *ClientManager) ResourceQuotas(contextName, namespace string) []ResourceQuotaInfo {
 	w, ok := m.watcher(contextName)
 	if !ok {

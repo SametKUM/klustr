@@ -140,6 +140,7 @@ func watchedKinds() []struct {
 		"IngressClass", "PriorityClass", "RuntimeClass",
 		"ClusterRole", "ClusterRoleBinding",
 		"MutatingWebhookConfiguration", "ValidatingWebhookConfiguration",
+		"APIService",
 	}
 	out := make([]struct {
 		kind string

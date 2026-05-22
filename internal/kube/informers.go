@@ -10,6 +10,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -55,12 +56,14 @@ type contextWatcher struct {
 	scopedNS  string                          // namespace `scoped` is bound to (informers.WithNamespace)
 	access    *contextAccess                  // per-kind routing decisions; nil ⇒ assume cluster-wide
 	defaultNS string                          // kubeconfig context.namespace, used as the scoped probe target
-	cs        kubernetes.Interface            // kept around for SelfSubjectAccessReview
-	gwFactory gwinformers.SharedInformerFactory
-	dyn       dynamic.Interface
-	crd       *crdWatcher
-	onChange  ChangeFunc
-	cancel    context.CancelFunc
+	cs             kubernetes.Interface // kept around for SelfSubjectAccessReview
+	gwFactory      gwinformers.SharedInformerFactory
+	apiSvcFactory  dynamicinformer.DynamicSharedInformerFactory
+	apiSvcInformer cache.SharedIndexInformer
+	dyn            dynamic.Interface
+	crd            *crdWatcher
+	onChange       ChangeFunc
+	cancel         context.CancelFunc
 
 	mu      sync.Mutex
 	pending map[string]struct{}
@@ -132,6 +135,11 @@ func (w *contextWatcher) start(parent context.Context) error {
 	}
 
 	if err := w.startGatewayInformers(ctx); err != nil {
+		cancel()
+		return err
+	}
+
+	if err := w.startAPIServiceInformer(ctx); err != nil {
 		cancel()
 		return err
 	}
