@@ -72,12 +72,11 @@ export function NamespaceSelector() {
   }, [unifiedNamespaces, favoriteSet])
 
   const disabled = activeContexts.length === 0
-  const label =
-    activeContexts.length === 0
-      ? 'No context'
-      : unifiedNamespaces.length === 0
-        ? 'Loading…'
-        : namespaceLabel(selectedNamespaces)
+  // Show "All namespaces" immediately while the informer is still syncing —
+  // it's accurate (no filter applied yet) and avoids the brief "Loading…"
+  // flicker that made the whole connect feel slow even when data was a few
+  // ms away. The dropdown list itself populates as soon as the cache hits.
+  const label = activeContexts.length === 0 ? 'No context' : namespaceLabel(selectedNamespaces)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
