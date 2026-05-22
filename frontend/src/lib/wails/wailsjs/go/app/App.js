@@ -10,8 +10,16 @@ export function ApplyResourceYAML(arg1, arg2) {
   return window['go']['app']['App']['ApplyResourceYAML'](arg1, arg2);
 }
 
+export function ApproveCertificateSigningRequest(arg1, arg2, arg3) {
+  return window['go']['app']['App']['ApproveCertificateSigningRequest'](arg1, arg2, arg3);
+}
+
 export function DeleteResource(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['DeleteResource'](arg1, arg2, arg3, arg4);
+}
+
+export function DenyCertificateSigningRequest(arg1, arg2, arg3) {
+  return window['go']['app']['App']['DenyCertificateSigningRequest'](arg1, arg2, arg3);
 }
 
 export function EnsureCustomResourceWatch(arg1, arg2, arg3, arg4) {
@@ -24,6 +32,10 @@ export function FetchMetricsServerManifest() {
 
 export function GetAPIService(arg1, arg2) {
   return window['go']['app']['App']['GetAPIService'](arg1, arg2);
+}
+
+export function GetCertificateSigningRequest(arg1, arg2) {
+  return window['go']['app']['App']['GetCertificateSigningRequest'](arg1, arg2);
 }
 
 export function GetClusterOverview(arg1) {
@@ -244,6 +256,10 @@ export function ListArgoApplications(arg1, arg2) {
 
 export function ListCRDs(arg1) {
   return window['go']['app']['App']['ListCRDs'](arg1);
+}
+
+export function ListCertificateSigningRequests(arg1) {
+  return window['go']['app']['App']['ListCertificateSigningRequests'](arg1);
 }
 
 export function ListClusterRoleBindings(arg1) {

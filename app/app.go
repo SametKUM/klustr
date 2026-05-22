@@ -532,6 +532,22 @@ func (a *App) ListAccessSubjects(contextName string) []kube.AccessSubject {
 	return a.clients.AccessSubjects(contextName)
 }
 
+func (a *App) ListCertificateSigningRequests(name string) []kube.CertificateSigningRequestInfo {
+	return a.clients.CertificateSigningRequests(name)
+}
+
+func (a *App) GetCertificateSigningRequest(contextName, name string) (*kube.CertificateSigningRequestDetail, error) {
+	return a.clients.CertificateSigningRequest(contextName, name)
+}
+
+func (a *App) ApproveCertificateSigningRequest(contextName, name, message string) error {
+	return a.clients.ApproveCSR(a.ctx, contextName, name, message)
+}
+
+func (a *App) DenyCertificateSigningRequest(contextName, name, message string) error {
+	return a.clients.DenyCSR(a.ctx, contextName, name, message)
+}
+
 func (a *App) ListAccessibleKinds(contextName string) []string {
 	out := a.clients.AccessibleKinds(contextName)
 	if out == nil {

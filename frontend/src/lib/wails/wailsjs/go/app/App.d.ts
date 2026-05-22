@@ -6,13 +6,19 @@ export function AddHelmRepo(arg1:string,arg2:string):Promise<void>;
 
 export function ApplyResourceYAML(arg1:string,arg2:string):Promise<void>;
 
+export function ApproveCertificateSigningRequest(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function DeleteResource(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function DenyCertificateSigningRequest(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function EnsureCustomResourceWatch(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function FetchMetricsServerManifest():Promise<string>;
 
 export function GetAPIService(arg1:string,arg2:string):Promise<kube.APIServiceDetail>;
+
+export function GetCertificateSigningRequest(arg1:string,arg2:string):Promise<kube.CertificateSigningRequestDetail>;
 
 export function GetClusterOverview(arg1:string):Promise<kube.ClusterOverview>;
 
@@ -123,6 +129,8 @@ export function ListArgoApplicationResources(arg1:string,arg2:string,arg3:string
 export function ListArgoApplications(arg1:string,arg2:string):Promise<Array<kube.ArgoApplicationInfo>>;
 
 export function ListCRDs(arg1:string):Promise<Array<kube.CRDInfo>>;
+
+export function ListCertificateSigningRequests(arg1:string):Promise<Array<kube.CertificateSigningRequestInfo>>;
 
 export function ListClusterRoleBindings(arg1:string):Promise<Array<kube.ClusterRoleBindingInfo>>;
 
