@@ -1,0 +1,299 @@
+package kube
+
+import (
+	"sort"
+	"strings"
+	"time"
+
+	coordv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+)
+
+type NamespaceInfo struct {
+	Name      string `json:"name"`
+	Phase     string `json:"phase"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type NodeInfo struct {
+	Name       string `json:"name"`
+	Status     string `json:"status"`
+	Roles      string `json:"roles"`
+	Version    string `json:"version"`
+	OSImage    string `json:"osImage"`
+	InternalIP string `json:"internalIP"`
+	CreatedAt  string `json:"createdAt"`
+}
+
+type LeaseInfo struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Holder    string `json:"holder"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type RuntimeClassInfo struct {
+	Name      string `json:"name"`
+	Handler   string `json:"handler"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type PriorityClassInfo struct {
+	Name          string `json:"name"`
+	Value         int32  `json:"value"`
+	GlobalDefault bool   `json:"globalDefault"`
+	Description   string `json:"description"`
+	CreatedAt     string `json:"createdAt"`
+}
+
+type IngressClassInfo struct {
+	Name       string `json:"name"`
+	Controller string `json:"controller"`
+	IsDefault  bool   `json:"isDefault"`
+	CreatedAt  string `json:"createdAt"`
+}
+
+type LimitRangeInfo struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Limits    int    `json:"limits"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type ResourceQuotaInfo struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Scopes    string `json:"scopes"`
+	Used      int    `json:"used"`
+	Hard      int    `json:"hard"`
+	CreatedAt string `json:"createdAt"`
+}
+
+func (w *contextWatcher) Namespaces() []NamespaceInfo {
+	list, err := w.factory.Core().V1().Namespaces().Lister().List(labels.Everything())
+	if err != nil {
+		return []NamespaceInfo{}
+	}
+	out := make([]NamespaceInfo, 0, len(list))
+	for _, ns := range list {
+		out = append(out, NamespaceInfo{
+			Name:      ns.Name,
+			Phase:     string(ns.Status.Phase),
+			CreatedAt: ns.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) Nodes() []NodeInfo {
+	list, err := w.factory.Core().V1().Nodes().Lister().List(labels.Everything())
+	if err != nil {
+		return []NodeInfo{}
+	}
+	out := make([]NodeInfo, 0, len(list))
+	for _, n := range list {
+		out = append(out, NodeInfo{
+			Name:       n.Name,
+			Status:     nodeStatus(n),
+			Roles:      nodeRoles(n),
+			Version:    n.Status.NodeInfo.KubeletVersion,
+			OSImage:    n.Status.NodeInfo.OSImage,
+			InternalIP: nodeInternalIP(n),
+			CreatedAt:  n.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) Leases(namespace string) []LeaseInfo {
+	lister := w.factory.Coordination().V1().Leases().Lister()
+	var (
+		leases []*coordv1.Lease
+		err    error
+	)
+	if namespace == "" {
+		leases, err = lister.List(labels.Everything())
+	} else {
+		leases, err = lister.Leases(namespace).List(labels.Everything())
+	}
+	if err != nil {
+		return []LeaseInfo{}
+	}
+	out := make([]LeaseInfo, 0, len(leases))
+	for _, l := range leases {
+		holder := ""
+		if l.Spec.HolderIdentity != nil {
+			holder = *l.Spec.HolderIdentity
+		}
+		out = append(out, LeaseInfo{
+			Name:      l.Name,
+			Namespace: l.Namespace,
+			Holder:    holder,
+			CreatedAt: l.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	return out
+}
+
+func (w *contextWatcher) RuntimeClasses() []RuntimeClassInfo {
+	rcs, err := w.factory.Node().V1().RuntimeClasses().Lister().List(labels.Everything())
+	if err != nil {
+		return []RuntimeClassInfo{}
+	}
+	out := make([]RuntimeClassInfo, 0, len(rcs))
+	for _, r := range rcs {
+		out = append(out, RuntimeClassInfo{
+			Name:      r.Name,
+			Handler:   r.Handler,
+			CreatedAt: r.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) PriorityClasses() []PriorityClassInfo {
+	pcs, err := w.factory.Scheduling().V1().PriorityClasses().Lister().List(labels.Everything())
+	if err != nil {
+		return []PriorityClassInfo{}
+	}
+	out := make([]PriorityClassInfo, 0, len(pcs))
+	for _, p := range pcs {
+		out = append(out, PriorityClassInfo{
+			Name:          p.Name,
+			Value:         p.Value,
+			GlobalDefault: p.GlobalDefault,
+			Description:   p.Description,
+			CreatedAt:     p.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Value > out[j].Value })
+	return out
+}
+
+func (w *contextWatcher) IngressClasses() []IngressClassInfo {
+	classes, err := w.factory.Networking().V1().IngressClasses().Lister().List(labels.Everything())
+	if err != nil {
+		return []IngressClassInfo{}
+	}
+	out := make([]IngressClassInfo, 0, len(classes))
+	for _, c := range classes {
+		out = append(out, IngressClassInfo{
+			Name:       c.Name,
+			Controller: c.Spec.Controller,
+			IsDefault:  c.Annotations["ingressclass.kubernetes.io/is-default-class"] == "true",
+			CreatedAt:  c.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) LimitRanges(namespace string) []LimitRangeInfo {
+	lister := w.factory.Core().V1().LimitRanges().Lister()
+	var (
+		lrs []*corev1.LimitRange
+		err error
+	)
+	if namespace == "" {
+		lrs, err = lister.List(labels.Everything())
+	} else {
+		lrs, err = lister.LimitRanges(namespace).List(labels.Everything())
+	}
+	if err != nil {
+		return []LimitRangeInfo{}
+	}
+	out := make([]LimitRangeInfo, 0, len(lrs))
+	for _, l := range lrs {
+		out = append(out, LimitRangeInfo{
+			Name:      l.Name,
+			Namespace: l.Namespace,
+			Limits:    len(l.Spec.Limits),
+			CreatedAt: l.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	return out
+}
+
+func (w *contextWatcher) ResourceQuotas(namespace string) []ResourceQuotaInfo {
+	lister := w.factory.Core().V1().ResourceQuotas().Lister()
+	var (
+		qs  []*corev1.ResourceQuota
+		err error
+	)
+	if namespace == "" {
+		qs, err = lister.List(labels.Everything())
+	} else {
+		qs, err = lister.ResourceQuotas(namespace).List(labels.Everything())
+	}
+	if err != nil {
+		return []ResourceQuotaInfo{}
+	}
+	out := make([]ResourceQuotaInfo, 0, len(qs))
+	for _, q := range qs {
+		scopes := make([]string, 0, len(q.Spec.Scopes))
+		for _, s := range q.Spec.Scopes {
+			scopes = append(scopes, string(s))
+		}
+		out = append(out, ResourceQuotaInfo{
+			Name:      q.Name,
+			Namespace: q.Namespace,
+			Scopes:    strings.Join(scopes, ","),
+			Used:      len(q.Status.Used),
+			Hard:      len(q.Status.Hard),
+			CreatedAt: q.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	return out
+}
+
+func nodeStatus(n *corev1.Node) string {
+	ready := "Unknown"
+	for _, c := range n.Status.Conditions {
+		if c.Type == corev1.NodeReady {
+			switch c.Status {
+			case corev1.ConditionTrue:
+				ready = "Ready"
+			default:
+				ready = "NotReady"
+			}
+		}
+	}
+	if n.Spec.Unschedulable {
+		ready += ",SchedulingDisabled"
+	}
+	return ready
+}
+
+func nodeRoles(n *corev1.Node) string {
+	const prefix = "node-role.kubernetes.io/"
+	roles := make([]string, 0)
+	for k := range n.Labels {
+		if strings.HasPrefix(k, prefix) {
+			role := strings.TrimPrefix(k, prefix)
+			if role != "" {
+				roles = append(roles, role)
+			}
+		}
+	}
+	if len(roles) == 0 {
+		return "<none>"
+	}
+	sort.Strings(roles)
+	return strings.Join(roles, ",")
+}
+
+func nodeInternalIP(n *corev1.Node) string {
+	for _, addr := range n.Status.Addresses {
+		if addr.Type == corev1.NodeInternalIP {
+			return addr.Address
+		}
+	}
+	return ""
+}
