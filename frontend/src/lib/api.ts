@@ -115,6 +115,7 @@ import {
   GetClusterRoleBinding,
   ListAccessSubjects,
   GetSubjectAccess,
+  ListAccessibleKinds,
   ListPods,
   PodsForOwner,
   ListSecrets,
@@ -392,6 +393,7 @@ export const api = {
     namespace: string,
     name: string,
   ): Promise<SubjectAccess> => GetSubjectAccess(ctx, kind, namespace, name),
+  listAccessibleKinds: (ctx: string): Promise<string[]> => ListAccessibleKinds(ctx),
   getPod: (contextName: string, namespace: string, name: string): Promise<PodDetail> =>
     GetPod(contextName, namespace, name),
   startPodLogs: (

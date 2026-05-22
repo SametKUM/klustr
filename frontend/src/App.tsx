@@ -77,6 +77,7 @@ import { useResources } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
 import { useHelmStore } from '@/store/helm'
 import { usePortForwards } from '@/store/portForwards'
+import { kindAccessibleInAny, useAccessStore } from '@/store/access'
 
 
 function MainView() {
@@ -240,6 +241,9 @@ function App() {
   const resetHelm = useHelmStore((s) => s.reset)
   const selectedCRDKey = useUIStore((s) => s.selectedCRDKey)
   const setSelectedCRD = useUIStore((s) => s.setSelectedCRD)
+  const setAccess = useAccessStore((s) => s.set)
+  const resetAccess = useAccessStore((s) => s.reset)
+  const accessByContext = useAccessStore((s) => s.byContext)
   const activeNavItemRef = useRef<HTMLLIElement | null>(null)
 
   const hasGatewayAPI = crds.some((c) => c.group === 'gateway.networking.k8s.io')
@@ -247,13 +251,24 @@ function App() {
     (c) => c.group === 'argoproj.io' && c.resource === 'applications',
   )
   const visibleGroups = useMemo<ResourceGroup[]>(() => {
-    return [
+    const allGroups: ResourceGroup[] = [
       ...RESOURCE_GROUPS,
       ...(hasGatewayAPI ? [GATEWAY_GROUP] : []),
       ...(hasArgoApplications ? [ARGO_GROUP] : []),
       HELM_GROUP,
     ]
-  }, [hasGatewayAPI, hasArgoApplications])
+    // Filter each group's items by per-context RBAC reach. Items without a
+    // `kind` (Overview, Events, Access Review, Helm Repos) always survive
+    // because they aren't gated on a single kind. Drop groups that empty out.
+    return allGroups
+      .map((g) => ({
+        ...g,
+        items: g.items.filter(
+          (i) => !i.kind || kindAccessibleInAny(accessByContext, activeContexts, i.kind),
+        ),
+      }))
+      .filter((g) => g.items.length > 0)
+  }, [hasGatewayAPI, hasArgoApplications, accessByContext, activeContexts])
   const navViews = useMemo<ResourceView[]>(() => visibleGroups.flatMap(groupViews), [
     visibleGroups,
   ])
@@ -291,8 +306,17 @@ function App() {
     resetResources()
     resetCRDs()
     resetHelm()
+    resetAccess()
     for (const ctx of activeContexts) {
-      api.startWatch(ctx).catch(console.error)
+      api
+        .startWatch(ctx)
+        .then(() =>
+          api
+            .listAccessibleKinds(ctx)
+            .then((kinds) => setAccess(ctx, kinds ?? []))
+            .catch(() => setAccess(ctx, [])),
+        )
+        .catch(console.error)
     }
     return () => {
       for (const ctx of activeContexts) {
@@ -301,8 +325,9 @@ function App() {
       resetResources()
       resetCRDs()
       resetHelm()
+      resetAccess()
     }
-  }, [activeContexts, resetResources, resetCRDs, resetHelm])
+  }, [activeContexts, resetResources, resetCRDs, resetHelm, resetAccess, setAccess])
 
   useEffect(() => {
     if (!selectedContext) {
