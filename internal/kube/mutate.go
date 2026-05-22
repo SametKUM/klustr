@@ -53,6 +53,8 @@ var kindToGVR = map[string]schema.GroupVersionResource{
 	"ClusterRole":        {Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "clusterroles"},
 	"ClusterRoleBinding": {Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "clusterrolebindings"},
 
+	"APIService": {Group: "apiregistration.k8s.io", Version: "v1", Resource: "apiservices"},
+
 	"Gateway":        {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"},
 	"HTTPRoute":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"},
 	"GRPCRoute":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "grpcroutes"},
