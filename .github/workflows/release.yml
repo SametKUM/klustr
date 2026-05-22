@@ -165,16 +165,58 @@ jobs:
 
             The build is signed with a Developer ID Application certificate and notarized by Apple.
 
-            ```bash
-            # Download
-            curl -LO https://github.com/SametKUM/klustr/releases/download/${{ github.ref_name }}/klustr-${{ github.ref_name }}-darwin-arm64.tar.gz
+            ### Homebrew
 
-            # Extract and move into /Applications
+            ```bash
+            brew install --cask sametkum/klustr/klustr
+            ```
+
+            ### Manual
+
+            ```bash
+            curl -LO https://github.com/SametKUM/klustr/releases/download/${{ github.ref_name }}/klustr-${{ github.ref_name }}-darwin-arm64.tar.gz
             tar -xzf klustr-${{ github.ref_name }}-darwin-arm64.tar.gz
             mv klustr.app /Applications/
-
-            # Launch
             open /Applications/klustr.app
             ```
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+      - name: Bump Homebrew cask
+        if: "!contains(github.ref_name, '-')"
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "HOMEBREW_TAP_TOKEN secret is not set; skipping cask bump." >&2
+            exit 0
+          fi
+          VERSION="${TAG#v}"
+          ASSET="artifacts/klustr-${TAG}-darwin-arm64.tar.gz"
+          if [ ! -f "$ASSET" ]; then
+            echo "Expected asset $ASSET not found." >&2
+            exit 1
+          fi
+          SHA=$(sha256sum "$ASSET" | awk '{print $1}')
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/SametKUM/homebrew-klustr.git" tap
+          cd tap
+          python3 - "$VERSION" "$SHA" <<'PY'
+          import pathlib, re, sys
+          version, sha = sys.argv[1], sys.argv[2]
+          path = pathlib.Path("Casks/klustr.rb")
+          text = path.read_text()
+          text = re.sub(r'^( *version )"[^"]*"', rf'\1"{version}"', text, count=1, flags=re.M)
+          text = re.sub(r'^( *sha256 )"[^"]*"', rf'\1"{sha}"', text, count=1, flags=re.M)
+          path.write_text(text)
+          PY
+          if git diff --quiet; then
+            echo "Cask already at ${VERSION}, nothing to bump."
+            exit 0
+          fi
+          git config user.name "klustr-release-bot"
+          git config user.email "noreply@github.com"
+          git add Casks/klustr.rb
+          git commit -m "klustr ${VERSION}"
+          git push
