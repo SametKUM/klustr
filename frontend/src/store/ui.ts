@@ -1,380 +1,63 @@
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
+import { DEFAULT_DARK, DEFAULT_LIGHT, getTheme, type ThemeId } from '@/features/_shared/themes'
 import {
-  DEFAULT_DARK,
-  DEFAULT_LIGHT,
-  THEME_CSS_CLASSES,
-  getTheme,
-  isThemeId,
-  type ThemeDefinition,
-  type ThemeId,
-} from '@/features/_shared/themes'
+  MAX_TAGS_PER_CONTEXT,
+  type ContextGroup,
+  type ContextTag,
+  type CustomTagDef,
+  type DetailTab,
+  type PendingAction,
+  type ResourceView,
+  type SelectedResource,
+  type SidebarMode,
+} from './ui.types'
+import {
+  applyThemeClasses,
+  clampSidebarWidth,
+  isValidGroupColor,
+  persistAggregatedContexts,
+  persistCollapsedNavGroups,
+  persistContextGroups,
+  persistContextTags,
+  persistCustomTags,
+  persistDefaultContext,
+  persistExpandedCRDGroups,
+  persistSidebarMode,
+  persistSidebarWidth,
+  persistThemeId,
+  readAggregatedContexts,
+  readCollapsedNavGroups,
+  readContextGroups,
+  readContextTags,
+  readCustomTags,
+  readDefaultContext,
+  readExpandedCRDGroups,
+  readSavedThemeId,
+  readSidebarMode,
+  readSidebarWidth,
+  systemThemeId,
+} from './ui.persistence'
 
-const THEME_STORAGE_KEY = 'klustr-theme'
-
-function readSavedThemeId(): ThemeId | null {
-  const saved = localStorage.getItem(THEME_STORAGE_KEY)
-  if (isThemeId(saved)) return saved
-  if (saved === 'dark') return DEFAULT_DARK
-  if (saved === 'light') return DEFAULT_LIGHT
-  return null
-}
-
-function systemThemeId(): ThemeId {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? DEFAULT_DARK : DEFAULT_LIGHT
-}
-
-function applyThemeClasses(theme: ThemeDefinition) {
-  const root = document.documentElement
-  root.classList.toggle('dark', theme.mode === 'dark')
-  for (const cls of THEME_CSS_CLASSES) {
-    root.classList.toggle(cls, theme.cssClass === cls)
-  }
-}
-
-const COLLAPSED_NAV_GROUPS_KEY = 'klustr-collapsed-nav-groups'
-const EXPANDED_CRD_GROUPS_KEY = 'klustr-expanded-crd-groups'
-const SIDEBAR_MODE_KEY = 'klustr-sidebar-mode'
-const SIDEBAR_WIDTH_KEY = 'klustr-sidebar-width'
-
-export type SidebarMode = 'expanded' | 'icons'
-
-export const SIDEBAR_WIDTH_MIN = 200
-export const SIDEBAR_WIDTH_MAX = 400
-export const SIDEBAR_WIDTH_DEFAULT = 256
-
-function readSidebarMode(): SidebarMode {
-  const raw = localStorage.getItem(SIDEBAR_MODE_KEY)
-  return raw === 'icons' ? 'icons' : 'expanded'
-}
-
-function clampSidebarWidth(value: number): number {
-  return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, value))
-}
-
-function readSidebarWidth(): number {
-  const raw = localStorage.getItem(SIDEBAR_WIDTH_KEY)
-  if (!raw) return SIDEBAR_WIDTH_DEFAULT
-  const parsed = Number.parseInt(raw, 10)
-  if (!Number.isFinite(parsed)) return SIDEBAR_WIDTH_DEFAULT
-  return clampSidebarWidth(parsed)
-}
-
-function readStringArray(key: string): string[] {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : []
-  } catch {
-    return []
-  }
-}
-
-function readCollapsedNavGroups(): string[] {
-  return readStringArray(COLLAPSED_NAV_GROUPS_KEY)
-}
-
-function readExpandedCRDGroups(): string[] {
-  return readStringArray(EXPANDED_CRD_GROUPS_KEY)
-}
-
-const DEFAULT_CONTEXT_KEY = 'klustr-default-context'
-
-function readDefaultContext(): string | null {
-  const v = localStorage.getItem(DEFAULT_CONTEXT_KEY)
-  return v && v.length > 0 ? v : null
-}
-
-const AGGREGATED_CONTEXTS_KEY = 'klustr-aggregated-contexts'
-
-function readAggregatedContexts(): string[] {
-  return readStringArray(AGGREGATED_CONTEXTS_KEY)
-}
-
-function persistAggregatedContexts(list: string[]) {
-  if (list.length === 0) {
-    localStorage.removeItem(AGGREGATED_CONTEXTS_KEY)
-  } else {
-    localStorage.setItem(AGGREGATED_CONTEXTS_KEY, JSON.stringify(list))
-  }
-}
-
-export type ContextTag = string
-
-export type TagColor =
-  | 'rose'
-  | 'red'
-  | 'orange'
-  | 'amber'
-  | 'yellow'
-  | 'lime'
-  | 'emerald'
-  | 'teal'
-  | 'cyan'
-  | 'sky'
-  | 'blue'
-  | 'indigo'
-  | 'violet'
-  | 'fuchsia'
-  | 'pink'
-  | 'slate'
-
-export type CustomTagDef = {
-  id: string
-  label: string
-  shortLabel: string
-  color: TagColor
-}
-
-const CONTEXT_TAGS_KEY = 'klustr-context-tags'
-const CUSTOM_TAGS_KEY = 'klustr-custom-tags'
-const CONTEXT_GROUPS_KEY = 'klustr-context-groups'
-
-export type ContextGroup = {
-  id: string
-  name: string
-  contexts: string[]
-  color: TagColor
-}
-
-const VALID_GROUP_COLORS: ReadonlySet<TagColor> = new Set([
-  'rose',
-  'red',
-  'orange',
-  'amber',
-  'yellow',
-  'lime',
-  'emerald',
-  'teal',
-  'cyan',
-  'sky',
-  'blue',
-  'indigo',
-  'violet',
-  'fuchsia',
-  'pink',
-  'slate',
-])
-
-function readContextGroups(): ContextGroup[] {
-  try {
-    const raw = localStorage.getItem(CONTEXT_GROUPS_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as unknown
-    if (!Array.isArray(parsed)) return []
-    const out: ContextGroup[] = []
-    for (const item of parsed) {
-      if (!item || typeof item !== 'object') continue
-      const g = item as Partial<ContextGroup>
-      if (typeof g.id !== 'string' || typeof g.name !== 'string') continue
-      if (!Array.isArray(g.contexts)) continue
-      const contexts = g.contexts.filter((c): c is string => typeof c === 'string' && c.length > 0)
-      if (g.id.length === 0 || g.name.length === 0) continue
-      const color =
-        typeof g.color === 'string' && VALID_GROUP_COLORS.has(g.color as TagColor)
-          ? (g.color as TagColor)
-          : 'sky'
-      out.push({ id: g.id, name: g.name, contexts, color })
-    }
-    return out
-  } catch {
-    return []
-  }
-}
-
-function persistContextGroups(list: ContextGroup[]) {
-  if (list.length === 0) {
-    localStorage.removeItem(CONTEXT_GROUPS_KEY)
-  } else {
-    localStorage.setItem(CONTEXT_GROUPS_KEY, JSON.stringify(list))
-  }
-}
-
-export const MAX_TAGS_PER_CONTEXT = 3
-
-function readContextTags(): Record<string, ContextTag[]> {
-  try {
-    const raw = localStorage.getItem(CONTEXT_TAGS_KEY)
-    if (!raw) return {}
-    const parsed = JSON.parse(raw) as unknown
-    if (!parsed || typeof parsed !== 'object') return {}
-    const result: Record<string, ContextTag[]> = {}
-    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof v === 'string' && v.length > 0) {
-        result[k] = [v]
-      } else if (Array.isArray(v)) {
-        const ids = v
-          .filter((x): x is string => typeof x === 'string' && x.length > 0)
-          .slice(0, MAX_TAGS_PER_CONTEXT)
-        if (ids.length > 0) result[k] = ids
-      }
-    }
-    return result
-  } catch {
-    return {}
-  }
-}
-
-const VALID_COLORS: ReadonlySet<TagColor> = new Set([
-  'rose',
-  'red',
-  'orange',
-  'amber',
-  'yellow',
-  'lime',
-  'emerald',
-  'teal',
-  'cyan',
-  'sky',
-  'blue',
-  'indigo',
-  'violet',
-  'fuchsia',
-  'pink',
-  'slate',
-])
-
-function readCustomTags(): Record<string, CustomTagDef> {
-  try {
-    const raw = localStorage.getItem(CUSTOM_TAGS_KEY)
-    if (!raw) return {}
-    const parsed = JSON.parse(raw) as unknown
-    if (!parsed || typeof parsed !== 'object') return {}
-    const result: Record<string, CustomTagDef> = {}
-    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-      if (!v || typeof v !== 'object') continue
-      const def = v as Partial<CustomTagDef>
-      if (
-        typeof def.id === 'string' &&
-        typeof def.label === 'string' &&
-        typeof def.shortLabel === 'string' &&
-        typeof def.color === 'string' &&
-        VALID_COLORS.has(def.color as TagColor)
-      ) {
-        result[k] = {
-          id: def.id,
-          label: def.label,
-          shortLabel: def.shortLabel,
-          color: def.color as TagColor,
-        }
-      }
-    }
-    return result
-  } catch {
-    return {}
-  }
-}
-
-export type ResourceView =
-  | 'overview'
-  | 'workloadsoverview'
-  | 'pods'
-  | 'deployments'
-  | 'services'
-  | 'configmaps'
-  | 'secrets'
-  | 'statefulsets'
-  | 'daemonsets'
-  | 'replicasets'
-  | 'persistentvolumeclaims'
-  | 'persistentvolumes'
-  | 'storageclasses'
-  | 'networkpolicies'
-  | 'horizontalpodautoscalers'
-  | 'poddisruptionbudgets'
-  | 'endpointslices'
-  | 'resourcequotas'
-  | 'limitranges'
-  | 'ingressclasses'
-  | 'priorityclasses'
-  | 'runtimeclasses'
-  | 'leases'
-  | 'mutatingwebhookconfigurations'
-  | 'validatingwebhookconfigurations'
-  | 'endpoints'
-  | 'replicationcontrollers'
-  | 'events'
-  | 'jobs'
-  | 'cronjobs'
-  | 'ingresses'
-  | 'nodes'
-  | 'namespaces'
-  | 'serviceaccounts'
-  | 'roles'
-  | 'rolebindings'
-  | 'clusterroles'
-  | 'clusterrolebindings'
-  | 'helmreleases'
-  | 'helmrepos'
-  | 'argocdapplications'
-  | 'gateways'
-  | 'httproutes'
-  | 'grpcroutes'
-  | 'gatewayclasses'
-  | 'referencegrants'
-
-export type ResourceKind =
-  | 'Pod'
-  | 'Deployment'
-  | 'StatefulSet'
-  | 'DaemonSet'
-  | 'ReplicaSet'
-  | 'PersistentVolumeClaim'
-  | 'PersistentVolume'
-  | 'StorageClass'
-  | 'NetworkPolicy'
-  | 'HorizontalPodAutoscaler'
-  | 'PodDisruptionBudget'
-  | 'EndpointSlice'
-  | 'ResourceQuota'
-  | 'LimitRange'
-  | 'IngressClass'
-  | 'PriorityClass'
-  | 'RuntimeClass'
-  | 'Lease'
-  | 'MutatingWebhookConfiguration'
-  | 'ValidatingWebhookConfiguration'
-  | 'Endpoints'
-  | 'ReplicationController'
-  | 'Job'
-  | 'CronJob'
-  | 'Service'
-  | 'ConfigMap'
-  | 'Secret'
-  | 'Ingress'
-  | 'Node'
-  | 'Namespace'
-  | 'ServiceAccount'
-  | 'Role'
-  | 'RoleBinding'  | 'ClusterRole'
-  | 'ClusterRoleBinding'
-  | 'Gateway'
-  | 'HTTPRoute'
-  | 'GRPCRoute'
-  | 'GatewayClass'
-  | 'ReferenceGrant'
-
-export type SelectedResourceGVR = {
-  group: string
-  version: string
-  resource: string
-}
-
-export type SelectedResource = {
-  kind: ResourceKind | string
-  namespace: string
-  name: string
-  gvr?: SelectedResourceGVR
-  context?: string
-}
-
-export type DetailTab = 'overview' | 'logs' | 'exec' | 'events' | 'history' | 'yaml'
-
-export type PendingAction =
-  | { kind: 'delete'; resource: SelectedResource }
-  | { kind: 'portforward'; resource: SelectedResource }
-  | { kind: 'restart'; resource: SelectedResource }
+export {
+  MAX_TAGS_PER_CONTEXT,
+  SIDEBAR_WIDTH_DEFAULT,
+  SIDEBAR_WIDTH_MAX,
+  SIDEBAR_WIDTH_MIN,
+} from './ui.types'
+export type {
+  ContextGroup,
+  ContextTag,
+  CustomTagDef,
+  DetailTab,
+  PendingAction,
+  ResourceKind,
+  ResourceView,
+  SelectedResource,
+  SelectedResourceGVR,
+  SidebarMode,
+  TagColor,
+} from './ui.types'
 
 type UIState = {
   selectedContext: string | null
@@ -601,20 +284,20 @@ export const useUIStore = create<UIState>((set) => {
         followingSystem = false
       }
       applyThemeClasses(getTheme(id))
-      localStorage.setItem(THEME_STORAGE_KEY, id)
+      persistThemeId(id)
       set({ themeId: id })
     },
     toggleSidebarMode: () =>
       set((s) => {
         const next: SidebarMode = s.sidebarMode === 'expanded' ? 'icons' : 'expanded'
-        localStorage.setItem(SIDEBAR_MODE_KEY, next)
+        persistSidebarMode(next)
         return { sidebarMode: next }
       }),
     setSidebarWidth: (px) =>
       set((s) => {
         const next = clampSidebarWidth(px)
         if (next === s.sidebarWidth) return s
-        localStorage.setItem(SIDEBAR_WIDTH_KEY, String(next))
+        persistSidebarWidth(next)
         return { sidebarWidth: next }
       }),
     toggleNavGroup: (label) =>
@@ -622,7 +305,7 @@ export const useUIStore = create<UIState>((set) => {
         const next = s.collapsedNavGroups.includes(label)
           ? s.collapsedNavGroups.filter((g) => g !== label)
           : [...s.collapsedNavGroups, label]
-        localStorage.setItem(COLLAPSED_NAV_GROUPS_KEY, JSON.stringify(next))
+        persistCollapsedNavGroups(next)
         return { collapsedNavGroups: next }
       }),
     toggleCRDGroup: (label) =>
@@ -630,16 +313,13 @@ export const useUIStore = create<UIState>((set) => {
         const next = s.expandedCRDGroups.includes(label)
           ? s.expandedCRDGroups.filter((g) => g !== label)
           : [...s.expandedCRDGroups, label]
-        localStorage.setItem(EXPANDED_CRD_GROUPS_KEY, JSON.stringify(next))
+        persistExpandedCRDGroups(next)
         return { expandedCRDGroups: next }
       }),
     setDefaultContext: (name) => {
-      if (name && name.length > 0) {
-        localStorage.setItem(DEFAULT_CONTEXT_KEY, name)
-      } else {
-        localStorage.removeItem(DEFAULT_CONTEXT_KEY)
-      }
-      set({ defaultContext: name && name.length > 0 ? name : null })
+      const value = name && name.length > 0 ? name : null
+      persistDefaultContext(value)
+      set({ defaultContext: value })
     },
     toggleContextTag: (name, tagId) =>
       set((s) => {
@@ -654,7 +334,7 @@ export const useUIStore = create<UIState>((set) => {
         const next = { ...s.contextTags }
         if (nextList.length === 0) delete next[name]
         else next[name] = nextList
-        localStorage.setItem(CONTEXT_TAGS_KEY, JSON.stringify(next))
+        persistContextTags(next)
         return { contextTags: next }
       }),
     clearContextTags: (name) =>
@@ -662,13 +342,13 @@ export const useUIStore = create<UIState>((set) => {
         if (!s.contextTags[name]) return s
         const next = { ...s.contextTags }
         delete next[name]
-        localStorage.setItem(CONTEXT_TAGS_KEY, JSON.stringify(next))
+        persistContextTags(next)
         return { contextTags: next }
       }),
     addCustomTag: (def) =>
       set((s) => {
         const next = { ...s.customTags, [def.id]: def }
-        localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(next))
+        persistCustomTags(next)
         return { customTags: next }
       }),
     removeCustomTag: (id) =>
@@ -680,13 +360,13 @@ export const useUIStore = create<UIState>((set) => {
           const filtered = list.filter((t) => t !== id)
           if (filtered.length > 0) nextAssignments[ctx] = filtered
         }
-        localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(nextTags))
-        localStorage.setItem(CONTEXT_TAGS_KEY, JSON.stringify(nextAssignments))
+        persistCustomTags(nextTags)
+        persistContextTags(nextAssignments)
         return { customTags: nextTags, contextTags: nextAssignments }
       }),
     upsertContextGroup: (group) =>
       set((s) => {
-        const color = VALID_GROUP_COLORS.has(group.color) ? group.color : 'sky'
+        const color = isValidGroupColor(group.color) ? group.color : 'sky'
         const cleaned: ContextGroup = {
           id: group.id,
           name: group.name.trim(),
