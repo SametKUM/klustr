@@ -72,8 +72,11 @@ The release build is signed with a Developer ID Application certificate and nota
 #### Homebrew
 
 ```bash
-brew install --cask sametkum/klustr/klustr
+brew tap sametkum/klustr
+brew install klustr
 ```
+
+After the initial `brew tap`, future updates are just `brew upgrade klustr` (or `brew upgrade` for everything), and `brew search klustr` / `brew info klustr` start finding it.
 
 #### Manual
 

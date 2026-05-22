@@ -168,7 +168,8 @@ jobs:
             ### Homebrew
 
             ```bash
-            brew install --cask sametkum/klustr/klustr
+            brew tap sametkum/klustr
+            brew install klustr
             ```
 
             ### Manual
