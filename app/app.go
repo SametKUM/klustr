@@ -520,6 +520,14 @@ func (a *App) GetClusterRoleBinding(contextName, name string) (*kube.ClusterRole
 	return a.clients.ClusterRoleBinding(contextName, name)
 }
 
+func (a *App) ListAccessSubjects(contextName string) []kube.AccessSubject {
+	return a.clients.AccessSubjects(contextName)
+}
+
+func (a *App) GetSubjectAccess(contextName, kind, namespace, name string) (*kube.SubjectAccess, error) {
+	return a.clients.SubjectAccess(contextName, kind, namespace, name)
+}
+
 func (a *App) ListHelmReleases(contextName, namespace string) ([]kube.HelmReleaseInfo, error) {
 	return a.clients.HelmReleases(contextName, namespace)
 }

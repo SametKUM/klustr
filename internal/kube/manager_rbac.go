@@ -81,3 +81,19 @@ func (m *ClientManager) ClusterRoleBinding(contextName, name string) (*ClusterRo
 	}
 	return w.ClusterRoleBinding(name)
 }
+
+func (m *ClientManager) AccessSubjects(contextName string) []AccessSubject {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return []AccessSubject{}
+	}
+	return w.ListAccessSubjects()
+}
+
+func (m *ClientManager) SubjectAccess(contextName, kind, namespace, name string) (*SubjectAccess, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.GetSubjectAccess(AccessSubject{Kind: kind, Namespace: namespace, Name: name}), nil
+}

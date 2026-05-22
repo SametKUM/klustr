@@ -1,5 +1,21 @@
 export namespace kube {
 	
+	export class AccessSubject {
+	    kind: string;
+	    name: string;
+	    namespace: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AccessSubject(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	    }
+	}
 	export class ArgoApplicationInfo {
 	    name: string;
 	    namespace: string;
@@ -4001,6 +4017,79 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class SubjectAccessRule {
+	    apiGroups: string[];
+	    resources: string[];
+	    verbs: string[];
+	    resourceNames: string[];
+	    nonResourceURLs: string[];
+	    bindingKind: string;
+	    bindingName: string;
+	    bindingNamespace: string;
+	    roleKind: string;
+	    roleName: string;
+	    roleNamespace: string;
+	    scope: string;
+	    viaGroup: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SubjectAccessRule(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.apiGroups = source["apiGroups"];
+	        this.resources = source["resources"];
+	        this.verbs = source["verbs"];
+	        this.resourceNames = source["resourceNames"];
+	        this.nonResourceURLs = source["nonResourceURLs"];
+	        this.bindingKind = source["bindingKind"];
+	        this.bindingName = source["bindingName"];
+	        this.bindingNamespace = source["bindingNamespace"];
+	        this.roleKind = source["roleKind"];
+	        this.roleName = source["roleName"];
+	        this.roleNamespace = source["roleNamespace"];
+	        this.scope = source["scope"];
+	        this.viaGroup = source["viaGroup"];
+	    }
+	}
+	export class SubjectAccess {
+	    subject: AccessSubject;
+	    rules: SubjectAccessRule[];
+	    hasWildcard: boolean;
+	    clusterAdmin: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SubjectAccess(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.subject = this.convertValues(source["subject"], AccessSubject);
+	        this.rules = this.convertValues(source["rules"], SubjectAccessRule);
+	        this.hasWildcard = source["hasWildcard"];
+	        this.clusterAdmin = source["clusterAdmin"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	
 	export class WebhookSummary {
 	    name: string;

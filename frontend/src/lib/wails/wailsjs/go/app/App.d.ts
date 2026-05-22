@@ -98,6 +98,8 @@ export function GetStatefulSet(arg1:string,arg2:string,arg3:string):Promise<kube
 
 export function GetStorageClass(arg1:string,arg2:string):Promise<kube.StorageClassDetail>;
 
+export function GetSubjectAccess(arg1:string,arg2:string,arg3:string,arg4:string):Promise<kube.SubjectAccess>;
+
 export function GetValidatingWebhookConfiguration(arg1:string,arg2:string):Promise<kube.WebhookConfigurationDetail>;
 
 export function GetWorkloadRevisionTemplate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number):Promise<string>;
@@ -107,6 +109,8 @@ export function HelmChartVersions(arg1:string,arg2:string):Promise<Array<string>
 export function InstallHelmRelease(arg1:kube.HelmInstallOptions):Promise<kube.HelmDryRunResult>;
 
 export function IsMetricsServerKlustrManaged(arg1:string):Promise<boolean>;
+
+export function ListAccessSubjects(arg1:string):Promise<Array<kube.AccessSubject>>;
 
 export function ListArgoApplicationResources(arg1:string,arg2:string,arg3:string):Promise<Array<kube.ArgoApplicationResource>>;
 

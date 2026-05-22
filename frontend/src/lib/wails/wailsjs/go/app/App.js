@@ -194,6 +194,10 @@ export function GetStorageClass(arg1, arg2) {
   return window['go']['app']['App']['GetStorageClass'](arg1, arg2);
 }
 
+export function GetSubjectAccess(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['GetSubjectAccess'](arg1, arg2, arg3, arg4);
+}
+
 export function GetValidatingWebhookConfiguration(arg1, arg2) {
   return window['go']['app']['App']['GetValidatingWebhookConfiguration'](arg1, arg2);
 }
@@ -212,6 +216,10 @@ export function InstallHelmRelease(arg1) {
 
 export function IsMetricsServerKlustrManaged(arg1) {
   return window['go']['app']['App']['IsMetricsServerKlustrManaged'](arg1);
+}
+
+export function ListAccessSubjects(arg1) {
+  return window['go']['app']['App']['ListAccessSubjects'](arg1);
 }
 
 export function ListArgoApplicationResources(arg1, arg2, arg3) {
