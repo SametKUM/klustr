@@ -67,16 +67,23 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 
 ### macOS (Apple Silicon)
 
+The release build is signed with a Developer ID Application certificate and notarized by Apple, so Gatekeeper opens it directly — even offline.
+
+#### Homebrew
+
+```bash
+brew install --cask sametkum/klustr/klustr
+```
+
+#### Manual
+
 Download the latest darwin-arm64 tarball from the [Releases](https://github.com/SametKUM/klustr/releases/latest) page, then:
 
 ```bash
 tar -xzf klustr-*-darwin-arm64.tar.gz
 mv klustr.app /Applications/
-xattr -cr /Applications/klustr.app   # silence Gatekeeper until notarization is restored
 open /Applications/klustr.app
 ```
-
-The build is signed with a Developer ID. Notarization is temporarily disabled while an Apple Developer support case is open, so first launch needs the `xattr` step above to clear the quarantine attribute. The roadmap item below tracks bringing notarization back.
 
 ### Windows / Linux
 
