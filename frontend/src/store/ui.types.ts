@@ -83,6 +83,7 @@ export type ResourceView =
   | 'rolebindings'
   | 'clusterroles'
   | 'clusterrolebindings'
+  | 'accessreview'
   | 'helmreleases'
   | 'helmrepos'
   | 'argocdapplications'

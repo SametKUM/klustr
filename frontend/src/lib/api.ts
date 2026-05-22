@@ -113,6 +113,8 @@ import {
   GetClusterRole,
   ListClusterRoleBindings,
   GetClusterRoleBinding,
+  ListAccessSubjects,
+  GetSubjectAccess,
   ListPods,
   PodsForOwner,
   ListSecrets,
@@ -240,6 +242,9 @@ export type ClusterRoleBindingDetail = kube.ClusterRoleBindingDetail
 export type PolicyRuleDetail = kube.PolicyRuleDetail
 export type SubjectDetail = kube.SubjectDetail
 export type RoleRefDetail = kube.RoleRefDetail
+export type AccessSubject = kube.AccessSubject
+export type SubjectAccess = kube.SubjectAccess
+export type SubjectAccessRule = kube.SubjectAccessRule
 export type PortForwardInfo = kube.PortForwardInfo
 export type PodLogTarget = kube.PodLogTarget
 export type EventInfo = kube.EventInfo
@@ -380,6 +385,13 @@ export const api = {
     GetClusterRole(ctx, name),
   getClusterRoleBinding: (ctx: string, name: string): Promise<ClusterRoleBindingDetail> =>
     GetClusterRoleBinding(ctx, name),
+  listAccessSubjects: (ctx: string): Promise<AccessSubject[]> => ListAccessSubjects(ctx),
+  getSubjectAccess: (
+    ctx: string,
+    kind: string,
+    namespace: string,
+    name: string,
+  ): Promise<SubjectAccess> => GetSubjectAccess(ctx, kind, namespace, name),
   getPod: (contextName: string, namespace: string, name: string): Promise<PodDetail> =>
     GetPod(contextName, namespace, name),
   startPodLogs: (

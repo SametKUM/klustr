@@ -34,6 +34,7 @@ import {
   Rocket,
   Route,
   Ruler,
+  ScanSearch,
   Scale,
   Server,
   Settings2,
@@ -123,6 +124,7 @@ export const RESOURCE_GROUPS: ResourceGroup[] = [
     label: 'Access Control',
     icon: KeyRound,
     items: [
+      { label: 'Access Review', view: 'accessreview', icon: ScanSearch },
       { label: 'Service Accounts', view: 'serviceaccounts', icon: User },
       { label: 'Cluster Roles', view: 'clusterroles', icon: ShieldCheck },
       { label: 'Roles', view: 'roles', icon: Shield },

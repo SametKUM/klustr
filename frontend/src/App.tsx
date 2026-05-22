@@ -44,6 +44,7 @@ import { RolesView } from '@/features/roles/RolesView'
 import { RoleBindingsView } from '@/features/rolebindings/RoleBindingsView'
 import { ClusterRolesView } from '@/features/clusterroles/ClusterRolesView'
 import { ClusterRoleBindingsView } from '@/features/clusterrolebindings/ClusterRoleBindingsView'
+import { AccessReviewView } from '@/features/accessreview/AccessReviewView'
 import { OverviewView } from '@/features/overview/OverviewView'
 import { WorkloadsOverviewView } from '@/features/overview/WorkloadsOverviewView'
 import { CustomResourceView } from '@/features/crds/CustomResourceView'
@@ -169,6 +170,8 @@ function MainView() {
       return <ClusterRolesView />
     case 'clusterrolebindings':
       return <ClusterRoleBindingsView />
+    case 'accessreview':
+      return <AccessReviewView />
     case 'helmreleases':
       return <HelmReleasesView />
     case 'helmrepos':
