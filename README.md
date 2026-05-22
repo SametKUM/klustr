@@ -133,7 +133,7 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] Helm support — release browser, dry-run diff, install / upgrade / rollback / uninstall, repo management
 - [x] Gateway API — Gateways, HTTPRoutes, GRPCRoutes, GatewayClasses, ReferenceGrants (typed informers, status pills, listener / rule / RouteParentStatus tables)
 - [x] Multi-cluster aggregated mode + named context groups + per-context health ping
-- [ ] Notarized macOS build (signing is in place; notarization is paused pending an open Apple Developer support case)
+- [x] Notarized macOS build — signed with a Developer ID Application certificate and notarized by Apple
 - [ ] Linux & Windows release distribution (after per-platform testing)
 
 ## Contributing
