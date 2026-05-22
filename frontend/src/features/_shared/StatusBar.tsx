@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Boxes, Folder, Network } from 'lucide-react'
+import { SiGithub } from 'react-icons/si'
 import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
 import { usePortForwards } from '@/store/portForwards'
 import { api } from '@/lib/api'
+import { BrowserOpenURL } from '@/lib/wails/wailsjs/runtime/runtime'
+
+const REPO_URL = 'https://github.com/SametKUM/klustr'
 
 type Health = {
   status: 'pinging' | 'ok' | 'slow' | 'stale' | 'error'
@@ -194,7 +198,15 @@ export function StatusBar() {
       >
         Press <kbd className="rounded border border-border bg-muted px-1 py-px text-[9px] text-foreground">?</kbd> for shortcuts
       </span>
-      {appVersion && <span className="font-mono">Klustr {appVersion}</span>}
+      <button
+        type="button"
+        onClick={() => BrowserOpenURL(REPO_URL)}
+        className="inline-flex items-center gap-1 font-mono text-muted-foreground/80 transition-colors hover:text-foreground"
+        title="Open Klustr on GitHub"
+      >
+        <SiGithub className="size-3" />
+        {appVersion && <span>Klustr {appVersion}</span>}
+      </button>
     </footer>
   )
 }
