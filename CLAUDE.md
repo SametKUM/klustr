@@ -174,23 +174,6 @@ Docker is **not** required — local dev uses native toolchains; CI builds use G
 - Use Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`, `test:`, `docs:`).
 - Prefer many small, logically scoped commits over a single monolithic one — target ~10–20 small commits per feature batch when work splits cleanly.
 
-## Phase Roadmap
-
-| Phase | Deliverable | Status |
-|---|---|---|
-| 0. Setup | mise config + `wails init` + Tailwind/shadcn scaffolding + first window renders | done |
-| 1. Contexts | kubeconfig discovery, context switcher UI, ClientManager backend | done |
-| 2. Resource browser | Informer infrastructure + core resources + YAML detail view | done |
-| 3. Logs | xterm.js streaming log viewer (single pod + Stern-style aggregated workload logs with ANSI highlighting) | done |
-| 4. Exec | xterm.js + SPDY exec sessions | done |
-| 5. Mutations | Monaco YAML editor + diff dialog before apply, delete, scale, restart | done |
-| 6. Port-forward | PF manager UI + status bar indicator | done |
-| 7. Polish | app icons, command palette, status bar, filter shortcut, log save/regex, code-split bundles, theme palettes, copy buttons, restart-count badge, CPU/Mem usage bars, table column resize/reorder/visibility (persisted), drag-to-reorder columns, app-wide `user-select: none` on chrome | done |
-| 8. Resource breadth | Every built-in resource kind: Pods, Deployments, ReplicaSets, ReplicationControllers, StatefulSets, DaemonSets, Jobs, CronJobs, HPAs, PDBs, Services, Endpoints, EndpointSlices, Ingresses, IngressClasses, NetworkPolicies, ConfigMaps, Secrets, ResourceQuotas, LimitRanges, Leases, Mutating/ValidatingWebhookConfigurations, PVCs, PVs, StorageClasses, Nodes, Namespaces, PriorityClasses, RuntimeClasses, Events (cluster-wide + per-resource) | done |
-| 9. Release | GitHub Actions build matrix + tag-triggered draft releases (v0.1.0 first public build) | done |
-| 10. Cross-resource navigation | Related-pods listing on workload/node detail pages, clickable owner/node references, dialog back-stack | done |
-| 11. Tooling | golangci-lint config + Go unit tests for `internal/kube` helpers, ESLint flat config + Vitest setup + tests for `lib/` and `store/` helpers | done |
-
 ## Things to Avoid
 
 - Polling the Kubernetes API instead of using Informers (metrics.k8s.io is the only exception — it has no watch).
