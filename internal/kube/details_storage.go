@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +38,53 @@ type PersistentVolumeDetail struct {
 	Labels        map[string]string `json:"labels"`
 	Annotations   map[string]string `json:"annotations"`
 	CreatedAt     string            `json:"createdAt"`
+}
+
+type CSIDriverDetail struct {
+	Name                 string            `json:"name"`
+	UID                  string            `json:"uid"`
+	AttachRequired       bool              `json:"attachRequired"`
+	PodInfoOnMount       bool              `json:"podInfoOnMount"`
+	StorageCapacity      bool              `json:"storageCapacity"`
+	RequiresRepublish    bool              `json:"requiresRepublish"`
+	SELinuxMount         bool              `json:"seLinuxMount"`
+	FSGroupPolicy        string            `json:"fsGroupPolicy"`
+	VolumeLifecycleModes []string          `json:"volumeLifecycleModes"`
+	TokenRequests        []string          `json:"tokenRequests"`
+	Labels               map[string]string `json:"labels"`
+	Annotations          map[string]string `json:"annotations"`
+	CreatedAt            string            `json:"createdAt"`
+}
+
+type CSINodeDriverDetail struct {
+	Name          string   `json:"name"`
+	NodeID        string   `json:"nodeID"`
+	TopologyKeys  []string `json:"topologyKeys"`
+	AllocatableMax int32   `json:"allocatableMax"`
+}
+
+type CSINodeDetail struct {
+	Name        string                `json:"name"`
+	UID         string                `json:"uid"`
+	Drivers     []CSINodeDriverDetail `json:"drivers"`
+	Labels      map[string]string     `json:"labels"`
+	Annotations map[string]string     `json:"annotations"`
+	CreatedAt   string                `json:"createdAt"`
+}
+
+type VolumeAttachmentDetail struct {
+	Name           string            `json:"name"`
+	UID            string            `json:"uid"`
+	Attacher       string            `json:"attacher"`
+	Node           string            `json:"node"`
+	PV             string            `json:"pv"`
+	Attached       bool              `json:"attached"`
+	AttachError    string            `json:"attachError"`
+	DetachError    string            `json:"detachError"`
+	AttachMetadata map[string]string `json:"attachMetadata"`
+	Labels         map[string]string `json:"labels"`
+	Annotations    map[string]string `json:"annotations"`
+	CreatedAt      string            `json:"createdAt"`
 }
 
 type PersistentVolumeClaimDetail struct {
@@ -151,6 +199,137 @@ func pvSource(p *corev1.PersistentVolume) string {
 		return "Local:" + s.Local.Path
 	}
 	return ""
+}
+
+func (w *contextWatcher) CSIDriver(name string) (*CSIDriverDetail, error) {
+	f := w.factoryFor("CSIDriver")
+	if f == nil {
+		return nil, errKindNoAccess("CSIDriver")
+	}
+	d, err := f.Storage().V1().CSIDrivers().Lister().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	attach := true
+	if d.Spec.AttachRequired != nil {
+		attach = *d.Spec.AttachRequired
+	}
+	podInfo := false
+	if d.Spec.PodInfoOnMount != nil {
+		podInfo = *d.Spec.PodInfoOnMount
+	}
+	cap := false
+	if d.Spec.StorageCapacity != nil {
+		cap = *d.Spec.StorageCapacity
+	}
+	republish := false
+	if d.Spec.RequiresRepublish != nil {
+		republish = *d.Spec.RequiresRepublish
+	}
+	selinux := false
+	if d.Spec.SELinuxMount != nil {
+		selinux = *d.Spec.SELinuxMount
+	}
+	fsGroup := ""
+	if d.Spec.FSGroupPolicy != nil {
+		fsGroup = string(*d.Spec.FSGroupPolicy)
+	}
+	modes := make([]string, 0, len(d.Spec.VolumeLifecycleModes))
+	for _, m := range d.Spec.VolumeLifecycleModes {
+		modes = append(modes, string(m))
+	}
+	tokens := make([]string, 0, len(d.Spec.TokenRequests))
+	for _, t := range d.Spec.TokenRequests {
+		if t.ExpirationSeconds != nil {
+			tokens = append(tokens, fmt.Sprintf("%s (exp=%ds)", t.Audience, *t.ExpirationSeconds))
+		} else {
+			tokens = append(tokens, t.Audience)
+		}
+	}
+	return &CSIDriverDetail{
+		Name:                 d.Name,
+		UID:                  string(d.UID),
+		AttachRequired:       attach,
+		PodInfoOnMount:       podInfo,
+		StorageCapacity:      cap,
+		RequiresRepublish:    republish,
+		SELinuxMount:         selinux,
+		FSGroupPolicy:        fsGroup,
+		VolumeLifecycleModes: modes,
+		TokenRequests:        tokens,
+		Labels:               d.Labels,
+		Annotations:          d.Annotations,
+		CreatedAt:            d.CreationTimestamp.UTC().Format(time.RFC3339),
+	}, nil
+}
+
+func (w *contextWatcher) CSINode(name string) (*CSINodeDetail, error) {
+	f := w.factoryFor("CSINode")
+	if f == nil {
+		return nil, errKindNoAccess("CSINode")
+	}
+	n, err := f.Storage().V1().CSINodes().Lister().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	drivers := make([]CSINodeDriverDetail, 0, len(n.Spec.Drivers))
+	for _, dr := range n.Spec.Drivers {
+		var maxV int32
+		if dr.Allocatable != nil && dr.Allocatable.Count != nil {
+			maxV = *dr.Allocatable.Count
+		}
+		drivers = append(drivers, CSINodeDriverDetail{
+			Name:           dr.Name,
+			NodeID:         dr.NodeID,
+			TopologyKeys:   append([]string{}, dr.TopologyKeys...),
+			AllocatableMax: maxV,
+		})
+	}
+	return &CSINodeDetail{
+		Name:        n.Name,
+		UID:         string(n.UID),
+		Drivers:     drivers,
+		Labels:      n.Labels,
+		Annotations: n.Annotations,
+		CreatedAt:   n.CreationTimestamp.UTC().Format(time.RFC3339),
+	}, nil
+}
+
+func (w *contextWatcher) VolumeAttachment(name string) (*VolumeAttachmentDetail, error) {
+	f := w.factoryFor("VolumeAttachment")
+	if f == nil {
+		return nil, errKindNoAccess("VolumeAttachment")
+	}
+	a, err := f.Storage().V1().VolumeAttachments().Lister().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	pv := ""
+	if a.Spec.Source.PersistentVolumeName != nil {
+		pv = *a.Spec.Source.PersistentVolumeName
+	}
+	attachErr := ""
+	if a.Status.AttachError != nil {
+		attachErr = a.Status.AttachError.Message
+	}
+	detachErr := ""
+	if a.Status.DetachError != nil {
+		detachErr = a.Status.DetachError.Message
+	}
+	return &VolumeAttachmentDetail{
+		Name:           a.Name,
+		UID:            string(a.UID),
+		Attacher:       a.Spec.Attacher,
+		Node:           a.Spec.NodeName,
+		PV:             pv,
+		Attached:       a.Status.Attached,
+		AttachError:    attachErr,
+		DetachError:    detachErr,
+		AttachMetadata: a.Status.AttachmentMetadata,
+		Labels:         a.Labels,
+		Annotations:    a.Annotations,
+		CreatedAt:      a.CreationTimestamp.UTC().Format(time.RFC3339),
+	}, nil
 }
 
 func (w *contextWatcher) PersistentVolumeClaim(namespace, name string) (*PersistentVolumeClaimDetail, error) {

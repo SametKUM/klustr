@@ -278,6 +278,15 @@ func (w *contextWatcher) registerHandlers() error {
 		{"CertificateSigningRequest", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
 			return f.Certificates().V1().CertificateSigningRequests().Informer()
 		}},
+		{"CSIDriver", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Storage().V1().CSIDrivers().Informer()
+		}},
+		{"CSINode", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Storage().V1().CSINodes().Informer()
+		}},
+		{"VolumeAttachment", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Storage().V1().VolumeAttachments().Informer()
+		}},
 	}
 
 	for _, b := range bindings {

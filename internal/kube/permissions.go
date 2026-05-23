@@ -116,6 +116,9 @@ var clusterScopedKinds = map[string]struct{}{
 	"APIService":                     {},
 	"GatewayClass":                   {},
 	"CertificateSigningRequest":      {},
+	"CSIDriver":                      {},
+	"CSINode":                        {},
+	"VolumeAttachment":               {},
 }
 
 // watchedKinds is the slice of (kind, gvr) pairs the watcher's informers
@@ -143,6 +146,7 @@ func watchedKinds() []struct {
 		"MutatingWebhookConfiguration", "ValidatingWebhookConfiguration",
 		"APIService",
 		"CertificateSigningRequest",
+		"CSIDriver", "CSINode", "VolumeAttachment",
 	}
 	out := make([]struct {
 		kind string

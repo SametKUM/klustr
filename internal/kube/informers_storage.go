@@ -30,6 +30,29 @@ type PersistentVolumeInfo struct {
 	CreatedAt     string `json:"createdAt"`
 }
 
+type CSIDriverInfo struct {
+	Name           string `json:"name"`
+	AttachRequired bool   `json:"attachRequired"`
+	PodInfoOnMount bool   `json:"podInfoOnMount"`
+	Modes          string `json:"modes"`
+	CreatedAt      string `json:"createdAt"`
+}
+
+type CSINodeInfo struct {
+	Name      string `json:"name"`
+	Drivers   int    `json:"drivers"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type VolumeAttachmentInfo struct {
+	Name      string `json:"name"`
+	Attacher  string `json:"attacher"`
+	Node      string `json:"node"`
+	PV        string `json:"pv"`
+	Attached  bool   `json:"attached"`
+	CreatedAt string `json:"createdAt"`
+}
+
 type PersistentVolumeClaimInfo struct {
 	Name         string `json:"name"`
 	Namespace    string `json:"namespace"`
@@ -111,6 +134,90 @@ func (w *contextWatcher) PersistentVolumes() []PersistentVolumeInfo {
 			Claim:         claim,
 			StorageClass:  p.Spec.StorageClassName,
 			CreatedAt:     p.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) CSIDrivers() []CSIDriverInfo {
+	f := w.factoryFor("CSIDriver")
+	if f == nil {
+		return []CSIDriverInfo{}
+	}
+	list, err := f.Storage().V1().CSIDrivers().Lister().List(labels.Everything())
+	if err != nil {
+		return []CSIDriverInfo{}
+	}
+	out := make([]CSIDriverInfo, 0, len(list))
+	for _, d := range list {
+		attach := true
+		if d.Spec.AttachRequired != nil {
+			attach = *d.Spec.AttachRequired
+		}
+		podInfo := false
+		if d.Spec.PodInfoOnMount != nil {
+			podInfo = *d.Spec.PodInfoOnMount
+		}
+		modes := make([]string, 0, len(d.Spec.VolumeLifecycleModes))
+		for _, m := range d.Spec.VolumeLifecycleModes {
+			modes = append(modes, string(m))
+		}
+		out = append(out, CSIDriverInfo{
+			Name:           d.Name,
+			AttachRequired: attach,
+			PodInfoOnMount: podInfo,
+			Modes:          strings.Join(modes, ","),
+			CreatedAt:      d.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) CSINodes() []CSINodeInfo {
+	f := w.factoryFor("CSINode")
+	if f == nil {
+		return []CSINodeInfo{}
+	}
+	list, err := f.Storage().V1().CSINodes().Lister().List(labels.Everything())
+	if err != nil {
+		return []CSINodeInfo{}
+	}
+	out := make([]CSINodeInfo, 0, len(list))
+	for _, n := range list {
+		out = append(out, CSINodeInfo{
+			Name:      n.Name,
+			Drivers:   len(n.Spec.Drivers),
+			CreatedAt: n.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) VolumeAttachments() []VolumeAttachmentInfo {
+	f := w.factoryFor("VolumeAttachment")
+	if f == nil {
+		return []VolumeAttachmentInfo{}
+	}
+	list, err := f.Storage().V1().VolumeAttachments().Lister().List(labels.Everything())
+	if err != nil {
+		return []VolumeAttachmentInfo{}
+	}
+	out := make([]VolumeAttachmentInfo, 0, len(list))
+	for _, a := range list {
+		pv := ""
+		if a.Spec.Source.PersistentVolumeName != nil {
+			pv = *a.Spec.Source.PersistentVolumeName
+		}
+		out = append(out, VolumeAttachmentInfo{
+			Name:      a.Name,
+			Attacher:  a.Spec.Attacher,
+			Node:      a.Spec.NodeName,
+			PV:        pv,
+			Attached:  a.Status.Attached,
+			CreatedAt: a.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
