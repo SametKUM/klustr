@@ -10,6 +10,8 @@ import type {
   CSIDriverInfo,
   CSINodeInfo,
   VolumeAttachmentInfo,
+  FlowSchemaInfo,
+  PriorityLevelConfigurationInfo,
   NetworkPolicyInfo,
   HorizontalPodAutoscalerInfo,
   PodDisruptionBudgetInfo,
@@ -64,6 +66,8 @@ type ResourcesState = {
   csiDrivers: ByContext<CSIDriverInfo>
   csiNodes: ByContext<CSINodeInfo>
   volumeAttachments: ByContext<VolumeAttachmentInfo>
+  flowSchemas: ByContext<FlowSchemaInfo>
+  priorityLevelConfigurations: ByContext<PriorityLevelConfigurationInfo>
   networkPolicies: ByContext<NetworkPolicyInfo>
   horizontalPodAutoscalers: ByContext<HorizontalPodAutoscalerInfo>
   podDisruptionBudgets: ByContext<PodDisruptionBudgetInfo>
@@ -109,6 +113,8 @@ type ResourcesState = {
   setCSIDrivers: (ctx: string, list: CSIDriverInfo[]) => void
   setCSINodes: (ctx: string, list: CSINodeInfo[]) => void
   setVolumeAttachments: (ctx: string, list: VolumeAttachmentInfo[]) => void
+  setFlowSchemas: (ctx: string, list: FlowSchemaInfo[]) => void
+  setPriorityLevelConfigurations: (ctx: string, list: PriorityLevelConfigurationInfo[]) => void
   setNetworkPolicies: (ctx: string, list: NetworkPolicyInfo[]) => void
   setHorizontalPodAutoscalers: (ctx: string, list: HorizontalPodAutoscalerInfo[]) => void
   setPodDisruptionBudgets: (ctx: string, list: PodDisruptionBudgetInfo[]) => void
@@ -159,6 +165,8 @@ const KIND_KEYS = [
   'csiDrivers',
   'csiNodes',
   'volumeAttachments',
+  'flowSchemas',
+  'priorityLevelConfigurations',
   'networkPolicies',
   'horizontalPodAutoscalers',
   'podDisruptionBudgets',
@@ -245,6 +253,11 @@ export const useResources = create<ResourcesState>((set) => ({
   setCSINodes: (ctx, list) => set((s) => ({ csiNodes: withCtx(s.csiNodes, ctx, list) })),
   setVolumeAttachments: (ctx, list) =>
     set((s) => ({ volumeAttachments: withCtx(s.volumeAttachments, ctx, list) })),
+  setFlowSchemas: (ctx, list) => set((s) => ({ flowSchemas: withCtx(s.flowSchemas, ctx, list) })),
+  setPriorityLevelConfigurations: (ctx, list) =>
+    set((s) => ({
+      priorityLevelConfigurations: withCtx(s.priorityLevelConfigurations, ctx, list),
+    })),
   setNetworkPolicies: (ctx, list) =>
     set((s) => ({ networkPolicies: withCtx(s.networkPolicies, ctx, list) })),
   setHorizontalPodAutoscalers: (ctx, list) =>

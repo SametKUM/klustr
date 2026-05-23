@@ -94,6 +94,10 @@ import {
   ListValidatingWebhookConfigurations,
   ListAPIServices,
   GetAPIService,
+  ListFlowSchemas,
+  GetFlowSchema,
+  ListPriorityLevelConfigurations,
+  GetPriorityLevelConfiguration,
   ListEndpoints,
   ListReplicationControllers,
   ListDeployments,
@@ -186,6 +190,11 @@ export type LeaseInfo = kube.LeaseInfo
 export type WebhookConfigurationInfo = kube.WebhookConfigurationInfo
 export type APIServiceInfo = kube.APIServiceInfo
 export type APIServiceDetail = kube.APIServiceDetail
+export type FlowSchemaInfo = kube.FlowSchemaInfo
+export type FlowSchemaDetail = kube.FlowSchemaDetail
+export type FlowSchemaRuleDetail = kube.FlowSchemaRuleDetail
+export type PriorityLevelConfigurationInfo = kube.PriorityLevelConfigurationInfo
+export type PriorityLevelConfigurationDetail = kube.PriorityLevelConfigurationDetail
 export type EndpointsInfo = kube.EndpointsInfo
 export type ReplicationControllerInfo = kube.ReplicationControllerInfo
 export type JobInfo = kube.JobInfo
@@ -372,6 +381,15 @@ export const api = {
     ListValidatingWebhookConfigurations(name),
   listAPIServices: (name: string): Promise<APIServiceInfo[]> => ListAPIServices(name),
   getAPIService: (ctx: string, name: string): Promise<APIServiceDetail> => GetAPIService(ctx, name),
+  listFlowSchemas: (name: string): Promise<FlowSchemaInfo[]> => ListFlowSchemas(name),
+  getFlowSchema: (ctx: string, name: string): Promise<FlowSchemaDetail> =>
+    GetFlowSchema(ctx, name),
+  listPriorityLevelConfigurations: (name: string): Promise<PriorityLevelConfigurationInfo[]> =>
+    ListPriorityLevelConfigurations(name),
+  getPriorityLevelConfiguration: (
+    ctx: string,
+    name: string,
+  ): Promise<PriorityLevelConfigurationDetail> => GetPriorityLevelConfiguration(ctx, name),
   listEndpoints: (name: string, namespace: string): Promise<EndpointsInfo[]> =>
     ListEndpoints(name, namespace),
   listReplicationControllers: (name: string, namespace: string): Promise<ReplicationControllerInfo[]> =>

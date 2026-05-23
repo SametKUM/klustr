@@ -33,6 +33,8 @@ import { PriorityClassesView } from '@/features/priorityclasses/PriorityClassesV
 import { RuntimeClassesView } from '@/features/runtimeclasses/RuntimeClassesView'
 import { APIServicesView } from '@/features/apiservices/APIServicesView'
 import { CSRsView } from '@/features/csrs/CSRsView'
+import { FlowSchemasView } from '@/features/flowschemas/FlowSchemasView'
+import { PriorityLevelsView } from '@/features/prioritylevels/PriorityLevelsView'
 import { LeasesView } from '@/features/leases/LeasesView'
 import { MutatingWebhookConfigurationsView } from '@/features/webhooks/MutatingWebhookConfigurationsView'
 import { ValidatingWebhookConfigurationsView } from '@/features/webhooks/ValidatingWebhookConfigurationsView'
@@ -154,6 +156,10 @@ function MainView() {
       return <APIServicesView />
     case 'certificatesigningrequests':
       return <CSRsView />
+    case 'flowschemas':
+      return <FlowSchemasView />
+    case 'prioritylevelconfigurations':
+      return <PriorityLevelsView />
     case 'leases':
       return <LeasesView />
     case 'mutatingwebhookconfigurations':

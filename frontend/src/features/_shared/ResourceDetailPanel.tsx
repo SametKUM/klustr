@@ -43,6 +43,8 @@ import { PriorityClassDetailBody } from '@/features/priorityclasses/PriorityClas
 import { RuntimeClassDetailBody } from '@/features/runtimeclasses/RuntimeClassDetailBody'
 import { APIServiceDetailBody } from '@/features/apiservices/APIServiceDetailBody'
 import { CSRDetailBody } from '@/features/csrs/CSRDetailBody'
+import { FlowSchemaDetailBody } from '@/features/flowschemas/FlowSchemaDetailBody'
+import { PriorityLevelDetailBody } from '@/features/prioritylevels/PriorityLevelDetailBody'
 import { LeaseDetailBody } from '@/features/leases/LeaseDetailBody'
 import { WebhookConfigurationDetailBody } from '@/features/webhooks/WebhookConfigurationDetailBody'
 import { EndpointsDetailBody } from '@/features/endpoints/EndpointsDetailBody'
@@ -513,6 +515,10 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
       return <APIServiceDetailBody contextName={contextName} name={resource.name} />
     case 'CertificateSigningRequest':
       return <CSRDetailBody contextName={contextName} name={resource.name} />
+    case 'FlowSchema':
+      return <FlowSchemaDetailBody contextName={contextName} name={resource.name} />
+    case 'PriorityLevelConfiguration':
+      return <PriorityLevelDetailBody contextName={contextName} name={resource.name} />
     case 'Lease':
       return <LeaseDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
     case 'MutatingWebhookConfiguration':
