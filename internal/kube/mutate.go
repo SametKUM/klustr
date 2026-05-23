@@ -61,6 +61,9 @@ var kindToGVR = map[string]schema.GroupVersionResource{
 	"CSINode":          {Group: "storage.k8s.io", Version: "v1", Resource: "csinodes"},
 	"VolumeAttachment": {Group: "storage.k8s.io", Version: "v1", Resource: "volumeattachments"},
 
+	"FlowSchema":                 {Group: "flowcontrol.apiserver.k8s.io", Version: "v1", Resource: "flowschemas"},
+	"PriorityLevelConfiguration": {Group: "flowcontrol.apiserver.k8s.io", Version: "v1", Resource: "prioritylevelconfigurations"},
+
 	"Gateway":        {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"},
 	"HTTPRoute":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"},
 	"GRPCRoute":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "grpcroutes"},

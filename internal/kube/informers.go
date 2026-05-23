@@ -287,6 +287,12 @@ func (w *contextWatcher) registerHandlers() error {
 		{"VolumeAttachment", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
 			return f.Storage().V1().VolumeAttachments().Informer()
 		}},
+		{"FlowSchema", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Flowcontrol().V1().FlowSchemas().Informer()
+		}},
+		{"PriorityLevelConfiguration", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Flowcontrol().V1().PriorityLevelConfigurations().Informer()
+		}},
 	}
 
 	for _, b := range bindings {

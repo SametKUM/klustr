@@ -54,6 +54,22 @@ type IngressClassInfo struct {
 	CreatedAt  string `json:"createdAt"`
 }
 
+type FlowSchemaInfo struct {
+	Name               string `json:"name"`
+	PriorityLevel      string `json:"priorityLevel"`
+	MatchingPrecedence int32  `json:"matchingPrecedence"`
+	Distinguisher      string `json:"distinguisher"`
+	CreatedAt          string `json:"createdAt"`
+}
+
+type PriorityLevelConfigurationInfo struct {
+	Name                      string `json:"name"`
+	Type                      string `json:"type"`
+	NominalConcurrencyShares  int32  `json:"nominalConcurrencyShares"`
+	LimitResponse             string `json:"limitResponse"`
+	CreatedAt                 string `json:"createdAt"`
+}
+
 type LimitRangeInfo struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
@@ -217,6 +233,71 @@ func (w *contextWatcher) IngressClasses() []IngressClassInfo {
 			Controller: c.Spec.Controller,
 			IsDefault:  c.Annotations["ingressclass.kubernetes.io/is-default-class"] == "true",
 			CreatedAt:  c.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func (w *contextWatcher) FlowSchemas() []FlowSchemaInfo {
+	f := w.factoryFor("FlowSchema")
+	if f == nil {
+		return []FlowSchemaInfo{}
+	}
+	list, err := f.Flowcontrol().V1().FlowSchemas().Lister().List(labels.Everything())
+	if err != nil {
+		return []FlowSchemaInfo{}
+	}
+	out := make([]FlowSchemaInfo, 0, len(list))
+	for _, fs := range list {
+		dist := ""
+		if fs.Spec.DistinguisherMethod != nil {
+			dist = string(fs.Spec.DistinguisherMethod.Type)
+		}
+		out = append(out, FlowSchemaInfo{
+			Name:               fs.Name,
+			PriorityLevel:      fs.Spec.PriorityLevelConfiguration.Name,
+			MatchingPrecedence: fs.Spec.MatchingPrecedence,
+			Distinguisher:      dist,
+			CreatedAt:          fs.CreationTimestamp.UTC().Format(time.RFC3339),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].MatchingPrecedence < out[j].MatchingPrecedence })
+	return out
+}
+
+func (w *contextWatcher) PriorityLevelConfigurations() []PriorityLevelConfigurationInfo {
+	f := w.factoryFor("PriorityLevelConfiguration")
+	if f == nil {
+		return []PriorityLevelConfigurationInfo{}
+	}
+	list, err := f.Flowcontrol().V1().PriorityLevelConfigurations().Lister().List(labels.Everything())
+	if err != nil {
+		return []PriorityLevelConfigurationInfo{}
+	}
+	out := make([]PriorityLevelConfigurationInfo, 0, len(list))
+	for _, plc := range list {
+		var shares int32
+		var limit string
+		switch {
+		case plc.Spec.Limited != nil:
+			if plc.Spec.Limited.NominalConcurrencyShares != nil {
+				shares = *plc.Spec.Limited.NominalConcurrencyShares
+			}
+			if plc.Spec.Limited.LimitResponse.Type != "" {
+				limit = string(plc.Spec.Limited.LimitResponse.Type)
+			}
+		case plc.Spec.Exempt != nil:
+			if plc.Spec.Exempt.NominalConcurrencyShares != nil {
+				shares = *plc.Spec.Exempt.NominalConcurrencyShares
+			}
+		}
+		out = append(out, PriorityLevelConfigurationInfo{
+			Name:                     plc.Name,
+			Type:                     string(plc.Spec.Type),
+			NominalConcurrencyShares: shares,
+			LimitResponse:            limit,
+			CreatedAt:                plc.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })

@@ -1,10 +1,13 @@
 package kube
 
 import (
+	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	flowctlv1 "k8s.io/api/flowcontrol/v1"
 )
 
 type NodeTaintDetail struct {
@@ -89,6 +92,41 @@ type IngressClassDetail struct {
 	Labels      map[string]string `json:"labels"`
 	Annotations map[string]string `json:"annotations"`
 	CreatedAt   string            `json:"createdAt"`
+}
+
+type FlowSchemaRuleDetail struct {
+	Subjects        []string `json:"subjects"`
+	ResourceRules   []string `json:"resourceRules"`
+	NonResourceURLs []string `json:"nonResourceURLs"`
+}
+
+type FlowSchemaDetail struct {
+	Name               string                 `json:"name"`
+	UID                string                 `json:"uid"`
+	PriorityLevel      string                 `json:"priorityLevel"`
+	MatchingPrecedence int32                  `json:"matchingPrecedence"`
+	Distinguisher      string                 `json:"distinguisher"`
+	Rules              []FlowSchemaRuleDetail `json:"rules"`
+	Conditions         []ConditionDetail      `json:"conditions"`
+	Labels             map[string]string      `json:"labels"`
+	Annotations        map[string]string      `json:"annotations"`
+	CreatedAt          string                 `json:"createdAt"`
+}
+
+type PriorityLevelConfigurationDetail struct {
+	Name                     string            `json:"name"`
+	UID                      string            `json:"uid"`
+	Type                     string            `json:"type"`
+	NominalConcurrencyShares int32             `json:"nominalConcurrencyShares"`
+	LendablePercent          int32             `json:"lendablePercent"`
+	LimitResponse            string            `json:"limitResponse"`
+	Queues                   int32             `json:"queues"`
+	HandSize                 int32             `json:"handSize"`
+	QueueLengthLimit         int32             `json:"queueLengthLimit"`
+	Conditions               []ConditionDetail `json:"conditions"`
+	Labels                   map[string]string `json:"labels"`
+	Annotations              map[string]string `json:"annotations"`
+	CreatedAt                string            `json:"createdAt"`
 }
 
 type LimitRangeItem struct {
@@ -314,6 +352,169 @@ func (w *contextWatcher) IngressClass(name string) (*IngressClassDetail, error) 
 		Annotations: c.Annotations,
 		CreatedAt:   c.CreationTimestamp.UTC().Format(time.RFC3339),
 	}, nil
+}
+
+func (w *contextWatcher) FlowSchema(name string) (*FlowSchemaDetail, error) {
+	f := w.factoryFor("FlowSchema")
+	if f == nil {
+		return nil, errKindNoAccess("FlowSchema")
+	}
+	fs, err := f.Flowcontrol().V1().FlowSchemas().Lister().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	dist := ""
+	if fs.Spec.DistinguisherMethod != nil {
+		dist = string(fs.Spec.DistinguisherMethod.Type)
+	}
+	rules := make([]FlowSchemaRuleDetail, 0, len(fs.Spec.Rules))
+	for _, r := range fs.Spec.Rules {
+		rules = append(rules, FlowSchemaRuleDetail{
+			Subjects:        flowSchemaSubjects(r.Subjects),
+			ResourceRules:   flowSchemaResourceRules(r.ResourceRules),
+			NonResourceURLs: flowSchemaNonResourceRules(r.NonResourceRules),
+		})
+	}
+	conds := make([]ConditionDetail, 0, len(fs.Status.Conditions))
+	for _, c := range fs.Status.Conditions {
+		conds = append(conds, ConditionDetail{
+			Type:    string(c.Type),
+			Status:  string(c.Status),
+			Reason:  c.Reason,
+			Message: c.Message,
+		})
+	}
+	return &FlowSchemaDetail{
+		Name:               fs.Name,
+		UID:                string(fs.UID),
+		PriorityLevel:      fs.Spec.PriorityLevelConfiguration.Name,
+		MatchingPrecedence: fs.Spec.MatchingPrecedence,
+		Distinguisher:      dist,
+		Rules:              rules,
+		Conditions:         conds,
+		Labels:             fs.Labels,
+		Annotations:        fs.Annotations,
+		CreatedAt:          fs.CreationTimestamp.UTC().Format(time.RFC3339),
+	}, nil
+}
+
+func (w *contextWatcher) PriorityLevelConfiguration(name string) (*PriorityLevelConfigurationDetail, error) {
+	f := w.factoryFor("PriorityLevelConfiguration")
+	if f == nil {
+		return nil, errKindNoAccess("PriorityLevelConfiguration")
+	}
+	plc, err := f.Flowcontrol().V1().PriorityLevelConfigurations().Lister().Get(name)
+	if err != nil {
+		return nil, err
+	}
+	var (
+		shares, lendable, queues, hand, queueLen int32
+		limit                                    string
+	)
+	switch {
+	case plc.Spec.Limited != nil:
+		if plc.Spec.Limited.NominalConcurrencyShares != nil {
+			shares = *plc.Spec.Limited.NominalConcurrencyShares
+		}
+		if plc.Spec.Limited.LendablePercent != nil {
+			lendable = *plc.Spec.Limited.LendablePercent
+		}
+		if plc.Spec.Limited.LimitResponse.Type != "" {
+			limit = string(plc.Spec.Limited.LimitResponse.Type)
+		}
+		if plc.Spec.Limited.LimitResponse.Queuing != nil {
+			queues = plc.Spec.Limited.LimitResponse.Queuing.Queues
+			hand = plc.Spec.Limited.LimitResponse.Queuing.HandSize
+			queueLen = plc.Spec.Limited.LimitResponse.Queuing.QueueLengthLimit
+		}
+	case plc.Spec.Exempt != nil:
+		if plc.Spec.Exempt.NominalConcurrencyShares != nil {
+			shares = *plc.Spec.Exempt.NominalConcurrencyShares
+		}
+		if plc.Spec.Exempt.LendablePercent != nil {
+			lendable = *plc.Spec.Exempt.LendablePercent
+		}
+	}
+	conds := make([]ConditionDetail, 0, len(plc.Status.Conditions))
+	for _, c := range plc.Status.Conditions {
+		conds = append(conds, ConditionDetail{
+			Type:    string(c.Type),
+			Status:  string(c.Status),
+			Reason:  c.Reason,
+			Message: c.Message,
+		})
+	}
+	return &PriorityLevelConfigurationDetail{
+		Name:                     plc.Name,
+		UID:                      string(plc.UID),
+		Type:                     string(plc.Spec.Type),
+		NominalConcurrencyShares: shares,
+		LendablePercent:          lendable,
+		LimitResponse:            limit,
+		Queues:                   queues,
+		HandSize:                 hand,
+		QueueLengthLimit:         queueLen,
+		Conditions:               conds,
+		Labels:                   plc.Labels,
+		Annotations:              plc.Annotations,
+		CreatedAt:                plc.CreationTimestamp.UTC().Format(time.RFC3339),
+	}, nil
+}
+
+func flowSchemaSubjects(subjects []flowctlv1.Subject) []string {
+	out := make([]string, 0, len(subjects))
+	for _, s := range subjects {
+		switch s.Kind {
+		case flowctlv1.SubjectKindUser:
+			if s.User != nil {
+				out = append(out, "user:"+s.User.Name)
+			}
+		case flowctlv1.SubjectKindGroup:
+			if s.Group != nil {
+				out = append(out, "group:"+s.Group.Name)
+			}
+		case flowctlv1.SubjectKindServiceAccount:
+			if s.ServiceAccount != nil {
+				out = append(out, "sa:"+s.ServiceAccount.Namespace+"/"+s.ServiceAccount.Name)
+			}
+		}
+	}
+	return out
+}
+
+func flowSchemaResourceRules(rules []flowctlv1.ResourcePolicyRule) []string {
+	out := make([]string, 0, len(rules))
+	for _, r := range rules {
+		scope := "namespaced"
+		if r.ClusterScope {
+			scope = "cluster"
+		}
+		nsLabel := "*"
+		if len(r.Namespaces) > 0 && r.Namespaces[0] != "*" {
+			nsLabel = strings.Join(r.Namespaces, ",")
+		}
+		out = append(out, fmt.Sprintf(
+			"%s %s.%s ns=%s (%s)",
+			strings.Join(r.Verbs, ","),
+			strings.Join(r.Resources, ","),
+			strings.Join(r.APIGroups, ","),
+			nsLabel,
+			scope,
+		))
+	}
+	return out
+}
+
+func flowSchemaNonResourceRules(rules []flowctlv1.NonResourcePolicyRule) []string {
+	out := make([]string, 0, len(rules))
+	for _, r := range rules {
+		out = append(out, fmt.Sprintf(
+			"%s on %s",
+			strings.Join(r.Verbs, ","),
+			strings.Join(r.NonResourceURLs, ","),
+		))
+	}
+	return out
 }
 
 func (w *contextWatcher) LimitRange(namespace, name string) (*LimitRangeDetail, error) {

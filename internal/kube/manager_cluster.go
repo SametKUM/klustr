@@ -130,6 +130,38 @@ func (m *ClientManager) APIService(contextName, name string) (*APIServiceDetail,
 	return w.APIService(name)
 }
 
+func (m *ClientManager) FlowSchemas(contextName string) []FlowSchemaInfo {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return []FlowSchemaInfo{}
+	}
+	return w.FlowSchemas()
+}
+
+func (m *ClientManager) FlowSchema(contextName, name string) (*FlowSchemaDetail, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.FlowSchema(name)
+}
+
+func (m *ClientManager) PriorityLevelConfigurations(contextName string) []PriorityLevelConfigurationInfo {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return []PriorityLevelConfigurationInfo{}
+	}
+	return w.PriorityLevelConfigurations()
+}
+
+func (m *ClientManager) PriorityLevelConfiguration(contextName, name string) (*PriorityLevelConfigurationDetail, error) {
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no active watch for context %q", contextName)
+	}
+	return w.PriorityLevelConfiguration(name)
+}
+
 func (m *ClientManager) ResourceQuotas(contextName, namespace string) []ResourceQuotaInfo {
 	w, ok := m.watcher(contextName)
 	if !ok {
