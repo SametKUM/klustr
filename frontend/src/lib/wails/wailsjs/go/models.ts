@@ -258,6 +258,137 @@ export namespace kube {
 		    return a;
 		}
 	}
+	export class CSIDriverDetail {
+	    name: string;
+	    uid: string;
+	    attachRequired: boolean;
+	    podInfoOnMount: boolean;
+	    storageCapacity: boolean;
+	    requiresRepublish: boolean;
+	    seLinuxMount: boolean;
+	    fsGroupPolicy: string;
+	    volumeLifecycleModes: string[];
+	    tokenRequests: string[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CSIDriverDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uid = source["uid"];
+	        this.attachRequired = source["attachRequired"];
+	        this.podInfoOnMount = source["podInfoOnMount"];
+	        this.storageCapacity = source["storageCapacity"];
+	        this.requiresRepublish = source["requiresRepublish"];
+	        this.seLinuxMount = source["seLinuxMount"];
+	        this.fsGroupPolicy = source["fsGroupPolicy"];
+	        this.volumeLifecycleModes = source["volumeLifecycleModes"];
+	        this.tokenRequests = source["tokenRequests"];
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class CSIDriverInfo {
+	    name: string;
+	    attachRequired: boolean;
+	    podInfoOnMount: boolean;
+	    modes: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CSIDriverInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.attachRequired = source["attachRequired"];
+	        this.podInfoOnMount = source["podInfoOnMount"];
+	        this.modes = source["modes"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class CSINodeDriverDetail {
+	    name: string;
+	    nodeID: string;
+	    topologyKeys: string[];
+	    allocatableMax: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new CSINodeDriverDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.nodeID = source["nodeID"];
+	        this.topologyKeys = source["topologyKeys"];
+	        this.allocatableMax = source["allocatableMax"];
+	    }
+	}
+	export class CSINodeDetail {
+	    name: string;
+	    uid: string;
+	    drivers: CSINodeDriverDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CSINodeDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uid = source["uid"];
+	        this.drivers = this.convertValues(source["drivers"], CSINodeDriverDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class CSINodeInfo {
+	    name: string;
+	    drivers: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CSINodeInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.drivers = source["drivers"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class CertificateSigningRequestDetail {
 	    name: string;
 	    uid: string;
@@ -4246,6 +4377,62 @@ export namespace kube {
 	}
 	
 	
+	export class VolumeAttachmentDetail {
+	    name: string;
+	    uid: string;
+	    attacher: string;
+	    node: string;
+	    pv: string;
+	    attached: boolean;
+	    attachError: string;
+	    detachError: string;
+	    attachMetadata: Record<string, string>;
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new VolumeAttachmentDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uid = source["uid"];
+	        this.attacher = source["attacher"];
+	        this.node = source["node"];
+	        this.pv = source["pv"];
+	        this.attached = source["attached"];
+	        this.attachError = source["attachError"];
+	        this.detachError = source["detachError"];
+	        this.attachMetadata = source["attachMetadata"];
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class VolumeAttachmentInfo {
+	    name: string;
+	    attacher: string;
+	    node: string;
+	    pv: string;
+	    attached: boolean;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new VolumeAttachmentInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.attacher = source["attacher"];
+	        this.node = source["node"];
+	        this.pv = source["pv"];
+	        this.attached = source["attached"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class WebhookSummary {
 	    name: string;
 	    clientCfg: string;

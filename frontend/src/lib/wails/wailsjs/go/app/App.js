@@ -34,6 +34,14 @@ export function GetAPIService(arg1, arg2) {
   return window['go']['app']['App']['GetAPIService'](arg1, arg2);
 }
 
+export function GetCSIDriver(arg1, arg2) {
+  return window['go']['app']['App']['GetCSIDriver'](arg1, arg2);
+}
+
+export function GetCSINode(arg1, arg2) {
+  return window['go']['app']['App']['GetCSINode'](arg1, arg2);
+}
+
 export function GetCertificateSigningRequest(arg1, arg2) {
   return window['go']['app']['App']['GetCertificateSigningRequest'](arg1, arg2);
 }
@@ -218,6 +226,10 @@ export function GetValidatingWebhookConfiguration(arg1, arg2) {
   return window['go']['app']['App']['GetValidatingWebhookConfiguration'](arg1, arg2);
 }
 
+export function GetVolumeAttachment(arg1, arg2) {
+  return window['go']['app']['App']['GetVolumeAttachment'](arg1, arg2);
+}
+
 export function GetWorkloadRevisionTemplate(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['GetWorkloadRevisionTemplate'](arg1, arg2, arg3, arg4, arg5);
 }
@@ -256,6 +268,14 @@ export function ListArgoApplications(arg1, arg2) {
 
 export function ListCRDs(arg1) {
   return window['go']['app']['App']['ListCRDs'](arg1);
+}
+
+export function ListCSIDrivers(arg1) {
+  return window['go']['app']['App']['ListCSIDrivers'](arg1);
+}
+
+export function ListCSINodes(arg1) {
+  return window['go']['app']['App']['ListCSINodes'](arg1);
 }
 
 export function ListCertificateSigningRequests(arg1) {
@@ -468,6 +488,10 @@ export function ListStorageClasses(arg1) {
 
 export function ListValidatingWebhookConfigurations(arg1) {
   return window['go']['app']['App']['ListValidatingWebhookConfigurations'](arg1);
+}
+
+export function ListVolumeAttachments(arg1) {
+  return window['go']['app']['App']['ListVolumeAttachments'](arg1);
 }
 
 export function PatchDeploymentPaused(arg1, arg2, arg3, arg4) {

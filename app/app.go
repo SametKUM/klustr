@@ -404,6 +404,30 @@ func (a *App) ListStorageClasses(name string) []kube.StorageClassInfo {
 	return a.clients.StorageClasses(name)
 }
 
+func (a *App) ListCSIDrivers(name string) []kube.CSIDriverInfo {
+	return a.clients.CSIDrivers(name)
+}
+
+func (a *App) GetCSIDriver(contextName, name string) (*kube.CSIDriverDetail, error) {
+	return a.clients.CSIDriver(contextName, name)
+}
+
+func (a *App) ListCSINodes(name string) []kube.CSINodeInfo {
+	return a.clients.CSINodes(name)
+}
+
+func (a *App) GetCSINode(contextName, name string) (*kube.CSINodeDetail, error) {
+	return a.clients.CSINode(contextName, name)
+}
+
+func (a *App) ListVolumeAttachments(name string) []kube.VolumeAttachmentInfo {
+	return a.clients.VolumeAttachments(name)
+}
+
+func (a *App) GetVolumeAttachment(contextName, name string) (*kube.VolumeAttachmentDetail, error) {
+	return a.clients.VolumeAttachment(contextName, name)
+}
+
 func (a *App) ListNetworkPolicies(name, namespace string) []kube.NetworkPolicyInfo {
 	return a.clients.NetworkPolicies(name, namespace)
 }

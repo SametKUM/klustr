@@ -18,6 +18,10 @@ export function FetchMetricsServerManifest():Promise<string>;
 
 export function GetAPIService(arg1:string,arg2:string):Promise<kube.APIServiceDetail>;
 
+export function GetCSIDriver(arg1:string,arg2:string):Promise<kube.CSIDriverDetail>;
+
+export function GetCSINode(arg1:string,arg2:string):Promise<kube.CSINodeDetail>;
+
 export function GetCertificateSigningRequest(arg1:string,arg2:string):Promise<kube.CertificateSigningRequestDetail>;
 
 export function GetClusterOverview(arg1:string):Promise<kube.ClusterOverview>;
@@ -110,6 +114,8 @@ export function GetSubjectAccess(arg1:string,arg2:string,arg3:string,arg4:string
 
 export function GetValidatingWebhookConfiguration(arg1:string,arg2:string):Promise<kube.WebhookConfigurationDetail>;
 
+export function GetVolumeAttachment(arg1:string,arg2:string):Promise<kube.VolumeAttachmentDetail>;
+
 export function GetWorkloadRevisionTemplate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number):Promise<string>;
 
 export function HelmChartVersions(arg1:string,arg2:string):Promise<Array<string>>;
@@ -129,6 +135,10 @@ export function ListArgoApplicationResources(arg1:string,arg2:string,arg3:string
 export function ListArgoApplications(arg1:string,arg2:string):Promise<Array<kube.ArgoApplicationInfo>>;
 
 export function ListCRDs(arg1:string):Promise<Array<kube.CRDInfo>>;
+
+export function ListCSIDrivers(arg1:string):Promise<Array<kube.CSIDriverInfo>>;
+
+export function ListCSINodes(arg1:string):Promise<Array<kube.CSINodeInfo>>;
 
 export function ListCertificateSigningRequests(arg1:string):Promise<Array<kube.CertificateSigningRequestInfo>>;
 
@@ -235,6 +245,8 @@ export function ListStatefulSets(arg1:string,arg2:string):Promise<Array<kube.Sta
 export function ListStorageClasses(arg1:string):Promise<Array<kube.StorageClassInfo>>;
 
 export function ListValidatingWebhookConfigurations(arg1:string):Promise<Array<kube.WebhookConfigurationInfo>>;
+
+export function ListVolumeAttachments(arg1:string):Promise<Array<kube.VolumeAttachmentInfo>>;
 
 export function PatchDeploymentPaused(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<void>;
 
