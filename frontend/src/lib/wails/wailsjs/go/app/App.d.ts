@@ -44,6 +44,8 @@ export function GetEndpointSlice(arg1:string,arg2:string,arg3:string):Promise<ku
 
 export function GetEndpoints(arg1:string,arg2:string,arg3:string):Promise<kube.EndpointsDetail>;
 
+export function GetFlowSchema(arg1:string,arg2:string):Promise<kube.FlowSchemaDetail>;
+
 export function GetGRPCRoute(arg1:string,arg2:string,arg3:string):Promise<kube.GRPCRouteDetail>;
 
 export function GetGateway(arg1:string,arg2:string,arg3:string):Promise<kube.GatewayDetail>;
@@ -83,6 +85,8 @@ export function GetPod(arg1:string,arg2:string,arg3:string):Promise<kube.PodDeta
 export function GetPodDisruptionBudget(arg1:string,arg2:string,arg3:string):Promise<kube.PodDisruptionBudgetDetail>;
 
 export function GetPriorityClass(arg1:string,arg2:string):Promise<kube.PriorityClassDetail>;
+
+export function GetPriorityLevelConfiguration(arg1:string,arg2:string):Promise<kube.PriorityLevelConfigurationDetail>;
 
 export function GetReferenceGrant(arg1:string,arg2:string,arg3:string):Promise<kube.ReferenceGrantDetail>;
 
@@ -170,6 +174,8 @@ export function ListEndpoints(arg1:string,arg2:string):Promise<Array<kube.Endpoi
 
 export function ListEvents(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Array<kube.EventInfo>>;
 
+export function ListFlowSchemas(arg1:string):Promise<Array<kube.FlowSchemaInfo>>;
+
 export function ListGRPCRoutes(arg1:string,arg2:string):Promise<Array<kube.GRPCRouteInfo>>;
 
 export function ListGatewayClasses(arg1:string):Promise<Array<kube.GatewayClassInfo>>;
@@ -217,6 +223,8 @@ export function ListPods(arg1:string,arg2:string):Promise<Array<kube.PodInfo>>;
 export function ListPortForwards():Promise<Array<kube.PortForwardInfo>>;
 
 export function ListPriorityClasses(arg1:string):Promise<Array<kube.PriorityClassInfo>>;
+
+export function ListPriorityLevelConfigurations(arg1:string):Promise<Array<kube.PriorityLevelConfigurationInfo>>;
 
 export function ListReferenceGrants(arg1:string,arg2:string):Promise<Array<kube.ReferenceGrantInfo>>;
 

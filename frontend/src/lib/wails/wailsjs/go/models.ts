@@ -1529,6 +1529,91 @@ export namespace kube {
 		    return a;
 		}
 	}
+	export class FlowSchemaRuleDetail {
+	    subjects: string[];
+	    resourceRules: string[];
+	    nonResourceURLs: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new FlowSchemaRuleDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.subjects = source["subjects"];
+	        this.resourceRules = source["resourceRules"];
+	        this.nonResourceURLs = source["nonResourceURLs"];
+	    }
+	}
+	export class FlowSchemaDetail {
+	    name: string;
+	    uid: string;
+	    priorityLevel: string;
+	    matchingPrecedence: number;
+	    distinguisher: string;
+	    rules: FlowSchemaRuleDetail[];
+	    conditions: ConditionDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FlowSchemaDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uid = source["uid"];
+	        this.priorityLevel = source["priorityLevel"];
+	        this.matchingPrecedence = source["matchingPrecedence"];
+	        this.distinguisher = source["distinguisher"];
+	        this.rules = this.convertValues(source["rules"], FlowSchemaRuleDetail);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class FlowSchemaInfo {
+	    name: string;
+	    priorityLevel: string;
+	    matchingPrecedence: number;
+	    distinguisher: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FlowSchemaInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.priorityLevel = source["priorityLevel"];
+	        this.matchingPrecedence = source["matchingPrecedence"];
+	        this.distinguisher = source["distinguisher"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
 	export class RouteParentStatusDetail {
 	    parent: ParentRefDetail;
 	    controller: string;
@@ -3405,6 +3490,80 @@ export namespace kube {
 	        this.value = source["value"];
 	        this.globalDefault = source["globalDefault"];
 	        this.description = source["description"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class PriorityLevelConfigurationDetail {
+	    name: string;
+	    uid: string;
+	    type: string;
+	    nominalConcurrencyShares: number;
+	    lendablePercent: number;
+	    limitResponse: string;
+	    queues: number;
+	    handSize: number;
+	    queueLengthLimit: number;
+	    conditions: ConditionDetail[];
+	    labels: Record<string, string>;
+	    annotations: Record<string, string>;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PriorityLevelConfigurationDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uid = source["uid"];
+	        this.type = source["type"];
+	        this.nominalConcurrencyShares = source["nominalConcurrencyShares"];
+	        this.lendablePercent = source["lendablePercent"];
+	        this.limitResponse = source["limitResponse"];
+	        this.queues = source["queues"];
+	        this.handSize = source["handSize"];
+	        this.queueLengthLimit = source["queueLengthLimit"];
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.labels = source["labels"];
+	        this.annotations = source["annotations"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class PriorityLevelConfigurationInfo {
+	    name: string;
+	    type: string;
+	    nominalConcurrencyShares: number;
+	    limitResponse: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PriorityLevelConfigurationInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.nominalConcurrencyShares = source["nominalConcurrencyShares"];
+	        this.limitResponse = source["limitResponse"];
 	        this.createdAt = source["createdAt"];
 	    }
 	}

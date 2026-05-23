@@ -476,6 +476,22 @@ func (a *App) GetAPIService(contextName, name string) (*kube.APIServiceDetail, e
 	return a.clients.APIService(contextName, name)
 }
 
+func (a *App) ListFlowSchemas(name string) []kube.FlowSchemaInfo {
+	return a.clients.FlowSchemas(name)
+}
+
+func (a *App) GetFlowSchema(contextName, name string) (*kube.FlowSchemaDetail, error) {
+	return a.clients.FlowSchema(contextName, name)
+}
+
+func (a *App) ListPriorityLevelConfigurations(name string) []kube.PriorityLevelConfigurationInfo {
+	return a.clients.PriorityLevelConfigurations(name)
+}
+
+func (a *App) GetPriorityLevelConfiguration(contextName, name string) (*kube.PriorityLevelConfigurationDetail, error) {
+	return a.clients.PriorityLevelConfiguration(contextName, name)
+}
+
 func (a *App) ListMutatingWebhookConfigurations(name string) []kube.WebhookConfigurationInfo {
 	return a.clients.MutatingWebhookConfigurations(name)
 }

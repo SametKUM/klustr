@@ -86,6 +86,10 @@ export function GetEndpoints(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetEndpoints'](arg1, arg2, arg3);
 }
 
+export function GetFlowSchema(arg1, arg2) {
+  return window['go']['app']['App']['GetFlowSchema'](arg1, arg2);
+}
+
 export function GetGRPCRoute(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetGRPCRoute'](arg1, arg2, arg3);
 }
@@ -164,6 +168,10 @@ export function GetPodDisruptionBudget(arg1, arg2, arg3) {
 
 export function GetPriorityClass(arg1, arg2) {
   return window['go']['app']['App']['GetPriorityClass'](arg1, arg2);
+}
+
+export function GetPriorityLevelConfiguration(arg1, arg2) {
+  return window['go']['app']['App']['GetPriorityLevelConfiguration'](arg1, arg2);
 }
 
 export function GetReferenceGrant(arg1, arg2, arg3) {
@@ -338,6 +346,10 @@ export function ListEvents(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['ListEvents'](arg1, arg2, arg3, arg4);
 }
 
+export function ListFlowSchemas(arg1) {
+  return window['go']['app']['App']['ListFlowSchemas'](arg1);
+}
+
 export function ListGRPCRoutes(arg1, arg2) {
   return window['go']['app']['App']['ListGRPCRoutes'](arg1, arg2);
 }
@@ -432,6 +444,10 @@ export function ListPortForwards() {
 
 export function ListPriorityClasses(arg1) {
   return window['go']['app']['App']['ListPriorityClasses'](arg1);
+}
+
+export function ListPriorityLevelConfigurations(arg1) {
+  return window['go']['app']['App']['ListPriorityLevelConfigurations'](arg1);
 }
 
 export function ListReferenceGrants(arg1, arg2) {
