@@ -74,6 +74,12 @@ import {
   ListPersistentVolumeClaims,
   ListPersistentVolumes,
   ListStorageClasses,
+  ListCSIDrivers,
+  GetCSIDriver,
+  ListCSINodes,
+  GetCSINode,
+  ListVolumeAttachments,
+  GetVolumeAttachment,
   ListNetworkPolicies,
   ListHorizontalPodAutoscalers,
   ListPodDisruptionBudgets,
@@ -209,6 +215,13 @@ export type ReplicaSetDetail = kube.ReplicaSetDetail
 export type PersistentVolumeClaimDetail = kube.PersistentVolumeClaimDetail
 export type PersistentVolumeDetail = kube.PersistentVolumeDetail
 export type StorageClassDetail = kube.StorageClassDetail
+export type CSIDriverInfo = kube.CSIDriverInfo
+export type CSIDriverDetail = kube.CSIDriverDetail
+export type CSINodeInfo = kube.CSINodeInfo
+export type CSINodeDetail = kube.CSINodeDetail
+export type CSINodeDriverDetail = kube.CSINodeDriverDetail
+export type VolumeAttachmentInfo = kube.VolumeAttachmentInfo
+export type VolumeAttachmentDetail = kube.VolumeAttachmentDetail
 export type NetworkPolicyDetail = kube.NetworkPolicyDetail
 export type HorizontalPodAutoscalerDetail = kube.HorizontalPodAutoscalerDetail
 export type PodDisruptionBudgetDetail = kube.PodDisruptionBudgetDetail
@@ -328,6 +341,14 @@ export const api = {
   listPersistentVolumes: (name: string): Promise<PersistentVolumeInfo[]> =>
     ListPersistentVolumes(name),
   listStorageClasses: (name: string): Promise<StorageClassInfo[]> => ListStorageClasses(name),
+  listCSIDrivers: (name: string): Promise<CSIDriverInfo[]> => ListCSIDrivers(name),
+  getCSIDriver: (ctx: string, name: string): Promise<CSIDriverDetail> => GetCSIDriver(ctx, name),
+  listCSINodes: (name: string): Promise<CSINodeInfo[]> => ListCSINodes(name),
+  getCSINode: (ctx: string, name: string): Promise<CSINodeDetail> => GetCSINode(ctx, name),
+  listVolumeAttachments: (name: string): Promise<VolumeAttachmentInfo[]> =>
+    ListVolumeAttachments(name),
+  getVolumeAttachment: (ctx: string, name: string): Promise<VolumeAttachmentDetail> =>
+    GetVolumeAttachment(ctx, name),
   listNetworkPolicies: (name: string, namespace: string): Promise<NetworkPolicyInfo[]> =>
     ListNetworkPolicies(name, namespace),
   listHorizontalPodAutoscalers: (name: string, namespace: string): Promise<HorizontalPodAutoscalerInfo[]> =>

@@ -7,6 +7,9 @@ import type {
   PersistentVolumeClaimInfo,
   PersistentVolumeInfo,
   StorageClassInfo,
+  CSIDriverInfo,
+  CSINodeInfo,
+  VolumeAttachmentInfo,
   NetworkPolicyInfo,
   HorizontalPodAutoscalerInfo,
   PodDisruptionBudgetInfo,
@@ -58,6 +61,9 @@ type ResourcesState = {
   persistentVolumeClaims: ByContext<PersistentVolumeClaimInfo>
   persistentVolumes: ByContext<PersistentVolumeInfo>
   storageClasses: ByContext<StorageClassInfo>
+  csiDrivers: ByContext<CSIDriverInfo>
+  csiNodes: ByContext<CSINodeInfo>
+  volumeAttachments: ByContext<VolumeAttachmentInfo>
   networkPolicies: ByContext<NetworkPolicyInfo>
   horizontalPodAutoscalers: ByContext<HorizontalPodAutoscalerInfo>
   podDisruptionBudgets: ByContext<PodDisruptionBudgetInfo>
@@ -100,6 +106,9 @@ type ResourcesState = {
   setPersistentVolumeClaims: (ctx: string, list: PersistentVolumeClaimInfo[]) => void
   setPersistentVolumes: (ctx: string, list: PersistentVolumeInfo[]) => void
   setStorageClasses: (ctx: string, list: StorageClassInfo[]) => void
+  setCSIDrivers: (ctx: string, list: CSIDriverInfo[]) => void
+  setCSINodes: (ctx: string, list: CSINodeInfo[]) => void
+  setVolumeAttachments: (ctx: string, list: VolumeAttachmentInfo[]) => void
   setNetworkPolicies: (ctx: string, list: NetworkPolicyInfo[]) => void
   setHorizontalPodAutoscalers: (ctx: string, list: HorizontalPodAutoscalerInfo[]) => void
   setPodDisruptionBudgets: (ctx: string, list: PodDisruptionBudgetInfo[]) => void
@@ -147,6 +156,9 @@ const KIND_KEYS = [
   'persistentVolumeClaims',
   'persistentVolumes',
   'storageClasses',
+  'csiDrivers',
+  'csiNodes',
+  'volumeAttachments',
   'networkPolicies',
   'horizontalPodAutoscalers',
   'podDisruptionBudgets',
@@ -229,6 +241,10 @@ export const useResources = create<ResourcesState>((set) => ({
     set((s) => ({ persistentVolumes: withCtx(s.persistentVolumes, ctx, list) })),
   setStorageClasses: (ctx, list) =>
     set((s) => ({ storageClasses: withCtx(s.storageClasses, ctx, list) })),
+  setCSIDrivers: (ctx, list) => set((s) => ({ csiDrivers: withCtx(s.csiDrivers, ctx, list) })),
+  setCSINodes: (ctx, list) => set((s) => ({ csiNodes: withCtx(s.csiNodes, ctx, list) })),
+  setVolumeAttachments: (ctx, list) =>
+    set((s) => ({ volumeAttachments: withCtx(s.volumeAttachments, ctx, list) })),
   setNetworkPolicies: (ctx, list) =>
     set((s) => ({ networkPolicies: withCtx(s.networkPolicies, ctx, list) })),
   setHorizontalPodAutoscalers: (ctx, list) =>

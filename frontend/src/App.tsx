@@ -19,6 +19,9 @@ import { ReplicaSetsView } from '@/features/replicasets/ReplicaSetsView'
 import { PersistentVolumeClaimsView } from '@/features/pvcs/PersistentVolumeClaimsView'
 import { PersistentVolumesView } from '@/features/pvs/PersistentVolumesView'
 import { StorageClassesView } from '@/features/storageclasses/StorageClassesView'
+import { CSIDriversView } from '@/features/csidrivers/CSIDriversView'
+import { CSINodesView } from '@/features/csinodes/CSINodesView'
+import { VolumeAttachmentsView } from '@/features/volumeattachments/VolumeAttachmentsView'
 import { NetworkPoliciesView } from '@/features/networkpolicies/NetworkPoliciesView'
 import { HorizontalPodAutoscalersView } from '@/features/hpas/HorizontalPodAutoscalersView'
 import { PodDisruptionBudgetsView } from '@/features/pdbs/PodDisruptionBudgetsView'
@@ -123,6 +126,12 @@ function MainView() {
       return <PersistentVolumesView />
     case 'storageclasses':
       return <StorageClassesView />
+    case 'csidrivers':
+      return <CSIDriversView />
+    case 'csinodes':
+      return <CSINodesView />
+    case 'volumeattachments':
+      return <VolumeAttachmentsView />
     case 'networkpolicies':
       return <NetworkPoliciesView />
     case 'horizontalpodautoscalers':

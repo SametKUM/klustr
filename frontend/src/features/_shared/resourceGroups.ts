@@ -24,6 +24,8 @@ import {
   HardDriveDownload,
   KeyRound,
   Layers3,
+  Plug,
+  ServerCog,
   Layers,
   LayoutDashboard,
   Library,
@@ -129,6 +131,9 @@ export const RESOURCE_GROUPS: ResourceGroup[] = [
       { label: 'PersistentVolumeClaims', view: 'persistentvolumeclaims', icon: HardDrive, kind: 'PersistentVolumeClaim' },
       { label: 'PersistentVolumes', view: 'persistentvolumes', icon: HardDriveDownload, kind: 'PersistentVolume' },
       { label: 'StorageClasses', view: 'storageclasses', icon: Archive, kind: 'StorageClass' },
+      { label: 'CSI Drivers', view: 'csidrivers', icon: Plug, kind: 'CSIDriver' },
+      { label: 'CSI Nodes', view: 'csinodes', icon: ServerCog, kind: 'CSINode' },
+      { label: 'Volume Attachments', view: 'volumeattachments', icon: Link2, kind: 'VolumeAttachment' },
     ],
   },
   {

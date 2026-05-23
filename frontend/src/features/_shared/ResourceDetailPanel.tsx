@@ -29,6 +29,9 @@ import { ReplicaSetDetailBody } from '@/features/replicasets/ReplicaSetDetailBod
 import { PersistentVolumeClaimDetailBody } from '@/features/pvcs/PersistentVolumeClaimDetailBody'
 import { PersistentVolumeDetailBody } from '@/features/pvs/PersistentVolumeDetailBody'
 import { StorageClassDetailBody } from '@/features/storageclasses/StorageClassDetailBody'
+import { CSIDriverDetailBody } from '@/features/csidrivers/CSIDriverDetailBody'
+import { CSINodeDetailBody } from '@/features/csinodes/CSINodeDetailBody'
+import { VolumeAttachmentDetailBody } from '@/features/volumeattachments/VolumeAttachmentDetailBody'
 import { NetworkPolicyDetailBody } from '@/features/networkpolicies/NetworkPolicyDetailBody'
 import { HorizontalPodAutoscalerDetailBody } from '@/features/hpas/HorizontalPodAutoscalerDetailBody'
 import { PodDisruptionBudgetDetailBody } from '@/features/pdbs/PodDisruptionBudgetDetailBody'
@@ -482,6 +485,12 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
       return <PersistentVolumeDetailBody contextName={contextName} name={resource.name} />
     case 'StorageClass':
       return <StorageClassDetailBody contextName={contextName} name={resource.name} />
+    case 'CSIDriver':
+      return <CSIDriverDetailBody contextName={contextName} name={resource.name} />
+    case 'CSINode':
+      return <CSINodeDetailBody contextName={contextName} name={resource.name} />
+    case 'VolumeAttachment':
+      return <VolumeAttachmentDetailBody contextName={contextName} name={resource.name} />
     case 'NetworkPolicy':
       return <NetworkPolicyDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
     case 'HorizontalPodAutoscaler':
