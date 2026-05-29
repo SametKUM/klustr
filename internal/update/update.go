@@ -69,7 +69,7 @@ func fetchLatest(ctx context.Context, owner, repo string) (githubRelease, error)
 	if err != nil {
 		return githubRelease{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return githubRelease{}, fmt.Errorf("github releases API: unexpected status %d", resp.StatusCode)
 	}

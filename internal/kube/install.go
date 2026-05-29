@@ -106,7 +106,7 @@ func FetchMetricsServerManifest(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("download manifest: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return "", fmt.Errorf("download manifest: HTTP %d", resp.StatusCode)
 	}

@@ -66,7 +66,7 @@ func (mgr *logSessionManager) start(
 
 	go func() {
 		defer func() {
-			stream.Close()
+			_ = stream.Close()
 			mgr.mu.Lock()
 			delete(mgr.sessions, id)
 			mgr.mu.Unlock()

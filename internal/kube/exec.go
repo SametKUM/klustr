@@ -28,7 +28,7 @@ type execSession struct {
 func (s *execSession) close() {
 	s.once.Do(func() {
 		s.cancel()
-		s.stdin.Close()
+		_ = s.stdin.Close()
 		close(s.resize)
 	})
 }
@@ -91,7 +91,7 @@ func (mgr *execSessionManager) start(
 
 	go func() {
 		defer func() {
-			pw.Close()
+			_ = pw.Close()
 			mgr.mu.Lock()
 			delete(mgr.sessions, id)
 			mgr.mu.Unlock()
