@@ -79,6 +79,7 @@ type contextWatcher struct {
 	mu      sync.Mutex
 	pending map[string]struct{}
 	timer   *time.Timer
+	stopped bool
 }
 
 func newContextWatcher(cs *kubernetes.Clientset, gw gwclient.Interface, dyn dynamic.Interface, defaultNS string, onChange ChangeFunc) *contextWatcher {
@@ -398,6 +399,7 @@ func (w *contextWatcher) stop() {
 		w.cancel()
 	}
 	w.mu.Lock()
+	w.stopped = true
 	if w.timer != nil {
 		w.timer.Stop()
 		w.timer = nil
@@ -408,11 +410,14 @@ func (w *contextWatcher) stop() {
 
 func (w *contextWatcher) touch(kind string) {
 	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.stopped {
+		return
+	}
 	w.pending[kind] = struct{}{}
 	if w.timer == nil {
 		w.timer = time.AfterFunc(debounceWindow, w.flush)
 	}
-	w.mu.Unlock()
 }
 
 func (w *contextWatcher) flush() {
