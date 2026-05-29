@@ -363,7 +363,7 @@ func (w *contextWatcher) Gateway(namespace, name string) (*GatewayDetail, error)
 			Name:              string(l.Name),
 			Hostname:          hostname,
 			Protocol:          string(l.Protocol),
-			Port:              int32(l.Port),
+			Port:              l.Port,
 			AllowedNamespaces: allowed,
 			AttachedRoutes:    attached,
 			Conditions:        conds,
@@ -818,7 +818,7 @@ func parentRefDetail(p gatewayv1.ParentReference, defaultNS string) ParentRefDet
 		out.SectionName = string(*p.SectionName)
 	}
 	if p.Port != nil {
-		out.Port = int32(*p.Port)
+		out.Port = *p.Port
 	}
 	return out
 }
@@ -850,7 +850,7 @@ func backendRefDetail(b gatewayv1.BackendRef, defaultNS string, weight *int32) B
 		out.Namespace = string(*b.Namespace)
 	}
 	if b.Port != nil {
-		out.Port = int32(*b.Port)
+		out.Port = *b.Port
 	}
 	if weight != nil {
 		out.Weight = *weight
