@@ -33,6 +33,8 @@ linters:
         - ifElseChain
         - hugeParam
   exclusions:
+    paths:
+      - frontend/node_modules
     rules:
       - path: _test\.go
         linters:
