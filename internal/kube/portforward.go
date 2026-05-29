@@ -34,11 +34,11 @@ type pfChangeFunc func()
 type pfSession struct {
 	info   PortForwardInfo
 	stopCh chan struct{}
+	closed sync.Once
 }
 
 func (s *pfSession) close() {
-	defer func() { _ = recover() }() // stopCh might already be closed
-	close(s.stopCh)
+	s.closed.Do(func() { close(s.stopCh) })
 }
 
 type pfManager struct {
