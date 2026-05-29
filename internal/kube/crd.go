@@ -91,10 +91,10 @@ type crdWatcher struct {
 	informer cache.SharedIndexInformer
 	started  bool
 
-	crMu       sync.Mutex
-	crFactory  dynamicinformer.DynamicSharedInformerFactory
-	crWatches  map[schema.GroupVersionResource]bool
-	crSynced   map[schema.GroupVersionResource]chan struct{}
+	crMu      sync.Mutex
+	crFactory dynamicinformer.DynamicSharedInformerFactory
+	crWatches map[schema.GroupVersionResource]bool
+	crSynced  map[schema.GroupVersionResource]chan struct{}
 }
 
 func newCRDWatcher(dyn dynamic.Interface, stopCh <-chan struct{}, onTouch func(kind string)) *crdWatcher {

@@ -29,19 +29,19 @@ var (
 // It pulls together fields scattered across spec/status so the frontend
 // renders a useful overview without parsing the whole CR.
 type KarpenterNodePoolInfo struct {
-	Name                 string `json:"name"`
-	Weight               int64  `json:"weight"`
-	NodeClassKind        string `json:"nodeClassKind"`
-	NodeClassName        string `json:"nodeClassName"`
-	ConsolidationPolicy  string `json:"consolidationPolicy"`
-	ConsolidateAfter     string `json:"consolidateAfter"`
-	CPULimit             string `json:"cpuLimit"`
-	MemoryLimit          string `json:"memoryLimit"`
-	CPUUsage             string `json:"cpuUsage"`
-	MemoryUsage          string `json:"memoryUsage"`
-	NodeCount            string `json:"nodeCount"`
-	Ready                string `json:"ready"`
-	CreatedAt            string `json:"createdAt"`
+	Name                string `json:"name"`
+	Weight              int64  `json:"weight"`
+	NodeClassKind       string `json:"nodeClassKind"`
+	NodeClassName       string `json:"nodeClassName"`
+	ConsolidationPolicy string `json:"consolidationPolicy"`
+	ConsolidateAfter    string `json:"consolidateAfter"`
+	CPULimit            string `json:"cpuLimit"`
+	MemoryLimit         string `json:"memoryLimit"`
+	CPUUsage            string `json:"cpuUsage"`
+	MemoryUsage         string `json:"memoryUsage"`
+	NodeCount           string `json:"nodeCount"`
+	Ready               string `json:"ready"`
+	CreatedAt           string `json:"createdAt"`
 }
 
 // KarpenterNodeClaimInfo is the row shape for the NodeClaims list view.
@@ -240,4 +240,3 @@ func unstructuredConditionStatus(obj *unstructured.Unstructured, conditionType s
 	}
 	return ""
 }
-

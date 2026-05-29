@@ -7,8 +7,8 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestFormatLabelSelector(t *testing.T) {
@@ -98,10 +98,10 @@ func TestNodeRoles(t *testing.T) {
 	}
 	n := &corev1.Node{}
 	n.Labels = map[string]string{
-		"node-role.kubernetes.io/worker":       "",
+		"node-role.kubernetes.io/worker":        "",
 		"node-role.kubernetes.io/control-plane": "",
-		"node-role.kubernetes.io/":             "",
-		"foo":                                  "bar",
+		"node-role.kubernetes.io/":              "",
+		"foo":                                   "bar",
 	}
 	if got := nodeRoles(n); got != "control-plane,worker" {
 		t.Errorf("got %q, want sorted control-plane,worker", got)

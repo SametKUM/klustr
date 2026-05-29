@@ -23,11 +23,11 @@ type DeviceClassDetail struct {
 }
 
 type ResourceSliceDeviceDetail struct {
-	Name         string   `json:"name"`
-	Attributes   []string `json:"attributes"`
-	Capacities   []string `json:"capacities"`
-	BindsToNode  bool     `json:"bindsToNode"`
-	Taints       int      `json:"taints"`
+	Name        string   `json:"name"`
+	Attributes  []string `json:"attributes"`
+	Capacities  []string `json:"capacities"`
+	BindsToNode bool     `json:"bindsToNode"`
+	Taints      int      `json:"taints"`
 }
 
 type ResourceSliceDetail struct {
@@ -44,13 +44,13 @@ type ResourceSliceDetail struct {
 }
 
 type DeviceRequestDetail struct {
-	Name             string   `json:"name"`
-	DeviceClassName  string   `json:"deviceClassName"`
-	AllocationMode   string   `json:"allocationMode"`
-	Count            int64    `json:"count"`
-	Selectors        []string `json:"selectors"`
-	AdminAccess      bool     `json:"adminAccess"`
-	FirstAvailable   int      `json:"firstAvailable"`
+	Name            string   `json:"name"`
+	DeviceClassName string   `json:"deviceClassName"`
+	AllocationMode  string   `json:"allocationMode"`
+	Count           int64    `json:"count"`
+	Selectors       []string `json:"selectors"`
+	AdminAccess     bool     `json:"adminAccess"`
+	FirstAvailable  int      `json:"firstAvailable"`
 }
 
 type AllocatedDeviceDetail struct {

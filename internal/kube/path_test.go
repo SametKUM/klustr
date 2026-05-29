@@ -59,4 +59,3 @@ func TestAugmentExecPathSkipsMissingDirectories(t *testing.T) {
 		}
 	}
 }
-

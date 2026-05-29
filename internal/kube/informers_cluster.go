@@ -66,11 +66,11 @@ type FlowSchemaInfo struct {
 }
 
 type PriorityLevelConfigurationInfo struct {
-	Name                      string `json:"name"`
-	Type                      string `json:"type"`
-	NominalConcurrencyShares  int32  `json:"nominalConcurrencyShares"`
-	LimitResponse             string `json:"limitResponse"`
-	CreatedAt                 string `json:"createdAt"`
+	Name                     string `json:"name"`
+	Type                     string `json:"type"`
+	NominalConcurrencyShares int32  `json:"nominalConcurrencyShares"`
+	LimitResponse            string `json:"limitResponse"`
+	CreatedAt                string `json:"createdAt"`
 }
 
 type LimitRangeInfo struct {

@@ -57,10 +57,10 @@ type CSIDriverDetail struct {
 }
 
 type CSINodeDriverDetail struct {
-	Name          string   `json:"name"`
-	NodeID        string   `json:"nodeID"`
-	TopologyKeys  []string `json:"topologyKeys"`
-	AllocatableMax int32   `json:"allocatableMax"`
+	Name           string   `json:"name"`
+	NodeID         string   `json:"nodeID"`
+	TopologyKeys   []string `json:"topologyKeys"`
+	AllocatableMax int32    `json:"allocatableMax"`
 }
 
 type CSINodeDetail struct {

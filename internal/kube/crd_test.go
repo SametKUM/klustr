@@ -54,9 +54,9 @@ func TestCRDInfoFromUnstructured(t *testing.T) {
 				"group": "example.com",
 				"scope": "Namespaced",
 				"names": map[string]any{
-					"kind":     "Widget",
-					"plural":   "widgets",
-					"singular": "widget",
+					"kind":       "Widget",
+					"plural":     "widgets",
+					"singular":   "widget",
 					"shortNames": []any{"wd"},
 				},
 				"versions": []any{

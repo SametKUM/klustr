@@ -54,8 +54,8 @@ func TestDiscoverAccess(t *testing.T) {
 		{
 			name: "prod-secret-reader: only secrets in prod",
 			allow: map[string]bool{
-				"list:namespaces:":    true,
-				"list:secrets:prod":   true,
+				"list:namespaces:":  true,
+				"list:secrets:prod": true,
 			},
 			candidateNS: "prod",
 			expect: map[string]KindAccess{

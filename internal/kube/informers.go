@@ -62,12 +62,12 @@ type ChangeFunc func(kind string)
 // files; the handler registration that wires up every kind stays here in
 // start() so the routing table is auditable in one place.
 type contextWatcher struct {
-	factory   informers.SharedInformerFactory // cluster-wide; nil when user has no cluster-wide list at all
-	scoped    informers.SharedInformerFactory // namespaced fallback; nil when no kind needs it
-	scopedNS  string                          // namespace `scoped` is bound to (informers.WithNamespace)
-	access    *contextAccess                  // per-kind routing decisions; nil ⇒ assume cluster-wide
-	defaultNS string                          // kubeconfig context.namespace, used as the scoped probe target
-	cs             kubernetes.Interface // kept around for SelfSubjectAccessReview
+	factory        informers.SharedInformerFactory // cluster-wide; nil when user has no cluster-wide list at all
+	scoped         informers.SharedInformerFactory // namespaced fallback; nil when no kind needs it
+	scopedNS       string                          // namespace `scoped` is bound to (informers.WithNamespace)
+	access         *contextAccess                  // per-kind routing decisions; nil ⇒ assume cluster-wide
+	defaultNS      string                          // kubeconfig context.namespace, used as the scoped probe target
+	cs             kubernetes.Interface            // kept around for SelfSubjectAccessReview
 	gwFactory      gwinformers.SharedInformerFactory
 	apiSvcFactory  dynamicinformer.DynamicSharedInformerFactory
 	apiSvcInformer cache.SharedIndexInformer

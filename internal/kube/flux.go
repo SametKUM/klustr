@@ -729,17 +729,17 @@ func extractFluxBucket(obj *unstructured.Unstructured) FluxBucketInfo {
 // incoming hook = bearer auth) are a bad surprise to discover from a
 // screenshot.
 type FluxProviderInfo struct {
-	Name             string `json:"name"`
-	Namespace        string `json:"namespace"`
-	Ready            string `json:"ready"`
-	Status           string `json:"status"`
-	Suspended        bool   `json:"suspended"`
-	Type             string `json:"type"`
-	Channel          string `json:"channel"`
-	Username         string `json:"username"`
-	Address          string `json:"address"`
-	AddressFromSecret bool  `json:"addressFromSecret"`
-	CreatedAt        string `json:"createdAt"`
+	Name              string `json:"name"`
+	Namespace         string `json:"namespace"`
+	Ready             string `json:"ready"`
+	Status            string `json:"status"`
+	Suspended         bool   `json:"suspended"`
+	Type              string `json:"type"`
+	Channel           string `json:"channel"`
+	Username          string `json:"username"`
+	Address           string `json:"address"`
+	AddressFromSecret bool   `json:"addressFromSecret"`
+	CreatedAt         string `json:"createdAt"`
 }
 
 type FluxProviderDetail struct {
@@ -855,11 +855,11 @@ type FluxAlertSource struct {
 
 type FluxAlertDetail struct {
 	FluxAlertInfo
-	Conditions     []FluxCondition   `json:"conditions"`
-	EventSources   []FluxAlertSource `json:"eventSources"`
-	InclusionList  []string          `json:"inclusionList"`
-	ExclusionList  []string          `json:"exclusionList"`
-	EventMetadata  map[string]string `json:"eventMetadata"`
+	Conditions    []FluxCondition   `json:"conditions"`
+	EventSources  []FluxAlertSource `json:"eventSources"`
+	InclusionList []string          `json:"inclusionList"`
+	ExclusionList []string          `json:"exclusionList"`
+	EventMetadata map[string]string `json:"eventMetadata"`
 }
 
 func (m *ClientManager) ListFluxAlerts(contextName, namespace string) []FluxAlertInfo {
@@ -1306,4 +1306,3 @@ func extractDependsOnRefs(raw []any) []string {
 	}
 	return out
 }
-

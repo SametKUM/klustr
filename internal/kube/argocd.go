@@ -528,7 +528,7 @@ type ArgoSyncResultResource struct {
 // polls during a sync (especially during dry-run, where there is nothing to
 // see in the cluster afterwards).
 type ArgoOperationState struct {
-	Phase      string                   `json:"phase"`      // Running / Succeeded / Failed / Error / "" (no op yet)
+	Phase      string                   `json:"phase"` // Running / Succeeded / Failed / Error / "" (no op yet)
 	Message    string                   `json:"message"`
 	StartedAt  string                   `json:"startedAt"`  // RFC3339
 	FinishedAt string                   `json:"finishedAt"` // RFC3339
