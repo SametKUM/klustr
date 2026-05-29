@@ -9,8 +9,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 )
@@ -98,13 +96,9 @@ type ArgoAppProjectDetail struct {
 // ListArgoAppProjects projects every AppProject CR from the cached dynamic
 // informer. The frontend ensures the watch is started on view mount.
 func (m *ClientManager) ListArgoAppProjects(contextName, namespace string) []ArgoAppProjectInfo {
-	objs := listFromCRWatch(m, contextName, argoAppProjectGVR, namespace)
+	objs := listCachedCRs(m, contextName, argoAppProjectGVR, namespace)
 	out := make([]ArgoAppProjectInfo, 0, len(objs))
-	for _, raw := range objs {
-		obj, ok := raw.(*unstructured.Unstructured)
-		if !ok {
-			continue
-		}
+	for _, obj := range objs {
 		out = append(out, extractArgoAppProjectInfo(obj))
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -294,13 +288,9 @@ type ArgoApplicationSetDetail struct {
 
 // ListArgoApplicationSets projects every ApplicationSet CR.
 func (m *ClientManager) ListArgoApplicationSets(contextName, namespace string) []ArgoApplicationSetInfo {
-	objs := listFromCRWatch(m, contextName, argoApplicationSetGVR, namespace)
+	objs := listCachedCRs(m, contextName, argoApplicationSetGVR, namespace)
 	out := make([]ArgoApplicationSetInfo, 0, len(objs))
-	for _, raw := range objs {
-		obj, ok := raw.(*unstructured.Unstructured)
-		if !ok {
-			continue
-		}
+	for _, obj := range objs {
 		out = append(out, extractArgoApplicationSetInfo(obj))
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -558,36 +548,6 @@ func readArgoApplicationSetConditions(obj *unstructured.Unstructured) []Conditio
 		out = append(out, c)
 	}
 	return out
-}
-
-// --- shared --------------------------------------------------------------
-
-// listFromCRWatch returns the cached objects for a CRD GVR from the dynamic
-// informer factory. Empty slice when the watch hasn't been started yet —
-// the frontend's EnsureCustomResourceWatch handles that on view mount.
-func listFromCRWatch(m *ClientManager, contextName string, gvr schema.GroupVersionResource, namespace string) []runtime.Object {
-	w, ok := m.watcher(contextName)
-	if !ok || w.crd == nil {
-		return nil
-	}
-	w.crd.crMu.Lock()
-	started := w.crd.crWatches[gvr]
-	w.crd.crMu.Unlock()
-	if !started {
-		return nil
-	}
-	lister := w.crd.crFactory.ForResource(gvr).Lister()
-	var objs []runtime.Object
-	var err error
-	if namespace == "" {
-		objs, err = lister.List(labels.Everything())
-	} else {
-		objs, err = lister.ByNamespace(namespace).List(labels.Everything())
-	}
-	if err != nil {
-		return nil
-	}
-	return objs
 }
 
 func nonNilStrings(s []string, _ bool, _ error) []string {

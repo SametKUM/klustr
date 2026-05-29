@@ -9,8 +9,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -1163,41 +1161,6 @@ func (m *ClientManager) SetFluxResourceSuspended(ctx context.Context, contextNam
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
-
-// listCachedCRs returns the cached CR list for the given GVR. The frontend
-// calls api.ensureCustomResourceWatch before any view that lists Flux
-// resources, so by the time these methods run the dynamic informer is
-// already populated; if not we return an empty slice rather than blocking.
-func listCachedCRs(m *ClientManager, contextName string, gvr schema.GroupVersionResource, namespace string) []*unstructured.Unstructured {
-	w, ok := m.watcher(contextName)
-	if !ok || w.crd == nil {
-		return nil
-	}
-	w.crd.crMu.Lock()
-	started := w.crd.crWatches[gvr]
-	w.crd.crMu.Unlock()
-	if !started {
-		return nil
-	}
-	lister := w.crd.crFactory.ForResource(gvr).Lister()
-	var raw []runtime.Object
-	var err error
-	if namespace == "" {
-		raw, err = lister.List(labels.Everything())
-	} else {
-		raw, err = lister.ByNamespace(namespace).List(labels.Everything())
-	}
-	if err != nil {
-		return nil
-	}
-	out := make([]*unstructured.Unstructured, 0, len(raw))
-	for _, r := range raw {
-		if u, ok := r.(*unstructured.Unstructured); ok {
-			out = append(out, u)
-		}
-	}
-	return out
-}
 
 // sortFluxRows sorts any of the FluxXxxInfo slices by (namespace, name).
 // Defined as a generic helper instead of a per-type sort so the list

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -118,30 +117,7 @@ func (m *ClientManager) NodeForNodeClaim(contextName, nodeClaimName string) []No
 // frontend retries after EnsureCustomResourceWatch resolves, mirroring the
 // Argo Applications flow in argocd.go.
 func (m *ClientManager) listKarpenterCR(contextName string, gvr schema.GroupVersionResource) []*unstructured.Unstructured {
-	w, ok := m.watcher(contextName)
-	if !ok || w.crd == nil {
-		return nil
-	}
-	w.crd.crMu.Lock()
-	started := w.crd.crWatches[gvr]
-	w.crd.crMu.Unlock()
-	if !started {
-		return nil
-	}
-	lister := w.crd.crFactory.ForResource(gvr).Lister()
-	raw, err := lister.List(labels.Everything())
-	if err != nil {
-		return nil
-	}
-	out := make([]*unstructured.Unstructured, 0, len(raw))
-	for _, r := range raw {
-		obj, ok := r.(*unstructured.Unstructured)
-		if !ok {
-			continue
-		}
-		out = append(out, obj)
-	}
-	return out
+	return listCachedCRs(m, contextName, gvr, "")
 }
 
 func extractKarpenterNodePool(obj *unstructured.Unstructured) KarpenterNodePoolInfo {

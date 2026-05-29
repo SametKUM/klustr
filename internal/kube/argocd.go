@@ -9,8 +9,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
@@ -40,33 +38,9 @@ type ArgoApplicationInfo struct {
 // Caller should have started the CR watch first (the frontend does this on
 // view mount).
 func (m *ClientManager) ListArgoApplications(contextName, namespace string) []ArgoApplicationInfo {
-	w, ok := m.watcher(contextName)
-	if !ok || w.crd == nil {
-		return []ArgoApplicationInfo{}
-	}
-	w.crd.crMu.Lock()
-	started := w.crd.crWatches[argoApplicationGVR]
-	w.crd.crMu.Unlock()
-	if !started {
-		return []ArgoApplicationInfo{}
-	}
-	lister := w.crd.crFactory.ForResource(argoApplicationGVR).Lister()
-	var objs []runtime.Object
-	var err error
-	if namespace == "" {
-		objs, err = lister.List(labels.Everything())
-	} else {
-		objs, err = lister.ByNamespace(namespace).List(labels.Everything())
-	}
-	if err != nil {
-		return []ArgoApplicationInfo{}
-	}
+	objs := listCachedCRs(m, contextName, argoApplicationGVR, namespace)
 	out := make([]ArgoApplicationInfo, 0, len(objs))
-	for _, raw := range objs {
-		obj, ok := raw.(*unstructured.Unstructured)
-		if !ok {
-			continue
-		}
+	for _, obj := range objs {
 		out = append(out, extractArgoApplication(obj))
 	}
 	sort.Slice(out, func(i, j int) bool {

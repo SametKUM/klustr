@@ -335,6 +335,42 @@ func (w *crdWatcher) EnsureCRWatch(gvr schema.GroupVersionResource) error {
 	return nil
 }
 
+// listCachedCRs reads the cached objects for a CRD GVR from the dynamic
+// informer, returning them as *unstructured.Unstructured. It returns nil when
+// the context has no watcher, the CRD watcher is absent, or the GVR's informer
+// has not been started yet (callers EnsureCRWatch first). A namespace of ""
+// lists across all namespaces.
+func listCachedCRs(m *ClientManager, contextName string, gvr schema.GroupVersionResource, namespace string) []*unstructured.Unstructured {
+	w, ok := m.watcher(contextName)
+	if !ok || w.crd == nil {
+		return nil
+	}
+	w.crd.crMu.Lock()
+	started := w.crd.crWatches[gvr]
+	w.crd.crMu.Unlock()
+	if !started {
+		return nil
+	}
+	lister := w.crd.crFactory.ForResource(gvr).Lister()
+	var raw []runtime.Object
+	var err error
+	if namespace == "" {
+		raw, err = lister.List(labels.Everything())
+	} else {
+		raw, err = lister.ByNamespace(namespace).List(labels.Everything())
+	}
+	if err != nil {
+		return nil
+	}
+	out := make([]*unstructured.Unstructured, 0, len(raw))
+	for _, r := range raw {
+		if u, ok := r.(*unstructured.Unstructured); ok {
+			out = append(out, u)
+		}
+	}
+	return out
+}
+
 // ListCustomResources reads the cached CR list for the given GVR. If the
 // informer for this GVR has not been started yet, it returns an empty slice —
 // callers should call EnsureCRWatch first.
