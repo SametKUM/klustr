@@ -116,7 +116,7 @@ func (w *contextWatcher) ListEndpoints(namespace string) []EndpointsInfo {
 	}
 	lister := f.Core().V1().Endpoints().Lister()
 	var (
-		eps []*corev1.Endpoints
+		eps []*corev1.Endpoints //nolint:staticcheck // listing the deprecated core/v1 Endpoints kind is the point of this view
 		err error
 	)
 	if namespace == "" {
