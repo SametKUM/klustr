@@ -297,7 +297,11 @@ func (w *crdWatcher) EnsureCRWatch(gvr schema.GroupVersionResource) error {
 	if w.crWatches[gvr] {
 		ch := w.crSynced[gvr]
 		w.crMu.Unlock()
-		<-ch
+		select {
+		case <-ch:
+		case <-w.stopCh:
+			return fmt.Errorf("context watch stopped")
+		}
 		return nil
 	}
 
