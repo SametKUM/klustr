@@ -462,10 +462,26 @@ func (h *helmManager) ListRepos() ([]HelmRepoInfo, error) {
 	return out, nil
 }
 
+// validateRepoName rejects names that would let a caller escape the repository
+// cache directory: the name is concatenated into cache file paths, so a path
+// separator or ".." segment could read or delete files outside the cache.
+func validateRepoName(name string) error {
+	if name == "" {
+		return fmt.Errorf("name is required")
+	}
+	if strings.ContainsAny(name, `/\`) || strings.Contains(name, "..") {
+		return fmt.Errorf("invalid repository name %q", name)
+	}
+	return nil
+}
+
 // AddRepo registers a new repo and downloads its index.
 func (h *helmManager) AddRepo(name, url string) error {
-	if name == "" || url == "" {
-		return fmt.Errorf("name and url are required")
+	if err := validateRepoName(name); err != nil {
+		return err
+	}
+	if url == "" {
+		return fmt.Errorf("url is required")
 	}
 	file, err := loadRepoFile(h.settings.RepositoryConfig)
 	if err != nil {
@@ -489,6 +505,9 @@ func (h *helmManager) AddRepo(name, url string) error {
 
 // RemoveRepo drops the repo from the local config and deletes its cache.
 func (h *helmManager) RemoveRepo(name string) error {
+	if err := validateRepoName(name); err != nil {
+		return err
+	}
 	file, err := loadRepoFile(h.settings.RepositoryConfig)
 	if err != nil {
 		return err
@@ -678,6 +697,9 @@ func chartMatches(needle, repoName, chartName string, v *repo.ChartVersion) bool
 }
 
 func validateChartInstallable(ch *chart.Chart) error {
+	if ch.Metadata == nil {
+		return fmt.Errorf("chart %q has no metadata", ch.Name())
+	}
 	switch ch.Metadata.Type {
 	case "", "application":
 		return nil
