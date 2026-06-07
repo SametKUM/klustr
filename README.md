@@ -15,6 +15,7 @@
   <a href="https://github.com/SametKUM/klustr/actions/workflows/release.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/SametKUM/klustr/release.yml?style=flat-square&cacheSeconds=300&label=build" alt="Build">
   </a>
+<a href="https://app.fossa.com/projects/git%2Bgithub.com%2FSametKUM%2Fklustr?ref=badge_shield" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FSametKUM%2Fklustr.svg?type=shield"/></a>
   <a href="LICENSE">
     <img src="https://img.shields.io/github/license/SametKUM/klustr?style=flat-square&cacheSeconds=300" alt="License">
   </a>
@@ -38,6 +39,9 @@
 <p align="center">
   <sub><a href="https://github.com/SametKUM/klustr/blob/main/docs/hero.mp4">▶ Watch the full-quality video</a></sub>
 </p>
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FSametKUM%2Fklustr.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FSametKUM%2Fklustr?ref=badge_large)
 
 ## What is Klustr?
 
