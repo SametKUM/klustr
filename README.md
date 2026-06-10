@@ -66,6 +66,7 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 - 🚧 **Cordon & drain.** One-click cordon/uncordon and a live-progress drain that evicts through the Eviction API (PDB-aware, skips DaemonSet & mirror pods).
 - 🔧 **YAML edit.** Monaco editor with a server-side dry-run diff before apply.
 - 🚀 **Scale, restart, pause/resume.** Replica controls, one-click rolling restart, inline pause/resume, HPA min/max editable inline.
+- 📐 **In-place pod resize.** Change a running container's CPU / memory requests and limits via the `pods/resize` subresource — no pod recreation; shows the live resize status (Deferred / Infeasible).
 - ⏪ **Rollout history & rollback.** Side-by-side template diff and one-click revert on Deployments / StatefulSets / DaemonSets.
 - 🔄 **Port-forwarding.** Suggested local ports, persistent header indicator, click-to-open in browser.
 - 🗺️ **Cluster overviews.** CPU / memory / pod donuts, workloads health, recent warnings — single-cluster or aggregated.
@@ -194,6 +195,7 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] Logs, exec, port-forwarding
 - [x] Node shell (privileged `nsenter` pod), cordon/uncordon, PDB-aware drain
 - [x] YAML edit / apply with diff, scale, restart, deployment pause/resume, HPA inline edit
+- [x] In-place pod resize (CPU/memory requests & limits via the `pods/resize` subresource, no recreation)
 - [x] Rollout history with revision diff and one-click rollback (Deployments / StatefulSets / DaemonSets)
 - [x] Cross-resource navigation (related pods, owner/node links, back stack)
 - [x] Custom Resource Definitions (CRDs)
