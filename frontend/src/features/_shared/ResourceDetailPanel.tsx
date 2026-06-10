@@ -31,6 +31,7 @@ import {
 } from '@/features/argocd/DeleteArgoApplicationButton'
 import { SyncArgoApplicationButton } from '@/features/argocd/SyncArgoApplicationButton'
 import { PodExecTab } from '@/features/pods/PodExecTab'
+import { ResizePodButton } from '@/features/pods/ResizePodButton'
 import { DeploymentDetailBody } from '@/features/deployments/DeploymentDetailBody'
 import { StatefulSetDetailBody } from '@/features/statefulsets/StatefulSetDetailBody'
 import { DaemonSetDetailBody } from '@/features/daemonsets/DaemonSetDetailBody'
@@ -189,6 +190,13 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
           </div>
           {resource && resource.kind !== 'HelmRelease' && (
             <div className="flex shrink-0 items-center gap-2 pt-1">
+              {!readOnly && resource.kind === 'Pod' && (
+                <ResizePodButton
+                  contextName={contextName}
+                  namespace={resource.namespace}
+                  podName={resource.name}
+                />
+              )}
               {resource.kind === 'Pod' && (
                 <PortForwardButton contextName={contextName} resource={resource} />
               )}

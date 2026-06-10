@@ -228,6 +228,7 @@ import {
   GetWorkloadRevisionTemplate,
   PatchDeploymentPaused,
   PatchHPAReplicas,
+  ResizePodResources,
   RestartWorkload,
   ScaleResource,
   SendExecInput,
@@ -831,6 +832,17 @@ export const api = {
     minReplicas: number,
     maxReplicas: number,
   ): Promise<void> => PatchHPAReplicas(ctx, ns, name, minReplicas, maxReplicas),
+  resizePodResources: (
+    ctx: string,
+    ns: string,
+    podName: string,
+    container: string,
+    cpuRequest: string,
+    cpuLimit: string,
+    memRequest: string,
+    memLimit: string,
+  ): Promise<void> =>
+    ResizePodResources(ctx, ns, podName, container, cpuRequest, cpuLimit, memRequest, memLimit),
   patchDeploymentPaused: (ctx: string, ns: string, name: string, paused: boolean): Promise<void> =>
     PatchDeploymentPaused(ctx, ns, name, paused),
   listDeploymentRevisions: (ctx: string, ns: string, name: string): Promise<WorkloadRevision[]> =>

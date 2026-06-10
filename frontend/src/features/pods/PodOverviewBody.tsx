@@ -22,6 +22,7 @@ export function PodOverviewBody({
   return (
     <div className="space-y-6">
       <PodDiagnosisCard detail={detail} />
+      {detail.resizeStatus && <ResizeStatusBanner status={detail.resizeStatus} />}
       <div className="grid gap-6 sm:grid-cols-2">
         <Section title="Status">
           <Field label="Status">{detail.status}</Field>
@@ -398,6 +399,37 @@ function SecretEnvValue({
   )
 }
 
+function ResizeStatusBanner({ status }: { status: string }) {
+  const infeasible = status === 'Infeasible'
+  return (
+    <div
+      className={[
+        'rounded-md border px-4 py-2 text-xs',
+        infeasible
+          ? 'border-destructive/40 bg-destructive/5 text-destructive'
+          : 'border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400',
+      ].join(' ')}
+    >
+      In-place resize <span className="font-semibold">{status}</span>
+      {infeasible
+        ? " — the node can't satisfy the requested resources."
+        : status === 'Deferred'
+          ? ' — waiting for room on the node; will retry.'
+          : ' — the kubelet is applying the new resources.'}
+    </div>
+  )
+}
+
+function resourceCell(req: string, lim: string) {
+  if (!req && !lim) return <span className="text-muted-foreground">—</span>
+  return (
+    <span className="font-mono">
+      {req || '—'}
+      <span className="text-muted-foreground"> / {lim || '—'}</span>
+    </span>
+  )
+}
+
 function PodContainersTable({
   title,
   containers,
@@ -406,7 +438,10 @@ function PodContainersTable({
   containers: PodDetail['containers']
 }) {
   return (
-    <Section title={title}>
+    <section className="rounded-md border border-border bg-card/40 p-4">
+      <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </h3>
       <div className="overflow-hidden rounded border border-border">
         <table className="w-full text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
@@ -416,6 +451,8 @@ function PodContainersTable({
               <Th>State</Th>
               <Th>Ready</Th>
               <Th>Restarts</Th>
+              <Th>CPU req/lim</Th>
+              <Th>Mem req/lim</Th>
             </tr>
           </thead>
           <tbody>
@@ -429,11 +466,13 @@ function PodContainersTable({
                 </Td>
                 <Td>{c.ready ? '✓' : '·'}</Td>
                 <Td>{c.restartCount}</Td>
+                <Td>{resourceCell(c.resources?.cpuRequest ?? '', c.resources?.cpuLimit ?? '')}</Td>
+                <Td>{resourceCell(c.resources?.memRequest ?? '', c.resources?.memLimit ?? '')}</Td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </Section>
+    </section>
   )
 }
