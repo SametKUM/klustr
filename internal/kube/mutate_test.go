@@ -1,10 +1,69 @@
 package kube
 
 import (
+	"encoding/json"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+func TestBuildResizePatch(t *testing.T) {
+	if _, err := buildResizePatch("", "100m", "", "", ""); err == nil {
+		t.Fatal("empty container name should error")
+	}
+	if _, err := buildResizePatch("app", "", "", "", ""); err == nil {
+		t.Fatal("no quantities should error")
+	}
+	if _, err := buildResizePatch("app", "not-a-qty", "", "", ""); err == nil {
+		t.Fatal("invalid quantity should error")
+	}
+
+	data, err := buildResizePatch("app", "250m", "500m", "128Mi", "256Mi")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var got struct {
+		Spec struct {
+			Containers []struct {
+				Name      string `json:"name"`
+				Resources struct {
+					Requests map[string]string `json:"requests"`
+					Limits   map[string]string `json:"limits"`
+				} `json:"resources"`
+			} `json:"containers"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("patch is not valid JSON: %v", err)
+	}
+	c := got.Spec.Containers[0]
+	if c.Name != "app" {
+		t.Fatalf("container name = %q, want app", c.Name)
+	}
+	if c.Resources.Requests["cpu"] != "250m" || c.Resources.Requests["memory"] != "128Mi" {
+		t.Fatalf("requests = %v", c.Resources.Requests)
+	}
+	if c.Resources.Limits["cpu"] != "500m" || c.Resources.Limits["memory"] != "256Mi" {
+		t.Fatalf("limits = %v", c.Resources.Limits)
+	}
+
+	// A partial resize must omit the untouched side entirely.
+	data, err = buildResizePatch("app", "", "", "512Mi", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var partial map[string]any
+	if err := json.Unmarshal(data, &partial); err != nil {
+		t.Fatalf("patch is not valid JSON: %v", err)
+	}
+	res := partial["spec"].(map[string]any)["containers"].([]any)[0].(map[string]any)["resources"].(map[string]any)
+	if _, hasLimits := res["limits"]; hasLimits {
+		t.Fatalf("limits should be omitted, got %v", res["limits"])
+	}
+	if res["requests"].(map[string]any)["memory"] != "512Mi" {
+		t.Fatalf("expected memory request 512Mi, got %v", res["requests"])
+	}
+}
 
 func TestResourceForKind(t *testing.T) {
 	cases := []struct {

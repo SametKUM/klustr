@@ -7,6 +7,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -425,6 +426,85 @@ func (m *ClientManager) PatchHPAReplicas(ctx context.Context, contextName, names
 		metav1.PatchOptions{FieldManager: "klustr"},
 	)
 	return err
+}
+
+// ResizePodResources changes a running container's CPU/memory requests and
+// limits in place via the pods/resize subresource (KEP-1287, beta and on by
+// default since Kubernetes 1.33), so the pod keeps running instead of being
+// recreated. Each field is optional; an empty string leaves that quantity
+// untouched. Non-empty values are validated as resource.Quantity before any
+// request is issued. Whether a container actually restarts is governed by its
+// resizePolicy, not by Klustr.
+func (m *ClientManager) ResizePodResources(ctx context.Context, contextName, namespace, podName, container, cpuRequest, cpuLimit, memRequest, memLimit string) error {
+	if err := m.assertWritable(contextName); err != nil {
+		return err
+	}
+	data, err := buildResizePatch(container, cpuRequest, cpuLimit, memRequest, memLimit)
+	if err != nil {
+		return err
+	}
+
+	cs, err := m.Clientset(contextName)
+	if err != nil {
+		return err
+	}
+	_, err = cs.CoreV1().Pods(namespace).Patch(
+		ctx, podName, types.StrategicMergePatchType, data,
+		metav1.PatchOptions{FieldManager: "klustr"}, "resize",
+	)
+	return err
+}
+
+// buildResizePatch validates the quantities and builds the strategic-merge
+// patch body sent to the pods/resize subresource. An empty field is omitted so
+// it stays untouched; at least one request or limit must be set.
+func buildResizePatch(container, cpuRequest, cpuLimit, memRequest, memLimit string) ([]byte, error) {
+	if container == "" {
+		return nil, fmt.Errorf("container name is required")
+	}
+	requests := map[string]string{}
+	limits := map[string]string{}
+	add := func(dst map[string]string, key, raw string) error {
+		if raw == "" {
+			return nil
+		}
+		if _, err := apiresource.ParseQuantity(raw); err != nil {
+			return fmt.Errorf("invalid quantity %q: %w", raw, err)
+		}
+		dst[key] = raw
+		return nil
+	}
+	if err := add(requests, "cpu", cpuRequest); err != nil {
+		return nil, err
+	}
+	if err := add(requests, "memory", memRequest); err != nil {
+		return nil, err
+	}
+	if err := add(limits, "cpu", cpuLimit); err != nil {
+		return nil, err
+	}
+	if err := add(limits, "memory", memLimit); err != nil {
+		return nil, err
+	}
+	if len(requests) == 0 && len(limits) == 0 {
+		return nil, fmt.Errorf("nothing to resize: set at least one request or limit")
+	}
+
+	resources := map[string]any{}
+	if len(requests) > 0 {
+		resources["requests"] = requests
+	}
+	if len(limits) > 0 {
+		resources["limits"] = limits
+	}
+	patch := map[string]any{
+		"spec": map[string]any{
+			"containers": []any{
+				map[string]any{"name": container, "resources": resources},
+			},
+		},
+	}
+	return json.Marshal(patch)
 }
 
 func (m *ClientManager) ScaleResource(ctx context.Context, contextName, kind, namespace, name string, replicas int32) error {

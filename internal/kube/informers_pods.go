@@ -55,6 +55,37 @@ type ContainerDetail struct {
 	Ports        []ContainerPort    `json:"ports"`
 	Env          []ContainerEnvVar  `json:"env"`
 	EnvFrom      []ContainerEnvFrom `json:"envFrom"`
+	// Resources is what the spec asks for; Allocated is what the kubelet has
+	// actually granted (status.containerStatuses[].resources). They diverge
+	// while an in-place resize is still being applied or was Deferred.
+	Resources ContainerResources `json:"resources"`
+	Allocated ContainerResources `json:"allocated"`
+}
+
+type ContainerResources struct {
+	CPURequest string `json:"cpuRequest"`
+	CPULimit   string `json:"cpuLimit"`
+	MemRequest string `json:"memRequest"`
+	MemLimit   string `json:"memLimit"`
+}
+
+func containerResources(rr corev1.ResourceRequirements) ContainerResources {
+	return resourcesFrom(rr.Requests, rr.Limits)
+}
+
+func resourcesFrom(requests, limits corev1.ResourceList) ContainerResources {
+	q := func(list corev1.ResourceList, name corev1.ResourceName) string {
+		if v, ok := list[name]; ok {
+			return v.String()
+		}
+		return ""
+	}
+	return ContainerResources{
+		CPURequest: q(requests, corev1.ResourceCPU),
+		CPULimit:   q(limits, corev1.ResourceCPU),
+		MemRequest: q(requests, corev1.ResourceMemory),
+		MemLimit:   q(limits, corev1.ResourceMemory),
+	}
 }
 
 type ContainerPort struct {
@@ -102,6 +133,11 @@ type PodDetail struct {
 	InitContainers    []ContainerDetail `json:"initContainers"`
 	Containers        []ContainerDetail `json:"containers"`
 	Conditions        []ConditionDetail `json:"conditions"`
+	// ResizeStatus reflects an in-flight in-place resize: "Proposed",
+	// "InProgress", "Deferred" or "Infeasible" (empty when none is pending).
+	// Read from .status.resize on older clusters and from the
+	// PodResizePending / PodResizeInProgress conditions on 1.33+.
+	ResizeStatus string `json:"resizeStatus"`
 }
 
 func (w *contextWatcher) Pod(namespace, name string) (*PodDetail, error) {
@@ -142,7 +178,32 @@ func (w *contextWatcher) Pod(namespace, name string) (*PodDetail, error) {
 		InitContainers:    w.containerDetails(p, p.Spec.InitContainers, p.Status.InitContainerStatuses),
 		Containers:        w.containerDetails(p, p.Spec.Containers, p.Status.ContainerStatuses),
 		Conditions:        podConditions(p.Status.Conditions),
+		ResizeStatus:      podResizeStatus(p),
 	}, nil
+}
+
+// podResizeStatus surfaces an in-flight in-place resize. Kubernetes ≤1.32
+// exposed it as the .status.resize enum; 1.33 moved it to the
+// PodResizePending / PodResizeInProgress conditions, so both are checked.
+func podResizeStatus(p *corev1.Pod) string {
+	if s := string(p.Status.Resize); s != "" {
+		return s
+	}
+	for _, c := range p.Status.Conditions {
+		if c.Status != corev1.ConditionTrue {
+			continue
+		}
+		switch c.Type {
+		case "PodResizeInProgress":
+			return "InProgress"
+		case "PodResizePending":
+			if c.Reason != "" {
+				return c.Reason // "Deferred" or "Infeasible"
+			}
+			return "Pending"
+		}
+	}
+	return ""
 }
 
 // replicaSetController resolves the controller that owns the named ReplicaSet
@@ -182,15 +243,19 @@ func (w *contextWatcher) containerDetails(pod *corev1.Pod, specs []corev1.Contai
 			})
 		}
 		d := ContainerDetail{
-			Name:    c.Name,
-			Image:   c.Image,
-			Ports:   ports,
-			Env:     w.envVarsFrom(pod, c, c.Env),
-			EnvFrom: envFromSources(c.EnvFrom),
+			Name:      c.Name,
+			Image:     c.Image,
+			Ports:     ports,
+			Env:       w.envVarsFrom(pod, c, c.Env),
+			EnvFrom:   envFromSources(c.EnvFrom),
+			Resources: containerResources(c.Resources),
 		}
 		if s, ok := byName[c.Name]; ok {
 			d.Ready = s.Ready
 			d.RestartCount = s.RestartCount
+			if s.Resources != nil {
+				d.Allocated = resourcesFrom(s.Resources.Requests, s.Resources.Limits)
+			}
 			switch {
 			case s.State.Running != nil:
 				d.State = "Running"
