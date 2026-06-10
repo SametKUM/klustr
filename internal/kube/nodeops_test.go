@@ -2,6 +2,7 @@ package kube
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -60,6 +61,24 @@ func TestPodKeysSorted(t *testing.T) {
 	want := []string{"default/a", "kube-system/b"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("podKeys = %v, want %v", got, want)
+	}
+}
+
+func TestNodeShellCommand(t *testing.T) {
+	normal := nodeShellCommand("Amazon Linux 2023")
+	if !slices.Contains(normal, "--mount") {
+		t.Fatal("normal host shell must enter the host mount namespace")
+	}
+	if normal[len(normal)-1] == "" || !strings.Contains(normal[len(normal)-1], "bash") {
+		t.Fatalf("normal host shell should prefer bash: %v", normal)
+	}
+
+	br := nodeShellCommand("Bottlerocket OS 1.61.0 (aws-k8s-1.35)")
+	if slices.Contains(br, "--mount") {
+		t.Fatal("Bottlerocket shell must NOT enter the host mount namespace (brush jail)")
+	}
+	if !strings.Contains(br[len(br)-1], "/proc/1/root") {
+		t.Fatalf("Bottlerocket shell should start in the host fs at /proc/1/root: %v", br)
 	}
 }
 

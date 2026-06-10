@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,20 +20,35 @@ const (
 	nodeShellReadyTimeout  = 90 * time.Second
 )
 
-// nodeShellCommand re-enters the host's namespaces through PID 1 and runs the
-// host's login shell, so the shell and every binary resolve from the host
-// filesystem, not the helper image. /bin/sh is the entry point because it
-// exists on every host (minimal node VMs such as OrbStack's ship no bash); the
-// -c probe upgrades to bash -l when the host has it, falling back to sh -l.
+// nodeShellCommand returns the nsenter invocation for the node's host OS.
 //
 // nsenter options are the long form, not the short `-t 1 -m -u -i -n -p`
 // cluster: the helper image's busybox nsenter mis-parses the short
 // optional-arg form on some node runtimes, exec'ing the post-`--` program with
 // the wrong argv.
-var nodeShellCommand = []string{
-	"nsenter", "--target", "1", "--mount", "--uts", "--ipc", "--net", "--pid", "--",
-	"sh", "-c",
-	"if command -v bash >/dev/null 2>&1; then exec bash -l; else exec sh -l; fi",
+//
+// Normal hosts: enter every namespace including --mount, so the shell and `/`
+// are the host's. The `sh -c` probe prefers the host's bash and falls back to
+// sh — bash is not guaranteed (minimal node VMs such as OrbStack's ship none).
+//
+// Bottlerocket: its host /bin/sh is `brush`, a sandboxed shell whose
+// allow-list refuses almost every program (even `ls`), so a --mount host shell
+// is unusable. Instead we skip --mount and run the helper image's own busybox
+// shell with the host's pid/net/ipc/uts namespaces, starting in /proc/1/root
+// (the live host filesystem). You still see every host process and the whole
+// host fs; only the shell binary and `/` come from the helper image.
+func nodeShellCommand(osImage string) []string {
+	if strings.Contains(strings.ToLower(osImage), "bottlerocket") {
+		return []string{
+			"nsenter", "--target", "1", "--uts", "--ipc", "--net", "--pid", "--",
+			"/bin/sh", "-c", "cd /proc/1/root 2>/dev/null; exec /bin/sh -l",
+		}
+	}
+	return []string{
+		"nsenter", "--target", "1", "--mount", "--uts", "--ipc", "--net", "--pid", "--",
+		"sh", "-c",
+		"if command -v bash >/dev/null 2>&1; then exec bash -l; else exec sh -l; fi",
+	}
 }
 
 // StartNodeShell gives a root shell on the node by creating a privileged
@@ -57,6 +73,11 @@ func (m *ClientManager) StartNodeShell(
 		return "", err
 	}
 
+	osImage := ""
+	if node, err := cs.CoreV1().Nodes().Get(parent, nodeName, metav1.GetOptions{}); err == nil {
+		osImage = node.Status.NodeInfo.OSImage
+	}
+
 	created, err := cs.CoreV1().Pods(nodeShellNamespace).Create(
 		parent, nodeShellPod(nodeName), metav1.CreateOptions{FieldManager: "klustr"})
 	if err != nil {
@@ -69,7 +90,7 @@ func (m *ClientManager) StartNodeShell(
 	}
 
 	id, err := m.execs.start(
-		parent, cfg, cs, nodeShellNamespace, created.Name, nodeShellContainerName, nodeShellCommand,
+		parent, cfg, cs, nodeShellNamespace, created.Name, nodeShellContainerName, nodeShellCommand(osImage),
 		onData,
 		func(err error) {
 			deleteNodeShellPod(cs, created.Name)
