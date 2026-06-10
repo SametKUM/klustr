@@ -17,11 +17,15 @@ export function CertManagerOrdersFor(arg1:string,arg2:string,arg3:string):Promis
 
 export function CheckForUpdate():Promise<update.Result>;
 
+export function CordonNode(arg1:string,arg2:string,arg3:boolean):Promise<void>;
+
 export function DeleteArgoApplication(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function DeleteResource(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function DenyCertificateSigningRequest(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function DrainNode(arg1:string,arg2:string):Promise<void>;
 
 export function DryRunApplyResourceYAML(arg1:string,arg2:string):Promise<kube.MutationDiff>;
 
@@ -466,6 +470,8 @@ export function SetFluxResourceSuspended(arg1:string,arg2:string,arg3:string,arg
 export function SetReadOnly(arg1:string,arg2:boolean):Promise<void>;
 
 export function StartExec(arg1:string,arg2:string,arg3:string,arg4:string,arg5:Array<string>):Promise<string>;
+
+export function StartNodeShell(arg1:string,arg2:string):Promise<string>;
 
 export function StartPodLogs(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean,arg6:number):Promise<string>;
 

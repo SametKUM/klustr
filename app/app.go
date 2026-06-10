@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"runtime/debug"
+	"time"
 
 	"klustr/internal/kube"
 	"klustr/internal/update"
@@ -395,6 +396,59 @@ func (a *App) ResizeExec(sessionID string, cols, rows int) {
 
 func (a *App) StopExec(sessionID string) {
 	a.clients.StopExec(sessionID)
+}
+
+func (a *App) StartNodeShell(contextName, nodeName string) (string, error) {
+	var sessionID string
+	id, err := a.clients.StartNodeShell(
+		a.ctx, contextName, nodeName,
+		func(data []byte) {
+			if sessionID == "" {
+				return
+			}
+			runtime.EventsEmit(a.ctx, "exec:out:"+sessionID, string(data))
+		},
+		func(err error) {
+			if sessionID == "" {
+				return
+			}
+			msg := ""
+			if err != nil {
+				msg = err.Error()
+			}
+			runtime.EventsEmit(a.ctx, "exec:close:"+sessionID, msg)
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+	sessionID = id
+	return id, nil
+}
+
+func (a *App) CordonNode(contextName, nodeName string, cordon bool) error {
+	return a.clients.SetNodeCordon(a.ctx, contextName, nodeName, cordon)
+}
+
+// DrainNode returns immediately; progress streams over the
+// "node:drain:<context>/<node>" event until a terminal done/error payload.
+func (a *App) DrainNode(contextName, nodeName string) {
+	event := "node:drain:" + contextName + "/" + nodeName
+	go func() {
+		ctx, cancel := context.WithTimeout(a.ctx, 15*time.Minute)
+		defer cancel()
+		err := a.clients.DrainNode(ctx, contextName, nodeName, func(p kube.NodeDrainProgress) {
+			runtime.EventsEmit(a.ctx, event, p)
+		})
+		if err != nil {
+			runtime.EventsEmit(a.ctx, event, kube.NodeDrainProgress{
+				Node:    nodeName,
+				Phase:   "error",
+				Pending: []string{},
+				Error:   err.Error(),
+			})
+		}
+	}()
 }
 
 func (a *App) OpenLocalTerminal(contextName string, cols, rows int) (string, error) {

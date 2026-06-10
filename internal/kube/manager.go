@@ -46,6 +46,8 @@ type ClientManager struct {
 	helm     *helmManager
 	onChange func(ContextChange)
 	readOnly map[string]bool
+	drainMu  sync.Mutex
+	draining map[string]bool
 }
 
 func NewClientManager() *ClientManager {
@@ -62,6 +64,7 @@ func NewClientManager() *ClientManager {
 		metrics:  newMetricsCache(),
 		helm:     helm,
 		readOnly: make(map[string]bool),
+		draining: make(map[string]bool),
 	}
 }
 

@@ -30,6 +30,10 @@ export function CheckForUpdate() {
   return window['go']['app']['App']['CheckForUpdate']();
 }
 
+export function CordonNode(arg1, arg2, arg3) {
+  return window['go']['app']['App']['CordonNode'](arg1, arg2, arg3);
+}
+
 export function DeleteArgoApplication(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['DeleteArgoApplication'](arg1, arg2, arg3, arg4);
 }
@@ -40,6 +44,10 @@ export function DeleteResource(arg1, arg2, arg3, arg4) {
 
 export function DenyCertificateSigningRequest(arg1, arg2, arg3) {
   return window['go']['app']['App']['DenyCertificateSigningRequest'](arg1, arg2, arg3);
+}
+
+export function DrainNode(arg1, arg2) {
+  return window['go']['app']['App']['DrainNode'](arg1, arg2);
 }
 
 export function DryRunApplyResourceYAML(arg1, arg2) {
@@ -928,6 +936,10 @@ export function SetReadOnly(arg1, arg2) {
 
 export function StartExec(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['StartExec'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function StartNodeShell(arg1, arg2) {
+  return window['go']['app']['App']['StartNodeShell'](arg1, arg2);
 }
 
 export function StartPodLogs(arg1, arg2, arg3, arg4, arg5, arg6) {
