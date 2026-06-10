@@ -219,7 +219,7 @@ export type SelectedResource = {
   logContainer?: string
 }
 
-export type DetailTab = 'overview' | 'logs' | 'exec' | 'events' | 'history' | 'yaml'
+export type DetailTab = 'overview' | 'logs' | 'exec' | 'shell' | 'events' | 'history' | 'yaml'
 
 export type PendingAction =
   | { kind: 'delete'; resource: SelectedResource }

@@ -78,6 +78,9 @@ import { GRPCRouteDetailBody } from '@/features/grpcroutes/GRPCRouteDetailBody'
 import { GatewayClassDetailBody } from '@/features/gatewayclasses/GatewayClassDetailBody'
 import { ReferenceGrantDetailBody } from '@/features/referencegrants/ReferenceGrantDetailBody'
 import { NodeDetailBody } from '@/features/nodes/NodeDetailBody'
+import { NodeShellTab } from '@/features/nodes/NodeShellTab'
+import { CordonNodeButton } from '@/features/nodes/CordonNodeButton'
+import { DrainNodeButton } from '@/features/nodes/DrainNodeButton'
 import { KarpenterNodesTab } from '@/features/karpenter-nodepools/KarpenterNodesTab'
 import { NamespaceDetailBody } from '@/features/namespaces/NamespaceDetailBody'
 import { ServiceAccountDetailBody } from '@/features/serviceaccounts/ServiceAccountDetailBody'
@@ -188,6 +191,12 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
             <div className="flex shrink-0 items-center gap-2 pt-1">
               {resource.kind === 'Pod' && (
                 <PortForwardButton contextName={contextName} resource={resource} />
+              )}
+              {!readOnly && resource.kind === 'Node' && (
+                <>
+                  <CordonNodeButton contextName={contextName} resource={resource} />
+                  <DrainNodeButton contextName={contextName} resource={resource} />
+                </>
               )}
               {!readOnly && isPausable(resource.kind) && (
                 <PauseDeploymentButton contextName={contextName} resource={resource} />
@@ -745,12 +754,17 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
 }
 
 function NonPodTabs({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
+  const readOnly = useUIStore((s) => s.globalReadOnly)
   const hasAggregatedLogs = (WORKLOAD_LOG_KINDS as readonly string[]).includes(resource.kind)
   const hasEvents = (EVENT_BEARING_KINDS as readonly string[]).includes(resource.kind)
   const hasHistory = (ROLLOUT_HISTORY_KINDS as readonly string[]).includes(resource.kind)
+  // The node shell works through a temporary privileged pod, so it is a
+  // mutation and stays hidden in read-only mode.
+  const hasNodeShell = resource.kind === 'Node' && !readOnly
   const requestedTab = useUIStore((s) => s.requestedTab)
   const allowed: DetailTab[] = ['overview']
   if (hasAggregatedLogs) allowed.push('logs')
+  if (hasNodeShell) allowed.push('shell')
   if (hasEvents) allowed.push('events')
   if (hasHistory) allowed.push('history')
   allowed.push('yaml')
@@ -762,6 +776,7 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
       <TabsList className="mx-6 mt-3 w-fit">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         {hasAggregatedLogs && <TabsTrigger value="logs">Logs</TabsTrigger>}
+        {hasNodeShell && <TabsTrigger value="shell">Shell</TabsTrigger>}
         {hasEvents && <TabsTrigger value="events">Events</TabsTrigger>}
         {hasHistory && <TabsTrigger value="history">History</TabsTrigger>}
         <TabsTrigger value="yaml">YAML</TabsTrigger>
@@ -772,6 +787,11 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
       {hasAggregatedLogs && (
         <TabsContent value="logs" className="min-h-0 flex-1 p-0">
           <WorkloadLogs contextName={contextName} resource={resource} />
+        </TabsContent>
+      )}
+      {hasNodeShell && (
+        <TabsContent value="shell" className="min-h-0 flex-1 p-0">
+          <NodeShellTab contextName={contextName} nodeName={resource.name} />
         </TabsContent>
       )}
       {hasEvents && (

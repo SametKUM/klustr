@@ -71,6 +71,9 @@ import {
   GetJob,
   GetNamespace,
   GetNode,
+  StartNodeShell,
+  CordonNode,
+  DrainNode,
   GetPod,
   GetResourceYAML,
   GetSecret,
@@ -378,6 +381,17 @@ export type IngressRuleDetail = kube.IngressRuleDetail
 export type IngressPathDetail = kube.IngressPathDetail
 export type IngressTLSDetail = kube.IngressTLSDetail
 export type NodeDetail = kube.NodeDetail
+
+// Mirrors kube.NodeDrainProgress, which only travels over the
+// "node:drain:<context>/<node>" Wails event and so never lands in models.ts.
+export type NodeDrainProgress = {
+  node: string
+  phase: 'cordoning' | 'evicting' | 'waiting' | 'done' | 'error'
+  total: number
+  evicted: number
+  pending: string[]
+  error: string
+}
 export type NodeTaintDetail = kube.NodeTaintDetail
 export type NamespaceDetail = kube.NamespaceDetail
 export type ServiceAccountDetail = kube.ServiceAccountDetail
@@ -714,6 +728,11 @@ export const api = {
   resizeExec: (sessionId: string, cols: number, rows: number): Promise<void> =>
     ResizeExec(sessionId, cols, rows),
   stopExec: (sessionId: string): Promise<void> => StopExec(sessionId),
+  startNodeShell: (contextName: string, nodeName: string): Promise<string> =>
+    StartNodeShell(contextName, nodeName),
+  cordonNode: (ctx: string, nodeName: string, cordon: boolean): Promise<void> =>
+    CordonNode(ctx, nodeName, cordon),
+  drainNode: (ctx: string, nodeName: string): Promise<void> => DrainNode(ctx, nodeName),
   openLocalTerminal: (contextName: string, cols: number, rows: number): Promise<string> =>
     OpenLocalTerminal(contextName, cols, rows),
   sendLocalTerminalInput: (sessionId: string, data: string): Promise<void> =>
