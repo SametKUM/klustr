@@ -874,6 +874,10 @@ export function ResizeLocalTerminal(arg1, arg2, arg3) {
   return window['go']['app']['App']['ResizeLocalTerminal'](arg1, arg2, arg3);
 }
 
+export function ResizePodResources(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['app']['App']['ResizePodResources'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+}
+
 export function RestartWorkload(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['RestartWorkload'](arg1, arg2, arg3, arg4);
 }

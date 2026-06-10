@@ -1826,6 +1826,24 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class ContainerResources {
+	    cpuRequest: string;
+	    cpuLimit: string;
+	    memRequest: string;
+	    memLimit: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContainerResources(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cpuRequest = source["cpuRequest"];
+	        this.cpuLimit = source["cpuLimit"];
+	        this.memRequest = source["memRequest"];
+	        this.memLimit = source["memLimit"];
+	    }
+	}
 	export class ContainerEnvFrom {
 	    source: string;
 	    prefix: string;
@@ -1940,6 +1958,8 @@ export namespace kube {
 	    ports: ContainerPort[];
 	    env: ContainerEnvVar[];
 	    envFrom: ContainerEnvFrom[];
+	    resources: ContainerResources;
+	    allocated: ContainerResources;
 	
 	    static createFrom(source: any = {}) {
 	        return new ContainerDetail(source);
@@ -1958,6 +1978,8 @@ export namespace kube {
 	        this.ports = this.convertValues(source["ports"], ContainerPort);
 	        this.env = this.convertValues(source["env"], ContainerEnvVar);
 	        this.envFrom = this.convertValues(source["envFrom"], ContainerEnvFrom);
+	        this.resources = this.convertValues(source["resources"], ContainerResources);
+	        this.allocated = this.convertValues(source["allocated"], ContainerResources);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1978,6 +2000,7 @@ export namespace kube {
 		    return a;
 		}
 	}
+	
 	
 	
 	
@@ -5730,6 +5753,7 @@ export namespace kube {
 	    initContainers: ContainerDetail[];
 	    containers: ContainerDetail[];
 	    conditions: ConditionDetail[];
+	    resizeStatus: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new PodDetail(source);
@@ -5756,6 +5780,7 @@ export namespace kube {
 	        this.initContainers = this.convertValues(source["initContainers"], ContainerDetail);
 	        this.containers = this.convertValues(source["containers"], ContainerDetail);
 	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.resizeStatus = source["resizeStatus"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

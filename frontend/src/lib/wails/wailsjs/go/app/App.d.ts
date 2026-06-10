@@ -439,6 +439,8 @@ export function ResizeExec(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function ResizeLocalTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
 
+export function ResizePodResources(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string):Promise<void>;
+
 export function RestartWorkload(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function RevealSecretValue(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
