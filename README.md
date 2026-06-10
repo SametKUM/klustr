@@ -62,6 +62,8 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 - 🔐 **cert-manager.** Certificates, Issuers / ClusterIssuers, and the full issuance chain — CertificateRequest → Order → Challenge — with ready/expiry status and a drill-down across the chain. One-click **Renew**, no `cmctl` CLI.
 - 📜 **Logs.** Stern-style multi-pod streaming with per-pod ANSI colors, follow, save and regex.
 - 🖥️ **In-app exec.** SPDY shell into any container.
+- 🐚 **Node shell.** Root shell on any node via a temporary privileged `nsenter` pod that's removed when the session ends — no SSH, nothing pre-installed.
+- 🚧 **Cordon & drain.** One-click cordon/uncordon and a live-progress drain that evicts through the Eviction API (PDB-aware, skips DaemonSet & mirror pods).
 - 🔧 **YAML edit.** Monaco editor with a server-side dry-run diff before apply.
 - 🚀 **Scale, restart, pause/resume.** Replica controls, one-click rolling restart, inline pause/resume, HPA min/max editable inline.
 - ⏪ **Rollout history & rollback.** Side-by-side template diff and one-click revert on Deployments / StatefulSets / DaemonSets.
@@ -190,6 +192,7 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] Every built-in resource kind (incl. full RBAC: ServiceAccounts, Roles, RoleBindings, ClusterRoles, ClusterRoleBindings)
 - [x] **Access Review** — subject → effective-permission matrix with binding trace, implicit-group expansion (`system:serviceaccounts:*`, `system:authenticated`), wildcard / cluster-admin detection, live across every active context
 - [x] Logs, exec, port-forwarding
+- [x] Node shell (privileged `nsenter` pod), cordon/uncordon, PDB-aware drain
 - [x] YAML edit / apply with diff, scale, restart, deployment pause/resume, HPA inline edit
 - [x] Rollout history with revision diff and one-click rollback (Deployments / StatefulSets / DaemonSets)
 - [x] Cross-resource navigation (related pods, owner/node links, back stack)

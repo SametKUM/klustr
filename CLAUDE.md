@@ -68,6 +68,10 @@ klustr/
 │       ├── overview.go              cluster-wide CPU / memory / pod aggregation
 │       ├── logs.go                  streaming log sessions
 │       ├── exec.go                  SPDY exec sessions
+│       ├── nodeshell.go             root node shell via a temporary privileged
+│       │                            nsenter pod, attached through exec.go
+│       ├── nodeops.go               node cordon/uncordon + PDB-aware drain
+│       │                            (eviction API, streamed progress)
 │       └── portforward.go           port-forward registry & lifecycle
 ├── app/                          Wails binding adapter (thin layer over ClientManager)
 ├── frontend/
