@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"sync"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	gwclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 )
 
@@ -48,12 +51,16 @@ type ClientManager struct {
 	readOnly map[string]bool
 	drainMu  sync.Mutex
 	draining map[string]bool
+	envReady chan struct{}
+	envOnce  sync.Once
+	creds    *credentialManager
+	appCtx   context.Context
 }
 
 func NewClientManager() *ClientManager {
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
 	helm, _ := newHelmManager(rules)
-	return &ClientManager{
+	m := &ClientManager{
 		rules:    rules,
 		cache:    make(map[string]*kubernetes.Clientset),
 		watchers: make(map[string]*contextWatcher),
@@ -65,6 +72,43 @@ func NewClientManager() *ClientManager {
 		helm:     helm,
 		readOnly: make(map[string]bool),
 		draining: make(map[string]bool),
+		envReady: make(chan struct{}),
+		creds:    newCredentialManager(),
+	}
+	m.creds.setOnRefreshed(m.onCredentialsRefreshed)
+	return m
+}
+
+// ImportShellEnv merges the user's login-shell environment into the process
+// and unblocks Watch/Ping. The app layer runs it in a goroutine at startup;
+// callers that connect before it finishes wait at waitEnvReady so the first
+// exec credential helper invocation already sees the merged PATH and config.
+func (m *ClientManager) ImportShellEnv() {
+	m.envOnce.Do(func() {
+		importShellEnv(shellEnvTimeout)
+		m.refreshLoadingRules()
+		close(m.envReady)
+	})
+}
+
+// refreshLoadingRules re-derives the kubeconfig search precedence after the
+// shell env import: KUBECONFIG may only exist in the login shell, and rules
+// snapshotted it at construction. helm shares the same rules pointer, so the
+// in-place swap propagates everywhere.
+func (m *ClientManager) refreshLoadingRules() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.rules.Precedence = clientcmd.NewDefaultClientConfigLoadingRules().Precedence
+}
+
+// waitEnvReady blocks until the shell env import finished. The fallback
+// timer makes a missing ImportShellEnv call (tests construct the manager
+// without the app layer) degrade to a bounded wait instead of a deadlock.
+func (m *ClientManager) waitEnvReady(ctx context.Context) {
+	select {
+	case <-m.envReady:
+	case <-ctx.Done():
+	case <-time.After(shellEnvTimeout + time.Second):
 	}
 }
 
@@ -144,6 +188,7 @@ func (m *ClientManager) Clientset(contextName string) (*kubernetes.Clientset, er
 }
 
 func (m *ClientManager) Ping(ctx context.Context, contextName string) (*ServerVersion, error) {
+	m.waitEnvReady(ctx)
 	cfg, err := m.restConfig(contextName)
 	if err != nil {
 		return nil, err
@@ -179,6 +224,25 @@ func (m *ClientManager) Ping(ctx context.Context, contextName string) (*ServerVe
 }
 
 func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
+	m.waitEnvReady(ctx)
+	m.mu.Lock()
+	if m.appCtx == nil {
+		m.appCtx = ctx
+	}
+	m.mu.Unlock()
+	// Auto-capture mapped helper credentials before any client is built. A
+	// failure is reported through the credential event stream but does not
+	// block the watch — the exec plugin may still succeed on ambient env.
+	if captured, _ := m.creds.ensureFresh(ctx, contextName); captured {
+		// While the capture was pending (a Keychain prompt can hold it for
+		// a while), status-bar pings and early frontend fetches may have
+		// built and cached a clientset whose exec authenticator never saw
+		// the credentials. Drop it so the watch and every later caller get
+		// clients with the captured env.
+		m.mu.Lock()
+		delete(m.cache, contextName)
+		m.mu.Unlock()
+	}
 	cs, err := m.Clientset(contextName)
 	if err != nil {
 		return err
@@ -231,6 +295,7 @@ func (m *ClientManager) Shutdown() {
 	m.logs.stopAll()
 	m.execs.stopAll()
 	m.terms.stopAll()
+	m.creds.stopAll()
 
 	m.mu.Lock()
 	watchers := m.watchers
@@ -257,6 +322,7 @@ func (m *ClientManager) StopWatch(contextName string) {
 	m.mu.Unlock()
 	m.metrics.invalidate(contextName)
 	m.helm.invalidate(contextName)
+	m.creds.pauseRefresh(contextName)
 	if ok {
 		w.stop()
 	}
@@ -284,7 +350,78 @@ func (m *ClientManager) AccessibleKinds(contextName string) []string {
 
 func (m *ClientManager) restConfig(contextName string) (*rest.Config, error) {
 	overrides := &clientcmd.ConfigOverrides{CurrentContext: contextName}
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(m.rules, overrides).ClientConfig()
+	cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(m.rules, overrides).ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	if cfg.ExecProvider != nil {
+		// Captured helper credentials ride into the kubeconfig's exec plugin
+		// (aws eks get-token, …) as ambient env. Sorted keys keep the
+		// ExecConfig content stable so client-go's exec-authenticator cache
+		// (keyed on the full config dump) reuses one authenticator per
+		// credential set instead of one per built client.
+		env := m.creds.envFor(contextName)
+		for _, k := range slices.Sorted(maps.Keys(env)) {
+			cfg.ExecProvider.Env = append(cfg.ExecProvider.Env, clientcmdapi.ExecEnvVar{Name: k, Value: env[k]})
+		}
+	}
+	return cfg, nil
+}
+
+// onCredentialsRefreshed rebuilds a context's clients after new credentials
+// were captured: existing clients hold an exec authenticator that snapshotted
+// the old env, so the cache entry is dropped and an active watch restarted
+// (Watch swaps the informer set without blanking the frontend caches).
+func (m *ClientManager) onCredentialsRefreshed(contextName string) {
+	m.mu.Lock()
+	delete(m.cache, contextName)
+	_, active := m.watchers[contextName]
+	appCtx := m.appCtx
+	m.mu.Unlock()
+	if active && appCtx != nil {
+		_ = m.Watch(appCtx, contextName)
+	}
+}
+
+// ---- Credential helpers -------------------------------------------------
+
+func (m *ClientManager) SetCredentialEventCallback(cb func(CredentialStatus)) {
+	m.creds.setOnEvent(cb)
+}
+
+func (m *ClientManager) CredentialProviders() []CredentialProviderInfo {
+	return m.creds.providerInfos()
+}
+
+func (m *ClientManager) CredentialProfiles(provider string) ([]string, error) {
+	return m.creds.profiles(provider)
+}
+
+func (m *ClientManager) SetCredentialMapping(contextName, provider, profile string) error {
+	return m.creds.setMapping(contextName, CredentialMapping{Provider: provider, Profile: profile})
+}
+
+func (m *ClientManager) ClearCredentialMapping(contextName string) error {
+	return m.creds.clearMapping(contextName)
+}
+
+func (m *ClientManager) CredentialStatuses() []CredentialStatus {
+	return m.creds.statuses()
+}
+
+// CaptureCredentials force-runs the mapped helper for a context (the manual
+// "re-authenticate" action) and rebuilds its clients on success.
+func (m *ClientManager) CaptureCredentials(ctx context.Context, contextName string) error {
+	m.waitEnvReady(ctx)
+	mapping, ok := m.creds.mapping(contextName)
+	if !ok {
+		return fmt.Errorf("no credential mapping for context %q", contextName)
+	}
+	if err := m.creds.capture(ctx, contextName, mapping); err != nil {
+		return err
+	}
+	m.onCredentialsRefreshed(contextName)
+	return nil
 }
 
 // contextDefaultNamespace returns the `namespace:` field of the kubeconfig
