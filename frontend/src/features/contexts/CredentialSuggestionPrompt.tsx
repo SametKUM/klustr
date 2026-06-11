@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { KeyRound, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { api, type ContextInfo } from '@/lib/api'
 import { useActiveContexts } from '@/store/ui'
 import { useAwsVaultDetected, useCredentialsStore } from '@/store/credentials'
@@ -12,12 +10,13 @@ function looksLikeCredentialError(message: string): boolean {
   return /getting credentials|exec plugin|executable .+ failed|credential/i.test(message)
 }
 
-// CredentialSuggestionBanner turns the dead-end "everything is empty and the
+// CredentialSuggestionPrompt turns the dead-end "everything is empty and the
 // status bar says offline" state into a guided fix: when an active context
 // authenticates through aws eks get-token, aws-vault is installed, no profile
-// is mapped and the connection is failing with a credential-shaped error, it
-// offers the mapping dialog right where the user is stuck.
-export function CredentialSuggestionBanner() {
+// is mapped and the connection is failing with a credential-shaped error, the
+// mapping dialog opens by itself with the failing context preselected.
+// Cancelling counts as a session-long dismissal for those contexts.
+export function CredentialSuggestionPrompt() {
   const activeContexts = useActiveContexts()
   const detected = useAwsVaultDetected()
   const statuses = useCredentialsStore((s) => s.statuses)
@@ -85,46 +84,33 @@ export function CredentialSuggestionBanner() {
     }
   }, [candidates])
 
-  const stuck = candidates.filter((c) => failing[c.name])
+  const stuck = useMemo(
+    () => candidates.filter((c) => failing[c.name]),
+    [candidates, failing],
+  )
+  const stuckKey = stuck.map((c) => c.name).join(',')
+
+  useEffect(() => {
+    if (stuckKey !== '') setDialogOpen(true)
+  }, [stuckKey])
+
   if (stuck.length === 0) return null
   const names = stuck.map((c) => c.name).join(', ')
 
   return (
-    <>
-      <div className="flex shrink-0 items-center gap-2.5 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs">
-        <KeyRound className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-        <span className="min-w-0 flex-1 text-foreground">
-          <span className="font-semibold">{names}</span>{' '}
-          {stuck.length === 1 ? 'is' : 'are'} failing to authenticate — the kubeconfig runs{' '}
-          <span className="font-mono">aws eks get-token</span>, which needs credentials aws-vault
-          can provide. Map an aws-vault profile and Klustr will run it for you.
-        </span>
-        <Button
-          size="sm"
-          className="h-6 shrink-0 text-xs"
-          onClick={() => setDialogOpen(true)}
-        >
-          Map profile
-        </Button>
-        <button
-          type="button"
-          aria-label="Dismiss credential suggestion"
-          className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-amber-500/20 hover:text-foreground"
-          onClick={() =>
-            setDismissed((prev) => new Set([...prev, ...stuck.map((c) => c.name)]))
-          }
-        >
-          <X className="size-3.5" />
-        </button>
-      </div>
-      <CredentialMappingDialog
-        contexts={stuck}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSaved={() => {
-          api.listCredentialStatuses().then((list) => setStatuses(list ?? []))
-        }}
-      />
-    </>
+    <CredentialMappingDialog
+      contexts={stuck}
+      open={dialogOpen}
+      onOpenChange={(open) => {
+        setDialogOpen(open)
+        if (!open) {
+          setDismissed((prev) => new Set([...prev, ...stuck.map((c) => c.name)]))
+        }
+      }}
+      onSaved={() => {
+        api.listCredentialStatuses().then((list) => setStatuses(list ?? []))
+      }}
+      reason={`${names} ${stuck.length === 1 ? 'is' : 'are'} failing to authenticate: the kubeconfig runs aws eks get-token, which needs credentials aws-vault can provide. Map a profile and Klustr will run it for you.`}
+    />
   )
 }

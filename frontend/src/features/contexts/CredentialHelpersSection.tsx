@@ -236,11 +236,13 @@ export function CredentialMappingDialog({
   open,
   onOpenChange,
   onSaved,
+  reason,
 }: {
   contexts: ContextInfo[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved: () => void
+  reason?: string
 }) {
   const [contextName, setContextName] = useState<string | null>(null)
   const [profiles, setProfiles] = useState<string[]>([])
@@ -300,6 +302,12 @@ export function CredentialMappingDialog({
           <DialogTitle>Map context to aws-vault profile</DialogTitle>
           <DialogDescription asChild>
             <div className="space-y-2">
+              {reason && (
+                <p className="flex items-start gap-1.5 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-foreground">
+                  <KeyRound className="mt-0.5 size-3 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span>{reason}</span>
+                </p>
+              )}
               <p>
                 Klustr will run <span className="font-mono text-xs">aws-vault export</span> for the
                 selected profile and feed the credentials to this context&apos;s{' '}
