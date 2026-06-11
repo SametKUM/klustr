@@ -9,6 +9,8 @@ export function ApplyResourceYAML(arg1:string,arg2:string):Promise<void>;
 
 export function ApproveCertificateSigningRequest(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function CaptureCredentials(arg1:string):Promise<void>;
+
 export function CertManagerCertificateRequestsFor(arg1:string,arg2:string,arg3:string):Promise<Array<kube.CertManagerCertificateRequestInfo>>;
 
 export function CertManagerChallengesFor(arg1:string,arg2:string,arg3:string):Promise<Array<kube.CertManagerChallengeInfo>>;
@@ -16,6 +18,8 @@ export function CertManagerChallengesFor(arg1:string,arg2:string,arg3:string):Pr
 export function CertManagerOrdersFor(arg1:string,arg2:string,arg3:string):Promise<Array<kube.CertManagerOrderInfo>>;
 
 export function CheckForUpdate():Promise<update.Result>;
+
+export function ClearCredentialMapping(arg1:string):Promise<void>;
 
 export function CordonNode(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
@@ -253,6 +257,12 @@ export function ListConfigMaps(arg1:string,arg2:string):Promise<Array<kube.Confi
 
 export function ListContexts():Promise<kube.Kubeconfig>;
 
+export function ListCredentialProfiles(arg1:string):Promise<Array<string>>;
+
+export function ListCredentialProviders():Promise<Array<kube.CredentialProviderInfo>>;
+
+export function ListCredentialStatuses():Promise<Array<kube.CredentialStatus>>;
+
 export function ListCronJobs(arg1:string,arg2:string):Promise<Array<kube.CronJobInfo>>;
 
 export function ListCustomResources(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<Array<kube.CustomResourceInfo>>;
@@ -466,6 +476,8 @@ export function SendExecInput(arg1:string,arg2:string):Promise<void>;
 export function SendLocalTerminalInput(arg1:string,arg2:string):Promise<void>;
 
 export function SetArgoApplicationAutomation(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<void>;
+
+export function SetCredentialMapping(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SetFluxResourceSuspended(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean):Promise<void>;
 

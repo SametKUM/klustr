@@ -13,7 +13,10 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-const eventKubeChange = "kube:change"
+const (
+	eventKubeChange  = "kube:change"
+	eventCredsUpdate = "creds:update"
+)
 
 const (
 	githubOwner = "SametKUM"
@@ -69,11 +72,15 @@ func (a *App) CheckForUpdate() (update.Result, error) {
 
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+	go a.clients.ImportShellEnv()
 	a.clients.SetOnChange(func(c kube.ContextChange) {
 		runtime.EventsEmit(ctx, eventKubeChange, c.Context, c.Kind)
 	})
 	a.clients.SetPFChangeCallback(func() {
 		runtime.EventsEmit(ctx, "pf:update")
+	})
+	a.clients.SetCredentialEventCallback(func(s kube.CredentialStatus) {
+		runtime.EventsEmit(ctx, eventCredsUpdate, s)
 	})
 }
 
@@ -106,6 +113,34 @@ func (a *App) StopWatch(name string) {
 // the frontend allows — a hard local guard against accidental writes.
 func (a *App) SetReadOnly(name string, readOnly bool) {
 	a.clients.SetReadOnly(name, readOnly)
+}
+
+func (a *App) ListCredentialProviders() []kube.CredentialProviderInfo {
+	return a.clients.CredentialProviders()
+}
+
+func (a *App) ListCredentialProfiles(provider string) ([]string, error) {
+	return a.clients.CredentialProfiles(provider)
+}
+
+func (a *App) SetCredentialMapping(contextName, provider, profile string) error {
+	return a.clients.SetCredentialMapping(contextName, provider, profile)
+}
+
+func (a *App) ClearCredentialMapping(contextName string) error {
+	return a.clients.ClearCredentialMapping(contextName)
+}
+
+func (a *App) ListCredentialStatuses() []kube.CredentialStatus {
+	return a.clients.CredentialStatuses()
+}
+
+// CaptureCredentials runs the mapped helper asynchronously — it may block on
+// a Keychain or MFA dialog — and reports the outcome over creds:update.
+func (a *App) CaptureCredentials(contextName string) {
+	go func() {
+		_ = a.clients.CaptureCredentials(a.ctx, contextName)
+	}()
 }
 
 func (a *App) ListNamespaces(name string) []kube.NamespaceInfo {

@@ -2032,6 +2032,10 @@ export namespace kube {
 	    server: string;
 	    user: string;
 	    namespace: string;
+	    execCommand: string;
+	    awsExec: boolean;
+	    awsVaultExec: boolean;
+	    awsProfileHint: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ContextInfo(source);
@@ -2044,6 +2048,46 @@ export namespace kube {
 	        this.server = source["server"];
 	        this.user = source["user"];
 	        this.namespace = source["namespace"];
+	        this.execCommand = source["execCommand"];
+	        this.awsExec = source["awsExec"];
+	        this.awsVaultExec = source["awsVaultExec"];
+	        this.awsProfileHint = source["awsProfileHint"];
+	    }
+	}
+	export class CredentialProviderInfo {
+	    name: string;
+	    detected: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new CredentialProviderInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.detected = source["detected"];
+	    }
+	}
+	export class CredentialStatus {
+	    context: string;
+	    provider: string;
+	    profile: string;
+	    state: string;
+	    expiresAt: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CredentialStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.context = source["context"];
+	        this.provider = source["provider"];
+	        this.profile = source["profile"];
+	        this.state = source["state"];
+	        this.expiresAt = source["expiresAt"];
+	        this.error = source["error"];
 	    }
 	}
 	export class CronJobDetail {

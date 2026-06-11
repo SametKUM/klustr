@@ -14,6 +14,10 @@ export function ApproveCertificateSigningRequest(arg1, arg2, arg3) {
   return window['go']['app']['App']['ApproveCertificateSigningRequest'](arg1, arg2, arg3);
 }
 
+export function CaptureCredentials(arg1) {
+  return window['go']['app']['App']['CaptureCredentials'](arg1);
+}
+
 export function CertManagerCertificateRequestsFor(arg1, arg2, arg3) {
   return window['go']['app']['App']['CertManagerCertificateRequestsFor'](arg1, arg2, arg3);
 }
@@ -28,6 +32,10 @@ export function CertManagerOrdersFor(arg1, arg2, arg3) {
 
 export function CheckForUpdate() {
   return window['go']['app']['App']['CheckForUpdate']();
+}
+
+export function ClearCredentialMapping(arg1) {
+  return window['go']['app']['App']['ClearCredentialMapping'](arg1);
 }
 
 export function CordonNode(arg1, arg2, arg3) {
@@ -502,6 +510,18 @@ export function ListContexts() {
   return window['go']['app']['App']['ListContexts']();
 }
 
+export function ListCredentialProfiles(arg1) {
+  return window['go']['app']['App']['ListCredentialProfiles'](arg1);
+}
+
+export function ListCredentialProviders() {
+  return window['go']['app']['App']['ListCredentialProviders']();
+}
+
+export function ListCredentialStatuses() {
+  return window['go']['app']['App']['ListCredentialStatuses']();
+}
+
 export function ListCronJobs(arg1, arg2) {
   return window['go']['app']['App']['ListCronJobs'](arg1, arg2);
 }
@@ -928,6 +948,10 @@ export function SendLocalTerminalInput(arg1, arg2) {
 
 export function SetArgoApplicationAutomation(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['SetArgoApplicationAutomation'](arg1, arg2, arg3, arg4);
+}
+
+export function SetCredentialMapping(arg1, arg2, arg3) {
+  return window['go']['app']['App']['SetCredentialMapping'](arg1, arg2, arg3);
 }
 
 export function SetFluxResourceSuspended(arg1, arg2, arg3, arg4, arg5) {
