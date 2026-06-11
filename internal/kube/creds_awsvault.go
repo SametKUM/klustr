@@ -41,7 +41,7 @@ func (awsVaultProvider) ListProfiles() ([]string, error) {
 		}
 		return []string{}, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return parseAWSConfigProfiles(f), nil
 }
 
