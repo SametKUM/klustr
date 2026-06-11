@@ -298,7 +298,16 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	if firstAttempt && !w.access.HasAnyClusterWide() && m.creds.hasMapping(contextName) {
 		m.mu.Lock()
 		m.credRewatch[contextName] = true
+		delete(m.cache, contextName)
 		m.mu.Unlock()
+		// The metrics and helm clients built during the cold-token window
+		// cached a failed exec authenticator too (their lazy first call hit
+		// the same 255), so they'd keep reporting metrics-server missing
+		// after the watch recovered. Drop them so the reconnect rebuilds
+		// every client against the now-warm token — the same scope StopWatch
+		// clears, minus the rewatch guard reset.
+		m.metrics.invalidate(contextName)
+		m.helm.invalidate(contextName)
 		return m.Watch(ctx, contextName)
 	}
 	return nil
