@@ -113,7 +113,9 @@ import { TerminalDrawer } from '@/features/terminal/TerminalDrawer'
 import { Toaster } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { api, type CRDInfo } from '@/lib/api'
-import { onKubeChange, onPFUpdate, resetSyncState } from '@/lib/events'
+import { onCredsUpdate, onKubeChange, onPFUpdate, resetSyncState } from '@/lib/events'
+import { toast } from 'sonner'
+import { useCredentialsStore } from '@/store/credentials'
 import {
   useActiveContexts,
   useEffectiveHiddenSidebarItems,
@@ -471,6 +473,30 @@ function App() {
     reload()
     return onPFUpdate(reload)
   }, [setPortForwards])
+
+  useEffect(() => {
+    const { setProviders, setStatuses } = useCredentialsStore.getState()
+    api
+      .listCredentialProviders()
+      .then((p) => setProviders(p ?? []))
+      .catch(() => {})
+    api
+      .listCredentialStatuses()
+      .then((s) => setStatuses(s ?? []))
+      .catch(() => {})
+    return onCredsUpdate((status) => {
+      useCredentialsStore.getState().applyStatus(status)
+      if (status.state === 'error') {
+        toast.error(`Credential capture failed for ${status.context}`, {
+          description: status.error,
+          action: {
+            label: 'Retry',
+            onClick: () => void api.captureCredentials(status.context),
+          },
+        })
+      }
+    })
+  }, [])
 
   useEffect(() => {
     for (const ctx of activeContexts) {

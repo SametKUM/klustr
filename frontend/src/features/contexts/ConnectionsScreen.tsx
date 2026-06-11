@@ -49,6 +49,7 @@ import {
   type ContextTagMeta,
 } from './contextTagMeta'
 import { ContextTagMenuContent } from './ContextTagPicker'
+import { CredentialBadge, CredentialHelpersSection } from './CredentialHelpersSection'
 import { TagBadge } from './TagBadge'
 
 type LoadState =
@@ -356,6 +357,8 @@ export function ConnectionsScreen() {
               onDelete={(id) => removeContextGroup(id)}
             />
           )}
+
+          {state.kind === 'ready' && <CredentialHelpersSection contexts={contexts} />}
 
           <div>
             {state.kind === 'loading' && (
@@ -1317,6 +1320,7 @@ function ContextCard({
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <CardTagBadges contextName={context.name} tagMetas={tagMetas} />
             <div className="ml-auto flex items-center gap-1.5">
+              <CredentialBadge contextName={context.name} />
               {shortcut && (
                 <span className="inline-flex items-center gap-0.5 rounded border border-border/70 bg-background/60 px-1 py-px font-mono text-[9px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
                   <Command className="size-2.5" />
