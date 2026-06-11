@@ -377,9 +377,19 @@ func (m *ClientManager) onCredentialsRefreshed(contextName string) {
 	delete(m.cache, contextName)
 	_, active := m.watchers[contextName]
 	appCtx := m.appCtx
+	cb := m.onChange
 	m.mu.Unlock()
-	if active && appCtx != nil {
-		_ = m.Watch(appCtx, contextName)
+	if !active || appCtx == nil {
+		return
+	}
+	if err := m.Watch(appCtx, contextName); err != nil {
+		return
+	}
+	// The rebuilt watcher re-ran access discovery with the new credentials;
+	// tell the frontend so it re-fetches AccessibleKinds — its copy was
+	// snapshotted right after the original (possibly all-denied) connect.
+	if cb != nil {
+		cb(ContextChange{Context: contextName, Kind: "_access"})
 	}
 }
 
