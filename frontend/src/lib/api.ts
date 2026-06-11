@@ -1,6 +1,12 @@
 import {
   AddHelmRepo,
   ApplyResourceYAML,
+  CaptureCredentials,
+  ClearCredentialMapping,
+  ListCredentialProfiles,
+  ListCredentialProviders,
+  ListCredentialStatuses,
+  SetCredentialMapping,
   DryRunApplyResourceYAML,
   FetchMetricsServerManifest,
   IsMetricsServerKlustrManaged,
@@ -252,6 +258,8 @@ import {
 import { kube, update } from '@/lib/wails/wailsjs/go/models'
 
 export type ContextInfo = kube.ContextInfo
+export type CredentialProviderInfo = kube.CredentialProviderInfo
+export type CredentialStatus = kube.CredentialStatus
 export type UpdateResult = update.Result
 export type SystemTerminal = kube.SystemTerminal
 export type Kubeconfig = kube.Kubeconfig
@@ -524,6 +532,15 @@ export const api = {
   pingContext: (name: string): Promise<ServerVersion> => PingContext(name),
   startWatch: (name: string): Promise<void> => StartWatch(name),
   stopWatch: (name: string): Promise<void> => StopWatch(name),
+  listCredentialProviders: (): Promise<CredentialProviderInfo[]> => ListCredentialProviders(),
+  listCredentialProfiles: (provider: string): Promise<string[]> =>
+    ListCredentialProfiles(provider),
+  listCredentialStatuses: (): Promise<CredentialStatus[]> => ListCredentialStatuses(),
+  setCredentialMapping: (contextName: string, provider: string, profile: string): Promise<void> =>
+    SetCredentialMapping(contextName, provider, profile),
+  clearCredentialMapping: (contextName: string): Promise<void> =>
+    ClearCredentialMapping(contextName),
+  captureCredentials: (contextName: string): Promise<void> => CaptureCredentials(contextName),
   setReadOnly: (contextName: string, readOnly: boolean): Promise<void> =>
     SetReadOnly(contextName, readOnly),
   listNamespaces: (name: string): Promise<NamespaceInfo[]> => ListNamespaces(name),

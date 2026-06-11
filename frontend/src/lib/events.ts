@@ -1,4 +1,5 @@
 import { EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
+import type { CredentialStatus } from '@/lib/api'
 
 type Handler = (contextName: string) => void
 
@@ -71,5 +72,24 @@ export function onPFUpdate(handler: () => void): () => void {
   pfHandlers.add(handler)
   return () => {
     pfHandlers.delete(handler)
+  }
+}
+
+const credsHandlers = new Set<(status: CredentialStatus) => void>()
+let credsInstalled = false
+
+function installCreds() {
+  if (credsInstalled) return
+  credsInstalled = true
+  EventsOn('creds:update', (status: CredentialStatus) => {
+    credsHandlers.forEach((h) => h(status))
+  })
+}
+
+export function onCredsUpdate(handler: (status: CredentialStatus) => void): () => void {
+  installCreds()
+  credsHandlers.add(handler)
+  return () => {
+    credsHandlers.delete(handler)
   }
 }
