@@ -49,8 +49,12 @@ import {
   type ContextTagMeta,
 } from './contextTagMeta'
 import { ContextTagMenuContent } from './ContextTagPicker'
-import { CredentialBadge, CredentialHelpersSection } from './CredentialHelpersSection'
-import { useCredentialStatus } from '@/store/credentials'
+import {
+  CredentialHelpersHint,
+  CredentialKeyButton,
+  CredentialMappingDialog,
+} from './CredentialHelpersSection'
+import { useAwsVaultDetected, useCredentialsStore, useCredentialStatus } from '@/store/credentials'
 import { TagBadge } from './TagBadge'
 
 type LoadState =
@@ -84,6 +88,8 @@ export function ConnectionsScreen() {
   const [reloadKey, setReloadKey] = useState(0)
   const [picked, setPicked] = useState<Set<string>>(() => new Set())
   const [editing, setEditing] = useState<ContextGroup | null>(null)
+  const [mappingTarget, setMappingTarget] = useState<ContextInfo | null>(null)
+  const setCredStatuses = useCredentialsStore((s) => s.setStatuses)
 
   useEffect(() => {
     let cancelled = false
@@ -359,7 +365,7 @@ export function ConnectionsScreen() {
             />
           )}
 
-          {state.kind === 'ready' && <CredentialHelpersSection contexts={contexts} />}
+          {state.kind === 'ready' && <CredentialHelpersHint contexts={contexts} />}
 
           <div>
             {state.kind === 'loading' && (
@@ -405,6 +411,7 @@ export function ConnectionsScreen() {
                       onToggleDefault={(name) =>
                         setDefaultContext(name === defaultContext ? null : name)
                       }
+                      onMapCredentials={setMappingTarget}
                     />
                   )
                 })}
@@ -446,6 +453,17 @@ export function ConnectionsScreen() {
           }}
         />
       )}
+
+      <CredentialMappingDialog
+        contexts={mappingTarget ? [mappingTarget] : []}
+        open={mappingTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setMappingTarget(null)
+        }}
+        onSaved={() => {
+          api.listCredentialStatuses().then((list) => setCredStatuses(list ?? []))
+        }}
+      />
     </div>
   )
 }
@@ -897,6 +915,7 @@ function ContextSection({
   onConnect,
   onTogglePick,
   onToggleDefault,
+  onMapCredentials,
 }: {
   section: GroupedSection
   baseIndex: number
@@ -907,6 +926,7 @@ function ContextSection({
   onConnect: (name: string) => void
   onTogglePick: (name: string) => void
   onToggleDefault: (name: string) => void
+  onMapCredentials: (context: ContextInfo) => void
 }) {
   const isProd = section.id === 'prod'
   return (
@@ -953,6 +973,7 @@ function ContextSection({
             onConnect={() => onConnect(c.name)}
             onTogglePick={() => onTogglePick(c.name)}
             onToggleDefault={() => onToggleDefault(c.name)}
+            onMapCredentials={() => onMapCredentials(c)}
           />
         ))}
       </ul>
@@ -1202,6 +1223,7 @@ function ContextCard({
   onConnect,
   onTogglePick,
   onToggleDefault,
+  onMapCredentials,
 }: {
   context: ContextInfo
   isDefault: boolean
@@ -1213,9 +1235,13 @@ function ContextCard({
   onConnect: () => void
   onTogglePick: () => void
   onToggleDefault: () => void
+  onMapCredentials: () => void
 }) {
   const customTags = useUIStore((s) => s.customTags)
-  const hasCredBadge = !!useCredentialStatus(context.name)
+  const awsVaultDetected = useAwsVaultDetected()
+  const hasCredKey =
+    !!useCredentialStatus(context.name) ||
+    (context.awsExec && !context.awsVaultExec && awsVaultDetected)
   const meta = providerMeta(context)
   const tagMetas = tagIds
     .map((id) => resolveTagMeta(id, customTags))
@@ -1303,7 +1329,7 @@ function ContextCard({
           </button>
         </div>
         <div className="min-w-0 flex-1">
-          <div className={`flex items-center gap-1.5 ${hasCredBadge ? 'pr-12' : 'pr-7'}`}>
+          <div className={`flex items-center gap-1.5 ${hasCredKey ? 'pr-12' : 'pr-7'}`}>
             <span className="truncate text-sm font-semibold leading-tight">{context.name}</span>
             {isDefault && (
               <span
@@ -1340,7 +1366,7 @@ function ContextCard({
           </div>
         </div>
         <div className="absolute right-1.5 top-1.5 flex items-center gap-1.5">
-          <CredentialBadge contextName={context.name} />
+          <CredentialKeyButton context={context} onMap={onMapCredentials} />
           <Tooltip>
             <TooltipTrigger asChild>
               <span

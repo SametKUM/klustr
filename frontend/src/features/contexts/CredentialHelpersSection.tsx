@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { KeyRound, Play, Plus, X } from 'lucide-react'
+import { KeyRound, Play, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -10,11 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api, type ContextInfo, type CredentialStatus } from '@/lib/api'
-import { useCredentialsStore, useCredentialStatus } from '@/store/credentials'
+import { useAwsVaultDetected, useCredentialsStore, useCredentialStatus } from '@/store/credentials'
 
 const STATE_DOT: Record<string, string> = {
   captured: 'bg-emerald-500',
@@ -54,169 +55,179 @@ function expiresIn(expiresAt: string): string | null {
   return `expires in ${hours}h ${minutes % 60}m`
 }
 
-// CredentialBadge is the per-card indicator on the connections screen: shown
-// only for contexts with a saved helper mapping, colored by capture state.
-export function CredentialBadge({ contextName }: { contextName: string }) {
-  const status = useCredentialStatus(contextName)
-  if (!status) return null
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className={`inline-flex items-center ${STATE_ICON[status.state] ?? 'text-muted-foreground'}`}>
-          <KeyRound className="size-3" />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-[20rem] text-xs">
-        <div className="font-medium">
-          {status.provider} · {status.profile}
-        </div>
-        <div className="text-muted-foreground">{describeState(status)}</div>
-        {status.error && (
-          <div className="mt-1 break-words font-mono text-[10px] text-red-400">{status.error}</div>
-        )}
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
-export function CredentialHelpersSection({ contexts }: { contexts: ContextInfo[] }) {
-  const providers = useCredentialsStore((s) => s.providers)
-  const statuses = useCredentialsStore((s) => s.statuses)
-  const setStatuses = useCredentialsStore((s) => s.setStatuses)
+// CredentialKeyButton is the single management surface for a context's
+// credential helper, living in the card's corner. Mapped contexts get a
+// state-colored key opening a popover with Run/Change/Remove; eligible
+// unmapped contexts get a muted key (revealed on card hover) that opens the
+// mapping dialog directly.
+export function CredentialKeyButton({
+  context,
+  onMap,
+}: {
+  context: ContextInfo
+  onMap: (context: ContextInfo) => void
+}) {
+  const status = useCredentialStatus(context.name)
+  const detected = useAwsVaultDetected()
   const removeStatus = useCredentialsStore((s) => s.removeStatus)
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [open, setOpen] = useState(false)
+  const remove = useMutation({
+    mutationFn: () => api.clearCredentialMapping(context.name),
+    onSuccess: () => {
+      removeStatus(context.name)
+      setOpen(false)
+    },
+    onError: (e) => toast.error(String(e)),
+  })
 
-  const detected = providers.some((p) => p.name === 'aws-vault' && p.detected)
-  const eligible = useMemo(
-    () => contexts.filter((c) => c.awsExec && !c.awsVaultExec),
-    [contexts],
-  )
-  const mapped = useMemo(
-    () =>
-      Object.values(statuses)
-        .filter((s) => contexts.some((c) => c.name === s.context))
-        .sort((a, b) => a.context.localeCompare(b.context)),
-    [statuses, contexts],
-  )
-  const unmapped = useMemo(
-    () => eligible.filter((c) => !(c.name in statuses)),
-    [eligible, statuses],
-  )
+  const eligible = context.awsExec && !context.awsVaultExec && detected
+  if (!status && !eligible) return null
 
-  if (!detected && eligible.length === 0) return null
-
-  if (!detected) {
+  if (!status) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-        <KeyRound className="size-3.5 shrink-0" />
-        <span>
-          {eligible.length} context{eligible.length === 1 ? ' uses' : 's use'} AWS exec auth, but{' '}
-          <span className="font-mono">aws-vault</span> was not found on PATH. Install it (or launch
-          Klustr from a terminal) to let Klustr run it for you.
-        </span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Map an aws-vault profile for ${context.name}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onMap(context)
+            }}
+            onKeyDown={(e) => e.stopPropagation()}
+            className={[
+              'inline-flex size-5 items-center justify-center rounded-md border border-dashed border-border bg-background/80',
+              'text-muted-foreground transition-opacity hover:bg-muted hover:text-foreground',
+              'opacity-0 focus-visible:opacity-100 group-hover:opacity-100',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            ].join(' ')}
+          >
+            <KeyRound className="size-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-[16rem] text-xs">
+          Map an aws-vault profile — Klustr will run it for this context on connect.
+        </TooltipContent>
+      </Tooltip>
     )
   }
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <KeyRound className="size-3 text-muted-foreground" />
-        <h2 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Credential helpers
-        </h2>
-        {mapped.length > 0 && (
-          <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
-            {mapped.length}
-          </span>
-        )}
-        <div className="ml-auto h-px flex-1 bg-border/60" />
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => setDialogOpen(true)}
-          disabled={unmapped.length === 0}
-          title={
-            unmapped.length === 0
-              ? 'Every AWS exec context already has a profile mapping'
-              : 'Map a context to an aws-vault profile'
-          }
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Credential helper for ${context.name}`}
+          title={`${status.provider} · ${status.profile} — ${describeState(status)}`}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          className={[
+            'inline-flex size-5 items-center justify-center rounded-md border border-border bg-background/80 transition-colors hover:bg-muted',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            STATE_ICON[status.state] ?? 'text-muted-foreground',
+          ].join(' ')}
         >
-          <Plus />
-          Map context
-        </Button>
-      </div>
-
-      {mapped.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
-          aws-vault detected. Map a context to a profile and Klustr will run{' '}
-          <span className="font-mono">aws-vault export</span> for it on connect — no terminal
-          wrapper needed.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-1.5">
-          {mapped.map((s) => (
-            <MappingRow key={s.context} status={s} onRemoved={() => removeStatus(s.context)} />
-          ))}
-        </ul>
-      )}
-
-      <CredentialMappingDialog
-        contexts={unmapped}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSaved={() => {
-          api.listCredentialStatuses().then((list) => setStatuses(list ?? []))
-        }}
-      />
-    </section>
-  )
-}
-
-function MappingRow({ status, onRemoved }: { status: CredentialStatus; onRemoved: () => void }) {
-  const remove = useMutation({
-    mutationFn: () => api.clearCredentialMapping(status.context),
-    onSuccess: onRemoved,
-    onError: (e) => toast.error(String(e)),
-  })
-  return (
-    <li className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-      <span aria-hidden className={`size-2 shrink-0 rounded-full ${STATE_DOT[status.state] ?? 'bg-muted-foreground/50'}`} />
-      <span className="truncate text-sm font-medium">{status.context}</span>
-      <span className="shrink-0 font-mono text-xs text-muted-foreground">
-        {status.provider} · {status.profile}
-      </span>
-      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground/80" title={status.error || undefined}>
-        {status.state === 'error' && status.error ? status.error : describeState(status)}
-      </span>
-      <Tooltip>
-        <TooltipTrigger asChild>
+          <KeyRound className="size-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-72 p-3 text-xs"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className={`size-1.5 shrink-0 rounded-full ${STATE_DOT[status.state] ?? 'bg-muted-foreground/50'}`}
+          />
+          <span className="font-mono text-muted-foreground">
+            {status.provider} · {status.profile}
+          </span>
+        </div>
+        <div className="mt-1 text-muted-foreground">{describeState(status)}</div>
+        {status.error && (
+          <div className="mt-1 break-words font-mono text-[10px] text-red-400">{status.error}</div>
+        )}
+        <div className="mt-2.5 flex items-center gap-1.5">
+          <Button
+            size="sm"
+            className="h-6 px-2 text-xs"
+            title="Run the helper now — a Keychain or MFA prompt may appear"
+            onClick={() => {
+              void api.captureCredentials(context.name)
+              setOpen(false)
+            }}
+          >
+            <Play />
+            Run now
+          </Button>
           <Button
             variant="outline"
             size="sm"
             className="h-6 px-2 text-xs"
-            onClick={() => void api.captureCredentials(status.context)}
+            onClick={() => {
+              setOpen(false)
+              onMap(context)
+            }}
           >
-            <Play />
-            Run
+            Change…
           </Button>
-        </TooltipTrigger>
-        <TooltipContent className="text-xs">
-          Run {status.provider} now — a Keychain or MFA prompt may appear
-        </TooltipContent>
-      </Tooltip>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-6 px-1.5 text-muted-foreground"
-        aria-label={`Remove credential mapping for ${status.context}`}
-        onClick={() => remove.mutate()}
-        disabled={remove.isPending}
-      >
-        <X className="size-3.5" />
-      </Button>
-    </li>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-xs text-destructive"
+            onClick={() => remove.mutate()}
+            disabled={remove.isPending}
+          >
+            <X />
+            Remove
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// CredentialHelpersHint renders at most one thin line on the welcome screen;
+// all management lives on the context cards' key buttons.
+export function CredentialHelpersHint({ contexts }: { contexts: ContextInfo[] }) {
+  const detected = useAwsVaultDetected()
+  const statuses = useCredentialsStore((s) => s.statuses)
+
+  const eligible = useMemo(
+    () => contexts.filter((c) => c.awsExec && !c.awsVaultExec),
+    [contexts],
+  )
+  const anyMapped = useMemo(
+    () => Object.keys(statuses).some((name) => contexts.some((c) => c.name === name)),
+    [statuses, contexts],
+  )
+
+  if (eligible.length === 0) return null
+
+  if (!detected) {
+    return (
+      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <KeyRound className="size-3 shrink-0" />
+        <span>
+          {eligible.length} context{eligible.length === 1 ? ' uses' : 's use'} AWS exec auth, but{' '}
+          <span className="font-mono">aws-vault</span> was not found on PATH — install it and
+          Klustr can run it for you.
+        </span>
+      </p>
+    )
+  }
+
+  if (anyMapped) return null
+
+  return (
+    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <KeyRound className="size-3 shrink-0" />
+      <span>
+        aws-vault detected — click the key on a context card to map a profile; Klustr runs it on
+        connect.
+      </span>
+    </p>
   )
 }
 
