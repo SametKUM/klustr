@@ -37,43 +37,45 @@ type ContextChange struct {
 // shared subsystems (logs/exec/portforward/CRD) and the package-private
 // watcher / restConfig helpers.
 type ClientManager struct {
-	mu       sync.Mutex
-	rules    *clientcmd.ClientConfigLoadingRules
-	cache    map[string]*kubernetes.Clientset
-	watchers map[string]*contextWatcher
-	logs     *logSessionManager
-	execs    *execSessionManager
-	terms    *terminalSessionManager
-	pf       *pfManager
-	metrics  *metricsCache
-	helm     *helmManager
-	onChange func(ContextChange)
-	readOnly map[string]bool
-	drainMu  sync.Mutex
-	draining map[string]bool
-	envReady chan struct{}
-	envOnce  sync.Once
-	creds    *credentialManager
-	appCtx   context.Context
+	mu          sync.Mutex
+	rules       *clientcmd.ClientConfigLoadingRules
+	cache       map[string]*kubernetes.Clientset
+	watchers    map[string]*contextWatcher
+	logs        *logSessionManager
+	execs       *execSessionManager
+	terms       *terminalSessionManager
+	pf          *pfManager
+	metrics     *metricsCache
+	helm        *helmManager
+	onChange    func(ContextChange)
+	readOnly    map[string]bool
+	drainMu     sync.Mutex
+	draining    map[string]bool
+	envReady    chan struct{}
+	envOnce     sync.Once
+	creds       *credentialManager
+	appCtx      context.Context
+	credRewatch map[string]bool
 }
 
 func NewClientManager() *ClientManager {
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
 	helm, _ := newHelmManager(rules)
 	m := &ClientManager{
-		rules:    rules,
-		cache:    make(map[string]*kubernetes.Clientset),
-		watchers: make(map[string]*contextWatcher),
-		logs:     newLogSessionManager(),
-		execs:    newExecSessionManager(),
-		terms:    newTerminalSessionManager(),
-		pf:       newPFManager(),
-		metrics:  newMetricsCache(),
-		helm:     helm,
-		readOnly: make(map[string]bool),
-		draining: make(map[string]bool),
-		envReady: make(chan struct{}),
-		creds:    newCredentialManager(),
+		rules:       rules,
+		cache:       make(map[string]*kubernetes.Clientset),
+		watchers:    make(map[string]*contextWatcher),
+		logs:        newLogSessionManager(),
+		execs:       newExecSessionManager(),
+		terms:       newTerminalSessionManager(),
+		pf:          newPFManager(),
+		metrics:     newMetricsCache(),
+		helm:        helm,
+		readOnly:    make(map[string]bool),
+		draining:    make(map[string]bool),
+		envReady:    make(chan struct{}),
+		creds:       newCredentialManager(),
+		credRewatch: make(map[string]bool),
 	}
 	m.creds.setOnRefreshed(m.onCredentialsRefreshed)
 	return m
@@ -233,7 +235,8 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	// Auto-capture mapped helper credentials before any client is built. A
 	// failure is reported through the credential event stream but does not
 	// block the watch — the exec plugin may still succeed on ambient env.
-	if captured, _ := m.creds.ensureFresh(ctx, contextName); captured {
+	capturedNow, _ := m.creds.ensureFresh(ctx, contextName)
+	if capturedNow {
 		// While the capture was pending (a Keychain prompt can hold it for
 		// a while), status-bar pings and early frontend fetches may have
 		// built and cached a clientset whose exec authenticator never saw
@@ -281,7 +284,23 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 
 	m.mu.Lock()
 	m.watchers[contextName] = w
+	firstAttempt := !m.credRewatch[contextName]
 	m.mu.Unlock()
+
+	// A token-cold first connect can mis-probe access: the exec credential
+	// mint (aws eks get-token → STS) races the 40+ parallel SSARs, they
+	// exceed the probe timeout and every kind resolves to denied, so the
+	// cluster looks empty until a manual reconnect. If a credential-mapped
+	// context comes back with no cluster-wide access at all, the exec token
+	// is warm now — silently reconnect once so discovery reruns against the
+	// hot token. credRewatch guards against a loop (and against punishing a
+	// genuinely namespaced-only user with endless reconnects).
+	if firstAttempt && !w.access.HasAnyClusterWide() && m.creds.hasMapping(contextName) {
+		m.mu.Lock()
+		m.credRewatch[contextName] = true
+		m.mu.Unlock()
+		return m.Watch(ctx, contextName)
+	}
 	return nil
 }
 
@@ -319,6 +338,7 @@ func (m *ClientManager) StopWatch(contextName string) {
 	// rotated, …) the next Watch() would otherwise hand back stale clients
 	// pointing at the old endpoint and every call would fail.
 	delete(m.cache, contextName)
+	delete(m.credRewatch, contextName)
 	m.mu.Unlock()
 	m.metrics.invalidate(contextName)
 	m.helm.invalidate(contextName)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 )
@@ -92,6 +93,13 @@ func (c *credentialManager) mapping(contextName string) (CredentialMapping, bool
 	return m, ok
 }
 
+func (c *credentialManager) hasMapping(contextName string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, ok := c.mappings[contextName]
+	return ok
+}
+
 func (c *credentialManager) setMapping(contextName string, mapping CredentialMapping) error {
 	if c.provider(mapping.Provider) == nil {
 		return fmt.Errorf("unknown credential provider %q", mapping.Provider)
@@ -139,9 +147,7 @@ func (c *credentialManager) envFor(contextName string) map[string]string {
 		return nil
 	}
 	out := make(map[string]string, len(cred.env))
-	for k, v := range cred.env {
-		out[k] = v
-	}
+	maps.Copy(out, cred.env)
 	return out
 }
 
