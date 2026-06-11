@@ -8,6 +8,7 @@ import { DisconnectButton } from '@/features/contexts/DisconnectButton'
 import { COLOR_PALETTE, resolveTagMeta } from '@/features/contexts/contextTagMeta'
 import { ConnectionStatus } from '@/features/contexts/ConnectionStatus'
 import { ConnectionsScreen } from '@/features/contexts/ConnectionsScreen'
+import { CredentialSuggestionBanner } from '@/features/contexts/CredentialSuggestionBanner'
 import { NamespaceSelector } from '@/features/contexts/NamespaceSelector'
 import { PodsView } from '@/features/pods/PodsView'
 import { DeploymentsView } from '@/features/deployments/DeploymentsView'
@@ -522,7 +523,17 @@ function App() {
         )
         .catch(console.error)
     }
+    // A backend-internal watch rebuild (credential capture/refresh) re-runs
+    // access discovery; re-fetch our snapshot when it announces the swap.
+    const unsubAccess = onKubeChange('_access', (ctx) => {
+      if (!activeContexts.includes(ctx)) return
+      api
+        .listAccessibleKinds(ctx)
+        .then((kinds) => setAccess(ctx, kinds ?? []))
+        .catch(() => {})
+    })
     return () => {
+      unsubAccess()
       for (const ctx of activeContexts) {
         api.stopWatch(ctx).catch(console.error)
       }
@@ -692,6 +703,7 @@ function App() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <CredentialSuggestionBanner />
           <main className="flex min-h-0 flex-1 overflow-hidden">
             <MainView />
           </main>

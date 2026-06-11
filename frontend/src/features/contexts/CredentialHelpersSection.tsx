@@ -220,7 +220,7 @@ function MappingRow({ status, onRemoved }: { status: CredentialStatus; onRemoved
   )
 }
 
-function CredentialMappingDialog({
+export function CredentialMappingDialog({
   contexts,
   open,
   onOpenChange,
