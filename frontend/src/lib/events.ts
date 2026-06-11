@@ -22,6 +22,16 @@ function install() {
   if (installed) return
   installed = true
   EventsOn('kube:change', (contextName: string, kind: string) => {
+    // '_access' is not a real kind: the backend emits it after a watch is
+    // rebuilt (credential capture/refresh) with the fresh watcher swapped in.
+    // Fan it out to every registered handler so self-fetching views (overview,
+    // access review, …) re-read the repopulated informer cache instead of
+    // lingering on the stale pre-capture one. Store-fed tables re-pull too,
+    // which is harmless.
+    if (kind === '_access') {
+      for (const set of handlers.values()) set.forEach((h) => h(contextName))
+      return
+    }
     syncedKinds.add(syncKey(contextName, kind))
     handlers.get(kind)?.forEach((h) => h(contextName))
   })
