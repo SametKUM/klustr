@@ -50,6 +50,7 @@ import {
 } from './contextTagMeta'
 import { ContextTagMenuContent } from './ContextTagPicker'
 import { CredentialBadge, CredentialHelpersSection } from './CredentialHelpersSection'
+import { useCredentialStatus } from '@/store/credentials'
 import { TagBadge } from './TagBadge'
 
 type LoadState =
@@ -1214,6 +1215,7 @@ function ContextCard({
   onToggleDefault: () => void
 }) {
   const customTags = useUIStore((s) => s.customTags)
+  const hasCredBadge = !!useCredentialStatus(context.name)
   const meta = providerMeta(context)
   const tagMetas = tagIds
     .map((id) => resolveTagMeta(id, customTags))
@@ -1301,7 +1303,7 @@ function ContextCard({
           </button>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 pr-7">
+          <div className={`flex items-center gap-1.5 ${hasCredBadge ? 'pr-12' : 'pr-7'}`}>
             <span className="truncate text-sm font-semibold leading-tight">{context.name}</span>
             {isDefault && (
               <span
@@ -1320,9 +1322,8 @@ function ContextCard({
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <CardTagBadges contextName={context.name} tagMetas={tagMetas} />
             <div className="ml-auto flex items-center gap-1.5">
-              <CredentialBadge contextName={context.name} />
               {shortcut && (
-                <span className="inline-flex items-center gap-0.5 rounded border border-border/70 bg-background/60 px-1 py-px font-mono text-[9px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                <span className="inline-flex items-center gap-0.5 rounded border border-border/70 bg-background/60 px-1 py-px font-mono text-[9px] text-muted-foreground">
                   <Command className="size-2.5" />
                   {shortcut.replace(/^⌘|^Ctrl/, '')}
                 </span>
@@ -1338,41 +1339,44 @@ function ContextCard({
             </div>
           </div>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              role="button"
-              aria-label={isDefault ? 'Disable auto-connect on launch' : 'Enable auto-connect on launch'}
-              aria-pressed={isDefault}
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleDefault()
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+        <div className="absolute right-1.5 top-1.5 flex items-center gap-1.5">
+          <CredentialBadge contextName={context.name} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                role="button"
+                aria-label={isDefault ? 'Disable auto-connect on launch' : 'Enable auto-connect on launch'}
+                aria-pressed={isDefault}
+                tabIndex={0}
+                onClick={(e) => {
                   e.stopPropagation()
-                  e.preventDefault()
                   onToggleDefault()
-                }
-              }}
-              className={[
-                'absolute right-1.5 top-1.5 inline-flex size-5 items-center justify-center rounded-md border transition-opacity',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                isDefault
-                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 opacity-100 dark:text-amber-400'
-                  : 'border-border bg-background/80 text-muted-foreground opacity-0 hover:bg-muted group-hover:opacity-100 focus-visible:opacity-100',
-              ].join(' ')}
-            >
-              {isDefault ? <Check className="size-3" /> : <Zap className="size-3" />}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="left" className="max-w-[14rem] text-xs">
-            {isDefault
-              ? 'Auto-connect enabled — Klustr will skip this picker and open this context on next launch. Click to disable.'
-              : 'Set as auto-connect — Klustr will skip this picker and open this context on next launch.'}
-          </TooltipContent>
-        </Tooltip>
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    onToggleDefault()
+                  }
+                }}
+                className={[
+                  'inline-flex size-5 items-center justify-center rounded-md border transition-opacity',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  isDefault
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 opacity-100 dark:text-amber-400'
+                    : 'border-border bg-background/80 text-muted-foreground opacity-0 hover:bg-muted group-hover:opacity-100 focus-visible:opacity-100',
+                ].join(' ')}
+              >
+                {isDefault ? <Check className="size-3" /> : <Zap className="size-3" />}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-[14rem] text-xs">
+              {isDefault
+                ? 'Auto-connect enabled — Klustr will skip this picker and open this context on next launch. Click to disable.'
+                : 'Set as auto-connect — Klustr will skip this picker and open this context on next launch.'}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </li>
   )
