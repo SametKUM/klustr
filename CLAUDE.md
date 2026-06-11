@@ -34,8 +34,14 @@ klustr/
 ├── main.go                       application entry point
 ├── internal/                     pure Go business logic (no Wails imports)
 │   └── kube/
-│       ├── config.go                kubeconfig parsing, context discovery
+│       ├── config.go                kubeconfig parsing, context discovery + exec auth hints
 │       ├── path.go                  GUI-launch PATH augmentation for exec credential helpers
+│       ├── shellenv.go              GUI-launch login-shell env import (PATH + allowlist)
+│       ├── creds_provider.go        CredentialProvider interface + status/mapping types
+│       ├── creds_awsvault.go        aws-vault provider (detect / profiles / export capture)
+│       ├── creds_store.go           context→profile mapping JSON under the user config dir
+│       ├── creds.go                 credentialManager: single-flight capture, in-memory
+│       │                            secrets, ahead-of-expiry refresh + client rebuild
 │       ├── manager.go               ClientManager lifecycle (Clientset / Ping / Watch /
 │       │                            StopWatch) + Logs / Exec / PortForward / CRD forwarders
 │       │                            + watcher() helper
@@ -94,6 +100,8 @@ klustr/
 │       │   ├── metrics.ts          metrics-server data + availability flag
 │       │   ├── portForwards.ts     active port-forwards list
 │       │   ├── crds.ts             discovered CRDs per context (by api group)
+│       │   ├── credentials.ts      credential-helper providers + per-context statuses
+│       │   │                       (fed by creds:update; mappings persist backend-side)
 │       │   ├── helm.ts             helm release index per (context, namespace, name)
 │       │   ├── namespaceFavorites.ts  per-context starred namespaces
 │       │   ├── tablePrefs.ts       per-kind column order / size / visibility (persisted)
@@ -102,7 +110,8 @@ klustr/
 │       │   └── ui.persistence.ts   localStorage read*/persist* helpers + applyThemeClasses
 │       ├── lib/wails/            auto-generated Go bindings — DO NOT EDIT
 │       ├── lib/api.ts            ergonomic wrappers over wails bindings
-│       └── lib/events.ts         onKubeChange / onPFUpdate Wails event subscriptions
+│       └── lib/events.ts         onKubeChange / onPFUpdate / onCredsUpdate Wails event
+│                                 subscriptions
 ├── build/                        Wails build artifacts (icons, Info.plist) +
 │                                 linux/ (nfpm.yaml + klustr.desktop for the .deb) +
 │                                 aur/PKGBUILD.tmpl (rendered each release by CI)
@@ -182,6 +191,35 @@ Both detections live in `App.tsx` (`hasGatewayAPI`, `hasArgoApplications`) by gr
 - Sidebar group shown only when the `gateway.networking.k8s.io` CRDs are present.
 - Detail dialogs render the listener table, per-rule `match → backend → weight` matrix and `RouteParentStatus` block by reading the typed status — a `ResolvedRefs=False` / `RefNotPermitted` backend is one click away.
 - Vendor-neutral: works with Envoy Gateway, Cilium, Istio, Contour, NGINX Gateway Fabric or any conformant implementation.
+
+### Credential helpers — GUI launch without a terminal wrapper
+
+GUI-launched apps (Finder/Dock/.desktop) skip the shell rc, so kubeconfig exec
+plugins that rely on shell-provided PATH or ambient cloud credentials
+(`aws-vault exec <profile> -- <tool>`) fail. Two layers fix this:
+
+- **Shell-env import** (`shellenv.go`): on startup (GUI launch only, never on
+  Windows or terminal launches) klustr spawns `$SHELL -ilc`, dumps the env
+  between sentinels and merges PATH plus a fixed allowlist
+  (AWS_VAULT_BACKEND, AWS_CONFIG_FILE, proxies, KUBECONFIG, …) into the
+  process. `Watch`/`Ping` wait on the `envReady` gate so the first exec
+  credential helper run already sees the merged env. The hardcoded dirs in
+  `path.go` stay as fallback.
+- **Credential providers** (`creds*.go`): the user maps a context to an
+  aws-vault profile (Connections screen → Credential helpers section, hints
+  preselected from the kubeconfig exec block's `--profile`/`AWS_PROFILE`).
+  On connect, `Watch` runs `aws-vault export --format=json <profile>`
+  (single-flight; the macOS Keychain dialog may appear) and `restConfig()`
+  injects the captured keys into `rest.Config.ExecProvider.Env`, so
+  `aws eks get-token` behaves exactly as under `aws-vault exec`. Credentials
+  live in memory only — the JSON store under the user config dir holds
+  provider/profile names, never secrets, and no credential value is ever
+  logged or sent over a Wails binding. A timer re-captures ~5 min before
+  expiry and rebuilds the context's clients (client-go's exec authenticator
+  snapshots its env, so refresh requires fresh rest.Configs + a watch swap);
+  failures surface on `creds:update` as an error toast with a Retry action.
+  The provider interface is generic — granted/saml2aws/etc. are future
+  implementations beside `creds_awsvault.go`.
 
 ### Multi-context aggregated mode
 
@@ -308,7 +346,7 @@ The test surface is **headless unit tests only** — Vitest+jsdom for frontend, 
 - Importing Wails-specific packages into `internal/kube/...`.
 - Returning nil slices from Go: the JSON encoder emits `null` and React `.length` access blows up. Use `append([]string{}, src...)`.
 - Passing a fresh object literal into TanStack `state.columnSizing` (or similar controlled props) every render — TanStack fires the change handler and the controlled store ping-pongs into an infinite loop.
-- Adding global stores beyond the documented layers — current legal set is `resources`, `metrics`, `portForwards`, `crds`, `helm`, `namespaceFavorites`, `ui`, `tablePrefs`. Anything new needs a reason in the PR.
+- Adding global stores beyond the documented layers — current legal set is `resources`, `metrics`, `portForwards`, `crds`, `helm`, `credentials`, `namespaceFavorites`, `ui`, `tablePrefs`. Anything new needs a reason in the PR.
 - Generating boilerplate docs (CHANGELOG, CODE_OF_CONDUCT, SECURITY, PR templates) before they're needed. The contributor-facing surface today is `CONTRIBUTING.md` and a single `.github/ISSUE_TEMPLATE/bug_report.yml`.
 - Marketing-style copy or emoji in UI strings unless explicitly requested.
 - Editing auto-generated Wails bindings.
