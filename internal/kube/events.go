@@ -24,6 +24,10 @@ type EventInfo struct {
 	ObjectName string    `json:"objectName"`
 }
 
+// maxWarningEventsScan bounds how many warning events one overview refresh
+// pulls from a pathologically noisy cluster before sorting.
+const maxWarningEventsScan = 5000
+
 func (m *ClientManager) ListClusterWarningEvents(ctx context.Context, contextName string, limit int) ([]EventInfo, error) {
 	cs, err := m.Clientset(contextName)
 	if err != nil {
@@ -33,18 +37,26 @@ func (m *ClientManager) ListClusterWarningEvents(ctx context.Context, contextNam
 		limit = 50
 	}
 
+	// Page through the full warning set before sorting: a server-side Limit
+	// truncates in etcd key order (alphabetical by namespace/name), which on a
+	// busy cluster can drop every recent warning before the recency sort runs.
 	opts := metav1.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector("type", "Warning").String(),
-		Limit:         int64(limit),
+		Limit:         500,
 	}
-	list, err := cs.CoreV1().Events("").List(ctx, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	out := make([]EventInfo, 0, len(list.Items))
-	for i := range list.Items {
-		out = append(out, eventInfoFrom(&list.Items[i]))
+	out := make([]EventInfo, 0, limit)
+	for {
+		list, err := cs.CoreV1().Events("").List(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		for i := range list.Items {
+			out = append(out, eventInfoFrom(&list.Items[i]))
+		}
+		if list.Continue == "" || len(out) >= maxWarningEventsScan {
+			break
+		}
+		opts.Continue = list.Continue
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].LastSeen.After(out[j].LastSeen) })
 	if len(out) > limit {
