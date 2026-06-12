@@ -18,7 +18,10 @@ import (
 	gwclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 )
 
-const pingTimeout = 5 * time.Second
+// Generous enough that a slow link reading the /version body doesn't
+// intermittently flag a healthy cluster; latency classification (ok/slow)
+// happens frontend-side from the measured round trip.
+const pingTimeout = 10 * time.Second
 
 type ServerVersion struct {
 	GitVersion string `json:"gitVersion"`

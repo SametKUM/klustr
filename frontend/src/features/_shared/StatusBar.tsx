@@ -14,6 +14,7 @@ type Health = {
   error: string | null
   version: string | null
   lastPingAt: number
+  failures: number
 }
 
 const PING_INTERVAL_MS = 25_000
@@ -76,7 +77,7 @@ export function StatusBar() {
         ...prev,
         [ctx]: prev[ctx]
           ? { ...prev[ctx], status: 'pinging' }
-          : { status: 'pinging', latencyMs: -1, error: null, version: null, lastPingAt: 0 },
+          : { status: 'pinging', latencyMs: -1, error: null, version: null, lastPingAt: 0, failures: 0 },
       }))
       api
         .pingContext(ctx)
@@ -91,21 +92,29 @@ export function StatusBar() {
               error: null,
               version: v.gitVersion,
               lastPingAt: Date.now(),
+              failures: 0,
             },
           }))
         })
         .catch((e: unknown) => {
           if (cancelled) return
-          setHealthByCtx((prev) => ({
-            ...prev,
-            [ctx]: {
-              status: 'error',
-              latencyMs: -1,
-              error: String(e),
-              version: prev[ctx]?.version ?? null,
-              lastPingAt: Date.now(),
-            },
-          }))
+          setHealthByCtx((prev) => {
+            // A single failed ping on a slow link (e.g. a /version body read
+            // exceeding the timeout) shows amber; only consecutive failures
+            // flip the dot red.
+            const failures = (prev[ctx]?.failures ?? 0) + 1
+            return {
+              ...prev,
+              [ctx]: {
+                status: failures >= 2 ? 'error' : 'slow',
+                latencyMs: -1,
+                error: String(e),
+                version: prev[ctx]?.version ?? null,
+                lastPingAt: Date.now(),
+                failures,
+              },
+            }
+          })
         })
     }
 
