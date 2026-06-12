@@ -383,7 +383,18 @@ export function ResourceTable<T>({
         next.add(ctx)
         return next
       })
+    // One fetch in flight per context; change events arriving meanwhile mark it
+    // dirty and a single trailing refetch runs shortly after. This bounds the
+    // bridge/render churn on busy clusters to roughly one refetch per fetch
+    // latency instead of one per event.
+    const inflight = new Map<string, { dirty: boolean }>()
     const reload = (ctx: string) => {
+      const st = inflight.get(ctx)
+      if (st) {
+        st.dirty = true
+        return
+      }
+      inflight.set(ctx, { dirty: false })
       fetchRef.current(ctx, query.apiNamespace).then((list) => {
         if (cancelled) return
         const items = stableList(dataRef.current[ctx], list ?? [])
@@ -396,6 +407,14 @@ export function ResourceTable<T>({
         if (cancelled) return
         setDataRef.current(ctx, [])
         markLoaded(ctx)
+      }).finally(() => {
+        const st = inflight.get(ctx)
+        inflight.delete(ctx)
+        if (!cancelled && st?.dirty) {
+          window.setTimeout(() => {
+            if (!cancelled) reload(ctx)
+          }, 150)
+        }
       })
     }
     for (const ctx of activeContexts) reload(ctx)
