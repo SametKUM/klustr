@@ -34,7 +34,7 @@ export function ReplicaSetDetailBody({
           <Section title="Controlled By">
             {detail.owners.map((o, i) => (
               <Field key={i} label={o.kind}>
-                <OwnerLink owner={o} namespace={detail.namespace} />
+                <OwnerLink owner={o} namespace={detail.namespace} context={contextName} />
               </Field>
             ))}
           </Section>

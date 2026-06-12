@@ -98,7 +98,12 @@ export function RelatedPods({ contextName, kind, namespace, name, title }: Props
                   key={`${p.namespace}/${p.name}`}
                   className="cursor-pointer border-t border-border align-top hover:bg-muted/40"
                   onClick={() =>
-                    openResource({ kind: 'Pod', namespace: p.namespace, name: p.name })
+                    openResource({
+                      kind: 'Pod',
+                      namespace: p.namespace,
+                      name: p.name,
+                      context: contextName ?? undefined,
+                    })
                   }
                 >
                   {showNamespace && <Td className="text-muted-foreground">{p.namespace}</Td>}
@@ -108,7 +113,7 @@ export function RelatedPods({ contextName, kind, namespace, name, title }: Props
                   <Td>{p.restarts}</Td>
                   {showNode && (
                     <Td className="text-muted-foreground">
-                      {p.node ? <NodeLink name={p.node} /> : '—'}
+                      {p.node ? <NodeLink name={p.node} context={contextName} /> : '—'}
                     </Td>
                   )}
                   <Td className="whitespace-nowrap text-muted-foreground">

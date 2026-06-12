@@ -38,7 +38,15 @@ function isNavigableKind(kind: string): kind is ResourceKind {
   return NAVIGABLE_KINDS.has(kind as ResourceKind)
 }
 
-export function OwnerLink({ owner, namespace }: { owner: OwnerRef; namespace: string }) {
+export function OwnerLink({
+  owner,
+  namespace,
+  context,
+}: {
+  owner: OwnerRef
+  namespace: string
+  context?: string | null
+}) {
   const openResource = useUIStore((s) => s.openResource)
   if (!isNavigableKind(owner.kind)) {
     return <span>{owner.name}</span>
@@ -46,7 +54,14 @@ export function OwnerLink({ owner, namespace }: { owner: OwnerRef; namespace: st
   return (
     <button
       type="button"
-      onClick={() => openResource({ kind: owner.kind as ResourceKind, namespace, name: owner.name })}
+      onClick={() =>
+        openResource({
+          kind: owner.kind as ResourceKind,
+          namespace,
+          name: owner.name,
+          context: context ?? undefined,
+        })
+      }
       className="cursor-pointer text-left hover:underline"
     >
       {owner.name}

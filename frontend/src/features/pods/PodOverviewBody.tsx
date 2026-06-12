@@ -38,14 +38,18 @@ export function PodOverviewBody({
           <Field label="Node">
             {detail.node ? (
               <Copyable value={detail.node}>
-                <NodeLink name={detail.node} />
+                <NodeLink name={detail.node} context={contextName} />
               </Copyable>
             ) : (
               '—'
             )}
           </Field>
           <Field label="Service Account">
-            <ServiceAccountLink namespace={detail.namespace} name={detail.serviceAccount || 'default'} />
+            <ServiceAccountLink
+              namespace={detail.namespace}
+              name={detail.serviceAccount || 'default'}
+              context={contextName}
+            />
           </Field>
           {detail.priorityClassName && <Field label="Priority Class">{detail.priorityClassName}</Field>}
         </Section>
@@ -54,7 +58,7 @@ export function PodOverviewBody({
           <Section title="Controlled By">
             {detail.owners.map((o, i) => (
               <Field key={i} label={o.kind}>
-                <OwnerLink owner={o} namespace={detail.namespace} />
+                <OwnerLink owner={o} namespace={detail.namespace} context={contextName} />
               </Field>
             ))}
           </Section>

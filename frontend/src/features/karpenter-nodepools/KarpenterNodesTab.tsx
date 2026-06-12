@@ -75,7 +75,14 @@ export function KarpenterNodesTab({ contextName, name, load, title, emptyMessage
                   <tr
                     key={n.name}
                     className="cursor-pointer border-t border-border align-top hover:bg-muted/40"
-                    onClick={() => openResource({ kind: 'Node', namespace: '', name: n.name })}
+                    onClick={() =>
+                      openResource({
+                        kind: 'Node',
+                        namespace: '',
+                        name: n.name,
+                        context: contextName ?? undefined,
+                      })
+                    }
                   >
                     <Td className="font-mono">{n.name}</Td>
                     <Td className={nodeStatusClass(n.status)}>{n.status}</Td>
