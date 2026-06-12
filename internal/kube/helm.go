@@ -410,6 +410,7 @@ func (h *helmManager) Upgrade(ctx context.Context, opts HelmInstallOptions) (*He
 	up.DryRun = opts.DryRun
 	up.ResetValues = opts.ResetValues
 	up.Timeout = resolveHelmTimeout(opts.TimeoutSeconds, up.Wait || up.Atomic)
+	up.MaxHistory = helmMaxHistory
 
 	chartRef, err := h.resolveChartRef(opts.ChartRef)
 	if err != nil {
@@ -447,6 +448,7 @@ func (h *helmManager) Rollback(contextName, namespace, name string, revision int
 	rb.Version = revision
 	rb.Wait = wait
 	rb.Timeout = resolveHelmTimeout(0, wait)
+	rb.MaxHistory = helmMaxHistory
 	return rb.Run(name)
 }
 
@@ -661,6 +663,11 @@ func (h *helmManager) resolveChartRef(ref string) (string, error) {
 		return "", fmt.Errorf("chart %q is provided by multiple repos (%s); prefix with the repo name", ref, strings.Join(matches, ", "))
 	}
 }
+
+// helmMaxHistory mirrors the helm CLI's --history-max default. The SDK's
+// zero value means "never prune", so without it every Klustr-driven upgrade
+// or rollback would add a permanent sh.helm.release.v1.* Secret.
+const helmMaxHistory = 10
 
 // resolveHelmTimeout mirrors helm CLI's behaviour: when --wait or --atomic is
 // set and no explicit --timeout is provided, helm defaults to 5 minutes. The
