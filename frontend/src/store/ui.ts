@@ -127,7 +127,18 @@ type UIState = {
 }
 
 function sameResource(a: SelectedResource, b: SelectedResource): boolean {
-  return a.kind === b.kind && a.namespace === b.namespace && a.name === b.name
+  // context and gvr are part of the identity: in aggregated mode the same
+  // namespace/name can exist in two clusters, and two CRDs can share a kind
+  // name across API groups.
+  return (
+    a.kind === b.kind &&
+    a.namespace === b.namespace &&
+    a.name === b.name &&
+    a.context === b.context &&
+    a.gvr?.group === b.gvr?.group &&
+    a.gvr?.version === b.gvr?.version &&
+    a.gvr?.resource === b.gvr?.resource
+  )
 }
 
 function dedupeSorted(names: readonly string[]): string[] {

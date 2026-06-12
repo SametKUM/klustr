@@ -253,7 +253,13 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
         </DialogHeader>
         {resource && (
           <DetailContent
-            key={`${resource.kind}/${resource.namespace}/${resource.name}`}
+            key={[
+              resource.context ?? '',
+              resource.gvr ? `${resource.gvr.group}/${resource.gvr.version}/${resource.gvr.resource}` : '',
+              resource.kind,
+              resource.namespace,
+              resource.name,
+            ].join('|')}
             contextName={contextName}
             resource={resource}
           />
