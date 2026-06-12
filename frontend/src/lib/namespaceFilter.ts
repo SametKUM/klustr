@@ -4,18 +4,21 @@ export type NamespaceQuery = {
 }
 
 export function namespaceQuery(selected: readonly string[]): NamespaceQuery {
-  if (selected.length === 0) {
+  // Sanitize before branching: persisted selections may carry duplicates or
+  // an empty entry, and either would corrupt the comma-encoded set below.
+  const uniq = [...new Set(selected)].filter((ns) => ns !== '').sort()
+  if (uniq.length === 0) {
     return { apiNamespace: '', matches: () => true }
   }
-  if (selected.length === 1) {
-    const only = selected[0]
+  if (uniq.length === 1) {
+    const only = uniq[0]
     return { apiNamespace: only, matches: (ns) => ns === only }
   }
   // The backend understands a comma-separated namespace set (namespace names
   // cannot contain commas) and lists each one from the informer cache, so a
   // multi-namespace selection no longer fetches the whole cluster.
-  const set = new Set(selected)
-  return { apiNamespace: [...selected].sort().join(','), matches: (ns) => set.has(ns) }
+  const set = new Set(uniq)
+  return { apiNamespace: uniq.join(','), matches: (ns) => set.has(ns) }
 }
 
 export function namespaceLabel(selected: readonly string[]): string {

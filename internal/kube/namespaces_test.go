@@ -19,6 +19,19 @@ func TestSplitNamespaces(t *testing.T) {
 	}
 }
 
+func TestSplitNamespacesSanitizes(t *testing.T) {
+	// An empty segment must not widen the query to the whole cluster, and a
+	// duplicate must not produce duplicate rows.
+	got := splitNamespaces("b,,a,b")
+	want := []string{"a", "b"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	if got := splitNamespaces(","); got != nil {
+		t.Fatalf("all-empty segments should return nil, got %v", got)
+	}
+}
+
 func TestListAcrossNamespaces(t *testing.T) {
 	byNS := map[string][]string{
 		"":     {"everything"},

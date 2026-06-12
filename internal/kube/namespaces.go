@@ -19,7 +19,24 @@ func splitNamespaces(namespace string) []string {
 	if !strings.Contains(namespace, ",") {
 		return nil
 	}
-	parts := strings.Split(namespace, ",")
+	// Drop empty segments and duplicates: an empty namespace inside a comma
+	// set would silently widen the query to the whole cluster, and a
+	// duplicate would produce duplicate rows with colliding identities.
+	seen := make(map[string]struct{})
+	parts := make([]string, 0, strings.Count(namespace, ",")+1)
+	for _, ns := range strings.Split(namespace, ",") {
+		if ns == "" {
+			continue
+		}
+		if _, ok := seen[ns]; ok {
+			continue
+		}
+		seen[ns] = struct{}{}
+		parts = append(parts, ns)
+	}
+	if len(parts) == 0 {
+		return nil
+	}
 	sort.Strings(parts)
 	return parts
 }
