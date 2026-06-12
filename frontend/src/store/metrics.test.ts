@@ -58,6 +58,29 @@ describe('useMetrics', () => {
     expect(s.available.staging).toBe(true)
   })
 
+  it('setPodMetrics keeps identities for unchanged readings', () => {
+    const other: PodMetrics = { namespace: 'default', name: 'other', cpuMC: 5, memB: 1024 }
+    useMetrics.getState().setPodMetrics('prod', [sample, other])
+    const before = useMetrics.getState().byPodByContext.prod
+
+    useMetrics.getState().setPodMetrics('prod', [{ ...sample }, { ...other }])
+    expect(useMetrics.getState().byPodByContext.prod).toBe(before)
+
+    useMetrics.getState().setPodMetrics('prod', [{ ...sample }, { ...other, cpuMC: 99 }])
+    const after = useMetrics.getState().byPodByContext.prod
+    expect(after).not.toBe(before)
+    expect(after['default/demo']).toBe(before['default/demo'])
+    expect(after['default/other'].cpuMC).toBe(99)
+  })
+
+  it('setNodeMetrics keeps identities for unchanged readings', () => {
+    const node = { name: 'n1', cpuMC: 100, memB: 2048 }
+    useMetrics.getState().setNodeMetrics('prod', [node])
+    const before = useMetrics.getState().byNodeByContext.prod
+    useMetrics.getState().setNodeMetrics('prod', [{ ...node }])
+    expect(useMetrics.getState().byNodeByContext.prod).toBe(before)
+  })
+
   it('reset wipes everything', () => {
     useMetrics.getState().setPodMetrics('prod', [sample])
     useMetrics.getState().reset()

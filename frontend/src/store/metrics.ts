@@ -25,14 +25,24 @@ export const useMetrics = create<MetricsState>((set) => ({
   byNodeByContext: {},
   setNodeMetrics: (ctx, list) =>
     set((s) => {
+      const prev = s.byNodeByContext[ctx]
       const byNode: MetricsByNode = {}
-      for (const m of list) byNode[m.name] = m
+      let changed = !prev || Object.keys(prev).length !== list.length
+      for (const m of list) {
+        const p = prev?.[m.name]
+        if (p && p.cpuMC === m.cpuMC && p.memB === m.memB) {
+          byNode[m.name] = p
+        } else {
+          byNode[m.name] = m
+          changed = true
+        }
+      }
       return {
         // metrics-server availability is shared with pods; only flip it true
         // here (a node poll returning empty shouldn't claim metrics are down
         // while pods still report).
         available: list.length > 0 ? { ...s.available, [ctx]: true } : s.available,
-        byNodeByContext: { ...s.byNodeByContext, [ctx]: byNode },
+        byNodeByContext: changed ? { ...s.byNodeByContext, [ctx]: byNode } : s.byNodeByContext,
       }
     }),
   setPodMetrics: (ctx, list) =>
@@ -43,11 +53,25 @@ export const useMetrics = create<MetricsState>((set) => ({
           byPodByContext: { ...s.byPodByContext, [ctx]: {} },
         }
       }
+      // Unchanged readings keep their previous object (and, when the whole poll
+      // is unchanged, the previous map), so per-cell store subscriptions bail
+      // out instead of re-rendering every usage cell each poll.
+      const prev = s.byPodByContext[ctx]
       const byPod: MetricsByPod = {}
-      for (const m of list) byPod[podKey(m.namespace, m.name)] = m
+      let changed = !prev || Object.keys(prev).length !== list.length
+      for (const m of list) {
+        const k = podKey(m.namespace, m.name)
+        const p = prev?.[k]
+        if (p && p.cpuMC === m.cpuMC && p.memB === m.memB) {
+          byPod[k] = p
+        } else {
+          byPod[k] = m
+          changed = true
+        }
+      }
       return {
         available: { ...s.available, [ctx]: true },
-        byPodByContext: { ...s.byPodByContext, [ctx]: byPod },
+        byPodByContext: changed ? { ...s.byPodByContext, [ctx]: byPod } : s.byPodByContext,
       }
     }),
   setUnavailable: (ctx) =>
