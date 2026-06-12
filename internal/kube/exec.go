@@ -90,11 +90,16 @@ func (mgr *execSessionManager) start(
 	queue := &chanSizeQueue{ch: resizeCh}
 
 	go func() {
+		// Delete-then-close mirrors stop(): once the session is out of the
+		// map, resize() can no longer reach the channel close() is about to
+		// close. Without the close(), remotecommand's resize handler blocks
+		// on the size queue forever and the derived context never cancels —
+		// one leaked goroutine per naturally-ended session.
 		defer func() {
-			_ = pw.Close()
 			mgr.mu.Lock()
 			delete(mgr.sessions, id)
 			mgr.mu.Unlock()
+			sess.close()
 		}()
 		err := executor.StreamWithContext(ctx, remotecommand.StreamOptions{
 			Stdin:             pr,

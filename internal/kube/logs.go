@@ -70,6 +70,7 @@ func (mgr *logSessionManager) start(
 			mgr.mu.Lock()
 			delete(mgr.sessions, id)
 			mgr.mu.Unlock()
+			cancel()
 		}()
 
 		scanner := bufio.NewScanner(stream)
