@@ -78,10 +78,10 @@ var kindToGVR = map[string]schema.GroupVersionResource{
 	"FlowSchema":                 {Group: "flowcontrol.apiserver.k8s.io", Version: "v1", Resource: "flowschemas"},
 	"PriorityLevelConfiguration": {Group: "flowcontrol.apiserver.k8s.io", Version: "v1", Resource: "prioritylevelconfigurations"},
 
-	"Gateway":        {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"},
-	"HTTPRoute":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"},
-	"GRPCRoute":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "grpcroutes"},
-	"GatewayClass":   {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"},
+	"Gateway":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"},
+	"HTTPRoute":    {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"},
+	"GRPCRoute":    {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "grpcroutes"},
+	"GatewayClass": {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"},
 	// v1beta1 deliberately: v1 referencegrants serving needs Gateway API >=1.5
 	// CRDs, v1beta1 is served everywhere the kind exists.
 	"ReferenceGrant": {Group: "gateway.networking.k8s.io", Version: "v1beta1", Resource: "referencegrants"},
