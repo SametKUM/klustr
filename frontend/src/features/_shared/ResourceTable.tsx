@@ -11,6 +11,7 @@ import {
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { ArrowDown, ArrowUp, ChevronsUpDown, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import { isKindSynced, onKubeChange } from '@/lib/events'
 import { namespaceQuery } from '@/lib/namespaceFilter'
@@ -112,6 +113,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
 type ResourceRowProps<T> = {
   row: Row<Tagged<T>>
+  rowIndex: number
   kind: string
   columns: ColumnDef<Tagged<T>, any>[]
   columnOrder: string[]
@@ -121,16 +123,19 @@ type ResourceRowProps<T> = {
   clickable: boolean
   onRowClick: (item: Tagged<T>) => void
   onToggle: (key: string) => void
+  measureRef: (node: Element | null) => void
 }
 
 function ResourceRowInner<T>({
   row,
+  rowIndex,
   kind,
   isSelected,
   flashing,
   clickable,
   onRowClick,
   onToggle,
+  measureRef,
 }: ResourceRowProps<T>) {
   useNowTick()
   const tagged = row.original
@@ -141,6 +146,8 @@ function ResourceRowInner<T>({
     kind === 'Pod' ? (tagged as { hasPorts?: boolean }).hasPorts === true : false
   const rowEl = (
     <tr
+      ref={measureRef}
+      data-index={rowIndex}
       className={[
         'border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors',
         clickable ? 'cursor-pointer select-none' : '',
@@ -192,6 +199,7 @@ const ResourceRow = memo(ResourceRowInner, (prev, next) => {
   return (
     prev.row.original === next.row.original &&
     prev.row.id === next.row.id &&
+    prev.rowIndex === next.rowIndex &&
     prev.kind === next.kind &&
     prev.columns === next.columns &&
     prev.columnOrder === next.columnOrder &&
@@ -484,6 +492,13 @@ export function ResourceTable<T>({
   })
 
   const visibleRows = table.getRowModel().rows
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+    count: visibleRows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 33,
+    overscan: 12,
+  })
   const visibleKeys = visibleRows
     .map((r) => {
       const tagged = r.original as Tagged<T>
@@ -636,7 +651,7 @@ export function ResourceTable<T>({
         </div>
         <ColumnControls table={table} onReset={() => resetPrefs(kind)} />
       </div>
-      <div className="flex-1 overflow-auto">
+      <div ref={scrollRef} className="flex-1 overflow-auto">
         <table
           className="border-collapse text-sm"
           style={{ width: '100%', minWidth: table.getTotalSize(), tableLayout: 'fixed' }}
@@ -788,27 +803,53 @@ export function ResourceTable<T>({
                 </td>
               </tr>
             ) : (
-              table.getRowModel().rows.map((row) => {
-                const tagged = row.original as Tagged<T>
-                const ctx = tagged[KLUSTR_CTX]
-                const identity = tagged as unknown as RowIdentity
-                const rowKey = identity.name ? identityKey(ctx, identity) : null
+              (() => {
+                const virtualItems = virtualizer.getVirtualItems()
+                const padTop = virtualItems.length > 0 ? virtualItems[0].start : 0
+                const padBottom =
+                  virtualItems.length > 0
+                    ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end
+                    : 0
+                const spacerSpan = table.getVisibleLeafColumns().length + 2
                 return (
-                  <ResourceRow
-                    key={row.id}
-                    row={row}
-                    kind={kind}
-                    columns={tableColumns}
-                    columnOrder={columnOrder}
-                    columnVisibility={columnVisibility}
-                    isSelected={rowKey !== null && selectedKeys.has(rowKey)}
-                    flashing={rowKey !== null && flashKey === rowKey}
-                    clickable={!!onRowClick}
-                    onRowClick={handleRowClick}
-                    onToggle={toggleRow}
-                  />
+                  <>
+                    {padTop > 0 && (
+                      <tr aria-hidden>
+                        <td colSpan={spacerSpan} style={{ height: padTop, padding: 0 }} />
+                      </tr>
+                    )}
+                    {virtualItems.map((vi) => {
+                      const row = visibleRows[vi.index]
+                      const tagged = row.original as Tagged<T>
+                      const ctx = tagged[KLUSTR_CTX]
+                      const identity = tagged as unknown as RowIdentity
+                      const rowKey = identity.name ? identityKey(ctx, identity) : null
+                      return (
+                        <ResourceRow
+                          key={row.id}
+                          row={row}
+                          rowIndex={vi.index}
+                          kind={kind}
+                          columns={tableColumns}
+                          columnOrder={columnOrder}
+                          columnVisibility={columnVisibility}
+                          isSelected={rowKey !== null && selectedKeys.has(rowKey)}
+                          flashing={rowKey !== null && flashKey === rowKey}
+                          clickable={!!onRowClick}
+                          onRowClick={handleRowClick}
+                          onToggle={toggleRow}
+                          measureRef={virtualizer.measureElement}
+                        />
+                      )
+                    })}
+                    {padBottom > 0 && (
+                      <tr aria-hidden>
+                        <td colSpan={spacerSpan} style={{ height: padBottom, padding: 0 }} />
+                      </tr>
+                    )}
+                  </>
                 )
-              })
+              })()
             )}
           </tbody>
         </table>
