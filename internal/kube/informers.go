@@ -59,8 +59,9 @@ type ChangeFunc func(kind string)
 // list call that would 403 and silently leave the cache empty.
 //
 // Per-kind type definitions and lister methods live in informers_<group>.go
-// files; the handler registration that wires up every kind stays here in
-// start() so the routing table is auditable in one place.
+// files; the kind → informer routing table stays here in kindBindings so it
+// is auditable in one place. Informers start lazily on first use
+// (factoryFor → ensureKind); only Namespace and Pod start eagerly on attach.
 type contextWatcher struct {
 	factory        informers.SharedInformerFactory // cluster-wide; nil when user has no cluster-wide list at all
 	scoped         informers.SharedInformerFactory // namespaced fallback; nil when no kind needs it
@@ -76,6 +77,11 @@ type contextWatcher struct {
 	crd            *crdWatcher
 	onChange       ChangeFunc
 	cancel         context.CancelFunc
+	stopCh         <-chan struct{}
+
+	startMu  sync.Mutex
+	bindings map[string]kindBinding
+	started  map[string]bool
 
 	mu      sync.Mutex
 	pending map[string]struct{}
@@ -101,8 +107,16 @@ func newContextWatcher(cs *kubernetes.Clientset, gw gwclient.Interface, dyn dyna
 // factoryFor returns the informer factory that owns the given kind, or nil
 // when the user has no access. Listers and detail Get paths call this so a
 // single helper carries the routing logic instead of every method making
-// the cluster-vs-scoped decision inline.
+// the cluster-vs-scoped decision inline. It is also the lazy-start
+// chokepoint: the kind's informer is registered and started on first use,
+// so attach cost no longer includes a cluster-wide LIST for every kind the
+// user never opens.
 func (w *contextWatcher) factoryFor(kind string) informers.SharedInformerFactory {
+	w.ensureKind(kind)
+	return w.routedFactory(kind)
+}
+
+func (w *contextWatcher) routedFactory(kind string) informers.SharedInformerFactory {
 	if w.access == nil {
 		return w.factory
 	}
@@ -114,6 +128,48 @@ func (w *contextWatcher) factoryFor(kind string) informers.SharedInformerFactory
 	default:
 		return nil
 	}
+}
+
+// ensureKind registers and starts the informer backing a kind the first time
+// anything asks for it, then touches the kind once its cache has synced so
+// the frontend's skeleton/synced gate works exactly as it did with eager
+// informers.
+func (w *contextWatcher) ensureKind(kind string) {
+	w.startMu.Lock()
+	defer w.startMu.Unlock()
+	if w.started == nil || w.started[kind] {
+		return
+	}
+	w.started[kind] = true
+	b, ok := w.bindings[kind]
+	if !ok {
+		return
+	}
+	f := w.routedFactory(kind)
+	if f == nil {
+		// Denied kinds get no informer; an immediate touch flips the
+		// frontend's synced flag so the empty list shows without waiting
+		// for the skeleton grace timer.
+		w.touch(kind)
+		return
+	}
+	informer := b.pick(f)
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(obj any) { w.touch(kind); callIf(b.sidecar, obj) },
+		UpdateFunc: func(_, obj any) { w.touch(kind); callIf(b.sidecar, obj) },
+		DeleteFunc: func(obj any) { w.touch(kind); callIf(b.sidecar, obj) },
+	})
+	if err != nil {
+		return
+	}
+	// Start only spins up informers not yet running, so repeated calls per
+	// lazily-added kind are safe.
+	f.Start(w.stopCh)
+	go func() {
+		if cache.WaitForCacheSync(w.stopCh, informer.HasSynced) {
+			w.touch(kind)
+		}
+	}()
 }
 
 func (w *contextWatcher) start(parent context.Context) error {
@@ -144,10 +200,9 @@ func (w *contextWatcher) start(parent context.Context) error {
 		go w.warmKEDA(ctx)
 	}
 
-	if err := w.registerHandlers(); err != nil {
-		cancel()
-		return err
-	}
+	w.stopCh = ctx.Done()
+	w.bindings = kindBindings(w)
+	w.started = make(map[string]bool)
 
 	if err := w.startGatewayInformers(ctx); err != nil {
 		cancel()
@@ -159,30 +214,27 @@ func (w *contextWatcher) start(parent context.Context) error {
 		return err
 	}
 
-	if w.factory != nil {
-		w.factory.Start(ctx.Done())
-	}
-	if w.scoped != nil {
-		w.scoped.Start(ctx.Done())
-	}
-	go func() {
-		if w.factory != nil {
-			w.factory.WaitForCacheSync(ctx.Done())
-		}
-		if w.scoped != nil {
-			w.scoped.WaitForCacheSync(ctx.Done())
-		}
-		for kind := range w.access.kinds {
-			w.touch(kind)
-		}
-	}()
+	// Only what every session needs immediately starts eagerly: the
+	// namespace selector and the default pods view. Every other kind's
+	// informer starts on first use (factoryFor → ensureKind), so attaching
+	// to a large cluster over a slow link no longer pays ~50 cluster-wide
+	// LISTs up front.
+	w.ensureKind("Namespace")
+	w.ensureKind("Pod")
 	return nil
 }
 
-// registerHandlers wires the standard touch callback into every kind's
-// informer using the factory the access table points at. The Secret block
-// adds a Helm-release piggyback that's special-cased inline.
-func (w *contextWatcher) registerHandlers() error {
+// kindBinding describes how to obtain a kind's informer from its routed
+// factory, plus an optional per-event sidecar (currently Secret → Helm).
+type kindBinding struct {
+	pick    func(informers.SharedInformerFactory) cache.SharedIndexInformer
+	sidecar func(obj any)
+}
+
+// kindBindings is the auditable routing table mapping every covered kind to
+// its informer constructor. Registration and start happen lazily per kind in
+// ensureKind; this table only declares what exists.
+func kindBindings(w *contextWatcher) map[string]kindBinding {
 	type binding struct {
 		kind     string
 		informer func(informers.SharedInformerFactory) cache.SharedIndexInformer
@@ -340,47 +392,20 @@ func (w *contextWatcher) registerHandlers() error {
 		}},
 	}
 
+	out := make(map[string]kindBinding, len(bindings)+1)
 	for _, b := range bindings {
-		if err := w.registerKind(b.kind, b.informer, nil); err != nil {
-			return err
-		}
+		out[b.kind] = kindBinding{pick: b.informer}
 	}
 
 	// Secret carries a Helm-release piggyback so the Helm UI updates when a
 	// release Secret lands; that's why this binding sits outside the table.
-	if err := w.registerKind("Secret",
-		func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+	out["Secret"] = kindBinding{
+		pick: func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
 			return f.Core().V1().Secrets().Informer()
 		},
-		func(obj any) { maybeTouchHelm(obj, w) },
-	); err != nil {
-		return err
+		sidecar: func(obj any) { maybeTouchHelm(obj, w) },
 	}
-
-	return nil
-}
-
-// registerKind looks up the kind's factory via the access map and, if the
-// user has any access at all, attaches the standard touch callback plus an
-// optional sidecar (currently used by Secret → Helm). Skips silently when
-// access is denied so the per-kind UI shows up empty rather than erroring.
-func (w *contextWatcher) registerKind(
-	kind string,
-	pick func(informers.SharedInformerFactory) cache.SharedIndexInformer,
-	sidecar func(obj any),
-) error {
-	f := w.factoryFor(kind)
-	if f == nil {
-		return nil
-	}
-	informer := pick(f)
-	handler := cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj any) { w.touch(kind); callIf(sidecar, obj) },
-		UpdateFunc: func(_, obj any) { w.touch(kind); callIf(sidecar, obj) },
-		DeleteFunc: func(obj any) { w.touch(kind); callIf(sidecar, obj) },
-	}
-	_, err := informer.AddEventHandler(handler)
-	return err
+	return out
 }
 
 func callIf(fn func(obj any), obj any) {
