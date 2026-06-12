@@ -36,8 +36,8 @@ func containerSummaries(specs []corev1.Container) []ContainerSummary {
 			Name:     c.Name,
 			Image:    c.Image,
 			Ports:    ports,
-			Command:  append([]string(nil), c.Command...),
-			Args:     append([]string(nil), c.Args...),
+			Command:  append([]string{}, c.Command...),
+			Args:     append([]string{}, c.Args...),
 			EnvCount: len(c.Env) + len(c.EnvFrom),
 		})
 	}

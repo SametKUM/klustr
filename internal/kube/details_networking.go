@@ -262,7 +262,7 @@ func (w *contextWatcher) EndpointSlice(namespace, name string) (*EndpointSliceDe
 			host = *e.Hostname
 		}
 		endpoints = append(endpoints, EndpointSliceEndpoint{
-			Addresses: append([]string(nil), e.Addresses...),
+			Addresses: append([]string{}, e.Addresses...),
 			NodeName:  node,
 			Hostname:  host,
 			Ready:     ready,
@@ -342,7 +342,7 @@ func (w *contextWatcher) Ingress(namespace, name string) (*IngressDetail, error)
 	}
 	tls := make([]IngressTLSDetail, 0, len(ing.Spec.TLS))
 	for _, t := range ing.Spec.TLS {
-		tls = append(tls, IngressTLSDetail{Hosts: t.Hosts, SecretName: t.SecretName})
+		tls = append(tls, IngressTLSDetail{Hosts: append([]string{}, t.Hosts...), SecretName: t.SecretName})
 	}
 	addresses := make([]string, 0, len(ing.Status.LoadBalancer.Ingress))
 	for _, lb := range ing.Status.LoadBalancer.Ingress {

@@ -108,7 +108,7 @@ func selectorsAsStrings(sels []resourcev1.DeviceSelector) []string {
 func requestsForDeviceClaim(c resourcev1.DeviceClaim) []DeviceRequestDetail {
 	out := make([]DeviceRequestDetail, 0, len(c.Requests))
 	for _, r := range c.Requests {
-		d := DeviceRequestDetail{Name: r.Name}
+		d := DeviceRequestDetail{Name: r.Name, Selectors: []string{}}
 		if r.Exactly != nil {
 			d.DeviceClassName = r.Exactly.DeviceClassName
 			d.AllocationMode = string(r.Exactly.AllocationMode)

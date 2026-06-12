@@ -37,7 +37,7 @@ func (w *contextWatcher) ValidatingWebhookConfiguration(name string) (*WebhookCo
 	}
 	whs := make([]WebhookSummary, 0, len(c.Webhooks))
 	for _, h := range c.Webhooks {
-		summary := WebhookSummary{Name: h.Name}
+		summary := WebhookSummary{Name: h.Name, Operations: []string{}, Resources: []string{}}
 		if h.ClientConfig.Service != nil {
 			summary.ClientCfg = h.ClientConfig.Service.Namespace + "/" + h.ClientConfig.Service.Name
 		} else if h.ClientConfig.URL != nil {
@@ -88,7 +88,7 @@ func (w *contextWatcher) MutatingWebhookConfiguration(name string) (*WebhookConf
 	}
 	whs := make([]WebhookSummary, 0, len(c.Webhooks))
 	for _, h := range c.Webhooks {
-		summary := WebhookSummary{Name: h.Name}
+		summary := WebhookSummary{Name: h.Name, Operations: []string{}, Resources: []string{}}
 		if h.ClientConfig.Service != nil {
 			summary.ClientCfg = h.ClientConfig.Service.Namespace + "/" + h.ClientConfig.Service.Name
 		} else if h.ClientConfig.URL != nil {

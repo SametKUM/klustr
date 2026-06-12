@@ -135,7 +135,7 @@ func (w *contextWatcher) StorageClass(name string) (*StorageClassDetail, error) 
 		AllowExpansion:    allow,
 		IsDefault:         s.Annotations["storageclass.kubernetes.io/is-default-class"] == "true",
 		Parameters:        s.Parameters,
-		MountOptions:      append([]string(nil), s.MountOptions...),
+		MountOptions:      append([]string{}, s.MountOptions...),
 		Labels:            s.Labels,
 		Annotations:       s.Annotations,
 		CreatedAt:         s.CreationTimestamp.UTC().Format(time.RFC3339),
