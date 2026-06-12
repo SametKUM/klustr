@@ -59,7 +59,7 @@ import {
   Waypoints,
   Webhook,
 } from 'lucide-react'
-import { Karpenter, SiArgo, SiIstio } from './brandIcons'
+import { Karpenter, SiArgo, SiHelm, SiIstio } from './brandIcons'
 
 import type { ResourceKind, ResourceView } from '@/store/ui'
 
@@ -213,7 +213,7 @@ export const RESOURCE_GROUPS: ResourceGroup[] = [
 
 export const HELM_GROUP: ResourceGroup = {
   label: 'Helm',
-  icon: Ship,
+  icon: SiHelm,
   items: [
     // Helm releases are stored as Secrets, so list access to Secrets is the
     // real gate. Repositories live in a local JSON file — always available.
