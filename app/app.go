@@ -359,8 +359,30 @@ func (a *App) ListPortForwards() []kube.PortForwardInfo {
 	return a.clients.ListPortForwards()
 }
 
+// sessionGate hands the session ID to stream callbacks. The pump goroutine
+// can deliver output (or even close) before the manager's start() returns the
+// ID to the caller; callbacks block on wait() until set() publishes it so a
+// fast stream can't race the assignment or drop its first events. set("") on
+// the start-error path unblocks any stragglers into a no-op.
+type sessionGate struct {
+	ready chan struct{}
+	id    string
+}
+
+func newSessionGate() *sessionGate { return &sessionGate{ready: make(chan struct{})} }
+
+func (g *sessionGate) set(id string) {
+	g.id = id
+	close(g.ready)
+}
+
+func (g *sessionGate) wait() string {
+	<-g.ready
+	return g.id
+}
+
 func (a *App) StartPodLogs(contextName, namespace, podName, container string, follow bool, tailLines int) (string, error) {
-	var sessionID string
+	gate := newSessionGate()
 	id, err := a.clients.StartLogs(
 		a.ctx,
 		contextName,
@@ -370,26 +392,27 @@ func (a *App) StartPodLogs(contextName, namespace, podName, container string, fo
 		follow,
 		int64(tailLines),
 		func(line string) {
-			if sessionID == "" {
-				return
+			if id := gate.wait(); id != "" {
+				runtime.EventsEmit(a.ctx, "pod:logs:line:"+id, line)
 			}
-			runtime.EventsEmit(a.ctx, "pod:logs:line:"+sessionID, line)
 		},
 		func(err error) {
-			if sessionID == "" {
+			id := gate.wait()
+			if id == "" {
 				return
 			}
 			msg := ""
 			if err != nil {
 				msg = err.Error()
 			}
-			runtime.EventsEmit(a.ctx, "pod:logs:close:"+sessionID, msg)
+			runtime.EventsEmit(a.ctx, "pod:logs:close:"+id, msg)
 		},
 	)
 	if err != nil {
+		gate.set("")
 		return "", err
 	}
-	sessionID = id
+	gate.set(id)
 	return id, nil
 }
 
@@ -398,30 +421,31 @@ func (a *App) StopPodLogs(sessionID string) {
 }
 
 func (a *App) StartExec(contextName, namespace, podName, container string, command []string) (string, error) {
-	var sessionID string
+	gate := newSessionGate()
 	id, err := a.clients.StartExec(
 		a.ctx, contextName, namespace, podName, container, command,
 		func(data []byte) {
-			if sessionID == "" {
-				return
+			if id := gate.wait(); id != "" {
+				runtime.EventsEmit(a.ctx, "exec:out:"+id, string(data))
 			}
-			runtime.EventsEmit(a.ctx, "exec:out:"+sessionID, string(data))
 		},
 		func(err error) {
-			if sessionID == "" {
+			id := gate.wait()
+			if id == "" {
 				return
 			}
 			msg := ""
 			if err != nil {
 				msg = err.Error()
 			}
-			runtime.EventsEmit(a.ctx, "exec:close:"+sessionID, msg)
+			runtime.EventsEmit(a.ctx, "exec:close:"+id, msg)
 		},
 	)
 	if err != nil {
+		gate.set("")
 		return "", err
 	}
-	sessionID = id
+	gate.set(id)
 	return id, nil
 }
 
@@ -438,30 +462,31 @@ func (a *App) StopExec(sessionID string) {
 }
 
 func (a *App) StartNodeShell(contextName, nodeName string) (string, error) {
-	var sessionID string
+	gate := newSessionGate()
 	id, err := a.clients.StartNodeShell(
 		a.ctx, contextName, nodeName,
 		func(data []byte) {
-			if sessionID == "" {
-				return
+			if id := gate.wait(); id != "" {
+				runtime.EventsEmit(a.ctx, "exec:out:"+id, string(data))
 			}
-			runtime.EventsEmit(a.ctx, "exec:out:"+sessionID, string(data))
 		},
 		func(err error) {
-			if sessionID == "" {
+			id := gate.wait()
+			if id == "" {
 				return
 			}
 			msg := ""
 			if err != nil {
 				msg = err.Error()
 			}
-			runtime.EventsEmit(a.ctx, "exec:close:"+sessionID, msg)
+			runtime.EventsEmit(a.ctx, "exec:close:"+id, msg)
 		},
 	)
 	if err != nil {
+		gate.set("")
 		return "", err
 	}
-	sessionID = id
+	gate.set(id)
 	return id, nil
 }
 
@@ -491,30 +516,31 @@ func (a *App) DrainNode(contextName, nodeName string) {
 }
 
 func (a *App) OpenLocalTerminal(contextName string, cols, rows int) (string, error) {
-	var sessionID string
+	gate := newSessionGate()
 	id, err := a.clients.StartLocalTerminal(
 		a.ctx, contextName, uint16(cols), uint16(rows),
 		func(data []byte) {
-			if sessionID == "" {
-				return
+			if id := gate.wait(); id != "" {
+				runtime.EventsEmit(a.ctx, "term:out:"+id, string(data))
 			}
-			runtime.EventsEmit(a.ctx, "term:out:"+sessionID, string(data))
 		},
 		func(err error) {
-			if sessionID == "" {
+			id := gate.wait()
+			if id == "" {
 				return
 			}
 			msg := ""
 			if err != nil {
 				msg = err.Error()
 			}
-			runtime.EventsEmit(a.ctx, "term:close:"+sessionID, msg)
+			runtime.EventsEmit(a.ctx, "term:close:"+id, msg)
 		},
 	)
 	if err != nil {
+		gate.set("")
 		return "", err
 	}
-	sessionID = id
+	gate.set(id)
 	return id, nil
 }
 
