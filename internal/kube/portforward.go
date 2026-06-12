@@ -145,12 +145,15 @@ func (mgr *pfManager) start(
 		s, ok := mgr.sessions[id]
 		if ok {
 			if err != nil {
+				// Keep the errored session listed until the user dismisses
+				// it via stop() — deleting here would make the forward
+				// vanish with no explanation of why it died.
 				s.info.Status = "error"
 				s.info.Error = err.Error()
 			} else {
 				s.info.Status = "closed"
+				delete(mgr.sessions, id)
 			}
-			delete(mgr.sessions, id)
 		}
 		mgr.mu.Unlock()
 		mgr.notify()
@@ -162,11 +165,20 @@ func (mgr *pfManager) start(
 func (mgr *pfManager) stop(id string) {
 	mgr.mu.Lock()
 	sess, ok := mgr.sessions[id]
+	// An errored session's monitor goroutine has already exited, so the
+	// user's stop doubles as the acknowledgement that removes it.
+	dismissed := ok && sess.info.Status == "error"
+	if dismissed {
+		delete(mgr.sessions, id)
+	}
 	mgr.mu.Unlock()
 	if !ok {
 		return
 	}
 	sess.close()
+	if dismissed {
+		mgr.notify()
+	}
 }
 
 func (mgr *pfManager) list() []PortForwardInfo {

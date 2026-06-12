@@ -20,13 +20,18 @@ export function PortForwardIndicator() {
   })
 
   const active = list.length > 0
+  const hasError = list.some((pf) => pf.status === 'error')
   const busy = stop.isPending || stopAll.isPending
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm" aria-label="Port-forwards">
-          <Network className={active ? 'text-emerald-500' : 'text-muted-foreground'} />
+          <Network
+            className={
+              hasError ? 'text-destructive' : active ? 'text-emerald-500' : 'text-muted-foreground'
+            }
+          />
           <span className="text-xs">
             {active ? `${list.length} forward${list.length === 1 ? '' : 's'}` : 'No forwards'}
           </span>
@@ -73,11 +78,16 @@ export function PortForwardIndicator() {
                 <span className="max-w-full truncate text-[10px] text-muted-foreground">
                   {pf.namespace} · {pf.context}
                 </span>
+                {pf.status === 'error' && (
+                  <span className="max-w-full truncate text-[10px] text-destructive" title={pf.error}>
+                    {pf.error}
+                  </span>
+                )}
               </button>
               <Button
                 size="icon-xs"
                 variant="ghost"
-                aria-label="Stop port-forward"
+                aria-label={pf.status === 'error' ? 'Dismiss failed port-forward' : 'Stop port-forward'}
                 disabled={busy}
                 onClick={() => stop.mutate(pf.id)}
                 className="shrink-0"
