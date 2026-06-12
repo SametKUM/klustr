@@ -135,8 +135,13 @@ func newHelmManager(rules *clientcmd.ClientConfigLoadingRules) (*helmManager, er
 
 // invalidate drops every cached action.Configuration whose key starts with
 // the given context — there is one entry per (context, namespace) pair, so
-// disconnecting from a context has to clear them all.
+// disconnecting from a context has to clear them all. Nil-safe: the manager
+// keeps a nil helmManager when newHelmManager failed at startup, and the
+// Watch/StopWatch lifecycle paths call invalidate unconditionally.
 func (h *helmManager) invalidate(contextName string) {
+	if h == nil {
+		return
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	prefix := contextName + "/"
