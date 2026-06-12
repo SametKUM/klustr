@@ -288,16 +288,25 @@ func (w *crdWatcher) LookupCRDByGVR(gvr schema.GroupVersionResource) (CRDInfo, b
 	return CRDInfo{}, false
 }
 
+const crSyncTimeout = 5 * time.Second
+
 // EnsureCRWatch starts a dynamic informer for the given GVR if not already
 // running, and waits up to ~5s for the cache to sync so the caller can List
-// immediately after.
+// immediately after. The timeout matters: a CR informer can be unable to
+// ever sync (no CR-list RBAC even though CRD-list succeeded, a broken
+// conversion webhook) and without it the call would hang until disconnect.
 func (w *crdWatcher) EnsureCRWatch(gvr schema.GroupVersionResource) error {
+	timeout := time.NewTimer(crSyncTimeout)
+	defer timeout.Stop()
+
 	w.crMu.Lock()
 	if w.crWatches[gvr] {
 		ch := w.crSynced[gvr]
 		w.crMu.Unlock()
 		select {
 		case <-ch:
+		case <-timeout.C:
+			return fmt.Errorf("timed out waiting for %s cache sync", gvr.Resource)
 		case <-w.stopCh:
 			return fmt.Errorf("context watch stopped")
 		}
@@ -325,9 +334,10 @@ func (w *crdWatcher) EnsureCRWatch(gvr schema.GroupVersionResource) error {
 		}
 		close(synced)
 	}()
-	// Wait until synced (or stopCh fires).
 	select {
 	case <-synced:
+	case <-timeout.C:
+		return fmt.Errorf("timed out waiting for %s cache sync", gvr.Resource)
 	case <-w.stopCh:
 		return fmt.Errorf("context watch stopped")
 	}
