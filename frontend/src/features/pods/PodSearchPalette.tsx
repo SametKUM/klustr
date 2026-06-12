@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Box } from 'lucide-react'
 import {
   CommandDialog,
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/command'
 import { api, type PodInfo } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
+import { stableList } from '@/lib/stableList'
 import { useResources } from '@/store/resources'
 import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
 
@@ -28,6 +29,14 @@ export function PodSearchPalette() {
   const podsByCtx = useResources((s) => s.pods)
   const setPods = useResources((s) => s.setPods)
 
+  // The Pods table shares this store slot; merging through stableList keeps
+  // row identities stable so palette refreshes don't re-render its rows.
+  const storePods = useCallback(
+    (ctx: string, list: PodInfo[] | null) =>
+      setPods(ctx, stableList(useResources.getState().pods[ctx], list ?? [])),
+    [setPods],
+  )
+
   // Refresh pods in every active context on open. Stores fill when the user
   // visits the Pods view; the palette must not depend on that having happened.
   useEffect(() => {
@@ -37,14 +46,14 @@ export function PodSearchPalette() {
       api
         .listPods(ctx, '')
         .then((list) => {
-          if (!cancelled) setPods(ctx, list ?? [])
+          if (!cancelled) storePods(ctx, list)
         })
         .catch(() => {})
     }
     return () => {
       cancelled = true
     }
-  }, [open, activeContexts, setPods])
+  }, [open, activeContexts, storePods])
 
   // Keep the live cache fresh while the dialog is open.
   useEffect(() => {
@@ -53,11 +62,11 @@ export function PodSearchPalette() {
       if (!activeContexts.includes(ctx)) return
       api
         .listPods(ctx, '')
-        .then((list) => setPods(ctx, list ?? []))
+        .then((list) => storePods(ctx, list))
         .catch(() => {})
     })
     return unsub
-  }, [open, activeContexts, setPods])
+  }, [open, activeContexts, storePods])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
