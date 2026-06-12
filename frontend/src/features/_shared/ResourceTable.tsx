@@ -518,28 +518,37 @@ export function ResourceTable<T>({
     estimateSize: () => 33,
     overscan: 12,
   })
-  const visibleKeys = visibleRows
-    .map((r) => {
+  // The virtualizer re-renders this component on every scroll frame; both
+  // derivations are O(rows), so memoize them on the row model itself.
+  const visibleKeys = useMemo(
+    () =>
+      visibleRows
+        .map((r) => {
+          const tagged = r.original as Tagged<T>
+          const ident = tagged as unknown as RowIdentity
+          return ident.name ? identityKey(tagged[KLUSTR_CTX], ident) : null
+        })
+        .filter((k): k is string => k !== null),
+    [visibleRows],
+  )
+  const selectedItems = useMemo(() => {
+    const items: BulkItem[] = []
+    for (const r of visibleRows) {
       const tagged = r.original as Tagged<T>
+      const ctx = tagged[KLUSTR_CTX]
       const ident = tagged as unknown as RowIdentity
-      return ident.name ? identityKey(tagged[KLUSTR_CTX], ident) : null
-    })
-    .filter((k): k is string => k !== null)
-  const selectedItems: BulkItem[] = []
-  for (const r of visibleRows) {
-    const tagged = r.original as Tagged<T>
-    const ctx = tagged[KLUSTR_CTX]
-    const ident = tagged as unknown as RowIdentity
-    if (!ident.name) continue
-    const key = identityKey(ctx, ident)
-    if (!selectedKeys.has(key)) continue
-    selectedItems.push({
-      contextName: ctx,
-      kind,
-      namespace: ident.namespace ?? '',
-      name: ident.name,
-    })
-  }
+      if (!ident.name) continue
+      const key = identityKey(ctx, ident)
+      if (!selectedKeys.has(key)) continue
+      items.push({
+        contextName: ctx,
+        kind,
+        namespace: ident.namespace ?? '',
+        name: ident.name,
+      })
+    }
+    return items
+  }, [visibleRows, selectedKeys, kind])
   const allVisibleSelected =
     visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k))
   const toggleRow = useCallback((key: string) => {

@@ -30,6 +30,7 @@ function itemKey(item: unknown, index: number): string {
 }
 
 export function stableList<T>(prev: readonly T[] | undefined, next: T[]): T[] {
+  if (prev && prev.length === 0 && next.length === 0) return prev as T[]
   if (!prev || prev.length === 0) return next
   const prevByKey = new Map<string, T>()
   prev.forEach((p, i) => prevByKey.set(itemKey(p, i), p))

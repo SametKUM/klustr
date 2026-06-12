@@ -12,6 +12,9 @@ let timer: number | undefined
 function subscribe(cb: () => void): () => void {
   listeners.add(cb)
   if (timer === undefined) {
+    // `now` froze when the last subscriber left (or the machine slept);
+    // refresh it so the first snapshot isn't arbitrarily stale.
+    now = Date.now()
     timer = window.setInterval(() => {
       now = Date.now()
       listeners.forEach((l) => l())
