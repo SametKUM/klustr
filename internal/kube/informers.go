@@ -69,6 +69,7 @@ type contextWatcher struct {
 	defaultNS      string                          // kubeconfig context.namespace, used as the scoped probe target
 	cs             kubernetes.Interface            // kept around for SelfSubjectAccessReview
 	gwFactory      gwinformers.SharedInformerFactory
+	refGrantVer    string // served referencegrants version ("v1"/"v1beta1"), "" when not served
 	apiSvcFactory  dynamicinformer.DynamicSharedInformerFactory
 	apiSvcInformer cache.SharedIndexInformer
 	dyn            dynamic.Interface
@@ -92,6 +93,7 @@ func newContextWatcher(cs *kubernetes.Clientset, gw gwclient.Interface, dyn dyna
 	}
 	if gw != nil && hasGatewayAPIGroup(cs.Discovery()) {
 		w.gwFactory = gwinformers.NewSharedInformerFactory(gw, 0)
+		w.refGrantVer = refGrantsVersion(cs.Discovery())
 	}
 	return w
 }

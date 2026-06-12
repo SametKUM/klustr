@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // ----------------------------------------------------------------------
@@ -220,6 +221,25 @@ func hasGatewayAPIGroup(d discovery.DiscoveryInterface) bool {
 	return false
 }
 
+// refGrantsVersion returns the gateway.networking.k8s.io version that serves
+// referencegrants on this cluster. The kind graduated to v1 only in Gateway
+// API 1.5, so older CRDs serve it under v1beta1 alone — pinning either
+// version would 404-loop the informer on the other side of that line.
+func refGrantsVersion(d discovery.DiscoveryInterface) string {
+	for _, v := range []string{"v1", "v1beta1"} {
+		list, err := d.ServerResourcesForGroupVersion("gateway.networking.k8s.io/" + v)
+		if err != nil {
+			continue
+		}
+		for _, r := range list.APIResources {
+			if r.Name == "referencegrants" {
+				return v
+			}
+		}
+	}
+	return ""
+}
+
 func (w *contextWatcher) startGatewayInformers(ctx context.Context) error {
 	if w.gwFactory == nil {
 		return nil
@@ -266,13 +286,21 @@ func (w *contextWatcher) startGatewayInformers(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
-	refGrants := w.gwFactory.Gateway().V1().ReferenceGrants().Informer()
-	if _, err := refGrants.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("ReferenceGrant") },
-		UpdateFunc: func(any, any) { w.touch("ReferenceGrant") },
-		DeleteFunc: func(any) { w.touch("ReferenceGrant") },
-	}); err != nil {
-		return err
+	var refGrants cache.SharedIndexInformer
+	switch w.refGrantVer {
+	case "v1":
+		refGrants = w.gwFactory.Gateway().V1().ReferenceGrants().Informer()
+	case "v1beta1":
+		refGrants = w.gwFactory.Gateway().V1beta1().ReferenceGrants().Informer()
+	}
+	if refGrants != nil {
+		if _, err := refGrants.AddEventHandler(cache.ResourceEventHandlerFuncs{
+			AddFunc:    func(any) { w.touch("ReferenceGrant") },
+			UpdateFunc: func(any, any) { w.touch("ReferenceGrant") },
+			DeleteFunc: func(any) { w.touch("ReferenceGrant") },
+		}); err != nil {
+			return err
+		}
 	}
 	w.gwFactory.Start(ctx.Done())
 	go func() {
@@ -666,20 +694,45 @@ func (w *contextWatcher) GatewayClass(name string) (*GatewayClassDetail, error) 
 // Listers — ReferenceGrants.
 // ----------------------------------------------------------------------
 
+// referenceGrantList reads cached ReferenceGrants from whichever versioned
+// informer this cluster got, normalized to the v1 type (v1beta1.ReferenceGrant
+// is defined on top of it, so the cast is exact).
+func (w *contextWatcher) referenceGrantList(namespace string) ([]*gatewayv1.ReferenceGrant, error) {
+	switch w.refGrantVer {
+	case "v1":
+		lister := w.gwFactory.Gateway().V1().ReferenceGrants().Lister()
+		if namespace == "" {
+			return lister.List(labels.Everything())
+		}
+		return lister.ReferenceGrants(namespace).List(labels.Everything())
+	case "v1beta1":
+		lister := w.gwFactory.Gateway().V1beta1().ReferenceGrants().Lister()
+		var (
+			list []*gatewayv1beta1.ReferenceGrant
+			err  error
+		)
+		if namespace == "" {
+			list, err = lister.List(labels.Everything())
+		} else {
+			list, err = lister.ReferenceGrants(namespace).List(labels.Everything())
+		}
+		if err != nil {
+			return nil, err
+		}
+		out := make([]*gatewayv1.ReferenceGrant, 0, len(list))
+		for _, g := range list {
+			out = append(out, (*gatewayv1.ReferenceGrant)(g))
+		}
+		return out, nil
+	}
+	return nil, fmt.Errorf("referencegrants is not served in this cluster")
+}
+
 func (w *contextWatcher) ReferenceGrants(namespace string) []ReferenceGrantInfo {
 	if w.gwFactory == nil {
 		return []ReferenceGrantInfo{}
 	}
-	lister := w.gwFactory.Gateway().V1().ReferenceGrants().Lister()
-	var (
-		list []*gatewayv1.ReferenceGrant
-		err  error
-	)
-	if namespace == "" {
-		list, err = lister.List(labels.Everything())
-	} else {
-		list, err = lister.ReferenceGrants(namespace).List(labels.Everything())
-	}
+	list, err := w.referenceGrantList(namespace)
 	if err != nil {
 		return []ReferenceGrantInfo{}
 	}
@@ -713,9 +766,22 @@ func (w *contextWatcher) ReferenceGrant(namespace, name string) (*ReferenceGrant
 	if w.gwFactory == nil {
 		return nil, fmt.Errorf("gateway api not available in this cluster")
 	}
-	g, err := w.gwFactory.Gateway().V1().ReferenceGrants().Lister().ReferenceGrants(namespace).Get(name)
-	if err != nil {
-		return nil, err
+	var g *gatewayv1.ReferenceGrant
+	switch w.refGrantVer {
+	case "v1":
+		got, err := w.gwFactory.Gateway().V1().ReferenceGrants().Lister().ReferenceGrants(namespace).Get(name)
+		if err != nil {
+			return nil, err
+		}
+		g = got
+	case "v1beta1":
+		got, err := w.gwFactory.Gateway().V1beta1().ReferenceGrants().Lister().ReferenceGrants(namespace).Get(name)
+		if err != nil {
+			return nil, err
+		}
+		g = (*gatewayv1.ReferenceGrant)(got)
+	default:
+		return nil, fmt.Errorf("referencegrants is not served in this cluster")
 	}
 	froms := make([]ReferenceGrantFromDetail, 0, len(g.Spec.From))
 	for _, f := range g.Spec.From {
