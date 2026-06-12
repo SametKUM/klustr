@@ -18,7 +18,8 @@ export function usePodMetricsPoll(contexts: readonly string[], namespace: string
       try {
         const list = await api.listPodMetrics(ctx, namespace)
         if (cancelled) return
-        setPodMetrics(ctx, list)
+        if (list === null) setUnavailable(ctx)
+        else setPodMetrics(ctx, list)
       } catch {
         if (cancelled) return
         setUnavailable(ctx)

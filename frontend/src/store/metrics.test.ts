@@ -32,11 +32,11 @@ describe('useMetrics', () => {
     expect(s.byPodByContext.prod['default/demo']).toEqual(sample)
   })
 
-  it('setPodMetrics with empty list flips the context to unavailable', () => {
+  it('setPodMetrics with empty list keeps the context available with no rows', () => {
     useMetrics.getState().setPodMetrics('prod', [sample])
     useMetrics.getState().setPodMetrics('prod', [])
     const s = useMetrics.getState()
-    expect(s.available.prod).toBe(false)
+    expect(s.available.prod).toBe(true)
     expect(s.byPodByContext.prod).toEqual({})
   })
 

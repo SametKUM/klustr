@@ -47,9 +47,12 @@ export const useMetrics = create<MetricsState>((set) => ({
     }),
   setPodMetrics: (ctx, list) =>
     set((s) => {
+      // An empty list means the metrics API answered with no rows for the
+      // current selection — the API is up. Unavailability is signaled
+      // separately via setUnavailable (null result / request error).
       if (list.length === 0) {
         return {
-          available: { ...s.available, [ctx]: false },
+          available: { ...s.available, [ctx]: true },
           byPodByContext: { ...s.byPodByContext, [ctx]: {} },
         }
       }

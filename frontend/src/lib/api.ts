@@ -905,8 +905,10 @@ export const api = {
     kind: string,
     name: string,
   ): Promise<EventInfo[]> => ListEvents(contextName, namespace, kind, name),
-  listPodMetrics: (contextName: string, namespace: string): Promise<PodMetrics[]> =>
-    ListPodMetrics(contextName, namespace),
+  // null means the metrics API is unavailable; an empty array means it
+  // answered with no rows for the selection (see ListPodMetrics in Go).
+  listPodMetrics: (contextName: string, namespace: string): Promise<PodMetrics[] | null> =>
+    ListPodMetrics(contextName, namespace) as Promise<PodMetrics[] | null>,
   listNodeMetrics: (contextName: string): Promise<NodeMetrics[]> => ListNodeMetrics(contextName),
   getClusterOverview: (contextName: string): Promise<ClusterOverview> =>
     GetClusterOverview(contextName),

@@ -48,7 +48,12 @@ func (m *ClientManager) ListPodMetrics(ctx context.Context, contextName, namespa
 	list, err := c.MetricsV1beta1().PodMetricses(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) || apierrors.IsServiceUnavailable(err) {
-			return []PodMetrics{}, nil
+			// Deliberate nil (JSON null): "metrics API unavailable", distinct
+			// from an empty non-nil slice meaning "API answered, no rows for
+			// this selection". The only consumer is usePodMetricsPoll, which
+			// branches on null — without this, a namespace selection that
+			// currently runs no pods would read as metrics-server missing.
+			return nil, nil
 		}
 		return nil, err
 	}
