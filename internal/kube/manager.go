@@ -41,6 +41,7 @@ type ClientManager struct {
 	rules       *clientcmd.ClientConfigLoadingRules
 	cache       map[string]*kubernetes.Clientset
 	watchers    map[string]*contextWatcher
+	watchLocks  map[string]*sync.Mutex
 	logs        *logSessionManager
 	execs       *execSessionManager
 	terms       *terminalSessionManager
@@ -65,6 +66,7 @@ func NewClientManager() *ClientManager {
 		rules:       rules,
 		cache:       make(map[string]*kubernetes.Clientset),
 		watchers:    make(map[string]*contextWatcher),
+		watchLocks:  make(map[string]*sync.Mutex),
 		logs:        newLogSessionManager(),
 		execs:       newExecSessionManager(),
 		terms:       newTerminalSessionManager(),
@@ -225,8 +227,30 @@ func (m *ClientManager) Ping(ctx context.Context, contextName string) (*ServerVe
 	}
 }
 
+// watchLock returns the mutex serializing Watch/StopWatch for one context.
+// Wails dispatches every bound call in its own goroutine, so without it two
+// concurrent Watch calls would both build informer sets (the loser's leaks),
+// and a racing StopWatch could be overwritten by an in-flight Watch.
+func (m *ClientManager) watchLock(contextName string) *sync.Mutex {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	l, ok := m.watchLocks[contextName]
+	if !ok {
+		l = &sync.Mutex{}
+		m.watchLocks[contextName] = l
+	}
+	return l
+}
+
 func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	m.waitEnvReady(ctx)
+	l := m.watchLock(contextName)
+	l.Lock()
+	defer l.Unlock()
+	return m.watchLocked(ctx, contextName)
+}
+
+func (m *ClientManager) watchLocked(ctx context.Context, contextName string) error {
 	m.mu.Lock()
 	if m.appCtx == nil {
 		m.appCtx = ctx
@@ -265,11 +289,7 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	defaultNS := m.contextDefaultNamespace(contextName)
 
 	m.mu.Lock()
-	if existing, ok := m.watchers[contextName]; ok {
-		m.mu.Unlock()
-		existing.stop()
-		m.mu.Lock()
-	}
+	existing := m.watchers[contextName]
 	cb := m.onChange
 	m.mu.Unlock()
 
@@ -278,6 +298,10 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 			cb(ContextChange{Context: contextName, Kind: kind})
 		}
 	})
+	// The old watcher keeps serving (and stays registered) until the new one
+	// has synced: start() runs up to ~8s of SSAR probes, and during a re-watch
+	// the forwarders would otherwise read a stopped watcher's frozen caches.
+	// On start error the live watcher simply stays in place.
 	if err := w.start(ctx); err != nil {
 		return err
 	}
@@ -286,6 +310,9 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	m.watchers[contextName] = w
 	firstAttempt := !m.credRewatch[contextName]
 	m.mu.Unlock()
+	if existing != nil {
+		existing.stop()
+	}
 
 	// A token-cold first connect can mis-probe access: the exec credential
 	// mint (aws eks get-token → STS) races the 40+ parallel SSARs, they
@@ -308,7 +335,9 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 		// clears, minus the rewatch guard reset.
 		m.metrics.invalidate(contextName)
 		m.helm.invalidate(contextName)
-		return m.Watch(ctx, contextName)
+		// Direct watchLocked call: the caller already holds this context's
+		// watch lock and it is not reentrant.
+		return m.watchLocked(ctx, contextName)
 	}
 	return nil
 }
@@ -336,6 +365,9 @@ func (m *ClientManager) Shutdown() {
 }
 
 func (m *ClientManager) StopWatch(contextName string) {
+	l := m.watchLock(contextName)
+	l.Lock()
+	defer l.Unlock()
 	m.mu.Lock()
 	w, ok := m.watchers[contextName]
 	if ok {
