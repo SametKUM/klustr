@@ -13,6 +13,7 @@ import {
 import { ArrowDown, ArrowUp, ChevronsUpDown, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import { isKindSynced, onKubeChange } from '@/lib/events'
 import { namespaceQuery } from '@/lib/namespaceFilter'
+import { stableList } from '@/lib/stableList'
 import { useActiveContexts, useIsAggregated, useUIStore, type ResourceKind } from '@/store/ui'
 import { useTablePrefs } from '@/store/tablePrefs'
 import { type ByContext } from '@/store/resources'
@@ -33,6 +34,20 @@ type Noun = { singular: string; plural: string }
 export const KLUSTR_CTX = '__klustrCtx' as const
 
 export type Tagged<T> = T & { [KLUSTR_CTX]: string }
+
+// Each source item gets exactly one tagged twin so the merged rows keep
+// referential equality across re-merges; stableList already guarantees a
+// source item survives refetches unchanged. An item belongs to exactly one
+// context's list, so a single cache is safe.
+const taggedCache = new WeakMap<object, unknown>()
+
+function tagItem<T>(item: T, ctx: string): Tagged<T> {
+  const cached = taggedCache.get(item as object) as Tagged<T> | undefined
+  if (cached) return cached
+  const tagged = { ...(item as object), [KLUSTR_CTX]: ctx } as Tagged<T>
+  taggedCache.set(item as object, tagged)
+  return tagged
+}
 
 export type ResourceTableProps<T> = {
   kind: string
@@ -202,7 +217,10 @@ export function ResourceTable<T>({
   fetchRef.current = fetch
   const setDataRef = useRef(setData)
   setDataRef.current = setData
+  const dataRef = useRef(data)
+  dataRef.current = data
 
+  const mergedRef = useRef<Tagged<T>[]>([])
   const mergedData = useMemo<Tagged<T>[]>(() => {
     const out: Tagged<T>[] = []
     for (const ctx of activeContexts) {
@@ -213,9 +231,14 @@ export function ResourceTable<T>({
           const ns = (item as RowIdentity).namespace ?? ''
           if (!query.matches(ns)) continue
         }
-        out.push({ ...(item as object), [KLUSTR_CTX]: ctx } as Tagged<T>)
+        out.push(tagItem(item, ctx))
       }
     }
+    const prev = mergedRef.current
+    if (prev.length === out.length && out.every((item, i) => item === prev[i])) {
+      return prev
+    }
+    mergedRef.current = out
     return out
   }, [activeContexts, data, scope, selectedNamespaces, query])
 
@@ -262,7 +285,7 @@ export function ResourceTable<T>({
     const reload = (ctx: string) => {
       fetchRef.current(ctx, query.apiNamespace).then((list) => {
         if (cancelled) return
-        const items = list ?? []
+        const items = stableList(dataRef.current[ctx], list ?? [])
         setDataRef.current(ctx, items)
         // An empty list is only trustworthy once the informer cache has synced;
         // before that, treat it as still loading so the skeleton stays up instead

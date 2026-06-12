@@ -246,6 +246,7 @@ function emptyMaps(): Pick<ResourcesState, KindKey> {
 }
 
 function withCtx<T>(map: ByContext<T>, ctx: string, list: T[]): ByContext<T> {
+  if (map[ctx] === list) return map
   return { ...map, [ctx]: list }
 }
 
