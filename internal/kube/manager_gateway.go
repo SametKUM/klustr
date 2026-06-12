@@ -7,7 +7,7 @@ func (m *ClientManager) Gateways(contextName, namespace string) []GatewayInfo {
 	if !ok {
 		return []GatewayInfo{}
 	}
-	return w.Gateways(namespace)
+	return listAcrossNamespaces(namespace, w.Gateways)
 }
 
 func (m *ClientManager) Gateway(contextName, namespace, name string) (*GatewayDetail, error) {
@@ -23,7 +23,7 @@ func (m *ClientManager) HTTPRoutes(contextName, namespace string) []HTTPRouteInf
 	if !ok {
 		return []HTTPRouteInfo{}
 	}
-	return w.HTTPRoutes(namespace)
+	return listAcrossNamespaces(namespace, w.HTTPRoutes)
 }
 
 func (m *ClientManager) HTTPRoute(contextName, namespace, name string) (*HTTPRouteDetail, error) {
@@ -39,7 +39,7 @@ func (m *ClientManager) GRPCRoutes(contextName, namespace string) []GRPCRouteInf
 	if !ok {
 		return []GRPCRouteInfo{}
 	}
-	return w.GRPCRoutes(namespace)
+	return listAcrossNamespaces(namespace, w.GRPCRoutes)
 }
 
 func (m *ClientManager) GRPCRoute(contextName, namespace, name string) (*GRPCRouteDetail, error) {
@@ -71,7 +71,7 @@ func (m *ClientManager) ReferenceGrants(contextName, namespace string) []Referen
 	if !ok {
 		return []ReferenceGrantInfo{}
 	}
-	return w.ReferenceGrants(namespace)
+	return listAcrossNamespaces(namespace, w.ReferenceGrants)
 }
 
 func (m *ClientManager) ReferenceGrant(contextName, namespace, name string) (*ReferenceGrantDetail, error) {

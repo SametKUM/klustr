@@ -87,7 +87,7 @@ func (m *ClientManager) PersistentVolumeClaims(contextName, namespace string) []
 	if !ok {
 		return []PersistentVolumeClaimInfo{}
 	}
-	return w.PersistentVolumeClaims(namespace)
+	return listAcrossNamespaces(namespace, w.PersistentVolumeClaims)
 }
 
 func (m *ClientManager) PersistentVolumeClaim(contextName, namespace, name string) (*PersistentVolumeClaimDetail, error) {

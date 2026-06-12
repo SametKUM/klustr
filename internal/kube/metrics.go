@@ -37,7 +37,15 @@ func (m *ClientManager) ListPodMetrics(ctx context.Context, contextName, namespa
 		return nil, err
 	}
 
-	list, err := c.MetricsV1beta1().PodMetricses(namespace).List(ctx, metav1.ListOptions{})
+	// A multi-namespace selection lists cluster-wide in one call and filters
+	// locally — metrics.k8s.io has no watch/cache and N namespaced calls would
+	// multiply apiserver round trips on every poll.
+	ns := namespace
+	nsFilter := namespaceFilter(namespace)
+	if nsFilter != nil {
+		ns = ""
+	}
+	list, err := c.MetricsV1beta1().PodMetricses(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) || apierrors.IsServiceUnavailable(err) {
 			return []PodMetrics{}, nil
@@ -48,6 +56,9 @@ func (m *ClientManager) ListPodMetrics(ctx context.Context, contextName, namespa
 	out := make([]PodMetrics, 0, len(list.Items))
 	for i := range list.Items {
 		pm := &list.Items[i]
+		if nsFilter != nil && !nsFilter(pm.Namespace) {
+			continue
+		}
 		var cpu, mem int64
 		for _, c := range pm.Containers {
 			if q, ok := c.Usage["cpu"]; ok {

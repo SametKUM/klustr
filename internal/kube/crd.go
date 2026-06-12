@@ -11,7 +11,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -352,13 +351,7 @@ func listCachedCRs(m *ClientManager, contextName string, gvr schema.GroupVersion
 		return nil
 	}
 	lister := w.crd.crFactory.ForResource(gvr).Lister()
-	var raw []runtime.Object
-	var err error
-	if namespace == "" {
-		raw, err = lister.List(labels.Everything())
-	} else {
-		raw, err = lister.ByNamespace(namespace).List(labels.Everything())
-	}
+	raw, err := listFromGenericLister(lister, namespace)
 	if err != nil {
 		return nil
 	}
@@ -387,13 +380,7 @@ func (w *crdWatcher) ListCustomResources(gvr schema.GroupVersionResource, namesp
 		return []CustomResourceInfo{}
 	}
 	lister := w.crFactory.ForResource(gvr).Lister()
-	var objs []runtime.Object
-	var err error
-	if namespace == "" {
-		objs, err = lister.List(labels.Everything())
-	} else {
-		objs, err = lister.ByNamespace(namespace).List(labels.Everything())
-	}
+	objs, err := listFromGenericLister(lister, namespace)
 	if err != nil {
 		return []CustomResourceInfo{}
 	}

@@ -68,9 +68,17 @@ func (m *ClientManager) ListEvents(ctx context.Context, contextName, namespace, 
 		opts.FieldSelector = selector.String()
 	}
 
+	// A multi-namespace selection lists cluster-wide in one call and filters
+	// locally — Events have no informer here and N namespaced calls would
+	// multiply apiserver round trips.
 	ns := namespace
+	nsFilter := namespaceFilter(namespace)
+	if nsFilter != nil {
+		ns = ""
+	}
 	if kind == "Node" || kind == "Namespace" {
 		ns = ""
+		nsFilter = nil
 	}
 
 	list, err := cs.CoreV1().Events(ns).List(ctx, opts)
@@ -80,6 +88,9 @@ func (m *ClientManager) ListEvents(ctx context.Context, contextName, namespace, 
 
 	out := make([]EventInfo, 0, len(list.Items))
 	for i := range list.Items {
+		if nsFilter != nil && !nsFilter(list.Items[i].Namespace) {
+			continue
+		}
 		out = append(out, eventInfoFrom(&list.Items[i]))
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].LastSeen.After(out[j].LastSeen) })

@@ -7,7 +7,7 @@ func (m *ClientManager) HorizontalPodAutoscalers(contextName, namespace string) 
 	if !ok {
 		return []HorizontalPodAutoscalerInfo{}
 	}
-	return w.HorizontalPodAutoscalers(namespace)
+	return listAcrossNamespaces(namespace, w.HorizontalPodAutoscalers)
 }
 
 func (m *ClientManager) HorizontalPodAutoscaler(contextName, namespace, name string) (*HorizontalPodAutoscalerDetail, error) {
@@ -23,7 +23,7 @@ func (m *ClientManager) PodDisruptionBudgets(contextName, namespace string) []Po
 	if !ok {
 		return []PodDisruptionBudgetInfo{}
 	}
-	return w.PodDisruptionBudgets(namespace)
+	return listAcrossNamespaces(namespace, w.PodDisruptionBudgets)
 }
 
 func (m *ClientManager) PodDisruptionBudget(contextName, namespace, name string) (*PodDisruptionBudgetDetail, error) {

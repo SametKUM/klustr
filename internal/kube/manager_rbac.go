@@ -7,7 +7,7 @@ func (m *ClientManager) ServiceAccounts(contextName, namespace string) []Service
 	if !ok {
 		return []ServiceAccountInfo{}
 	}
-	return w.ServiceAccounts(namespace)
+	return listAcrossNamespaces(namespace, w.ServiceAccounts)
 }
 
 func (m *ClientManager) ServiceAccount(contextName, namespace, name string) (*ServiceAccountDetail, error) {
@@ -23,7 +23,7 @@ func (m *ClientManager) Roles(contextName, namespace string) []RoleInfo {
 	if !ok {
 		return []RoleInfo{}
 	}
-	return w.Roles(namespace)
+	return listAcrossNamespaces(namespace, w.Roles)
 }
 
 func (m *ClientManager) Role(contextName, namespace, name string) (*RoleDetail, error) {
@@ -39,7 +39,7 @@ func (m *ClientManager) RoleBindings(contextName, namespace string) []RoleBindin
 	if !ok {
 		return []RoleBindingInfo{}
 	}
-	return w.RoleBindings(namespace)
+	return listAcrossNamespaces(namespace, w.RoleBindings)
 }
 
 func (m *ClientManager) RoleBinding(contextName, namespace, name string) (*RoleBindingDetail, error) {

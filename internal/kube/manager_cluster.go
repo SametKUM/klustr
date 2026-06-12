@@ -47,7 +47,7 @@ func (m *ClientManager) Leases(contextName, namespace string) []LeaseInfo {
 	if !ok {
 		return []LeaseInfo{}
 	}
-	return w.Leases(namespace)
+	return listAcrossNamespaces(namespace, w.Leases)
 }
 
 func (m *ClientManager) Lease(contextName, namespace, name string) (*LeaseDetail, error) {
@@ -111,7 +111,7 @@ func (m *ClientManager) LimitRanges(contextName, namespace string) []LimitRangeI
 	if !ok {
 		return []LimitRangeInfo{}
 	}
-	return w.LimitRanges(namespace)
+	return listAcrossNamespaces(namespace, w.LimitRanges)
 }
 
 func (m *ClientManager) LimitRange(contextName, namespace, name string) (*LimitRangeDetail, error) {
@@ -175,7 +175,7 @@ func (m *ClientManager) ResourceQuotas(contextName, namespace string) []Resource
 	if !ok {
 		return []ResourceQuotaInfo{}
 	}
-	return w.ResourceQuotas(namespace)
+	return listAcrossNamespaces(namespace, w.ResourceQuotas)
 }
 
 func (m *ClientManager) ResourceQuota(contextName, namespace, name string) (*ResourceQuotaDetail, error) {

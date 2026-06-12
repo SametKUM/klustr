@@ -7,7 +7,7 @@ func (m *ClientManager) Services(contextName, namespace string) []ServiceInfo {
 	if !ok {
 		return []ServiceInfo{}
 	}
-	return w.Services(namespace)
+	return listAcrossNamespaces(namespace, w.Services)
 }
 
 func (m *ClientManager) Service(contextName, namespace, name string) (*ServiceDetail, error) {
@@ -23,7 +23,7 @@ func (m *ClientManager) EndpointsList(contextName, namespace string) []Endpoints
 	if !ok {
 		return []EndpointsInfo{}
 	}
-	return w.ListEndpoints(namespace)
+	return listAcrossNamespaces(namespace, w.ListEndpoints)
 }
 
 func (m *ClientManager) Endpoints(contextName, namespace, name string) (*EndpointsDetail, error) {
@@ -39,7 +39,7 @@ func (m *ClientManager) EndpointSlices(contextName, namespace string) []Endpoint
 	if !ok {
 		return []EndpointSliceInfo{}
 	}
-	return w.EndpointSlices(namespace)
+	return listAcrossNamespaces(namespace, w.EndpointSlices)
 }
 
 func (m *ClientManager) EndpointSlice(contextName, namespace, name string) (*EndpointSliceDetail, error) {
@@ -55,7 +55,7 @@ func (m *ClientManager) Ingresses(contextName, namespace string) []IngressInfo {
 	if !ok {
 		return []IngressInfo{}
 	}
-	return w.Ingresses(namespace)
+	return listAcrossNamespaces(namespace, w.Ingresses)
 }
 
 func (m *ClientManager) Ingress(contextName, namespace, name string) (*IngressDetail, error) {
@@ -71,7 +71,7 @@ func (m *ClientManager) NetworkPolicies(contextName, namespace string) []Network
 	if !ok {
 		return []NetworkPolicyInfo{}
 	}
-	return w.NetworkPolicies(namespace)
+	return listAcrossNamespaces(namespace, w.NetworkPolicies)
 }
 
 func (m *ClientManager) NetworkPolicy(contextName, namespace, name string) (*NetworkPolicyDetail, error) {

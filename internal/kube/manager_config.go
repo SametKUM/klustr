@@ -7,7 +7,7 @@ func (m *ClientManager) ConfigMaps(contextName, namespace string) []ConfigMapInf
 	if !ok {
 		return []ConfigMapInfo{}
 	}
-	return w.ConfigMaps(namespace)
+	return listAcrossNamespaces(namespace, w.ConfigMaps)
 }
 
 func (m *ClientManager) ConfigMap(contextName, namespace, name string) (*ConfigMapDetail, error) {
@@ -23,7 +23,7 @@ func (m *ClientManager) Secrets(contextName, namespace string) []SecretInfo {
 	if !ok {
 		return []SecretInfo{}
 	}
-	return w.Secrets(namespace)
+	return listAcrossNamespaces(namespace, w.Secrets)
 }
 
 func (m *ClientManager) Secret(contextName, namespace, name string) (*SecretDetail, error) {

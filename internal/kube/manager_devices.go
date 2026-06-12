@@ -39,7 +39,7 @@ func (m *ClientManager) ResourceClaims(contextName, namespace string) []Resource
 	if !ok {
 		return []ResourceClaimInfo{}
 	}
-	return w.ResourceClaims(namespace)
+	return listAcrossNamespaces(namespace, w.ResourceClaims)
 }
 
 func (m *ClientManager) ResourceClaim(contextName, namespace, name string) (*ResourceClaimDetail, error) {
@@ -55,7 +55,7 @@ func (m *ClientManager) ResourceClaimTemplates(contextName, namespace string) []
 	if !ok {
 		return []ResourceClaimTemplateInfo{}
 	}
-	return w.ResourceClaimTemplates(namespace)
+	return listAcrossNamespaces(namespace, w.ResourceClaimTemplates)
 }
 
 func (m *ClientManager) ResourceClaimTemplate(contextName, namespace, name string) (*ResourceClaimTemplateDetail, error) {

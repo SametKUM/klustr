@@ -7,7 +7,7 @@ func (m *ClientManager) Pods(contextName, namespace string) []PodInfo {
 	if !ok {
 		return []PodInfo{}
 	}
-	return w.Pods(namespace)
+	return listAcrossNamespaces(namespace, w.Pods)
 }
 
 func (m *ClientManager) PodsForOwner(contextName, kind, namespace, name string) ([]PodInfo, error) {

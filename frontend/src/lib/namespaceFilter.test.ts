@@ -15,9 +15,9 @@ describe('namespaceQuery', () => {
     expect(q.matches('default')).toBe(false)
   })
 
-  it('falls back to all-namespaces API call when multiple are selected', () => {
-    const q = namespaceQuery(['a', 'b', 'c'])
-    expect(q.apiNamespace).toBe('')
+  it('encodes a multi-selection as a sorted comma-separated set', () => {
+    const q = namespaceQuery(['c', 'a', 'b'])
+    expect(q.apiNamespace).toBe('a,b,c')
     expect(q.matches('a')).toBe(true)
     expect(q.matches('c')).toBe(true)
     expect(q.matches('z')).toBe(false)

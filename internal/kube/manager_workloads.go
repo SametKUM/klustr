@@ -7,7 +7,7 @@ func (m *ClientManager) Deployments(contextName, namespace string) []DeploymentI
 	if !ok {
 		return []DeploymentInfo{}
 	}
-	return w.Deployments(namespace)
+	return listAcrossNamespaces(namespace, w.Deployments)
 }
 
 func (m *ClientManager) Deployment(contextName, namespace, name string) (*DeploymentDetail, error) {
@@ -23,7 +23,7 @@ func (m *ClientManager) StatefulSets(contextName, namespace string) []StatefulSe
 	if !ok {
 		return []StatefulSetInfo{}
 	}
-	return w.StatefulSets(namespace)
+	return listAcrossNamespaces(namespace, w.StatefulSets)
 }
 
 func (m *ClientManager) StatefulSet(contextName, namespace, name string) (*StatefulSetDetail, error) {
@@ -39,7 +39,7 @@ func (m *ClientManager) DaemonSets(contextName, namespace string) []DaemonSetInf
 	if !ok {
 		return []DaemonSetInfo{}
 	}
-	return w.DaemonSets(namespace)
+	return listAcrossNamespaces(namespace, w.DaemonSets)
 }
 
 func (m *ClientManager) DaemonSet(contextName, namespace, name string) (*DaemonSetDetail, error) {
@@ -55,7 +55,7 @@ func (m *ClientManager) ReplicaSets(contextName, namespace string) []ReplicaSetI
 	if !ok {
 		return []ReplicaSetInfo{}
 	}
-	return w.ReplicaSets(namespace)
+	return listAcrossNamespaces(namespace, w.ReplicaSets)
 }
 
 func (m *ClientManager) ReplicaSet(contextName, namespace, name string) (*ReplicaSetDetail, error) {
@@ -71,7 +71,7 @@ func (m *ClientManager) ReplicationControllers(contextName, namespace string) []
 	if !ok {
 		return []ReplicationControllerInfo{}
 	}
-	return w.ReplicationControllers(namespace)
+	return listAcrossNamespaces(namespace, w.ReplicationControllers)
 }
 
 func (m *ClientManager) ReplicationController(contextName, namespace, name string) (*ReplicationControllerDetail, error) {
@@ -87,7 +87,7 @@ func (m *ClientManager) Jobs(contextName, namespace string) []JobInfo {
 	if !ok {
 		return []JobInfo{}
 	}
-	return w.Jobs(namespace)
+	return listAcrossNamespaces(namespace, w.Jobs)
 }
 
 func (m *ClientManager) Job(contextName, namespace, name string) (*JobDetail, error) {
@@ -103,7 +103,7 @@ func (m *ClientManager) CronJobs(contextName, namespace string) []CronJobInfo {
 	if !ok {
 		return []CronJobInfo{}
 	}
-	return w.CronJobs(namespace)
+	return listAcrossNamespaces(namespace, w.CronJobs)
 }
 
 func (m *ClientManager) CronJob(contextName, namespace, name string) (*CronJobDetail, error) {

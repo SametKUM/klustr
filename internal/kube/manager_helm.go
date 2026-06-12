@@ -6,13 +6,15 @@ import (
 )
 
 func (m *ClientManager) HelmReleases(contextName, namespace string) ([]HelmReleaseInfo, error) {
-	if w, ok := m.watcher(contextName); ok {
-		return w.HelmReleases(namespace)
-	}
-	if m.helm == nil {
-		return nil, fmt.Errorf("helm subsystem unavailable")
-	}
-	return m.helm.ListReleases(contextName, namespace)
+	return listAcrossNamespacesErr(namespace, func(ns string) ([]HelmReleaseInfo, error) {
+		if w, ok := m.watcher(contextName); ok {
+			return w.HelmReleases(ns)
+		}
+		if m.helm == nil {
+			return nil, fmt.Errorf("helm subsystem unavailable")
+		}
+		return m.helm.ListReleases(contextName, ns)
+	})
 }
 
 func (m *ClientManager) HelmReleaseHistory(contextName, namespace, name string) ([]HelmRevisionInfo, error) {
