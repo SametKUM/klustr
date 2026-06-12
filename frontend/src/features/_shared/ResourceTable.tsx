@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -7,6 +7,7 @@ import {
   useReactTable,
   type ColumnDef,
   type ColumnSizingState,
+  type Row,
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table'
@@ -14,6 +15,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown, RotateCcw, Search, Trash2, X } from
 import { isKindSynced, onKubeChange } from '@/lib/events'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { stableList } from '@/lib/stableList'
+import { useNowTick } from '@/lib/nowTick'
 import { useActiveContexts, useIsAggregated, useUIStore, type ResourceKind } from '@/store/ui'
 import { useTablePrefs } from '@/store/tablePrefs'
 import { type ByContext } from '@/store/resources'
@@ -107,6 +109,98 @@ function isEditableTarget(target: EventTarget | null): boolean {
   const tag = target.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
 }
+
+type ResourceRowProps<T> = {
+  row: Row<Tagged<T>>
+  kind: string
+  columns: ColumnDef<Tagged<T>, any>[]
+  columnOrder: string[]
+  columnVisibility: VisibilityState
+  isSelected: boolean
+  flashing: boolean
+  clickable: boolean
+  onRowClick: (item: Tagged<T>) => void
+  onToggle: (key: string) => void
+}
+
+function ResourceRowInner<T>({
+  row,
+  kind,
+  isSelected,
+  flashing,
+  clickable,
+  onRowClick,
+  onToggle,
+}: ResourceRowProps<T>) {
+  useNowTick()
+  const tagged = row.original
+  const ctx = tagged[KLUSTR_CTX]
+  const identity = tagged as unknown as RowIdentity
+  const rowKey = identity.name ? identityKey(ctx, identity) : null
+  const canPortForward =
+    kind === 'Pod' ? (tagged as { hasPorts?: boolean }).hasPorts === true : false
+  const rowEl = (
+    <tr
+      className={[
+        'border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors',
+        clickable ? 'cursor-pointer select-none' : '',
+        flashing ? 'bg-emerald-100/60 dark:bg-emerald-400/15' : '',
+        isSelected ? 'bg-primary/10' : '',
+      ].join(' ')}
+      onClick={clickable ? () => onRowClick(tagged) : undefined}
+    >
+      <td className="px-2 py-1.5 align-middle" onClick={(e) => e.stopPropagation()}>
+        {rowKey && (
+          <Checkbox
+            checked={isSelected}
+            onChange={() => onToggle(rowKey)}
+            aria-label={`Select ${identity.name}`}
+          />
+        )}
+      </td>
+      {row.getVisibleCells().map((cell) => (
+        <td
+          key={cell.id}
+          className="overflow-hidden truncate whitespace-nowrap px-3 py-1.5 align-middle"
+        >
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </td>
+      ))}
+      <td aria-hidden />
+    </tr>
+  )
+  if (!identity.name) return rowEl
+  return (
+    <RowContextMenu
+      kind={kind as ResourceKind}
+      contextName={ctx}
+      namespace={identity.namespace ?? ''}
+      name={identity.name}
+      canPortForward={canPortForward}
+    >
+      {rowEl}
+    </RowContextMenu>
+  )
+}
+
+// Rows bail out by comparing the underlying item reference (kept stable across
+// refetches by stableList) plus everything that changes what cells render.
+// Function props are intentionally excluded — the parent passes stable
+// ref-backed callbacks. Cell output never depends on column sizing (widths
+// live on <colgroup>), so columnSizing is excluded too.
+const ResourceRow = memo(ResourceRowInner, (prev, next) => {
+  return (
+    prev.row.original === next.row.original &&
+    prev.row.id === next.row.id &&
+    prev.kind === next.kind &&
+    prev.columns === next.columns &&
+    prev.columnOrder === next.columnOrder &&
+    prev.columnVisibility === next.columnVisibility &&
+    prev.isSelected === next.isSelected &&
+    prev.flashing === next.flashing &&
+    prev.clickable === next.clickable
+  )
+}) as typeof ResourceRowInner
 
 export function ResourceTable<T>({
   kind,
@@ -209,7 +303,6 @@ export function ResourceTable<T>({
   useEffect(() => {
     setSelectedKeys(new Set())
   }, [activeContexts, selectedNamespaces, kind])
-  const [, setTick] = useState(0)
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
   const [loadedSet, setLoadedSet] = useState<Set<string>>(() => new Set())
@@ -314,11 +407,6 @@ export function ResourceTable<T>({
     }
   }, [activeContexts, query, kind])
 
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 10_000)
-    return () => clearInterval(id)
-  }, [])
-
   const tableColumns = useMemo<ColumnDef<Tagged<T>, any>[]>(() => {
     const baseCols = columns as unknown as ColumnDef<Tagged<T>, any>[]
     if (!isAggregated) return baseCols
@@ -386,6 +474,10 @@ export function ResourceTable<T>({
       })
     },
     defaultColumn: { minSize: 60, size: 160 },
+    getRowId: (row, index) => {
+      const ident = row as unknown as RowIdentity
+      return ident.name ? identityKey(row[KLUSTR_CTX], ident) : `#${index}`
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -416,14 +508,19 @@ export function ResourceTable<T>({
   }
   const allVisibleSelected =
     visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k))
-  const toggleRow = (key: string) => {
+  const toggleRow = useCallback((key: string) => {
     setSelectedKeys((prev) => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
       else next.add(key)
       return next
     })
-  }
+  }, [])
+  const onRowClickRef = useRef(onRowClick)
+  onRowClickRef.current = onRowClick
+  const handleRowClick = useCallback((item: Tagged<T>) => {
+    onRowClickRef.current?.(item as unknown as T, item[KLUSTR_CTX])
+  }, [])
   const toggleAllVisible = () => {
     setSelectedKeys((prev) => {
       const next = new Set(prev)
@@ -696,56 +793,20 @@ export function ResourceTable<T>({
                 const ctx = tagged[KLUSTR_CTX]
                 const identity = tagged as unknown as RowIdentity
                 const rowKey = identity.name ? identityKey(ctx, identity) : null
-                const isSelected = rowKey !== null && selectedKeys.has(rowKey)
-                const flashing = flashKey !== null && flashKey === identityKey(ctx, identity)
-                const canPortForward =
-                  kind === 'Pod' ? (tagged as { hasPorts?: boolean }).hasPorts === true : false
-                const rowEl = (
-                  <tr
-                    key={row.id}
-                    className={[
-                      'border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors',
-                      onRowClick ? 'cursor-pointer select-none' : '',
-                      flashing ? 'bg-emerald-100/60 dark:bg-emerald-400/15' : '',
-                      isSelected ? 'bg-primary/10' : '',
-                    ].join(' ')}
-                    onClick={onRowClick ? () => onRowClick(tagged as unknown as T, ctx) : undefined}
-                  >
-                    <td
-                      className="px-2 py-1.5 align-middle"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {rowKey && (
-                        <Checkbox
-                          checked={isSelected}
-                          onChange={() => toggleRow(rowKey)}
-                          aria-label={`Select ${identity.name}`}
-                        />
-                      )}
-                    </td>
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="overflow-hidden truncate whitespace-nowrap px-3 py-1.5 align-middle"
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                    <td aria-hidden />
-                  </tr>
-                )
-                if (!identity.name) return rowEl
                 return (
-                  <RowContextMenu
+                  <ResourceRow
                     key={row.id}
-                    kind={kind as ResourceKind}
-                    contextName={ctx}
-                    namespace={identity.namespace ?? ''}
-                    name={identity.name}
-                    canPortForward={canPortForward}
-                  >
-                    {rowEl}
-                  </RowContextMenu>
+                    row={row}
+                    kind={kind}
+                    columns={tableColumns}
+                    columnOrder={columnOrder}
+                    columnVisibility={columnVisibility}
+                    isSelected={rowKey !== null && selectedKeys.has(rowKey)}
+                    flashing={rowKey !== null && flashKey === rowKey}
+                    clickable={!!onRowClick}
+                    onRowClick={handleRowClick}
+                    onToggle={toggleRow}
+                  />
                 )
               })
             )}
