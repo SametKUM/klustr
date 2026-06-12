@@ -13,6 +13,7 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/registry"
@@ -282,11 +283,7 @@ func (h *helmManager) GetRelease(contextName, namespace, name string) (*HelmRele
 	if err != nil {
 		return nil, err
 	}
-	var chartDefaults map[string]any
-	if rel.Chart != nil {
-		chartDefaults = rel.Chart.Values
-	}
-	mergedVals, err := marshalValues(chartDefaults)
+	mergedVals, err := mergedReleaseValues(rel)
 	if err != nil {
 		return nil, err
 	}
@@ -317,6 +314,20 @@ func (h *helmManager) GetRelease(contextName, namespace, name string) (*HelmRele
 		AppVersion:   appVer,
 		Revisions:    revs,
 	}, nil
+}
+
+// mergedReleaseValues coalesces the user-supplied config on top of the chart
+// defaults — the same merge `helm get values --all` renders. Chart defaults
+// alone would silently hide every user override from the detail view.
+func mergedReleaseValues(rel *release.Release) (string, error) {
+	if rel.Chart == nil {
+		return marshalValues(rel.Config)
+	}
+	merged, err := chartutil.CoalesceValues(rel.Chart, rel.Config)
+	if err != nil {
+		return "", err
+	}
+	return marshalValues(merged)
 }
 
 // marshalValues serialises a values map to YAML, returning "" for nil/empty so

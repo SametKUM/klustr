@@ -143,11 +143,7 @@ func (w *contextWatcher) HelmRelease(namespace, name string) (*HelmReleaseDetail
 	if err != nil {
 		return nil, err
 	}
-	var chartDefaults map[string]any
-	if latest.Chart != nil {
-		chartDefaults = latest.Chart.Values
-	}
-	mergedVals, err := marshalValues(chartDefaults)
+	mergedVals, err := mergedReleaseValues(latest)
 	if err != nil {
 		return nil, err
 	}
