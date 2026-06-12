@@ -505,23 +505,43 @@ function App() {
     }
   }, [activeContexts, globalReadOnly])
 
+  // Watches are diffed against the previous context set instead of being torn
+  // down in the effect cleanup: Wails runs each bound call in its own
+  // goroutine, so a cleanup StopWatch(A) racing the re-run's StartWatch(A)
+  // could land after it and silently tear down the fresh watcher. Only
+  // contexts actually leaving the set are stopped, which also keeps the
+  // "already-attached contexts aren't restarted" invariant.
+  const watchedContextsRef = useRef<string[]>([])
   useEffect(() => {
-    if (activeContexts.length === 0) return
-    resetSyncState(activeContexts)
+    const prev = watchedContextsRef.current
+    const removed = prev.filter((ctx) => !activeContexts.includes(ctx))
+    const added = activeContexts.filter((ctx) => !prev.includes(ctx))
+    watchedContextsRef.current = activeContexts
+    for (const ctx of removed) {
+      api.stopWatch(ctx).catch(console.error)
+    }
     resetResources()
     resetCRDs()
     resetHelm()
     resetAccess()
-    for (const ctx of activeContexts) {
+    if (activeContexts.length === 0) return
+    resetSyncState(added)
+    const fetchAccess = (ctx: string) =>
       api
-        .startWatch(ctx)
-        .then(() =>
-          api
-            .listAccessibleKinds(ctx)
-            .then((kinds) => setAccess(ctx, kinds ?? []))
-            .catch(() => setAccess(ctx, [])),
-        )
-        .catch(console.error)
+        .listAccessibleKinds(ctx)
+        .then((kinds) => setAccess(ctx, kinds ?? []))
+        .catch(() => setAccess(ctx, []))
+    for (const ctx of activeContexts) {
+      if (added.includes(ctx)) {
+        api
+          .startWatch(ctx)
+          .then(() => fetchAccess(ctx))
+          .catch(console.error)
+      } else {
+        // Retained contexts keep their live watcher; only the access snapshot
+        // was reset above and needs a re-fetch.
+        void fetchAccess(ctx)
+      }
     }
     // A backend-internal watch rebuild (credential capture/refresh) re-runs
     // access discovery; re-fetch our snapshot when it announces the swap.
@@ -534,13 +554,6 @@ function App() {
     })
     return () => {
       unsubAccess()
-      for (const ctx of activeContexts) {
-        api.stopWatch(ctx).catch(console.error)
-      }
-      resetResources()
-      resetCRDs()
-      resetHelm()
-      resetAccess()
     }
   }, [activeContexts, resetResources, resetCRDs, resetHelm, resetAccess, setAccess])
 
