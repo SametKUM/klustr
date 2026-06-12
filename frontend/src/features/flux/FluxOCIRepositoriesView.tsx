@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import {
   FLUX_OCIREPOSITORY_RESOURCE,
   FLUX_SOURCE_GROUP,
@@ -134,19 +134,23 @@ export function FluxOCIRepositoriesView() {
     (ctx: string, ns: string) => api.listFluxOCIRepositories(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: FluxOCIRepositoryInfo, ctx: string): SelectedResource => ({
+      kind: 'FluxOCIRepository',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+      suspended: row.suspended,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: FluxOCIRepositoryInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'FluxOCIRepository',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-        suspended: row.suspended,
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -188,6 +192,7 @@ export function FluxOCIRepositoriesView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

@@ -17,7 +17,13 @@ import { isKindSynced, onKubeChange } from '@/lib/events'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { stableList } from '@/lib/stableList'
 import { useNowTick } from '@/lib/nowTick'
-import { useActiveContexts, useIsAggregated, useUIStore, type ResourceKind } from '@/store/ui'
+import {
+  useActiveContexts,
+  useIsAggregated,
+  useUIStore,
+  type ResourceKind,
+  type SelectedResource,
+} from '@/store/ui'
 import { useTablePrefs } from '@/store/tablePrefs'
 import { type ByContext } from '@/store/resources'
 import { Button } from '@/components/ui/button'
@@ -62,6 +68,11 @@ export type ResourceTableProps<T> = {
   columns: ColumnDef<T, any>[]
   defaultSort?: SortingState
   onRowClick?: (row: T, contextName: string) => void
+  // CR views must supply this: their table `kind` is a prefs key
+  // (`cr:group/resource`), not a real kind, so the row context menu can't
+  // build a working SelectedResource from it. The builder returns the same
+  // object the view's onRowClick selects (alias kind, gvr, extras).
+  rowResource?: (row: T, contextName: string) => SelectedResource
 }
 
 function identityKey(ctx: string, r: RowIdentity): string {
@@ -122,6 +133,7 @@ type ResourceRowProps<T> = {
   flashing: boolean
   clickable: boolean
   onRowClick: (item: Tagged<T>) => void
+  rowResource: (item: Tagged<T>) => SelectedResource | undefined
   onToggle: (key: string) => void
   measureRef: (node: Element | null) => void
 }
@@ -134,6 +146,7 @@ function ResourceRowInner<T>({
   flashing,
   clickable,
   onRowClick,
+  rowResource,
   onToggle,
   measureRef,
 }: ResourceRowProps<T>) {
@@ -184,6 +197,7 @@ function ResourceRowInner<T>({
       namespace={identity.namespace ?? ''}
       name={identity.name}
       canPortForward={canPortForward}
+      resource={rowResource(tagged)}
     >
       {rowEl}
     </RowContextMenu>
@@ -220,6 +234,7 @@ export function ResourceTable<T>({
   columns,
   defaultSort,
   onRowClick,
+  rowResource,
 }: ResourceTableProps<T>) {
   const activeContexts = useActiveContexts()
   const isAggregated = useIsAggregated()
@@ -564,6 +579,12 @@ export function ResourceTable<T>({
   const handleRowClick = useCallback((item: Tagged<T>) => {
     onRowClickRef.current?.(item as unknown as T, item[KLUSTR_CTX])
   }, [])
+  const rowResourceRef = useRef(rowResource)
+  rowResourceRef.current = rowResource
+  const handleRowResource = useCallback(
+    (item: Tagged<T>) => rowResourceRef.current?.(item as unknown as T, item[KLUSTR_CTX]),
+    [],
+  )
   const toggleAllVisible = () => {
     setSelectedKeys((prev) => {
       const next = new Set(prev)
@@ -865,6 +886,7 @@ export function ResourceTable<T>({
                           flashing={rowKey !== null && flashKey === rowKey}
                           clickable={!!onRowClick}
                           onRowClick={handleRowClick}
+                          rowResource={handleRowResource}
                           onToggle={toggleRow}
                           measureRef={virtualizer.measureElement}
                         />

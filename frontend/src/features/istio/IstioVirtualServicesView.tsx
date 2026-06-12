@@ -7,7 +7,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import { ISTIO_NETWORKING_GROUP, ISTIO_VIRTUALSERVICE_RESOURCE } from './istioKinds'
 
 const columnHelper = createColumnHelper<IstioVirtualServiceInfo>()
@@ -99,18 +99,22 @@ export function IstioVirtualServicesView() {
   )
   const setData = useCallback((_ctx: string, list: IstioVirtualServiceInfo[]) => setRows(list), [])
   const fetch = useCallback((ctx: string, ns: string) => api.listIstioVirtualServices(ctx, ns), [])
+  const rowResource = useCallback(
+    (row: IstioVirtualServiceInfo, ctx: string): SelectedResource => ({
+      kind: 'IstioVirtualService',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: IstioVirtualServiceInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'IstioVirtualService',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -159,6 +163,7 @@ export function IstioVirtualServicesView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

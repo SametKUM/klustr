@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore, crdKey } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 
 const columnHelper = createColumnHelper<CustomResourceInfo>()
 
@@ -93,16 +93,19 @@ export function CustomResourceView({ crd }: Props) {
       api.listCustomResources(ctx, crd.group, crd.version, crd.resource, ns),
     [crd.group, crd.version, crd.resource],
   )
+  const rowResource = useCallback(
+    (row: CustomResourceInfo, ctx: string): SelectedResource => ({
+      kind: crd.kind,
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: { group: crd.group, version: crd.version, resource: crd.resource },
+    }),
+    [crd.group, crd.version, crd.resource, crd.kind],
+  )
   const onRowClick = useCallback(
-    (row: CustomResourceInfo, ctx: string) =>
-      setSelectedResource({
-        kind: crd.kind,
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      }),
-    [crd.group, crd.version, crd.resource, crd.kind, setSelectedResource],
+    (row: CustomResourceInfo, ctx: string) => setSelectedResource(rowResource(row, ctx)),
+    [rowResource, setSelectedResource],
   )
   const noun = useMemo(
     () => ({ singular: crd.singular || crd.kind.toLowerCase(), plural: crd.resource }),
@@ -144,6 +147,7 @@ export function CustomResourceView({ crd }: Props) {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

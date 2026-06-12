@@ -8,7 +8,7 @@ import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 
 const KARPENTER_GROUP = 'karpenter.sh'
 const NODECLAIM_RESOURCE = 'nodeclaims'
@@ -153,18 +153,22 @@ export function KarpenterNodeClaimsView() {
     [],
   )
   const fetch = useCallback((ctx: string) => api.listKarpenterNodeClaims(ctx), [])
+  const rowResource = useCallback(
+    (row: KarpenterNodeClaimInfo, ctx: string): SelectedResource => ({
+      kind: 'NodeClaim',
+      namespace: '',
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: KarpenterNodeClaimInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'NodeClaim',
-        namespace: '',
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -213,6 +217,7 @@ export function KarpenterNodeClaimsView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

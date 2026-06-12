@@ -48,6 +48,10 @@ type Props = {
   namespace: string
   name: string
   canPortForward?: boolean
+  // CR rows pass the view-built SelectedResource (alias kind + gvr); without
+  // it the table-prefs key (`cr:group/resource`) would leak in as the kind
+  // and the detail panel would open blank.
+  resource?: SelectedResource
   children: React.ReactNode
 }
 
@@ -57,13 +61,19 @@ export function RowContextMenu({
   namespace,
   name,
   canPortForward,
+  resource: resourceOverride,
   children,
 }: Props) {
   const openResource = useUIStore((s) => s.openResource)
   const setPendingAction = useUIStore((s) => s.setPendingAction)
   const readOnly = useUIStore((s) => s.globalReadOnly)
 
-  const resource: SelectedResource = { kind, namespace, name, context: contextName }
+  const resource: SelectedResource = resourceOverride ?? {
+    kind,
+    namespace,
+    name,
+    context: contextName,
+  }
   const isPod = POD_KINDS.has(kind)
   const hasLogs = WORKLOAD_LOG_KINDS.has(kind)
   const hasEvents = EVENT_BEARING_KINDS.has(kind)

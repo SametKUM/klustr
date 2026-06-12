@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import { FLUX_ALERT_RESOURCE, FLUX_NOTIFICATION_GROUP } from './fluxKinds'
 import { FluxReadyPill } from './FluxReadyPill'
 import { ReconcileFluxResourceButton } from './ReconcileFluxResourceButton'
@@ -127,19 +127,23 @@ export function FluxAlertsView() {
     (ctx: string, ns: string) => api.listFluxAlerts(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: FluxAlertInfo, ctx: string): SelectedResource => ({
+      kind: 'FluxAlert',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+      suspended: row.suspended,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: FluxAlertInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'FluxAlert',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-        suspended: row.suspended,
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -181,6 +185,7 @@ export function FluxAlertsView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

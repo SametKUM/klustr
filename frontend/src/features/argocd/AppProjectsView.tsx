@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 
 const ARGO_GROUP = 'argoproj.io'
 const ARGO_RESOURCE = 'appprojects'
@@ -108,18 +108,22 @@ export function AppProjectsView() {
     (ctx: string, ns: string) => api.listArgoAppProjects(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: ArgoAppProjectInfo, ctx: string): SelectedResource => ({
+      kind: 'AppProject',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: ArgoAppProjectInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'AppProject',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -164,6 +168,7 @@ export function AppProjectsView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

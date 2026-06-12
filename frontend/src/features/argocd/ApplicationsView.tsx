@@ -10,7 +10,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import { HealthPill, SyncPill } from './ApplicationResourcesTab'
 import { SuspendResumeArgoApplicationButton } from './SuspendResumeArgoApplicationButton'
 import { SyncArgoApplicationDialog } from './SyncArgoApplicationDialog'
@@ -179,18 +179,22 @@ export function ApplicationsView() {
     (ctx: string, ns: string) => api.listArgoApplications(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: ArgoApplicationInfo, ctx: string): SelectedResource => ({
+      kind: 'Application',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: ArgoApplicationInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'Application',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -241,6 +245,7 @@ export function ApplicationsView() {
         fetch={fetch}
         columns={columns}
         onRowClick={onRowClick}
+        rowResource={rowResource}
       />
       <SyncArgoApplicationDialog
         contextName={selectedContext}

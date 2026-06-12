@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import { ISTIO_SECURITY_GROUP, ISTIO_PEERAUTHENTICATION_RESOURCE } from './istioKinds'
 
 const columnHelper = createColumnHelper<IstioPeerAuthenticationInfo>()
@@ -86,18 +86,22 @@ export function IstioPeerAuthenticationsView() {
     (ctx: string, ns: string) => api.listIstioPeerAuthentications(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: IstioPeerAuthenticationInfo, ctx: string): SelectedResource => ({
+      kind: 'IstioPeerAuthentication',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: IstioPeerAuthenticationInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'IstioPeerAuthentication',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -146,6 +150,7 @@ export function IstioPeerAuthenticationsView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import { CERT_MANAGER_ACME_GROUP, CERT_MANAGER_ORDER_RESOURCE } from './certManagerKinds'
 import { CertManagerStatePill } from './CertManagerStatePill'
 
@@ -94,18 +94,22 @@ export function OrdersView() {
   )
   const setData = useCallback((_ctx: string, list: CertManagerOrderInfo[]) => setRows(list), [])
   const fetch = useCallback((ctx: string, ns: string) => api.listCertManagerOrders(ctx, ns), [])
+  const rowResource = useCallback(
+    (row: CertManagerOrderInfo, ctx: string): SelectedResource => ({
+      kind: 'Order',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: CertManagerOrderInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'Order',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -154,6 +158,7 @@ export function OrdersView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

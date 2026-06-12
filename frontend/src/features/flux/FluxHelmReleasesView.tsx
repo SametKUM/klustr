@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import {
   FLUX_HELMRELEASE_GROUP,
   FLUX_HELMRELEASE_RESOURCE,
@@ -132,19 +132,23 @@ export function FluxHelmReleasesView() {
     (ctx: string, ns: string) => api.listFluxHelmReleases(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: FluxHelmReleaseInfo, ctx: string): SelectedResource => ({
+      kind: 'FluxHelmRelease',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+      suspended: row.suspended,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: FluxHelmReleaseInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'FluxHelmRelease',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-        suspended: row.suspended,
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -193,6 +197,7 @@ export function FluxHelmReleasesView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

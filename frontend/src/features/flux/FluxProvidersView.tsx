@@ -7,7 +7,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import {
   FLUX_NOTIFICATION_GROUP,
   FLUX_PROVIDER_RESOURCE,
@@ -127,19 +127,23 @@ export function FluxProvidersView() {
     (ctx: string, ns: string) => api.listFluxProviders(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: FluxProviderInfo, ctx: string): SelectedResource => ({
+      kind: 'FluxProvider',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+      suspended: row.suspended,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: FluxProviderInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'FluxProvider',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-        suspended: row.suspended,
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -181,6 +185,7 @@ export function FluxProvidersView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

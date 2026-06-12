@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import { FLUX_NOTIFICATION_GROUP, FLUX_RECEIVER_RESOURCE } from './fluxKinds'
 import { FluxReadyPill } from './FluxReadyPill'
 import { ReconcileFluxResourceButton } from './ReconcileFluxResourceButton'
@@ -133,19 +133,23 @@ export function FluxReceiversView() {
     (ctx: string, ns: string) => api.listFluxReceivers(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: FluxReceiverInfo, ctx: string): SelectedResource => ({
+      kind: 'FluxReceiver',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+      suspended: row.suspended,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: FluxReceiverInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'FluxReceiver',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-        suspended: row.suspended,
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -187,6 +191,7 @@ export function FluxReceiversView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

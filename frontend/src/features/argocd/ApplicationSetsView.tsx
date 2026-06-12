@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 
 const ARGO_GROUP = 'argoproj.io'
 const ARGO_RESOURCE = 'applicationsets'
@@ -95,18 +95,22 @@ export function ApplicationSetsView() {
     (ctx: string, ns: string) => api.listArgoApplicationSets(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: ArgoApplicationSetInfo, ctx: string): SelectedResource => ({
+      kind: 'ApplicationSet',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: ArgoApplicationSetInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'ApplicationSet',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -155,6 +159,7 @@ export function ApplicationSetsView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

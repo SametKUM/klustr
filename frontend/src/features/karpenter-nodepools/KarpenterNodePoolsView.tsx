@@ -8,7 +8,7 @@ import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 
 const KARPENTER_GROUP = 'karpenter.sh'
 const NODEPOOL_RESOURCE = 'nodepools'
@@ -131,18 +131,22 @@ export function KarpenterNodePoolsView() {
     [],
   )
   const fetch = useCallback((ctx: string) => api.listKarpenterNodePools(ctx), [])
+  const rowResource = useCallback(
+    (row: KarpenterNodePoolInfo, ctx: string): SelectedResource => ({
+      kind: 'NodePool',
+      namespace: '',
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: KarpenterNodePoolInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'NodePool',
-        namespace: '',
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -191,6 +195,7 @@ export function KarpenterNodePoolsView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

@@ -7,7 +7,7 @@ import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import {
   CERT_MANAGER_CERTIFICATE_RESOURCE,
   CERT_MANAGER_GROUP,
@@ -125,18 +125,22 @@ export function CertificatesView() {
     (ctx: string, ns: string) => api.listCertManagerCertificates(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: CertManagerCertificateInfo, ctx: string): SelectedResource => ({
+      kind: 'Certificate',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: CertManagerCertificateInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'Certificate',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -185,6 +189,7 @@ export function CertificatesView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

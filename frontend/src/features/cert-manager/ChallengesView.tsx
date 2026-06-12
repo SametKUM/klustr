@@ -6,7 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import { CERT_MANAGER_ACME_GROUP, CERT_MANAGER_CHALLENGE_RESOURCE } from './certManagerKinds'
 import { CertManagerStatePill } from './CertManagerStatePill'
 
@@ -111,18 +111,22 @@ export function ChallengesView() {
     (ctx: string, ns: string) => api.listCertManagerChallenges(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: CertManagerChallengeInfo, ctx: string): SelectedResource => ({
+      kind: 'Challenge',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: CertManagerChallengeInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'Challenge',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -171,6 +175,7 @@ export function ChallengesView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

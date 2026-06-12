@@ -7,7 +7,7 @@ import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import {
   CERT_MANAGER_CERTIFICATEREQUEST_RESOURCE,
   CERT_MANAGER_GROUP,
@@ -105,18 +105,22 @@ export function CertificateRequestsView() {
     (ctx: string, ns: string) => api.listCertManagerCertificateRequests(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: CertManagerCertificateRequestInfo, ctx: string): SelectedResource => ({
+      kind: 'CertificateRequest',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: CertManagerCertificateRequestInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'CertificateRequest',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -166,6 +170,7 @@ export function CertificateRequestsView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }

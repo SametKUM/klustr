@@ -8,7 +8,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore } from '@/store/ui'
+import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import {
   FLUX_GITREPOSITORY_RESOURCE,
   FLUX_SOURCE_GROUP,
@@ -136,19 +136,23 @@ export function FluxGitRepositoriesView() {
     (ctx: string, ns: string) => api.listFluxGitRepositories(ctx, ns),
     [],
   )
+  const rowResource = useCallback(
+    (row: FluxGitRepositoryInfo, ctx: string): SelectedResource => ({
+      kind: 'FluxGitRepository',
+      namespace: row.namespace,
+      name: row.name,
+      context: ctx,
+      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+      suspended: row.suspended,
+    }),
+    [crd],
+  )
   const onRowClick = useCallback(
     (row: FluxGitRepositoryInfo, ctx: string) => {
       if (!crd) return
-      setSelectedResource({
-        kind: 'FluxGitRepository',
-        namespace: row.namespace,
-        name: row.name,
-        context: ctx,
-        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-        suspended: row.suspended,
-      })
+      setSelectedResource(rowResource(row, ctx))
     },
-    [crd, setSelectedResource],
+    [crd, rowResource, setSelectedResource],
   )
 
   if (isAggregated) {
@@ -193,6 +197,7 @@ export function FluxGitRepositoriesView() {
       fetch={fetch}
       columns={columns}
       onRowClick={onRowClick}
+      rowResource={rowResource}
     />
   )
 }
