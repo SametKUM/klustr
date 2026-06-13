@@ -50,8 +50,9 @@ klustr/
 │       │                             autoscaling / admission / rbac / helm / gateway / pods)
 │       ├── mutate.go                generic apply / delete / scale via dynamic client +
 │       │                            kindToGVR map
-│       ├── informers.go             contextWatcher lifecycle + the single start() that wires
-│       │                            every kind's event handler + shared helpers
+│       ├── informers.go             contextWatcher lifecycle + start() bootstrap + the
+│       │                            kindBindings routing table + ensureKind lazy per-kind
+│       │                            start + shared helpers
 │       │                            (sortByNamespaceName, formatLabelSelector, OwnerRef, …)
 │       ├── informers_<group>.go     per-sidebar-group XxxInfo types and lister methods
 │       ├── details.go               shared types (ContainerSummary) + helpers
