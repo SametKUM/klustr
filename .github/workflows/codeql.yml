@@ -16,7 +16,11 @@ permissions:
 jobs:
   analyze:
     name: Analyze ${{ matrix.language }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    # Match release.yml: webkit 4.1 needs the webkit2_41 build tag so CodeQL's
+    # autobuild of the Go module links against the right headers.
+    env:
+      GOFLAGS: -tags=webkit2_41
     strategy:
       fail-fast: false
       matrix:
@@ -38,7 +42,7 @@ jobs:
         if: matrix.language == 'go'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
       - name: Stub embedded frontend assets
         if: matrix.language == 'go'
