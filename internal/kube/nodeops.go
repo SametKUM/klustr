@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -53,7 +54,7 @@ const drainPollInterval = 2 * time.Second
 // PodDisruptionBudgets are honored, with blocked evictions retried each poll
 // round. It blocks until the node is empty or ctx is done; callers run it in
 // a goroutine and consume onProgress.
-func (m *ClientManager) DrainNode(ctx context.Context, contextName, nodeName string, onProgress func(NodeDrainProgress)) error {
+func (m *ClientManager) DrainNode(ctx context.Context, contextName, nodeName string, force bool, onProgress func(NodeDrainProgress)) error {
 	if err := m.assertWritable(contextName); err != nil {
 		return err
 	}
@@ -87,11 +88,6 @@ func (m *ClientManager) DrainNode(ctx context.Context, contextName, nodeName str
 		onProgress(p)
 	}
 
-	report(NodeDrainProgress{Phase: "cordoning"})
-	if err := m.SetNodeCordon(ctx, contextName, nodeName, true); err != nil {
-		return fmt.Errorf("cordon: %w", err)
-	}
-
 	list, err := cs.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 		FieldSelector: "spec.nodeName=" + nodeName,
 	})
@@ -99,7 +95,25 @@ func (m *ClientManager) DrainNode(ctx context.Context, contextName, nodeName str
 		return err
 	}
 	targets := drainTargets(list.Items)
+
+	// kubectl drain refuses to delete pods not managed by a controller without
+	// --force, since they cannot be rescheduled and are gone for good. Check
+	// before cordoning so a refused drain leaves the node untouched.
+	if !force {
+		if bare := barePods(targets); len(bare) > 0 {
+			return fmt.Errorf(
+				"%d pod(s) on this node are not managed by a controller and would be permanently deleted (enable force to override): %s",
+				len(bare), strings.Join(podKeys(bare), ", "),
+			)
+		}
+	}
 	total := len(targets)
+
+	report(NodeDrainProgress{Phase: "cordoning"})
+	if err := m.SetNodeCordon(ctx, contextName, nodeName, true); err != nil {
+		return fmt.Errorf("cordon: %w", err)
+	}
+
 	report(NodeDrainProgress{Phase: "evicting", Total: total, Pending: podKeys(targets)})
 
 	for {
@@ -172,6 +186,19 @@ func drainTargets(pods []corev1.Pod) []corev1.Pod {
 			continue
 		}
 		out = append(out, p)
+	}
+	return out
+}
+
+// barePods returns the drain targets that no controller owns. Evicting one
+// deletes it permanently — nothing will recreate it — so a drain only touches
+// them when the user explicitly forces it.
+func barePods(pods []corev1.Pod) []corev1.Pod {
+	out := make([]corev1.Pod, 0)
+	for _, p := range pods {
+		if metav1.GetControllerOf(&p) == nil {
+			out = append(out, p)
+		}
 	}
 	return out
 }

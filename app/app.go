@@ -496,12 +496,12 @@ func (a *App) CordonNode(contextName, nodeName string, cordon bool) error {
 
 // DrainNode returns immediately; progress streams over the
 // "node:drain:<context>/<node>" event until a terminal done/error payload.
-func (a *App) DrainNode(contextName, nodeName string) {
+func (a *App) DrainNode(contextName, nodeName string, force bool) {
 	event := "node:drain:" + contextName + "/" + nodeName
 	go func() {
 		ctx, cancel := context.WithTimeout(a.ctx, 15*time.Minute)
 		defer cancel()
-		err := a.clients.DrainNode(ctx, contextName, nodeName, func(p kube.NodeDrainProgress) {
+		err := a.clients.DrainNode(ctx, contextName, nodeName, force, func(p kube.NodeDrainProgress) {
 			runtime.EventsEmit(a.ctx, event, p)
 		})
 		if err != nil {

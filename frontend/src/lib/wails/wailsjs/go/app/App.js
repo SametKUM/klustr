@@ -54,8 +54,8 @@ export function DenyCertificateSigningRequest(arg1, arg2, arg3) {
   return window['go']['app']['App']['DenyCertificateSigningRequest'](arg1, arg2, arg3);
 }
 
-export function DrainNode(arg1, arg2) {
-  return window['go']['app']['App']['DrainNode'](arg1, arg2);
+export function DrainNode(arg1, arg2, arg3) {
+  return window['go']['app']['App']['DrainNode'](arg1, arg2, arg3);
 }
 
 export function DryRunApplyResourceYAML(arg1, arg2) {

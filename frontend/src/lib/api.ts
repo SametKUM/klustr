@@ -750,7 +750,8 @@ export const api = {
     StartNodeShell(contextName, nodeName),
   cordonNode: (ctx: string, nodeName: string, cordon: boolean): Promise<void> =>
     CordonNode(ctx, nodeName, cordon),
-  drainNode: (ctx: string, nodeName: string): Promise<void> => DrainNode(ctx, nodeName),
+  drainNode: (ctx: string, nodeName: string, force: boolean): Promise<void> =>
+    DrainNode(ctx, nodeName, force),
   openLocalTerminal: (contextName: string, cols: number, rows: number): Promise<string> =>
     OpenLocalTerminal(contextName, cols, rows),
   sendLocalTerminalInput: (sessionId: string, data: string): Promise<void> =>

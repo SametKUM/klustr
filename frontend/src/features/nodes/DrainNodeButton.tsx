@@ -32,6 +32,8 @@ export function DrainNodeButton({ contextName, resource }: Props) {
 
   const draining =
     progress !== null && progress.phase !== 'done' && progress.phase !== 'error'
+  const blockedByBarePods =
+    progress?.phase === 'error' && (progress.error?.includes('not managed by a controller') ?? false)
 
   useEffect(
     () => () => {
@@ -41,7 +43,7 @@ export function DrainNodeButton({ contextName, resource }: Props) {
     [],
   )
 
-  const start = () => {
+  const start = (force: boolean) => {
     if (!contextName) return
     setStartError(null)
     setProgress({ node: resource.name, phase: 'cordoning', total: 0, evicted: 0, pending: [], error: '' })
@@ -63,7 +65,7 @@ export function DrainNodeButton({ contextName, resource }: Props) {
         }
       },
     )
-    api.drainNode(contextName, resource.name).catch((e: unknown) => {
+    api.drainNode(contextName, resource.name, force).catch((e: unknown) => {
       setStartError(String(e))
       setProgress(null)
       unsubRef.current?.()
@@ -93,9 +95,10 @@ export function DrainNodeButton({ contextName, resource }: Props) {
                   and evicts all pods through the Eviction API, so PodDisruptionBudgets are
                   honored. DaemonSet-managed and static pods are left in place — equivalent to{' '}
                   <code className="font-mono text-xs">
-                    kubectl drain --ignore-daemonsets --delete-emptydir-data --force
+                    kubectl drain --ignore-daemonsets --delete-emptydir-data
                   </code>
-                  .
+                  . Pods not managed by a controller cannot be rescheduled, so the drain stops
+                  and asks before permanently deleting them.
                 </p>
                 {progress && (
                   <div className="space-y-1 rounded border border-border bg-muted/40 p-2 font-mono text-xs">
@@ -137,12 +140,19 @@ export function DrainNodeButton({ contextName, resource }: Props) {
             {progress?.phase !== 'done' && (
               <AlertDialogAction
                 disabled={draining || !contextName}
+                className={blockedByBarePods ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : undefined}
                 onClick={(e) => {
                   e.preventDefault()
-                  start()
+                  start(blockedByBarePods)
                 }}
               >
-                {draining ? 'Draining…' : progress?.phase === 'error' ? 'Retry drain' : 'Drain'}
+                {draining
+                  ? 'Draining…'
+                  : blockedByBarePods
+                    ? 'Force drain (delete unmanaged pods)'
+                    : progress?.phase === 'error'
+                      ? 'Retry drain'
+                      : 'Drain'}
               </AlertDialogAction>
             )}
           </AlertDialogFooter>

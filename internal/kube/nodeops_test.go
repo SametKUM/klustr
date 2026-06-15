@@ -52,6 +52,30 @@ func TestDrainTargets(t *testing.T) {
 	}
 }
 
+func TestBarePods(t *testing.T) {
+	controller := true
+	pods := []corev1.Pod{
+		drainPod("app", nil),
+		drainPod("rs-managed", func(p *corev1.Pod) {
+			p.OwnerReferences = []metav1.OwnerReference{
+				{Kind: "ReplicaSet", Name: "web-abc", Controller: &controller},
+			}
+		}),
+		drainPod("owned-not-controller", func(p *corev1.Pod) {
+			owned := false
+			p.OwnerReferences = []metav1.OwnerReference{
+				{Kind: "ReplicaSet", Name: "x", Controller: &owned},
+			}
+		}),
+	}
+
+	got := podKeys(barePods(pods))
+	want := []string{"default/app", "default/owned-not-controller"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("barePods = %v, want %v", got, want)
+	}
+}
+
 func TestPodKeysSorted(t *testing.T) {
 	pods := []corev1.Pod{
 		{ObjectMeta: metav1.ObjectMeta{Name: "b", Namespace: "kube-system"}},
