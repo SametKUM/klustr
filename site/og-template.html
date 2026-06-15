@@ -1,0 +1,122 @@
+<!doctype html>
+<!--
+  Source template for public/og.png (1200×630 social card).
+  Regenerate after changing it:
+    cd site && npx playwright screenshot --viewport-size=1200,630 \
+      og-template.html public/og.png
+  (or render via the project's Playwright tooling). Keep the feature line in
+  sync with the site/README feature list.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --background: oklch(0.19 0.02 264);
+        --foreground: oklch(0.96 0.008 256);
+        --muted: oklch(0.73 0.02 256);
+        --primary: oklch(0.7 0.17 256);
+        --ok: oklch(0.73 0.15 162);
+        --border: oklch(1 0 0 / 16%);
+        --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+        --mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1200px; height: 630px; }
+      body {
+        position: relative;
+        background-color: var(--background);
+        color: var(--foreground);
+        font-family: var(--sans);
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      .glow, .grid {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+      }
+      .glow {
+        background:
+          radial-gradient(58% 60% at 50% -12%, oklch(0.7 0.17 256 / 0.24), transparent 72%),
+          radial-gradient(42% 40% at 90% 6%, oklch(0.7 0.2 304 / 0.12), transparent 70%);
+      }
+      .grid {
+        background-image: radial-gradient(circle at 1px 1px, oklch(1 0 0 / 0.05) 1px, transparent 0);
+        background-size: 30px 30px;
+        mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+      }
+      .frame {
+        position: relative;
+        z-index: 1;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 72px;
+      }
+      .brand { display: flex; align-items: center; gap: 16px; }
+      .brand img { width: 56px; height: 56px; border-radius: 14px; }
+      .brand span { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; }
+
+      h1 {
+        font-size: 78px;
+        font-weight: 600;
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+      }
+      h1 .accent { color: var(--primary); }
+      .features {
+        margin-top: 30px;
+        font-family: var(--mono);
+        font-size: 23px;
+        letter-spacing: -0.01em;
+        color: var(--muted);
+      }
+      .features b { color: var(--foreground); font-weight: 500; }
+      .features .sep { color: oklch(1 0 0 / 28%); padding: 0 10px; }
+
+      .footer { display: flex; align-items: center; justify-content: space-between; }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--border);
+        border-radius: 9999px;
+        padding: 12px 22px;
+        font-family: var(--mono);
+        font-size: 21px;
+      }
+      .dot { width: 11px; height: 11px; border-radius: 9999px; background: var(--ok); }
+      .meta { font-family: var(--mono); font-size: 21px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="glow"></div>
+    <div class="grid"></div>
+    <div class="frame">
+      <div class="brand">
+        <img src="public/appicon.png" alt="" />
+        <span>Klustr</span>
+      </div>
+
+      <div>
+        <h1>A fast, lightweight<br /><span class="accent">Kubernetes desktop client.</span></h1>
+        <div class="features">
+          Live resources<span class="sep">·</span><b>RBAC</b><span class="sep">·</span><b>Helm</b><span class="sep">·</span><b>Argo&nbsp;CD</b><span class="sep">·</span><b>Flux</b><span class="sep">·</span><b>Gateway&nbsp;API</b><span class="sep">·</span><b>cert-manager</b>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span class="pill"><span class="dot"></span>Open source · MIT</span>
+        <span class="meta">Native, built in Go · macOS &amp; Linux</span>
+      </div>
+    </div>
+  </body>
+</html>
