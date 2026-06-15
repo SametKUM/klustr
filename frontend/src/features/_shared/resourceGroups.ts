@@ -305,3 +305,21 @@ export const CERT_MANAGER_GROUP_NAV: ResourceGroup = {
     { label: 'ClusterIssuers', view: 'certmanagerclusterissuers', icon: Globe },
   ],
 }
+
+// Every view id any sidebar group can surface. Used to prune persisted
+// hidden-sidebar entries whose view was renamed or removed across releases.
+export const ALL_RESOURCE_VIEWS: ReadonlySet<ResourceView> = new Set(
+  [
+    ...RESOURCE_GROUPS,
+    HELM_GROUP,
+    ARGO_GROUP,
+    GATEWAY_GROUP,
+    KARPENTER_GROUP,
+    FLUX_GROUP,
+    ISTIO_GROUP,
+    CERT_MANAGER_GROUP_NAV,
+  ]
+    .flatMap((g) => g.items)
+    .map((i) => i.view)
+    .filter((v): v is ResourceView => v !== undefined),
+)

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { DEFAULT_DARK, DEFAULT_LIGHT, getTheme, type ThemeId } from '@/features/_shared/themes'
+import { ALL_RESOURCE_VIEWS } from '@/features/_shared/resourceGroups'
 import {
   MAX_TAGS_PER_CONTEXT,
   type ContextGroup,
@@ -234,6 +235,14 @@ export const useUIStore = create<UIState>((set) => {
   const namespacesByContext = readNamespacesByContext()
   const activeAtBoot = aggregatedAtBoot.length > 0 ? aggregatedAtBoot : selectedAtBoot ? [selectedAtBoot] : []
 
+  // Validate persisted hidden views against the live set, dropping ids whose
+  // view was renamed or removed across releases instead of force-casting them.
+  const hiddenSidebarItemsByContext: Record<string, ResourceView[]> = {}
+  for (const [ctx, list] of Object.entries(readHiddenSidebarItemsByContext())) {
+    const valid = list.filter((v): v is ResourceView => ALL_RESOURCE_VIEWS.has(v as ResourceView))
+    if (valid.length > 0) hiddenSidebarItemsByContext[ctx] = valid
+  }
+
   return {
     selectedContext: selectedAtBoot,
     aggregatedContexts: aggregatedAtBoot,
@@ -252,7 +261,7 @@ export const useUIStore = create<UIState>((set) => {
     sidebarMode: readSidebarMode(),
     sidebarWidth: readSidebarWidth(),
     collapsedNavGroups: readCollapsedNavGroups(),
-    hiddenSidebarItemsByContext: readHiddenSidebarItemsByContext() as Record<string, ResourceView[]>,
+    hiddenSidebarItemsByContext,
     expandedCRDGroups: readExpandedCRDGroups(),
     defaultContext: initialDefaultContext,
     contextTags: readContextTags(),
