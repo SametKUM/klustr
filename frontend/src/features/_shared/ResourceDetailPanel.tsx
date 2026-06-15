@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, RefreshCcw } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -841,11 +841,17 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
 }
 
 function WorkloadLogs({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
-  const [selector, setSelector] = useState<Record<string, string>>({})
+  const [state, setState] = useState<
+    | { status: 'loading' }
+    | { status: 'error'; message: string }
+    | { status: 'resolved'; selector: Record<string, string> }
+  >({ status: 'loading' })
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!contextName) return
     let cancelled = false
+    setState({ status: 'loading' })
     const fetcher =
       resource.kind === 'Deployment'
         ? api.getDeployment
@@ -855,21 +861,38 @@ function WorkloadLogs({ contextName, resource }: { contextName: string | null; r
     fetcher(contextName, resource.namespace, resource.name)
       .then((d) => {
         if (cancelled) return
-        setSelector(d.selector ?? {})
+        setState({ status: 'resolved', selector: d.selector ?? {} })
       })
-      .catch(() => {
+      .catch((e: unknown) => {
         if (cancelled) return
-        setSelector({})
+        setState({ status: 'error', message: String(e) })
       })
     return () => {
       cancelled = true
     }
-  }, [contextName, resource.kind, resource.namespace, resource.name])
+  }, [contextName, resource.kind, resource.namespace, resource.name, reloadKey])
 
-  if (Object.keys(selector).length === 0) {
+  if (state.status === 'loading') {
     return (
       <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
         Resolving pod selector…
+      </div>
+    )
+  }
+  if (state.status === 'error' || Object.keys(state.selector).length === 0) {
+    const message =
+      state.status === 'error'
+        ? `Could not resolve the pod selector: ${state.message}`
+        : 'This workload has no matchLabels selector (matchExpressions-only selectors are not supported for log streaming).'
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-xs text-muted-foreground">
+        <span>{message}</span>
+        {state.status === 'error' && (
+          <Button type="button" size="xs" variant="outline" onClick={() => setReloadKey((k) => k + 1)}>
+            <RefreshCcw />
+            Retry
+          </Button>
+        )}
       </div>
     )
   }
@@ -877,7 +900,7 @@ function WorkloadLogs({ contextName, resource }: { contextName: string | null; r
     <MultiPodLogsTab
       contextName={contextName}
       namespace={resource.namespace}
-      selector={selector}
+      selector={state.selector}
       title={resource.name}
     />
   )
