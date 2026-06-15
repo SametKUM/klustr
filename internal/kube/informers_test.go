@@ -316,6 +316,30 @@ func TestDerivePodStatus(t *testing.T) {
 	if got := derivePodStatus(withReason); got != "Evicted" {
 		t.Errorf("evicted: got %q", got)
 	}
+
+	// A Completed sidecar must not mask a still-running main container.
+	completedSidecarReady := &corev1.Pod{Status: corev1.PodStatus{
+		Phase:      corev1.PodRunning,
+		Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}},
+		ContainerStatuses: []corev1.ContainerStatus{
+			{Ready: true, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}},
+			{State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "Completed"}}},
+		},
+	}}
+	if got := derivePodStatus(completedSidecarReady); got != "Running" {
+		t.Errorf("completed sidecar (ready): got %q", got)
+	}
+
+	completedSidecarNotReady := &corev1.Pod{Status: corev1.PodStatus{
+		Phase: corev1.PodRunning,
+		ContainerStatuses: []corev1.ContainerStatus{
+			{Ready: true, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}},
+			{State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "Completed"}}},
+		},
+	}}
+	if got := derivePodStatus(completedSidecarNotReady); got != "NotReady" {
+		t.Errorf("completed sidecar (not ready): got %q", got)
+	}
 }
 
 func TestControllerOwnerRef(t *testing.T) {

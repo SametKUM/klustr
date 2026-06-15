@@ -814,24 +814,48 @@ func derivePodStatus(p *corev1.Pod) string {
 		}
 	}
 
+	reason := ""
+	hasRunning := false
 	for i := len(p.Status.ContainerStatuses) - 1; i >= 0; i-- {
 		c := p.Status.ContainerStatuses[i]
-		if c.State.Waiting != nil && c.State.Waiting.Reason != "" {
-			return c.State.Waiting.Reason
-		}
-		if c.State.Terminated != nil {
-			if c.State.Terminated.Reason != "" {
-				return c.State.Terminated.Reason
-			}
-			if c.State.Terminated.Signal != 0 {
-				return fmt.Sprintf("Signal:%d", c.State.Terminated.Signal)
-			}
-			return fmt.Sprintf("ExitCode:%d", c.State.Terminated.ExitCode)
+		switch {
+		case c.State.Waiting != nil && c.State.Waiting.Reason != "":
+			reason = c.State.Waiting.Reason
+		case c.State.Terminated != nil && c.State.Terminated.Reason != "":
+			reason = c.State.Terminated.Reason
+		case c.State.Terminated != nil && c.State.Terminated.Signal != 0:
+			reason = fmt.Sprintf("Signal:%d", c.State.Terminated.Signal)
+		case c.State.Terminated != nil:
+			reason = fmt.Sprintf("ExitCode:%d", c.State.Terminated.ExitCode)
+		case c.Ready && c.State.Running != nil:
+			hasRunning = true
 		}
 	}
 
+	// A terminated container (commonly a Completed sidecar) must not mask
+	// containers still running, matching kubectl's printer.
+	if reason == "Completed" && hasRunning {
+		if podReady(p) {
+			reason = "Running"
+		} else {
+			reason = "NotReady"
+		}
+	}
+
+	if reason != "" {
+		return reason
+	}
 	if p.Status.Reason != "" {
 		return p.Status.Reason
 	}
 	return string(p.Status.Phase)
+}
+
+func podReady(p *corev1.Pod) bool {
+	for _, c := range p.Status.Conditions {
+		if c.Type == corev1.PodReady {
+			return c.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
