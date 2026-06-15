@@ -262,6 +262,37 @@ func TestPodResourceTotals(t *testing.T) {
 	}
 }
 
+func TestPodResourceTotalsInitAndSidecar(t *testing.T) {
+	always := corev1.ContainerRestartPolicyAlways
+	cpu := func(s string) corev1.ResourceRequirements {
+		return corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse(s)}}
+	}
+	pod := &corev1.Pod{Spec: corev1.PodSpec{
+		Containers: []corev1.Container{{Resources: cpu("250m")}},
+		InitContainers: []corev1.Container{
+			{Resources: cpu("100m"), RestartPolicy: &always}, // sidecar: adds to total
+			{Resources: cpu("600m")},                         // init: max(600+100, 250+100) = 700
+		},
+	}}
+	cpuReq, _, _, _ := podResourceTotals(pod)
+	if cpuReq != 700 {
+		t.Errorf("cpuReq with sidecar+init: got %d, want 700", cpuReq)
+	}
+
+	// Without an init container exceeding the regular+sidecar sum, the base wins.
+	pod2 := &corev1.Pod{Spec: corev1.PodSpec{
+		Containers: []corev1.Container{{Resources: cpu("250m")}},
+		InitContainers: []corev1.Container{
+			{Resources: cpu("100m"), RestartPolicy: &always},
+			{Resources: cpu("50m")},
+		},
+	}}
+	cpuReq2, _, _, _ := podResourceTotals(pod2)
+	if cpuReq2 != 350 {
+		t.Errorf("cpuReq base wins: got %d, want 350", cpuReq2)
+	}
+}
+
 func TestDerivePodStatus(t *testing.T) {
 	now := metav1.Now()
 	terminating := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &now}}

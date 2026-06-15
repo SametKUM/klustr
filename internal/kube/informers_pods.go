@@ -762,28 +762,61 @@ func isFailureReason(reason string) bool {
 	return false
 }
 
-// podResourceTotals sums cpu/mem requests and limits across init+regular
-// containers, returning millicores and bytes. A zero result means unset
-// for that dimension.
+// podResourceTotals computes a pod's effective cpu/mem requests and limits in
+// millicores and bytes, matching Kubernetes' scheduling semantics: regular
+// containers and restartable init containers (sidecars) sum, while ordinary
+// init containers run sequentially and only raise the total when one (plus the
+// sidecars started before it) exceeds the regular sum. A zero result means
+// unset for that dimension.
 func podResourceTotals(p *corev1.Pod) (cpuReq, cpuLim, memReq, memLim int64) {
-	add := func(list []corev1.Container) {
-		for _, c := range list {
-			if q, ok := c.Resources.Requests[corev1.ResourceCPU]; ok {
-				cpuReq += q.MilliValue()
-			}
-			if q, ok := c.Resources.Limits[corev1.ResourceCPU]; ok {
-				cpuLim += q.MilliValue()
-			}
-			if q, ok := c.Resources.Requests[corev1.ResourceMemory]; ok {
-				memReq += q.Value()
-			}
-			if q, ok := c.Resources.Limits[corev1.ResourceMemory]; ok {
-				memLim += q.Value()
-			}
+	type res struct{ cpuReq, cpuLim, memReq, memLim int64 }
+	get := func(c corev1.Container) res {
+		var r res
+		if q, ok := c.Resources.Requests[corev1.ResourceCPU]; ok {
+			r.cpuReq = q.MilliValue()
+		}
+		if q, ok := c.Resources.Limits[corev1.ResourceCPU]; ok {
+			r.cpuLim = q.MilliValue()
+		}
+		if q, ok := c.Resources.Requests[corev1.ResourceMemory]; ok {
+			r.memReq = q.Value()
+		}
+		if q, ok := c.Resources.Limits[corev1.ResourceMemory]; ok {
+			r.memLim = q.Value()
+		}
+		return r
+	}
+
+	var base, sidecar, initMax res
+	for _, c := range p.Spec.Containers {
+		r := get(c)
+		base.cpuReq += r.cpuReq
+		base.cpuLim += r.cpuLim
+		base.memReq += r.memReq
+		base.memLim += r.memLim
+	}
+	for _, c := range p.Spec.InitContainers {
+		r := get(c)
+		if c.RestartPolicy != nil && *c.RestartPolicy == corev1.ContainerRestartPolicyAlways {
+			sidecar.cpuReq += r.cpuReq
+			sidecar.cpuLim += r.cpuLim
+			sidecar.memReq += r.memReq
+			sidecar.memLim += r.memLim
+			base.cpuReq += r.cpuReq
+			base.cpuLim += r.cpuLim
+			base.memReq += r.memReq
+			base.memLim += r.memLim
+		} else {
+			initMax.cpuReq = max(initMax.cpuReq, sidecar.cpuReq+r.cpuReq)
+			initMax.cpuLim = max(initMax.cpuLim, sidecar.cpuLim+r.cpuLim)
+			initMax.memReq = max(initMax.memReq, sidecar.memReq+r.memReq)
+			initMax.memLim = max(initMax.memLim, sidecar.memLim+r.memLim)
 		}
 	}
-	add(p.Spec.Containers)
-	return
+	return max(base.cpuReq, initMax.cpuReq),
+		max(base.cpuLim, initMax.cpuLim),
+		max(base.memReq, initMax.memReq),
+		max(base.memLim, initMax.memLim)
 }
 
 // derivePodStatus mirrors kubectl's STATUS column logic: it walks init
