@@ -164,6 +164,16 @@ Windows builds will be attached to releases once they've been validated. Until t
 2. On first run, pick a context — or check **two or more** to view them aggregated as one cluster. Save a recurring selection as a named **group** for one-click reconnect, and toggle **Auto-connect** on a card to pin it as the default.
 3. Browse via the sidebar, click any row for a detail dialog, or `⌘P` to fuzzy-search resources by name. The header's **Disconnect** button drops you back to the picker at any time.
 
+## Documentation
+
+Task-focused guides live in [`docs/guide/`](docs/guide):
+
+- [Getting started](docs/guide/getting-started.md) — contexts, namespaces, read-only mode
+- [Multi-context & aggregated mode](docs/guide/multi-context.md) — many clusters as one, groups, tags
+- [Credential helpers](docs/guide/credential-helpers.md) — aws-vault and other exec plugins under a GUI launch
+- [Workloads & debugging](docs/guide/workloads-and-debugging.md) — logs, exec, port-forward, node shell
+- [Helm](docs/guide/helm.md) · [GitOps: Argo CD & Flux](docs/guide/gitops.md) · [Gateway API](docs/guide/gateway-api.md) · [Custom Resources](docs/guide/custom-resources.md)
+
 ## Build from source
 
 ```bash
@@ -220,7 +230,7 @@ Bug reports and focused pull requests are welcome.
   ```
 - New user-facing features should include a screenshot or short clip in the PR description.
 
-Full guide: [`CONTRIBUTING.md`](CONTRIBUTING.md). Bug reports go through the [`bug_report.yml`](.github/ISSUE_TEMPLATE/bug_report.yml) issue template so the version / OS / cluster details we need actually land in the report.
+Full guide: [`CONTRIBUTING.md`](CONTRIBUTING.md). Bug reports go through the [`bug_report.yml`](.github/ISSUE_TEMPLATE/bug_report.yml) issue template so the version / OS / cluster details we need actually land in the report. Found a security issue? Please report it privately — see the [security policy](SECURITY.md).
 
 ## License
 
