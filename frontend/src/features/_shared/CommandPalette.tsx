@@ -17,8 +17,11 @@ import { useCRDStore } from '@/store/crds'
 import { useActiveContexts, useUIStore } from '@/store/ui'
 import {
   ARGO_GROUP,
+  CERT_MANAGER_GROUP_NAV,
+  FLUX_GROUP,
   GATEWAY_GROUP,
   HELM_GROUP,
+  ISTIO_GROUP,
   KARPENTER_GROUP,
   RESOURCE_GROUPS,
 } from './resourceGroups'
@@ -52,19 +55,31 @@ export function CommandPalette() {
   }, [])
 
   const groups = useMemo(() => {
-    const showGateway = crds.some((c) => c.group === 'gateway.networking.k8s.io')
-    const showArgo = crds.some(
-      (c) => c.group === 'argoproj.io' && c.resource === 'applications',
-    )
-    const showKarpenter = crds.some((c) => c.group === 'karpenter.sh')
+    // Mirror App.tsx: the integration groups only work in single-context mode,
+    // so gate them on !isAggregated too — otherwise ⌘K offers views that bail.
+    const isAggregated = activeContexts.length >= 2
+    const showGateway = !isAggregated && crds.some((c) => c.group === 'gateway.networking.k8s.io')
+    const showArgo =
+      !isAggregated && crds.some((c) => c.group === 'argoproj.io' && c.resource === 'applications')
+    const showKarpenter = !isAggregated && crds.some((c) => c.group === 'karpenter.sh')
+    const showFlux =
+      !isAggregated &&
+      crds.some((c) => c.group === 'kustomize.toolkit.fluxcd.io' && c.resource === 'kustomizations')
+    const showIstio = !isAggregated && crds.some((c) => c.group === 'networking.istio.io')
+    const showCertManager =
+      !isAggregated &&
+      crds.some((c) => c.group === 'cert-manager.io' && c.resource === 'certificates')
     return [
       ...RESOURCE_GROUPS,
       ...(showGateway ? [GATEWAY_GROUP] : []),
+      ...(showIstio ? [ISTIO_GROUP] : []),
+      ...(showCertManager ? [CERT_MANAGER_GROUP_NAV] : []),
       ...(showArgo ? [ARGO_GROUP] : []),
       ...(showKarpenter ? [KARPENTER_GROUP] : []),
+      ...(showFlux ? [FLUX_GROUP] : []),
       HELM_GROUP,
     ]
-  }, [crds])
+  }, [crds, activeContexts])
 
   const activeContextSet = useMemo(() => new Set(activeContexts), [activeContexts])
 
