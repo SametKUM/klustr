@@ -191,13 +191,13 @@ const accessProbeTimeout = 8 * time.Second
 // All per-kind probes fan out concurrently via sync.WaitGroup so total
 // latency is one round-trip, not N. The rest.Config has been bumped to
 // QPS=50/Burst=100 so this burst doesn't trigger client-side throttling.
-func discoverAccess(parent context.Context, cs kubernetes.Interface, candidateNS string) *contextAccess {
+func discoverAccess(parent context.Context, cs kubernetes.Interface, disco discovery.DiscoveryInterface, candidateNS string) *contextAccess {
 	ctx, cancel := context.WithTimeout(parent, accessProbeTimeout)
 	defer cancel()
 
 	out := &contextAccess{kinds: make(map[string]KindAccess, 40)}
 	kinds := watchedKinds()
-	served := servedResources(cs.Discovery())
+	served := servedResources(disco)
 
 	var (
 		wg sync.WaitGroup

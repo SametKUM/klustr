@@ -9,6 +9,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
@@ -69,6 +70,7 @@ type contextWatcher struct {
 	access         *contextAccess                  // per-kind routing decisions; nil ⇒ assume cluster-wide
 	defaultNS      string                          // kubeconfig context.namespace, used as the scoped probe target
 	cs             kubernetes.Interface            // kept around for SelfSubjectAccessReview
+	disco          discovery.DiscoveryInterface    // timeout-bounded; used for construction-time probes
 	gwFactory      gwinformers.SharedInformerFactory
 	refGrantVer    string // served referencegrants version ("v1"/"v1beta1"), "" when not served
 	apiSvcFactory  dynamicinformer.DynamicSharedInformerFactory
@@ -89,17 +91,18 @@ type contextWatcher struct {
 	stopped bool
 }
 
-func newContextWatcher(cs *kubernetes.Clientset, gw gwclient.Interface, dyn dynamic.Interface, defaultNS string, onChange ChangeFunc) *contextWatcher {
+func newContextWatcher(cs *kubernetes.Clientset, disco discovery.DiscoveryInterface, gw gwclient.Interface, dyn dynamic.Interface, defaultNS string, onChange ChangeFunc) *contextWatcher {
 	w := &contextWatcher{
 		cs:        cs,
+		disco:     disco,
 		dyn:       dyn,
 		defaultNS: defaultNS,
 		onChange:  onChange,
 		pending:   make(map[string]struct{}),
 	}
-	if gw != nil && hasGatewayAPIGroup(cs.Discovery()) {
+	if gw != nil && hasGatewayAPIGroup(disco) {
 		w.gwFactory = gwinformers.NewSharedInformerFactory(gw, 0)
-		w.refGrantVer = refGrantsVersion(cs.Discovery())
+		w.refGrantVer = refGrantsVersion(disco)
 	}
 	return w
 }
@@ -176,7 +179,7 @@ func (w *contextWatcher) start(parent context.Context) error {
 	ctx, cancel := context.WithCancel(parent)
 	w.cancel = cancel
 
-	w.access = discoverAccess(ctx, w.cs, w.defaultNS)
+	w.access = discoverAccess(ctx, w.cs, w.disco, w.defaultNS)
 	if w.access.HasAnyClusterWide() {
 		w.factory = informers.NewSharedInformerFactory(w.cs.(*kubernetes.Clientset), 0)
 	}

@@ -11,6 +11,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -22,6 +23,12 @@ import (
 // intermittently flag a healthy cluster; latency classification (ok/slow)
 // happens frontend-side from the measured round trip.
 const pingTimeout = 10 * time.Second
+
+// discoveryTimeout bounds the construction-time discovery probes (Gateway API
+// detection, served-resource set). The discovery client's methods take no
+// context, so without a rest.Config timeout a hung apiserver would stall Watch
+// at watcher construction.
+const discoveryTimeout = 8 * time.Second
 
 type ServerVersion struct {
 	GitVersion string `json:"gitVersion"`
@@ -289,6 +296,12 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string) err
 	if err != nil {
 		return err
 	}
+	discoCfg := *cfg
+	discoCfg.Timeout = discoveryTimeout
+	disco, err := discovery.NewDiscoveryClientForConfig(&discoCfg)
+	if err != nil {
+		return err
+	}
 	defaultNS := m.contextDefaultNamespace(contextName)
 
 	m.mu.Lock()
@@ -296,7 +309,7 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string) err
 	cb := m.onChange
 	m.mu.Unlock()
 
-	w := newContextWatcher(cs, gw, dyn, defaultNS, func(kind string) {
+	w := newContextWatcher(cs, disco, gw, dyn, defaultNS, func(kind string) {
 		if cb != nil {
 			cb(ContextChange{Context: contextName, Kind: kind})
 		}

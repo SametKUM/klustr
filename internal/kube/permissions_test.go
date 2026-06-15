@@ -116,7 +116,7 @@ func TestDiscoverAccess(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cs := fakeSAR(t, tc.allow)
-			got := discoverAccess(context.Background(), cs, tc.candidateNS)
+			got := discoverAccess(context.Background(), cs, cs.Discovery(), tc.candidateNS)
 			for kind, want := range tc.expect {
 				gotAccess := got.For(kind)
 				if gotAccess.Mode != want.Mode {
@@ -139,7 +139,7 @@ func TestDiscoverAccessUnservedKindDenied(t *testing.T) {
 	cs.Resources = []*metav1.APIResourceList{
 		{GroupVersion: "v1", APIResources: []metav1.APIResource{{Name: "pods"}}},
 	}
-	got := discoverAccess(context.Background(), cs, "")
+	got := discoverAccess(context.Background(), cs, cs.Discovery(), "")
 	if got.For("Pod").Mode != AccessCluster {
 		t.Errorf("served Pod should be cluster-wide: got %v", got.For("Pod").Mode)
 	}
