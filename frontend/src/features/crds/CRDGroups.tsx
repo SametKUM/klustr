@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { crdKey } from '@/store/crds'
 import type { CRDInfo } from '@/lib/api'
+import { ROOT_LABEL, SUBGROUP_PREFIX, groupByAPIGroup } from './crdGrouping'
 
 type Props = {
   crds: CRDInfo[]
@@ -10,9 +11,6 @@ type Props = {
   selectedCRDKey: string | null
   onSelect: (key: string | null) => void
 }
-
-const ROOT_LABEL = 'root'
-const SUBGROUP_PREFIX = 'group:'
 
 export function CRDGroups({
   crds,
@@ -92,25 +90,4 @@ export function CRDGroups({
       )}
     </div>
   )
-}
-
-type GroupedCRDs = {
-  group: string
-  crds: CRDInfo[]
-}
-
-function groupByAPIGroup(crds: CRDInfo[]): GroupedCRDs[] {
-  const map = new Map<string, CRDInfo[]>()
-  for (const c of crds) {
-    const list = map.get(c.group) ?? []
-    list.push(c)
-    map.set(c.group, list)
-  }
-  const out: GroupedCRDs[] = []
-  for (const [group, list] of map) {
-    list.sort((a, b) => a.kind.localeCompare(b.kind))
-    out.push({ group, crds: list })
-  }
-  out.sort((a, b) => a.group.localeCompare(b.group))
-  return out
 }

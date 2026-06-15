@@ -68,6 +68,7 @@ import { OverviewView } from '@/features/overview/OverviewView'
 import { WorkloadsOverviewView } from '@/features/overview/WorkloadsOverviewView'
 import { CustomResourceView } from '@/features/crds/CustomResourceView'
 import { CRDGroups } from '@/features/crds/CRDGroups'
+import { orderedCRDKeys } from '@/features/crds/crdGrouping'
 import { ApplicationsView } from '@/features/argocd/ApplicationsView'
 import { AppProjectsView } from '@/features/argocd/AppProjectsView'
 import { ApplicationSetsView } from '@/features/argocd/ApplicationSetsView'
@@ -331,6 +332,8 @@ function groupViews(group: ResourceGroup): ResourceView[] {
   return group.items.map((i) => i.view).filter((v): v is ResourceView => v !== undefined)
 }
 
+type NavEntry = { kind: 'view'; view: ResourceView } | { kind: 'crd'; key: string }
+
 function isEditableTarget(t: EventTarget | null): boolean {
   if (!(t instanceof HTMLElement)) return false
   if (t.isContentEditable) return true
@@ -434,6 +437,17 @@ function App() {
   const navViews = useMemo<ResourceView[]>(() => visibleGroups.flatMap(groupViews), [
     visibleGroups,
   ])
+  // Builtin views followed by the currently-visible CRD entries, in sidebar
+  // order, so arrow navigation is continuous across both and stays anchored to
+  // the active CRD instead of a stale builtin view.
+  const navEntries = useMemo<NavEntry[]>(() => {
+    const views: NavEntry[] = navViews.map((view) => ({ kind: 'view', view }))
+    const crdKeys: NavEntry[] =
+      sidebarMode === 'expanded'
+        ? orderedCRDKeys(crds, expandedCRDGroups).map((key) => ({ kind: 'crd', key }))
+        : []
+    return [...views, ...crdKeys]
+  }, [navViews, crds, expandedCRDGroups, sidebarMode])
 
   useEffect(() => {
     activeNavItemRef.current?.scrollIntoView({ block: 'nearest' })
@@ -444,16 +458,20 @@ function App() {
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
       if (isEditableTarget(e.target)) return
+      if (navEntries.length === 0) return
       e.preventDefault()
-      const current = navViews.indexOf(selectedView)
+      const current = selectedCRDKey
+        ? navEntries.findIndex((en) => en.kind === 'crd' && en.key === selectedCRDKey)
+        : navEntries.findIndex((en) => en.kind === 'view' && en.view === selectedView)
       const start = current >= 0 ? current : 0
       const delta = e.key === 'ArrowDown' ? 1 : -1
-      const next = (start + delta + navViews.length) % navViews.length
-      setSelectedView(navViews[next])
+      const next = navEntries[(start + delta + navEntries.length) % navEntries.length]
+      if (next.kind === 'view') setSelectedView(next.view)
+      else setSelectedCRD(next.key)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [navViews, selectedView, setSelectedView])
+  }, [navEntries, selectedView, selectedCRDKey, setSelectedView, setSelectedCRD])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
