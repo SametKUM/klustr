@@ -53,10 +53,11 @@ export function WorkloadsOverviewView() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null)
   const [query, setQuery] = useState('')
   const debounceRef = useRef<number | null>(null)
+  const epochRef = useRef(0)
 
   const pull = useCallback(() => {
     if (activeContexts.length === 0) return
-    let cancelled = false
+    const epoch = epochRef.current
 
     const filterByNs = <T extends { namespace: string }>(list: T[]): T[] =>
       multi ? list.filter((r) => matches(r.namespace)) : list
@@ -103,7 +104,7 @@ export function WorkloadsOverviewView() {
 
     Promise.all(fetches)
       .then((results) => {
-        if (cancelled) return
+        if (epoch !== epochRef.current) return
         const mergedPods: PodInfo[] = []
         const mergedDeployments: DeploymentInfo[] = []
         const mergedStatefulSets: StatefulSetInfo[] = []
@@ -143,10 +144,6 @@ export function WorkloadsOverviewView() {
       .catch(() => {
         /* per-context errors handled above */
       })
-
-    return () => {
-      cancelled = true
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctxKey, apiNamespace, matches, multi])
 
@@ -163,7 +160,7 @@ export function WorkloadsOverviewView() {
       setEvents([])
       return
     }
-    const cleanup = pull()
+    pull()
 
     const scheduleSoon = () => {
       if (debounceRef.current !== null) return
@@ -191,13 +188,13 @@ export function WorkloadsOverviewView() {
     )
 
     return () => {
+      epochRef.current++
       window.clearInterval(id)
       if (debounceRef.current !== null) {
         window.clearTimeout(debounceRef.current)
         debounceRef.current = null
       }
       unsubs.forEach((u) => u())
-      if (cleanup) cleanup()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctxKey, pull])
