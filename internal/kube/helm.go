@@ -440,7 +440,7 @@ func (h *helmManager) Upgrade(ctx context.Context, opts HelmInstallOptions) (*He
 }
 
 // Rollback restores a previous revision.
-func (h *helmManager) Rollback(contextName, namespace, name string, revision int, wait bool) error {
+func (h *helmManager) Rollback(ctx context.Context, contextName, namespace, name string, revision int, wait bool) error {
 	cfg, err := h.configFor(contextName, namespace)
 	if err != nil {
 		return err
@@ -450,19 +450,37 @@ func (h *helmManager) Rollback(contextName, namespace, name string, revision int
 	rb.Wait = wait
 	rb.Timeout = resolveHelmTimeout(0, wait)
 	rb.MaxHistory = helmMaxHistory
-	return rb.Run(name)
+	return runHelmWithContext(ctx, func() error { return rb.Run(name) })
 }
 
 // Uninstall deletes a release; keepHistory preserves the release history.
-func (h *helmManager) Uninstall(contextName, namespace, name string, keepHistory bool) error {
+func (h *helmManager) Uninstall(ctx context.Context, contextName, namespace, name string, keepHistory bool) error {
 	cfg, err := h.configFor(contextName, namespace)
 	if err != nil {
 		return err
 	}
 	un := action.NewUninstall(cfg)
 	un.KeepHistory = keepHistory
-	_, err = un.Run(name)
-	return err
+	return runHelmWithContext(ctx, func() error {
+		_, err := un.Run(name)
+		return err
+	})
+}
+
+// runHelmWithContext runs a blocking Helm action and returns as soon as it
+// finishes or ctx is cancelled. The Helm v3 Rollback/Uninstall actions take no
+// context, so on cancel the action keeps running until its own timeout; the
+// caller (a quit) is unblocked immediately, and the leaked goroutine dies with
+// the process. fn must not touch shared state after returning.
+func runHelmWithContext(ctx context.Context, fn func() error) error {
+	done := make(chan error, 1)
+	go func() { done <- fn() }()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-done:
+		return err
+	}
 }
 
 // --- repos + search -----------------------------------------------------

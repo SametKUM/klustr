@@ -57,24 +57,24 @@ func (m *ClientManager) HelmUpgrade(ctx context.Context, opts HelmInstallOptions
 	return m.helm.Upgrade(ctx, opts)
 }
 
-func (m *ClientManager) HelmRollback(contextName, namespace, name string, revision int, wait bool) error {
+func (m *ClientManager) HelmRollback(ctx context.Context, contextName, namespace, name string, revision int, wait bool) error {
 	if err := m.assertWritable(contextName); err != nil {
 		return err
 	}
 	if m.helm == nil {
 		return fmt.Errorf("helm subsystem unavailable")
 	}
-	return m.helm.Rollback(contextName, namespace, name, revision, wait)
+	return m.helm.Rollback(ctx, contextName, namespace, name, revision, wait)
 }
 
-func (m *ClientManager) HelmUninstall(contextName, namespace, name string, keepHistory bool) error {
+func (m *ClientManager) HelmUninstall(ctx context.Context, contextName, namespace, name string, keepHistory bool) error {
 	if err := m.assertWritable(contextName); err != nil {
 		return err
 	}
 	if m.helm == nil {
 		return fmt.Errorf("helm subsystem unavailable")
 	}
-	return m.helm.Uninstall(contextName, namespace, name, keepHistory)
+	return m.helm.Uninstall(ctx, contextName, namespace, name, keepHistory)
 }
 
 func (m *ClientManager) HelmRepos() ([]HelmRepoInfo, error) {

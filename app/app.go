@@ -901,11 +901,11 @@ func (a *App) UpgradeHelmRelease(opts kube.HelmInstallOptions) (*kube.HelmDryRun
 }
 
 func (a *App) RollbackHelmRelease(contextName, namespace, name string, revision int, wait bool) error {
-	return a.clients.HelmRollback(contextName, namespace, name, revision, wait)
+	return a.clients.HelmRollback(a.ctx, contextName, namespace, name, revision, wait)
 }
 
 func (a *App) UninstallHelmRelease(contextName, namespace, name string, keepHistory bool) error {
-	return a.clients.HelmUninstall(contextName, namespace, name, keepHistory)
+	return a.clients.HelmUninstall(a.ctx, contextName, namespace, name, keepHistory)
 }
 
 func (a *App) ListHelmRepos() ([]kube.HelmRepoInfo, error) {
