@@ -5,6 +5,7 @@ type Handler = (contextName: string) => void
 
 const handlers = new Map<string, Set<Handler>>()
 let installed = false
+let kubeUnsub: (() => void) | null = null
 
 // Tracks which (context, kind) pairs have produced at least one change event
 // since their watch (re)started. The backend touches every accessible kind once
@@ -24,7 +25,7 @@ function syncKey(contextName: string, kind: string): string {
 function install() {
   if (installed) return
   installed = true
-  EventsOn('kube:change', (contextName: string, kind: string) => {
+  kubeUnsub = EventsOn('kube:change', (contextName: string, kind: string) => {
     // '_access' is not a real kind: the backend emits it after a watch is
     // rebuilt (credential capture/refresh) with the fresh watcher swapped in.
     // Fan it out to every registered handler so self-fetching views (overview,
@@ -71,11 +72,12 @@ export function onKubeChange(kind: string, handler: Handler): () => void {
 
 const pfHandlers = new Set<() => void>()
 let pfInstalled = false
+let pfUnsub: (() => void) | null = null
 
 function installPF() {
   if (pfInstalled) return
   pfInstalled = true
-  EventsOn('pf:update', () => {
+  pfUnsub = EventsOn('pf:update', () => {
     pfHandlers.forEach((h) => h())
   })
 }
@@ -90,12 +92,24 @@ export function onPFUpdate(handler: () => void): () => void {
 
 const credsHandlers = new Set<(status: CredentialStatus) => void>()
 let credsInstalled = false
+let credsUnsub: (() => void) | null = null
 
 function installCreds() {
   if (credsInstalled) return
   credsInstalled = true
-  EventsOn('creds:update', (status: CredentialStatus) => {
+  credsUnsub = EventsOn('creds:update', (status: CredentialStatus) => {
     credsHandlers.forEach((h) => h(status))
+  })
+}
+
+// On a Vite HMR reload this module re-evaluates with fresh `installed` flags,
+// so without tearing down the previous runtime listeners each save would stack
+// another one and fire handlers N times. No-op in production builds.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    kubeUnsub?.()
+    pfUnsub?.()
+    credsUnsub?.()
   })
 }
 
