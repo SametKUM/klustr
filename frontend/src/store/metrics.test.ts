@@ -8,7 +8,7 @@ import {
 } from './metrics'
 
 function reset() {
-  useMetrics.setState({ available: {}, byPodByContext: {} })
+  useMetrics.setState({ available: {}, byPodByContext: {}, byNodeByContext: {} })
 }
 
 const sample: PodMetrics = {
@@ -46,6 +46,16 @@ describe('useMetrics', () => {
     const s = useMetrics.getState()
     expect(s.available.prod).toBe(false)
     expect(s.byPodByContext.prod).toEqual({})
+  })
+
+  it('clearPodMetrics drops pod readings but keeps node metrics and availability', () => {
+    useMetrics.getState().setPodMetrics('prod', [sample])
+    useMetrics.getState().setNodeMetrics('prod', [{ name: 'n1', cpuMC: 100, memB: 2048 }])
+    useMetrics.getState().clearPodMetrics('prod')
+    const s = useMetrics.getState()
+    expect(s.byPodByContext.prod).toBeUndefined()
+    expect(s.available.prod).toBe(true)
+    expect(s.byNodeByContext.prod['n1']).toBeDefined()
   })
 
   it('clearContext removes only the target context', () => {

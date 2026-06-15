@@ -9,7 +9,6 @@ const POLL_MS = 15_000
 // each node's allocatable from the informer-backed NodeInfo.
 export function useNodeMetricsPoll(contexts: readonly string[]) {
   const setNodeMetrics = useMetrics((s) => s.setNodeMetrics)
-  const clearContext = useMetrics((s) => s.clearContext)
   const ctxKey = contexts.join('|')
 
   useEffect(() => {
@@ -38,5 +37,5 @@ export function useNodeMetricsPoll(contexts: readonly string[]) {
       for (const id of intervalIds) window.clearInterval(id)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ctxKey is the stable dep; the setters are store-stable
-  }, [ctxKey, setNodeMetrics, clearContext])
+  }, [ctxKey, setNodeMetrics])
 }

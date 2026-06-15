@@ -11,6 +11,7 @@ type MetricsState = {
   setPodMetrics: (ctx: string, list: PodMetrics[]) => void
   setNodeMetrics: (ctx: string, list: NodeMetrics[]) => void
   setUnavailable: (ctx: string) => void
+  clearPodMetrics: (ctx: string) => void
   clearContext: (ctx: string) => void
   reset: () => void
 }
@@ -82,6 +83,13 @@ export const useMetrics = create<MetricsState>((set) => ({
       available: { ...s.available, [ctx]: false },
       byPodByContext: { ...s.byPodByContext, [ctx]: {} },
     })),
+  clearPodMetrics: (ctx) =>
+    set((s) => {
+      if (!(ctx in s.byPodByContext)) return s
+      const nextBy = { ...s.byPodByContext }
+      delete nextBy[ctx]
+      return { byPodByContext: nextBy }
+    }),
   clearContext: (ctx) =>
     set((s) => {
       const nextAvail = { ...s.available }

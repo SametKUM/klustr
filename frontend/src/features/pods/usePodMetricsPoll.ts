@@ -7,7 +7,7 @@ const POLL_MS = 15_000
 export function usePodMetricsPoll(contexts: readonly string[], namespace: string) {
   const setPodMetrics = useMetrics((s) => s.setPodMetrics)
   const setUnavailable = useMetrics((s) => s.setUnavailable)
-  const clearContext = useMetrics((s) => s.clearContext)
+  const clearPodMetrics = useMetrics((s) => s.clearPodMetrics)
   const ctxKey = contexts.join('|')
 
   useEffect(() => {
@@ -34,9 +34,9 @@ export function usePodMetricsPoll(contexts: readonly string[], namespace: string
     }
     return () => {
       cancelled = true
-      for (const ctx of contexts) clearContext(ctx)
+      for (const ctx of contexts) clearPodMetrics(ctx)
       for (const id of intervalIds) window.clearInterval(id)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctxKey, namespace, setPodMetrics, setUnavailable, clearContext])
+  }, [ctxKey, namespace, setPodMetrics, setUnavailable, clearPodMetrics])
 }
