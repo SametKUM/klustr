@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/yaml"
@@ -815,14 +816,18 @@ func notesFrom(r *release.Release) string {
 const HelmChangeKind = "HelmRelease"
 
 func maybeTouchHelm(obj any, w *contextWatcher) {
+	// A delete can arrive wrapped in a tombstone; unwrapping it is what lets a
+	// release uninstalled during a watch gap still trigger a UI refresh.
+	if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+		obj = tombstone.Obj
+	}
 	s, ok := obj.(*corev1.Secret)
 	if !ok {
 		return
 	}
-	if string(s.Type) != "helm.sh/release.v1" {
-		return
+	if isHelmReleaseSecret(s) {
+		w.touch(HelmChangeKind)
 	}
-	w.touch(HelmChangeKind)
 }
 
 // Compile-time assertion that restClientGetter satisfies Helm's
