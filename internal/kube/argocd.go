@@ -302,9 +302,11 @@ const argoResourcesFinalizer = "resources-finalizer.argocd.argoproj.io"
 // cascade behaviour, matching what the Argo CD UI exposes.
 //
 //   - "foreground"    → add finalizer, DELETE with PropagationForeground
-//     (the API server blocks until Argo's cleanup completes; safest).
+//     (the DELETE returns immediately; the Application lingers with a
+//     deletionTimestamp until its managed resources are gone, then is
+//     removed — safest, and you can watch cleanup progress).
 //   - "background"    → add finalizer, DELETE with PropagationBackground
-//     (returns immediately; Argo cleans up asynchronously).
+//     (the Application is removed right away; Argo cleans up asynchronously).
 //   - "non-cascading" → strip the finalizer if present, DELETE with
 //     PropagationOrphan; the Application CR is removed, the managed
 //     resources stay in the cluster.
