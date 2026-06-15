@@ -206,6 +206,10 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
               const rawLine = rawPrefix + line
               if (!predicateRef.current(rawLine)) return
               const styled = prefix + highlightLogContent(line)
+              // Capture the raw line for Save regardless of pause; pausing only
+              // defers rendering to the terminal, not capture.
+              visibleLinesRef.current.push(rawLine)
+              if (visibleLinesRef.current.length > 100_000) visibleLinesRef.current.shift()
               if (pausedRef.current) {
                 bufferRef.current.push(styled)
                 if (bufferRef.current.length > 10_000) bufferRef.current.shift()
@@ -213,8 +217,6 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
                 return
               }
               term.writeln(styled)
-              visibleLinesRef.current.push(rawLine)
-              if (visibleLinesRef.current.length > 100_000) visibleLinesRef.current.shift()
             })
             const unsubClose = EventsOn(`pod:logs:close:${id}`, (msg: string) => {
               if (msg) {

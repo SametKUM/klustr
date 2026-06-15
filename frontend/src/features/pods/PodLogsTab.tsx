@@ -135,6 +135,7 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
 
     term.clear()
     term.writeln(`\x1b[2m# streaming ${container} (last ${TAIL_LINES} lines)\x1b[0m`)
+    setError(null)
 
     let cancelled = false
     let sessionId: string | null = null
@@ -153,6 +154,10 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
         unsubLine = EventsOn(`pod:logs:line:${id}`, (line: string) => {
           if (!predicateRef.current(line)) return
           const styled = highlightLogContent(line)
+          // Record the raw line for Save regardless of pause; pausing only
+          // defers rendering to the terminal, not capture.
+          visibleLinesRef.current.push(line)
+          if (visibleLinesRef.current.length > 50_000) visibleLinesRef.current.shift()
           if (pausedRef.current) {
             bufferRef.current.push(styled)
             if (bufferRef.current.length > 5_000) bufferRef.current.shift()
@@ -160,8 +165,6 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
             return
           }
           term.writeln(styled)
-          visibleLinesRef.current.push(line)
-          if (visibleLinesRef.current.length > 50_000) visibleLinesRef.current.shift()
         })
         unsubClose = EventsOn(`pod:logs:close:${id}`, (msg: string) => {
           setStreaming(false)
