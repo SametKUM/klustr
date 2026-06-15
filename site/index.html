@@ -78,6 +78,7 @@
         <nav class="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
           <a href="#features" class="transition-colors hover:text-foreground">Features</a>
           <a href="#screenshots" class="transition-colors hover:text-foreground">Screenshots</a>
+          <a href="#docs" class="transition-colors hover:text-foreground">Docs</a>
           <a href="#install" class="transition-colors hover:text-foreground">Install</a>
           <a
             href="https://github.com/SametKUM/klustr"
@@ -326,6 +327,72 @@
         </div>
       </section>
 
+      <!-- ── Docs ───────────────────────────────────────────────────── -->
+      <section id="docs" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16">
+        <div class="reveal flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div class="max-w-2xl">
+            <p class="eyebrow">Documentation</p>
+            <h2 class="mt-3 text-3xl font-semibold sm:text-4xl">Guides for getting the most out of Klustr</h2>
+            <p class="mt-4 text-muted-foreground">
+              Task-focused walkthroughs for connecting, debugging and driving your
+              GitOps stack. Each guide opens on GitHub.
+            </p>
+          </div>
+          <a
+            href="https://github.com/SametKUM/klustr/tree/main/docs/guide"
+            target="_blank"
+            rel="noreferrer"
+            class="btn btn-ghost shrink-0 gap-2 px-4 py-2 text-sm"
+          >
+            All guides
+            <i data-lucide="arrow-up-right"></i>
+          </a>
+        </div>
+
+        <div class="reveal mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <a href="https://github.com/SametKUM/klustr/blob/main/docs/guide/getting-started.md" target="_blank" rel="noreferrer" class="feature group block p-6">
+            <div class="feature-icon mb-4"><i data-lucide="rocket"></i></div>
+            <h3 class="flex items-center gap-1.5 font-semibold">Getting started <i data-lucide="arrow-up-right" class="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground"></i></h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">Connect to a context, select namespaces, and use read-only mode to browse production safely.</p>
+          </a>
+          <a href="https://github.com/SametKUM/klustr/blob/main/docs/guide/multi-context.md" target="_blank" rel="noreferrer" class="feature group block p-6">
+            <div class="feature-icon mb-4"><i data-lucide="layers"></i></div>
+            <h3 class="flex items-center gap-1.5 font-semibold">Multi-context &amp; aggregated mode <i data-lucide="arrow-up-right" class="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground"></i></h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">View 2+ clusters as one, save named groups, and tag contexts with the top-bar color stripe.</p>
+          </a>
+          <a href="https://github.com/SametKUM/klustr/blob/main/docs/guide/credential-helpers.md" target="_blank" rel="noreferrer" class="feature group block p-6">
+            <div class="feature-icon mb-4"><i data-lucide="key-round"></i></div>
+            <h3 class="flex items-center gap-1.5 font-semibold">Credential helpers <i data-lucide="arrow-up-right" class="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground"></i></h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">Make aws-vault and other exec plugins work when Klustr is launched from the Dock or Finder.</p>
+          </a>
+          <a href="https://github.com/SametKUM/klustr/blob/main/docs/guide/workloads-and-debugging.md" target="_blank" rel="noreferrer" class="feature group block p-6">
+            <div class="feature-icon mb-4"><i data-lucide="scroll-text"></i></div>
+            <h3 class="flex items-center gap-1.5 font-semibold">Workloads &amp; debugging <i data-lucide="arrow-up-right" class="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground"></i></h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">Logs, exec, port-forward, a root node shell, events and pod diagnosis — all in the app.</p>
+          </a>
+          <a href="https://github.com/SametKUM/klustr/blob/main/docs/guide/helm.md" target="_blank" rel="noreferrer" class="feature group block p-6">
+            <div class="feature-icon mb-4"><i data-lucide="ship"></i></div>
+            <h3 class="flex items-center gap-1.5 font-semibold">Helm <i data-lucide="arrow-up-right" class="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground"></i></h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">Browse releases and run install / upgrade / rollback / uninstall with a dry-run preview first.</p>
+          </a>
+          <a href="https://github.com/SametKUM/klustr/blob/main/docs/guide/gitops.md" target="_blank" rel="noreferrer" class="feature group block p-6">
+            <div class="feature-icon mb-4"><i data-lucide="git-merge"></i></div>
+            <h3 class="flex items-center gap-1.5 font-semibold">GitOps: Argo CD &amp; Flux <i data-lucide="arrow-up-right" class="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground"></i></h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">Sync, refresh, reconcile and suspend through the Kubernetes API — no vendor CLIs.</p>
+          </a>
+          <a href="https://github.com/SametKUM/klustr/blob/main/docs/guide/gateway-api.md" target="_blank" rel="noreferrer" class="feature group block p-6">
+            <div class="feature-icon mb-4"><i data-lucide="waypoints"></i></div>
+            <h3 class="flex items-center gap-1.5 font-semibold">Gateway API <i data-lucide="arrow-up-right" class="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground"></i></h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">Read Gateways, routes and RouteParentStatus to spot a misrouted parent or rejected backend.</p>
+          </a>
+          <a href="https://github.com/SametKUM/klustr/blob/main/docs/guide/custom-resources.md" target="_blank" rel="noreferrer" class="feature group block p-6">
+            <div class="feature-icon mb-4"><i data-lucide="puzzle"></i></div>
+            <h3 class="flex items-center gap-1.5 font-semibold">Custom Resources <i data-lucide="arrow-up-right" class="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground"></i></h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">How CRDs are auto-discovered, the generic browser, and the promoted typed integrations.</p>
+          </a>
+        </div>
+      </section>
+
       <!-- ── Install (full) ─────────────────────────────────────────── -->
       <section id="install" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16">
         <div class="reveal max-w-2xl">
@@ -464,6 +531,7 @@
         <div class="grid grid-cols-2 gap-x-12 gap-y-2 text-sm sm:grid-cols-3">
           <a href="https://github.com/SametKUM/klustr" class="text-muted-foreground transition-colors hover:text-foreground">GitHub</a>
           <a href="https://github.com/SametKUM/klustr/releases" class="text-muted-foreground transition-colors hover:text-foreground">Releases</a>
+          <a href="https://github.com/SametKUM/klustr/tree/main/docs/guide" class="text-muted-foreground transition-colors hover:text-foreground">Docs</a>
           <a href="#install" class="text-muted-foreground transition-colors hover:text-foreground">Install</a>
           <a href="https://github.com/SametKUM/klustr/blob/main/LICENSE" class="text-muted-foreground transition-colors hover:text-foreground">License</a>
           <a href="https://github.com/SametKUM/klustr/blob/main/CONTRIBUTING.md" class="text-muted-foreground transition-colors hover:text-foreground">Contributing</a>
