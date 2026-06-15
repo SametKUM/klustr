@@ -1057,7 +1057,9 @@ func (a *App) SaveTextFile(defaultName, content string) (string, error) {
 	if path == "" {
 		return "", nil
 	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	// Exports routinely contain Secret manifests or revealed values, so keep
+	// them owner-only rather than world-readable.
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		return "", errors.New("write failed: " + err.Error())
 	}
 	return path, nil
