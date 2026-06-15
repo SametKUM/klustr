@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/util/retry"
 )
 
 // ArgoApplicationInfo is the row shape the Argo Applications view renders.
@@ -60,6 +61,20 @@ func extractArgoApplication(obj *unstructured.Unstructured) ArgoApplicationInfo 
 	repoURL, _, _ := unstructured.NestedString(obj.Object, "spec", "source", "repoURL")
 	path, _, _ := unstructured.NestedString(obj.Object, "spec", "source", "path")
 	targetRev, _, _ := unstructured.NestedString(obj.Object, "spec", "source", "targetRevision")
+	// Multi-source Applications carry spec.sources (a list) instead of the
+	// singular spec.source; surface the first source so the row isn't blank.
+	if repoURL == "" {
+		if sources, found, _ := unstructured.NestedSlice(obj.Object, "spec", "sources"); found && len(sources) > 0 {
+			if first, ok := sources[0].(map[string]any); ok {
+				repoURL, _ = first["repoURL"].(string)
+				path, _ = first["path"].(string)
+				targetRev, _ = first["targetRevision"].(string)
+				if path == "" {
+					path, _ = first["chart"].(string)
+				}
+			}
+		}
+	}
 	autoSync, selfHeal, prune := false, false, false
 	if automated, found, _ := unstructured.NestedMap(obj.Object, "spec", "syncPolicy", "automated"); found && automated != nil {
 		autoSync = true
@@ -336,30 +351,38 @@ func (m *ClientManager) DeleteArgoApplication(ctx context.Context, contextName, 
 // Application. It's a Get → mutate → Update because the unstructured
 // dynamic client can't strategic-merge a list field cleanly.
 func setArgoFinalizer(ctx context.Context, resource dynamic.ResourceInterface, name string, want bool) error {
-	obj, err := resource.Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("get application %s: %w", name, err)
-	}
-	finalizers := obj.GetFinalizers()
-	has := false
-	idx := -1
-	for i, f := range finalizers {
-		if f == argoResourcesFinalizer {
-			has = true
-			idx = i
-			break
+	// The Argo controller writes .status frequently, so a bare Get → Update
+	// races it and 409s; retry on conflict with a fresh Get each round. The
+	// callback returns raw errors so RetryOnConflict can detect the 409 (it
+	// inspects the error directly and won't unwrap a wrapped one).
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		obj, err := resource.Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
-	}
-	switch {
-	case want && !has:
-		obj.SetFinalizers(append(finalizers, argoResourcesFinalizer))
-	case !want && has:
-		obj.SetFinalizers(append(finalizers[:idx], finalizers[idx+1:]...))
-	default:
-		return nil
-	}
-	if _, err := resource.Update(ctx, obj, metav1.UpdateOptions{}); err != nil {
-		return fmt.Errorf("update finalizers on %s: %w", name, err)
+		finalizers := obj.GetFinalizers()
+		has := false
+		idx := -1
+		for i, f := range finalizers {
+			if f == argoResourcesFinalizer {
+				has = true
+				idx = i
+				break
+			}
+		}
+		switch {
+		case want && !has:
+			obj.SetFinalizers(append(finalizers, argoResourcesFinalizer))
+		case !want && has:
+			obj.SetFinalizers(append(finalizers[:idx], finalizers[idx+1:]...))
+		default:
+			return nil
+		}
+		_, err = resource.Update(ctx, obj, metav1.UpdateOptions{})
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("set finalizer on application %s: %w", name, err)
 	}
 	return nil
 }

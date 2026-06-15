@@ -62,6 +62,44 @@ func TestExtractArgoApplicationDefaults(t *testing.T) {
 	}
 }
 
+func TestExtractArgoApplicationMultiSource(t *testing.T) {
+	obj := &unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"name": "multi", "namespace": "argocd"},
+		"spec": map[string]any{
+			"sources": []any{
+				map[string]any{
+					"repoURL":        "https://github.com/example/repo",
+					"path":           "manifests",
+					"targetRevision": "main",
+				},
+				map[string]any{"repoURL": "https://charts.example.com", "chart": "redis"},
+			},
+		},
+	}}
+	got := extractArgoApplication(obj)
+	if got.RepoURL != "https://github.com/example/repo" {
+		t.Errorf("RepoURL: got %q", got.RepoURL)
+	}
+	if got.Path != "manifests" || got.TargetRevision != "main" {
+		t.Errorf("Path/TargetRevision: got %q / %q", got.Path, got.TargetRevision)
+	}
+}
+
+func TestExtractArgoApplicationMultiSourceChart(t *testing.T) {
+	obj := &unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"name": "chart", "namespace": "argocd"},
+		"spec": map[string]any{
+			"sources": []any{
+				map[string]any{"repoURL": "https://charts.example.com", "chart": "redis", "targetRevision": "18.0.0"},
+			},
+		},
+	}}
+	got := extractArgoApplication(obj)
+	if got.Path != "redis" {
+		t.Errorf("chart source should fall back to chart name for Path: got %q", got.Path)
+	}
+}
+
 func TestExtractArgoApplicationAutomatedWithoutFlags(t *testing.T) {
 	obj := &unstructured.Unstructured{Object: map[string]any{
 		"metadata": map[string]any{"name": "auto", "namespace": "argocd"},
