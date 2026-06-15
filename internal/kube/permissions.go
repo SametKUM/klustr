@@ -8,6 +8,7 @@ import (
 	authv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -196,6 +197,7 @@ func discoverAccess(parent context.Context, cs kubernetes.Interface, candidateNS
 
 	out := &contextAccess{kinds: make(map[string]KindAccess, 40)}
 	kinds := watchedKinds()
+	served := servedResources(cs.Discovery())
 
 	var (
 		wg sync.WaitGroup
@@ -205,7 +207,15 @@ func discoverAccess(parent context.Context, cs kubernetes.Interface, candidateNS
 		wg.Add(1)
 		go func(kind string, gvr schema.GroupVersionResource) {
 			defer wg.Done()
-			mode := probeAccess(ctx, cs, kind, gvr, candidateNS)
+			var mode KindAccess
+			if served != nil && !served[gvr] {
+				// An SSAR can say "allowed" for an RBAC wildcard even when the
+				// apiserver doesn't serve this resource version, which would
+				// 404-loop the informer. Treat unserved kinds as denied.
+				mode = KindAccess{Mode: AccessDenied}
+			} else {
+				mode = probeAccess(ctx, cs, kind, gvr, candidateNS)
+			}
 			mu.Lock()
 			out.kinds[kind] = mode
 			mu.Unlock()
@@ -213,6 +223,28 @@ func discoverAccess(parent context.Context, cs kubernetes.Interface, candidateNS
 	}
 	wg.Wait()
 	return out
+}
+
+// servedResources returns the set of GVRs the apiserver actually serves. A nil
+// result means discovery was unavailable, in which case callers fall back to
+// the SSAR answer alone. Partial discovery (an aggregated API down) still
+// returns usable lists alongside its error, so only a fully empty result bails.
+func servedResources(d discovery.DiscoveryInterface) map[schema.GroupVersionResource]bool {
+	_, lists, _ := d.ServerGroupsAndResources()
+	if len(lists) == 0 {
+		return nil
+	}
+	served := make(map[schema.GroupVersionResource]bool, 256)
+	for _, list := range lists {
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			continue
+		}
+		for _, r := range list.APIResources {
+			served[schema.GroupVersionResource{Group: gv.Group, Version: gv.Version, Resource: r.Name}] = true
+		}
+	}
+	return served
 }
 
 func probeAccess(ctx context.Context, cs kubernetes.Interface, kind string, gvr schema.GroupVersionResource, candidateNS string) KindAccess {

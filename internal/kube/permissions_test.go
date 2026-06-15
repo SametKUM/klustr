@@ -130,6 +130,24 @@ func TestDiscoverAccess(t *testing.T) {
 	}
 }
 
+func TestDiscoverAccessUnservedKindDenied(t *testing.T) {
+	cs := fakeSAR(t, map[string]bool{
+		"list:pods:":          true,
+		"list:deviceclasses:": true, // RBAC wildcard allows it...
+	})
+	// ...but the cluster only serves core/v1, not resource.k8s.io/v1.
+	cs.Resources = []*metav1.APIResourceList{
+		{GroupVersion: "v1", APIResources: []metav1.APIResource{{Name: "pods"}}},
+	}
+	got := discoverAccess(context.Background(), cs, "")
+	if got.For("Pod").Mode != AccessCluster {
+		t.Errorf("served Pod should be cluster-wide: got %v", got.For("Pod").Mode)
+	}
+	if got.For("DeviceClass").Mode != AccessDenied {
+		t.Errorf("unserved DeviceClass should be denied despite SSAR allow: got %v", got.For("DeviceClass").Mode)
+	}
+}
+
 func TestContextAccessHelpers(t *testing.T) {
 	a := &contextAccess{kinds: map[string]KindAccess{
 		"Pod":    {Mode: AccessCluster},
