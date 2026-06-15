@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"runtime/debug"
 	"time"
@@ -348,6 +349,15 @@ func (a *App) RestartWorkload(contextName, kind, namespace, name string) error {
 }
 
 func (a *App) StartPortForward(contextName, namespace, podName string, localPort, remotePort int) (kube.PortForwardInfo, error) {
+	// localPort 0 means "auto-assign an ephemeral port"; remotePort is a real
+	// container port. Reject out-of-range values instead of letting the uint16
+	// conversion silently wrap (e.g. 70000 -> 4464).
+	if localPort < 0 || localPort > 65535 {
+		return kube.PortForwardInfo{}, fmt.Errorf("local port %d out of range (0-65535)", localPort)
+	}
+	if remotePort < 1 || remotePort > 65535 {
+		return kube.PortForwardInfo{}, fmt.Errorf("remote port %d out of range (1-65535)", remotePort)
+	}
 	return a.clients.StartPortForward(contextName, namespace, podName, uint16(localPort), uint16(remotePort))
 }
 
@@ -454,7 +464,19 @@ func (a *App) SendExecInput(sessionID, data string) {
 }
 
 func (a *App) ResizeExec(sessionID string, cols, rows int) {
-	a.clients.ResizeExec(sessionID, uint16(cols), uint16(rows))
+	a.clients.ResizeExec(sessionID, clampDim(cols), clampDim(rows))
+}
+
+// clampDim bounds a terminal dimension to the uint16 range so an absurd value
+// from the frontend can't wrap (uint16(70000) == 4464).
+func clampDim(v int) uint16 {
+	if v < 0 {
+		return 0
+	}
+	if v > 65535 {
+		return 65535
+	}
+	return uint16(v)
 }
 
 func (a *App) StopExec(sessionID string) {
@@ -518,7 +540,7 @@ func (a *App) DrainNode(contextName, nodeName string, force bool) {
 func (a *App) OpenLocalTerminal(contextName string, cols, rows int) (string, error) {
 	gate := newSessionGate()
 	id, err := a.clients.StartLocalTerminal(
-		a.ctx, contextName, uint16(cols), uint16(rows),
+		a.ctx, contextName, clampDim(cols), clampDim(rows),
 		func(data []byte) {
 			if id := gate.wait(); id != "" {
 				runtime.EventsEmit(a.ctx, "term:out:"+id, string(data))
@@ -549,7 +571,7 @@ func (a *App) SendLocalTerminalInput(sessionID, data string) {
 }
 
 func (a *App) ResizeLocalTerminal(sessionID string, cols, rows int) {
-	a.clients.ResizeLocalTerminal(sessionID, uint16(cols), uint16(rows))
+	a.clients.ResizeLocalTerminal(sessionID, clampDim(cols), clampDim(rows))
 }
 
 func (a *App) StopLocalTerminal(sessionID string) {
