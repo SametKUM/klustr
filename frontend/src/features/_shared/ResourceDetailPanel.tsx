@@ -454,7 +454,24 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
       : hasOverview
         ? 'overview'
         : 'yaml'
-  const [tab, setTab] = useState<string>(initialTab)
+  const requestedTab = useUIStore((s) => s.requestedTab)
+  const allowedTabs: string[] = []
+  if (hasOverview) allowedTabs.push('overview')
+  if (isArgoApp) allowedTabs.push('resources', 'history')
+  if (hasKarpenterNodes) allowedTabs.push('nodes')
+  if (isCertManagerCert) allowedTabs.push('requests')
+  if (isCertManagerRequest) allowedTabs.push('orders')
+  if (isCertManagerOrder) allowedTabs.push('challenges')
+  if (hasEvents) allowedTabs.push('events')
+  allowedTabs.push('yaml')
+  const resolveTab = (req: string | null) => (req && allowedTabs.includes(req) ? req : initialTab)
+  const [tab, setTab] = useState<string>(resolveTab(requestedTab))
+  // Re-opening the same CR with a different requested tab doesn't remount this
+  // component (the panel key excludes the tab), so sync like PodTabs does.
+  useEffect(() => {
+    setTab(resolveTab(requestedTab))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- allowedTabs/initialTab derive from the identity deps below
+  }, [resource.kind, resource.namespace, resource.name, resource.gvr?.group, requestedTab])
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
@@ -785,6 +802,12 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
   const initialTab: DetailTab =
     requestedTab && allowed.includes(requestedTab) ? requestedTab : 'overview'
   const [tab, setTab] = useState<DetailTab>(initialTab)
+  // Re-opening the same resource with a different requested tab doesn't remount
+  // this component (the panel key excludes the tab), so sync like PodTabs does.
+  useEffect(() => {
+    setTab(requestedTab && allowed.includes(requestedTab) ? requestedTab : 'overview')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- allowed is derived from the identity deps below
+  }, [resource.kind, resource.namespace, resource.name, requestedTab])
   return (
     <Tabs value={tab} onValueChange={(v) => setTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
