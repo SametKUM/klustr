@@ -15,7 +15,10 @@ let installed = false
 const syncedKinds = new Set<string>()
 
 function syncKey(contextName: string, kind: string): string {
-  return `${contextName} ${kind}`
+  // Newline can't appear in a context name or kind, so it's a safe delimiter:
+  // a space collides (context "a"+kind "b c" vs "a b"+"c", and a "prod" reset
+  // would prefix-match "prod cluster").
+  return `${contextName}\n${kind}`
 }
 
 function install() {
