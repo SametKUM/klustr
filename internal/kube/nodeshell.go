@@ -191,3 +191,23 @@ func deleteNodeShellPod(cs kubernetes.Interface, name string) {
 		_ = cs.CoreV1().Pods(nodeShellNamespace).Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: &noGrace})
 	}()
 }
+
+const nodeShellLabelSelector = "klustr/component=node-shell"
+
+// cleanupStaleNodeShellPods reaps node-shell pods orphaned by an earlier Klustr
+// crash. ActiveDeadlineSeconds only moves a lost pod to Failed; the object then
+// lingers in kube-system forever. Run best-effort on context attach. Only
+// terminated pods (Failed/Succeeded) are deleted so a live session's running
+// pod is never touched.
+func cleanupStaleNodeShellPods(ctx context.Context, cs kubernetes.Interface) {
+	pods, err := cs.CoreV1().Pods(nodeShellNamespace).List(ctx, metav1.ListOptions{LabelSelector: nodeShellLabelSelector})
+	if err != nil {
+		return
+	}
+	for i := range pods.Items {
+		switch pods.Items[i].Status.Phase {
+		case corev1.PodFailed, corev1.PodSucceeded:
+			deleteNodeShellPod(cs, pods.Items[i].Name)
+		}
+	}
+}

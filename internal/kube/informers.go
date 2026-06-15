@@ -221,6 +221,8 @@ func (w *contextWatcher) start(parent context.Context) error {
 	// LISTs up front.
 	w.ensureKind("Namespace")
 	w.ensureKind("Pod")
+
+	go cleanupStaleNodeShellPods(ctx, w.cs)
 	return nil
 }
 
