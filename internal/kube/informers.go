@@ -454,6 +454,12 @@ func (w *contextWatcher) touch(kind string) {
 
 func (w *contextWatcher) flush() {
 	w.mu.Lock()
+	// A timer that already fired can run flush after stop(); don't emit change
+	// events for a detached context.
+	if w.stopped {
+		w.mu.Unlock()
+		return
+	}
 	kinds := make([]string, 0, len(w.pending))
 	for k := range w.pending {
 		kinds = append(kinds, k)
