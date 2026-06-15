@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,8 +29,11 @@ func (m *ClientManager) IsMetricsServerKlustrManaged(ctx context.Context, contex
 		return false, err
 	}
 	dep, err := cs.AppsV1().Deployments("kube-system").Get(ctx, "metrics-server", metav1.GetOptions{})
-	if err != nil {
+	if apierrors.IsNotFound(err) {
 		return false, nil
+	}
+	if err != nil {
+		return false, err
 	}
 	if dep.Labels[MetricsServerManagedByLabel] == MetricsServerManagedByValue {
 		return true, nil
