@@ -71,11 +71,13 @@ jobs:
       - name: Resolve version and artifact name
         id: meta
         shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
           else
-            VERSION="${{ inputs.version }}"
+            VERSION="$INPUT_VERSION"
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "name=klustr-${VERSION}-${{ matrix.suffix }}" >> "$GITHUB_OUTPUT"
@@ -85,15 +87,19 @@ jobs:
 
       - name: Build
         shell: bash
+        env:
+          KLUSTR_VERSION: ${{ steps.meta.outputs.version }}
+          BUILD_TAGS: ${{ matrix.tags }}
+          BUILD_PLATFORM: ${{ matrix.platform }}
         run: |
           TAGS_ARG=""
-          if [ -n "${{ matrix.tags }}" ]; then
-            TAGS_ARG="-tags ${{ matrix.tags }}"
+          if [ -n "$BUILD_TAGS" ]; then
+            TAGS_ARG="-tags $BUILD_TAGS"
           fi
           wails build \
             $TAGS_ARG \
-            -platform ${{ matrix.platform }} \
-            -ldflags "-X klustr/app.Version=${{ steps.meta.outputs.version }}" \
+            -platform "$BUILD_PLATFORM" \
+            -ldflags "-X klustr/app.Version=${KLUSTR_VERSION}" \
             -trimpath \
             -clean
 
@@ -317,6 +323,13 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${TAG#v}"
+          # This step only runs for non-prerelease tags, so the version must be
+          # a clean x.y.z. Reject anything else before it reaches the sed
+          # templating below (a '|' would break the s|@VERSION@|...| delimiter).
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Refusing to render PKGBUILD for unexpected version: $VERSION" >&2
+            exit 1
+          fi
           TARBALL="artifacts/klustr-${TAG}-linux-amd64.tar.gz"
           if [ ! -f "$TARBALL" ]; then
             echo "Expected asset $TARBALL not found." >&2
