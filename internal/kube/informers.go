@@ -475,6 +475,7 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 	setProject("ReplicationController", projector(replicationControllerInfoFrom))
 	setProject("Job", projector(jobInfoFrom))
 	setProject("CronJob", projector(cronJobInfoFrom))
+	setProject("ConfigMap", projector(configMapInfoFrom))
 
 	// Secret carries a Helm-release piggyback so the Helm UI updates when a
 	// release Secret lands; that's why this binding sits outside the table.
@@ -483,6 +484,7 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 			return f.Core().V1().Secrets().Informer()
 		},
 		sidecar: func(obj any) { maybeTouchHelm(obj, w) },
+		project: projector(secretInfoFrom),
 	}
 	return out
 }

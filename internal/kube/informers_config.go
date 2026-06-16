@@ -23,6 +23,25 @@ type SecretInfo struct {
 	CreatedAt string `json:"createdAt"`
 }
 
+func configMapInfoFrom(c *corev1.ConfigMap) ConfigMapInfo {
+	return ConfigMapInfo{
+		Name:      c.Name,
+		Namespace: c.Namespace,
+		Keys:      len(c.Data) + len(c.BinaryData),
+		CreatedAt: c.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func secretInfoFrom(s *corev1.Secret) SecretInfo {
+	return SecretInfo{
+		Name:      s.Name,
+		Namespace: s.Namespace,
+		Type:      string(s.Type),
+		Keys:      len(s.Data),
+		CreatedAt: s.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
 func (w *contextWatcher) ConfigMaps(namespace string) []ConfigMapInfo {
 	f := w.factoryFor("ConfigMap")
 	if f == nil {
@@ -43,12 +62,7 @@ func (w *contextWatcher) ConfigMaps(namespace string) []ConfigMapInfo {
 	}
 	out := make([]ConfigMapInfo, 0, len(cms))
 	for _, c := range cms {
-		out = append(out, ConfigMapInfo{
-			Name:      c.Name,
-			Namespace: c.Namespace,
-			Keys:      len(c.Data) + len(c.BinaryData),
-			CreatedAt: c.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, configMapInfoFrom(c))
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Namespace != out[j].Namespace {
@@ -79,13 +93,7 @@ func (w *contextWatcher) Secrets(namespace string) []SecretInfo {
 	}
 	out := make([]SecretInfo, 0, len(secs))
 	for _, s := range secs {
-		out = append(out, SecretInfo{
-			Name:      s.Name,
-			Namespace: s.Namespace,
-			Type:      string(s.Type),
-			Keys:      len(s.Data),
-			CreatedAt: s.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, secretInfoFrom(s))
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Namespace != out[j].Namespace {

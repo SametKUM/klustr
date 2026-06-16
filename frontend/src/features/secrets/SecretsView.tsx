@@ -17,6 +17,7 @@ function shortenSecretType(t: string): string {
 export function SecretsView() {
   const secrets = useResources((s) => s.secrets)
   const setSecrets = useResources((s) => s.setSecrets)
+  const applySecretsDelta = useResources((s) => s.applySecretsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -46,6 +47,7 @@ export function SecretsView() {
       scope="namespaced"
       data={secrets}
       setData={setSecrets}
+      applyDelta={applySecretsDelta}
       fetch={api.listSecrets}
       columns={columns}
       onRowClick={(row, ctx) =>

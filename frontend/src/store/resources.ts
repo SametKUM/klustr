@@ -133,6 +133,8 @@ type ResourcesState = {
   ) => void
   applyJobsDelta: (ctx: string, upserts: JobInfo[], removed: string[]) => void
   applyCronJobsDelta: (ctx: string, upserts: CronJobInfo[], removed: string[]) => void
+  applyConfigMapsDelta: (ctx: string, upserts: ConfigMapInfo[], removed: string[]) => void
+  applySecretsDelta: (ctx: string, upserts: SecretInfo[], removed: string[]) => void
   setDeployments: (ctx: string, list: DeploymentInfo[]) => void
   setServices: (ctx: string, list: ServiceInfo[]) => void
   setConfigMaps: (ctx: string, list: ConfigMapInfo[]) => void
@@ -320,6 +322,10 @@ export const useResources = create<ResourcesState>((set) => ({
     set((s) => ({ jobs: withCtx(s.jobs, ctx, applyDeltaToList(s.jobs[ctx], upserts, removed)) })),
   applyCronJobsDelta: (ctx, upserts, removed) =>
     set((s) => ({ cronJobs: withCtx(s.cronJobs, ctx, applyDeltaToList(s.cronJobs[ctx], upserts, removed)) })),
+  applyConfigMapsDelta: (ctx, upserts, removed) =>
+    set((s) => ({ configMaps: withCtx(s.configMaps, ctx, applyDeltaToList(s.configMaps[ctx], upserts, removed)) })),
+  applySecretsDelta: (ctx, upserts, removed) =>
+    set((s) => ({ secrets: withCtx(s.secrets, ctx, applyDeltaToList(s.secrets[ctx], upserts, removed)) })),
   setDeployments: (ctx, list) => set((s) => ({ deployments: withCtx(s.deployments, ctx, list) })),
   setServices: (ctx, list) => set((s) => ({ services: withCtx(s.services, ctx, list) })),
   setConfigMaps: (ctx, list) => set((s) => ({ configMaps: withCtx(s.configMaps, ctx, list) })),

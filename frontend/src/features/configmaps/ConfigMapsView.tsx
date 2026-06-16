@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<ConfigMapInfo>()
 export function ConfigMapsView() {
   const configMaps = useResources((s) => s.configMaps)
   const setConfigMaps = useResources((s) => s.setConfigMaps)
+  const applyConfigMapsDelta = useResources((s) => s.applyConfigMapsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -36,6 +37,7 @@ export function ConfigMapsView() {
       scope="namespaced"
       data={configMaps}
       setData={setConfigMaps}
+      applyDelta={applyConfigMapsDelta}
       fetch={api.listConfigMaps}
       columns={columns}
       onRowClick={(row, ctx) =>
