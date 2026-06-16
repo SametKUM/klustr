@@ -73,6 +73,11 @@ export type ResourceTableProps<T> = {
   // build a working SelectedResource from it. The builder returns the same
   // object the view's onRowClick selects (alias kind, gvr, extras).
   rowResource?: (row: T, contextName: string) => SelectedResource
+  // Delta-update pilot: when provided, kube:change deltas for this kind apply
+  // incrementally (filtered by the active namespace selection) instead of
+  // refetching the whole list. Falls back to a full refetch on reset/gap and on
+  // the initial load, which stays the source of truth.
+  applyDelta?: (contextName: string, upserts: T[], removed: string[]) => void
 }
 
 function identityKey(ctx: string, r: RowIdentity): string {
@@ -235,6 +240,7 @@ export function ResourceTable<T>({
   defaultSort,
   onRowClick,
   rowResource,
+  applyDelta,
 }: ResourceTableProps<T>) {
   const activeContexts = useActiveContexts()
   const isAggregated = useIsAggregated()
@@ -348,6 +354,11 @@ export function ResourceTable<T>({
   setDataRef.current = setData
   const dataRef = useRef(data)
   dataRef.current = data
+  const applyDeltaRef = useRef(applyDelta)
+  applyDeltaRef.current = applyDelta
+  // Last applied delta generation per context; cleared on each full fetch so the
+  // next delta seeds a fresh baseline, then contiguity is required (gap ⇒ resync).
+  const genRef = useRef<Map<string, number>>(new Map())
 
   const mergedRef = useRef<Tagged<T>[]>([])
   const mergedData = useMemo<Tagged<T>[]>(() => {
@@ -429,6 +440,9 @@ export function ResourceTable<T>({
         const tFetched = import.meta.env.DEV ? performance.now() : 0
         const items = stableList(dataRef.current[ctx], list ?? [])
         setDataRef.current(ctx, items)
+        // A full fetch is the source of truth: clear the delta baseline so the
+        // next delta is accepted and reseeds it.
+        genRef.current.delete(ctx)
         if (import.meta.env.DEV) {
           const n = (list ?? []).length
           // roundtrip = bridge + Go build + JSON parse; apply = stableList diff + setState.
@@ -444,6 +458,7 @@ export function ResourceTable<T>({
       }).catch(() => {
         if (cancelled) return
         setDataRef.current(ctx, [])
+        genRef.current.delete(ctx)
         markLoaded(ctx)
       }).finally(() => {
         const st = inflight.get(ctx)
@@ -456,8 +471,27 @@ export function ResourceTable<T>({
       })
     }
     for (const ctx of activeContexts) reload(ctx)
-    const unsub = onKubeChange(kind, (ctx) => {
-      if (activeContexts.includes(ctx)) reload(ctx)
+    const unsub = onKubeChange(kind, (ctx, delta) => {
+      if (!activeContexts.includes(ctx)) return
+      const apply = applyDeltaRef.current
+      // No delta support for this kind, no payload (e.g. _access fan-out), or an
+      // explicit reset ⇒ full refetch (today's behavior).
+      if (!apply || !delta || delta.reset) {
+        reload(ctx)
+        return
+      }
+      const last = genRef.current.get(ctx)
+      if (last !== undefined && delta.gen !== last + 1) {
+        // Missed or out-of-order batch ⇒ resync from a full fetch.
+        reload(ctx)
+        return
+      }
+      genRef.current.set(ctx, delta.gen)
+      // Deltas are whole-kind; apply only upserts in the active namespace
+      // selection. Removes are unconditional (removing an absent key is a no-op).
+      const ups = delta.upserts as T[]
+      const filtered = ups.filter((u) => query.matches((u as RowIdentity).namespace ?? ''))
+      apply(ctx, filtered, delta.removed)
     })
     // Fallback for kinds that never emit a sync event (e.g. RBAC-denied kinds get
     // no informer at all): stop waiting after a grace period and show the result.
