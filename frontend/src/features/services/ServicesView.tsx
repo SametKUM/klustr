@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<ServiceInfo>()
 export function ServicesView() {
   const services = useResources((s) => s.services)
   const setServices = useResources((s) => s.setServices)
+  const applyServicesDelta = useResources((s) => s.applyServicesDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -50,6 +51,7 @@ export function ServicesView() {
       scope="namespaced"
       data={services}
       setData={setServices}
+      applyDelta={applyServicesDelta}
       fetch={api.listServices}
       columns={columns}
       onRowClick={(row, ctx) =>

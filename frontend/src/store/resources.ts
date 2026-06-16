@@ -135,6 +135,11 @@ type ResourcesState = {
   applyCronJobsDelta: (ctx: string, upserts: CronJobInfo[], removed: string[]) => void
   applyConfigMapsDelta: (ctx: string, upserts: ConfigMapInfo[], removed: string[]) => void
   applySecretsDelta: (ctx: string, upserts: SecretInfo[], removed: string[]) => void
+  applyServicesDelta: (ctx: string, upserts: ServiceInfo[], removed: string[]) => void
+  applyEndpointsDelta: (ctx: string, upserts: EndpointsInfo[], removed: string[]) => void
+  applyEndpointSlicesDelta: (ctx: string, upserts: EndpointSliceInfo[], removed: string[]) => void
+  applyIngressesDelta: (ctx: string, upserts: IngressInfo[], removed: string[]) => void
+  applyNetworkPoliciesDelta: (ctx: string, upserts: NetworkPolicyInfo[], removed: string[]) => void
   setDeployments: (ctx: string, list: DeploymentInfo[]) => void
   setServices: (ctx: string, list: ServiceInfo[]) => void
   setConfigMaps: (ctx: string, list: ConfigMapInfo[]) => void
@@ -326,6 +331,20 @@ export const useResources = create<ResourcesState>((set) => ({
     set((s) => ({ configMaps: withCtx(s.configMaps, ctx, applyDeltaToList(s.configMaps[ctx], upserts, removed)) })),
   applySecretsDelta: (ctx, upserts, removed) =>
     set((s) => ({ secrets: withCtx(s.secrets, ctx, applyDeltaToList(s.secrets[ctx], upserts, removed)) })),
+  applyServicesDelta: (ctx, upserts, removed) =>
+    set((s) => ({ services: withCtx(s.services, ctx, applyDeltaToList(s.services[ctx], upserts, removed)) })),
+  applyEndpointsDelta: (ctx, upserts, removed) =>
+    set((s) => ({ endpoints: withCtx(s.endpoints, ctx, applyDeltaToList(s.endpoints[ctx], upserts, removed)) })),
+  applyEndpointSlicesDelta: (ctx, upserts, removed) =>
+    set((s) => ({
+      endpointSlices: withCtx(s.endpointSlices, ctx, applyDeltaToList(s.endpointSlices[ctx], upserts, removed)),
+    })),
+  applyIngressesDelta: (ctx, upserts, removed) =>
+    set((s) => ({ ingresses: withCtx(s.ingresses, ctx, applyDeltaToList(s.ingresses[ctx], upserts, removed)) })),
+  applyNetworkPoliciesDelta: (ctx, upserts, removed) =>
+    set((s) => ({
+      networkPolicies: withCtx(s.networkPolicies, ctx, applyDeltaToList(s.networkPolicies[ctx], upserts, removed)),
+    })),
   setDeployments: (ctx, list) => set((s) => ({ deployments: withCtx(s.deployments, ctx, list) })),
   setServices: (ctx, list) => set((s) => ({ services: withCtx(s.services, ctx, list) })),
   setConfigMaps: (ctx, list) => set((s) => ({ configMaps: withCtx(s.configMaps, ctx, list) })),

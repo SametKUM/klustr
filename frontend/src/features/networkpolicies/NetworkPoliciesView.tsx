@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<NetworkPolicyInfo>()
 export function NetworkPoliciesView() {
   const policies = useResources((s) => s.networkPolicies)
   const setPolicies = useResources((s) => s.setNetworkPolicies)
+  const applyPoliciesDelta = useResources((s) => s.applyNetworkPoliciesDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -40,6 +41,7 @@ export function NetworkPoliciesView() {
       scope="namespaced"
       data={policies}
       setData={setPolicies}
+      applyDelta={applyPoliciesDelta}
       fetch={api.listNetworkPolicies}
       columns={columns}
       onRowClick={(row, ctx) =>

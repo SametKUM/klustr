@@ -476,6 +476,11 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 	setProject("Job", projector(jobInfoFrom))
 	setProject("CronJob", projector(cronJobInfoFrom))
 	setProject("ConfigMap", projector(configMapInfoFrom))
+	setProject("Service", projector(serviceInfoFrom))
+	setProject("Endpoints", projector(endpointsInfoFrom))
+	setProject("EndpointSlice", projector(endpointSliceInfoFrom))
+	setProject("Ingress", projector(ingressInfoFrom))
+	setProject("NetworkPolicy", projector(networkPolicyInfoFrom))
 
 	// Secret carries a Helm-release piggyback so the Helm UI updates when a
 	// release Secret lands; that's why this binding sits outside the table.

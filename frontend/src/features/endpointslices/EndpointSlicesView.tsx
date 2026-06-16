@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<EndpointSliceInfo>()
 export function EndpointSlicesView() {
   const slices = useResources((s) => s.endpointSlices)
   const setSlices = useResources((s) => s.setEndpointSlices)
+  const applySlicesDelta = useResources((s) => s.applyEndpointSlicesDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -39,6 +40,7 @@ export function EndpointSlicesView() {
       scope="namespaced"
       data={slices}
       setData={setSlices}
+      applyDelta={applySlicesDelta}
       fetch={api.listEndpointSlices}
       columns={columns}
       onRowClick={(row, ctx) =>

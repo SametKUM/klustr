@@ -70,6 +70,112 @@ type IPAddressInfo struct {
 	CreatedAt string `json:"createdAt"`
 }
 
+func serviceInfoFrom(s *corev1.Service) ServiceInfo {
+	return ServiceInfo{
+		Name:       s.Name,
+		Namespace:  s.Namespace,
+		Type:       string(s.Spec.Type),
+		ClusterIP:  serviceClusterIP(s),
+		ExternalIP: serviceExternalIP(s),
+		Ports:      servicePorts(s),
+		CreatedAt:  s.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+//nolint:staticcheck // the Endpoints view intentionally projects the deprecated core/v1 Endpoints kind
+func endpointsInfoFrom(e *corev1.Endpoints) EndpointsInfo {
+	addrs := []string{}
+	for _, s := range e.Subsets {
+		for _, a := range s.Addresses {
+			for _, p := range s.Ports {
+				addrs = append(addrs, fmt.Sprintf("%s:%d", a.IP, p.Port))
+			}
+		}
+	}
+	joined := strings.Join(addrs, ", ")
+	if len(addrs) > 5 {
+		joined = strings.Join(addrs[:5], ", ") + fmt.Sprintf(" +%d more", len(addrs)-5)
+	}
+	return EndpointsInfo{
+		Name:      e.Name,
+		Namespace: e.Namespace,
+		Endpoints: joined,
+		CreatedAt: e.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func endpointSliceInfoFrom(s *discoveryv1.EndpointSlice) EndpointSliceInfo {
+	ports := make([]string, 0, len(s.Ports))
+	for _, p := range s.Ports {
+		port := int32(0)
+		if p.Port != nil {
+			port = *p.Port
+		}
+		proto := ""
+		if p.Protocol != nil {
+			proto = string(*p.Protocol)
+		}
+		ports = append(ports, fmt.Sprintf("%d/%s", port, proto))
+	}
+	return EndpointSliceInfo{
+		Name:        s.Name,
+		Namespace:   s.Namespace,
+		AddressType: string(s.AddressType),
+		Ports:       strings.Join(ports, ","),
+		Endpoints:   len(s.Endpoints),
+		Service:     s.Labels["kubernetes.io/service-name"],
+		CreatedAt:   s.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func ingressInfoFrom(ing *networkingv1.Ingress) IngressInfo {
+	class := ""
+	if ing.Spec.IngressClassName != nil {
+		class = *ing.Spec.IngressClassName
+	}
+	hosts := make([]string, 0, len(ing.Spec.Rules))
+	for _, r := range ing.Spec.Rules {
+		if r.Host != "" {
+			hosts = append(hosts, r.Host)
+		}
+	}
+	addresses := make([]string, 0, len(ing.Status.LoadBalancer.Ingress))
+	for _, lb := range ing.Status.LoadBalancer.Ingress {
+		if lb.IP != "" {
+			addresses = append(addresses, lb.IP)
+		} else if lb.Hostname != "" {
+			addresses = append(addresses, lb.Hostname)
+		}
+	}
+	ports := "80"
+	if len(ing.Spec.TLS) > 0 {
+		ports = "80, 443"
+	}
+	return IngressInfo{
+		Name:      ing.Name,
+		Namespace: ing.Namespace,
+		Class:     class,
+		Hosts:     strings.Join(hosts, ", "),
+		Address:   strings.Join(addresses, ", "),
+		Ports:     ports,
+		CreatedAt: ing.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func networkPolicyInfoFrom(p *networkingv1.NetworkPolicy) NetworkPolicyInfo {
+	types := make([]string, 0, len(p.Spec.PolicyTypes))
+	for _, t := range p.Spec.PolicyTypes {
+		types = append(types, string(t))
+	}
+	return NetworkPolicyInfo{
+		Name:        p.Name,
+		Namespace:   p.Namespace,
+		PodSelector: formatLabelSelector(&p.Spec.PodSelector),
+		PolicyTypes: strings.Join(types, ","),
+		CreatedAt:   p.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
 func (w *contextWatcher) Services(namespace string) []ServiceInfo {
 	f := w.factoryFor("Service")
 	if f == nil {
@@ -90,22 +196,9 @@ func (w *contextWatcher) Services(namespace string) []ServiceInfo {
 	}
 	out := make([]ServiceInfo, 0, len(svcs))
 	for _, s := range svcs {
-		out = append(out, ServiceInfo{
-			Name:       s.Name,
-			Namespace:  s.Namespace,
-			Type:       string(s.Spec.Type),
-			ClusterIP:  serviceClusterIP(s),
-			ExternalIP: serviceExternalIP(s),
-			Ports:      servicePorts(s),
-			CreatedAt:  s.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, serviceInfoFrom(s))
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Namespace != out[j].Namespace {
-			return out[i].Namespace < out[j].Namespace
-		}
-		return out[i].Name < out[j].Name
-	})
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -129,24 +222,7 @@ func (w *contextWatcher) ListEndpoints(namespace string) []EndpointsInfo {
 	}
 	out := make([]EndpointsInfo, 0, len(eps))
 	for _, e := range eps {
-		addrs := []string{}
-		for _, s := range e.Subsets {
-			for _, a := range s.Addresses {
-				for _, p := range s.Ports {
-					addrs = append(addrs, fmt.Sprintf("%s:%d", a.IP, p.Port))
-				}
-			}
-		}
-		joined := strings.Join(addrs, ", ")
-		if len(addrs) > 5 {
-			joined = strings.Join(addrs[:5], ", ") + fmt.Sprintf(" +%d more", len(addrs)-5)
-		}
-		out = append(out, EndpointsInfo{
-			Name:      e.Name,
-			Namespace: e.Namespace,
-			Endpoints: joined,
-			CreatedAt: e.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, endpointsInfoFrom(e))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
@@ -172,27 +248,7 @@ func (w *contextWatcher) EndpointSlices(namespace string) []EndpointSliceInfo {
 	}
 	out := make([]EndpointSliceInfo, 0, len(slices))
 	for _, s := range slices {
-		ports := make([]string, 0, len(s.Ports))
-		for _, p := range s.Ports {
-			port := int32(0)
-			if p.Port != nil {
-				port = *p.Port
-			}
-			proto := ""
-			if p.Protocol != nil {
-				proto = string(*p.Protocol)
-			}
-			ports = append(ports, fmt.Sprintf("%d/%s", port, proto))
-		}
-		out = append(out, EndpointSliceInfo{
-			Name:        s.Name,
-			Namespace:   s.Namespace,
-			AddressType: string(s.AddressType),
-			Ports:       strings.Join(ports, ","),
-			Endpoints:   len(s.Endpoints),
-			Service:     s.Labels["kubernetes.io/service-name"],
-			CreatedAt:   s.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, endpointSliceInfoFrom(s))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
@@ -218,37 +274,7 @@ func (w *contextWatcher) Ingresses(namespace string) []IngressInfo {
 	}
 	out := make([]IngressInfo, 0, len(ings))
 	for _, ing := range ings {
-		class := ""
-		if ing.Spec.IngressClassName != nil {
-			class = *ing.Spec.IngressClassName
-		}
-		hosts := make([]string, 0, len(ing.Spec.Rules))
-		for _, r := range ing.Spec.Rules {
-			if r.Host != "" {
-				hosts = append(hosts, r.Host)
-			}
-		}
-		addresses := make([]string, 0, len(ing.Status.LoadBalancer.Ingress))
-		for _, lb := range ing.Status.LoadBalancer.Ingress {
-			if lb.IP != "" {
-				addresses = append(addresses, lb.IP)
-			} else if lb.Hostname != "" {
-				addresses = append(addresses, lb.Hostname)
-			}
-		}
-		ports := "80"
-		if len(ing.Spec.TLS) > 0 {
-			ports = "80, 443"
-		}
-		out = append(out, IngressInfo{
-			Name:      ing.Name,
-			Namespace: ing.Namespace,
-			Class:     class,
-			Hosts:     strings.Join(hosts, ", "),
-			Address:   strings.Join(addresses, ", "),
-			Ports:     ports,
-			CreatedAt: ing.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, ingressInfoFrom(ing))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
@@ -274,17 +300,7 @@ func (w *contextWatcher) NetworkPolicies(namespace string) []NetworkPolicyInfo {
 	}
 	out := make([]NetworkPolicyInfo, 0, len(policies))
 	for _, p := range policies {
-		types := make([]string, 0, len(p.Spec.PolicyTypes))
-		for _, t := range p.Spec.PolicyTypes {
-			types = append(types, string(t))
-		}
-		out = append(out, NetworkPolicyInfo{
-			Name:        p.Name,
-			Namespace:   p.Namespace,
-			PodSelector: formatLabelSelector(&p.Spec.PodSelector),
-			PolicyTypes: strings.Join(types, ","),
-			CreatedAt:   p.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, networkPolicyInfoFrom(p))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out

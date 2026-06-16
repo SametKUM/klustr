@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<EndpointsInfo>()
 export function EndpointsView() {
   const eps = useResources((s) => s.endpoints)
   const setEps = useResources((s) => s.setEndpoints)
+  const applyEpsDelta = useResources((s) => s.applyEndpointsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -39,6 +40,7 @@ export function EndpointsView() {
       scope="namespaced"
       data={eps}
       setData={setEps}
+      applyDelta={applyEpsDelta}
       fetch={api.listEndpoints}
       columns={columns}
       onRowClick={(row, ctx) =>

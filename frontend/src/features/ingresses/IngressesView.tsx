@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<IngressInfo>()
 export function IngressesView() {
   const ingresses = useResources((s) => s.ingresses)
   const setIngresses = useResources((s) => s.setIngresses)
+  const applyIngressesDelta = useResources((s) => s.applyIngressesDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -45,6 +46,7 @@ export function IngressesView() {
       scope="namespaced"
       data={ingresses}
       setData={setIngresses}
+      applyDelta={applyIngressesDelta}
       fetch={api.listIngresses}
       columns={columns}
       onRowClick={(row, ctx) =>
