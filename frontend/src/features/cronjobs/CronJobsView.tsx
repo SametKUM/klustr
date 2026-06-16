@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<CronJobInfo>()
 export function CronJobsView() {
   const cronJobs = useResources((s) => s.cronJobs)
   const setCronJobs = useResources((s) => s.setCronJobs)
+  const applyCronJobsDelta = useResources((s) => s.applyCronJobsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -51,6 +52,7 @@ export function CronJobsView() {
       scope="namespaced"
       data={cronJobs}
       setData={setCronJobs}
+      applyDelta={applyCronJobsDelta}
       fetch={api.listCronJobs}
       columns={columns}
       onRowClick={(row, ctx) =>

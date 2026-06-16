@@ -19,6 +19,7 @@ function readyClass(ready: number, desired: number): string {
 export function ReplicaSetsView() {
   const replicaSets = useResources((s) => s.replicaSets)
   const setReplicaSets = useResources((s) => s.setReplicaSets)
+  const applyReplicaSetsDelta = useResources((s) => s.applyReplicaSetsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -58,6 +59,7 @@ export function ReplicaSetsView() {
       scope="namespaced"
       data={replicaSets}
       setData={setReplicaSets}
+      applyDelta={applyReplicaSetsDelta}
       fetch={api.listReplicaSets}
       columns={columns}
       onRowClick={(row, ctx) =>

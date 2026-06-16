@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<DaemonSetInfo>()
 export function DaemonSetsView() {
   const daemonSets = useResources((s) => s.daemonSets)
   const setDaemonSets = useResources((s) => s.setDaemonSets)
+  const applyDaemonSetsDelta = useResources((s) => s.applyDaemonSetsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -41,6 +42,7 @@ export function DaemonSetsView() {
       scope="namespaced"
       data={daemonSets}
       setData={setDaemonSets}
+      applyDelta={applyDaemonSetsDelta}
       fetch={api.listDaemonSets}
       columns={columns}
       onRowClick={(row, ctx) =>

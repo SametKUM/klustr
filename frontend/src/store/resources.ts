@@ -119,9 +119,20 @@ type ResourcesState = {
   ipAddresses: ByContext<IPAddressInfo>
   setNamespaces: (ctx: string, list: NamespaceInfo[]) => void
   setPods: (ctx: string, list: PodInfo[]) => void
-  // Incremental delta apply (delta-update pilot kind). Coexists with setPods,
-  // which stays the full-load/resync path.
+  // Incremental delta apply. Coexists with the wholesale setters, which stay
+  // the full-load/resync path. Defined for the delta-enabled kinds only.
   applyPodsDelta: (ctx: string, upserts: PodInfo[], removed: string[]) => void
+  applyDeploymentsDelta: (ctx: string, upserts: DeploymentInfo[], removed: string[]) => void
+  applyStatefulSetsDelta: (ctx: string, upserts: StatefulSetInfo[], removed: string[]) => void
+  applyDaemonSetsDelta: (ctx: string, upserts: DaemonSetInfo[], removed: string[]) => void
+  applyReplicaSetsDelta: (ctx: string, upserts: ReplicaSetInfo[], removed: string[]) => void
+  applyReplicationControllersDelta: (
+    ctx: string,
+    upserts: ReplicationControllerInfo[],
+    removed: string[],
+  ) => void
+  applyJobsDelta: (ctx: string, upserts: JobInfo[], removed: string[]) => void
+  applyCronJobsDelta: (ctx: string, upserts: CronJobInfo[], removed: string[]) => void
   setDeployments: (ctx: string, list: DeploymentInfo[]) => void
   setServices: (ctx: string, list: ServiceInfo[]) => void
   setConfigMaps: (ctx: string, list: ConfigMapInfo[]) => void
@@ -281,6 +292,34 @@ export const useResources = create<ResourcesState>((set) => ({
   setPods: (ctx, list) => set((s) => ({ pods: withCtx(s.pods, ctx, list) })),
   applyPodsDelta: (ctx, upserts, removed) =>
     set((s) => ({ pods: withCtx(s.pods, ctx, applyDeltaToList(s.pods[ctx], upserts, removed)) })),
+  applyDeploymentsDelta: (ctx, upserts, removed) =>
+    set((s) => ({
+      deployments: withCtx(s.deployments, ctx, applyDeltaToList(s.deployments[ctx], upserts, removed)),
+    })),
+  applyStatefulSetsDelta: (ctx, upserts, removed) =>
+    set((s) => ({
+      statefulSets: withCtx(s.statefulSets, ctx, applyDeltaToList(s.statefulSets[ctx], upserts, removed)),
+    })),
+  applyDaemonSetsDelta: (ctx, upserts, removed) =>
+    set((s) => ({
+      daemonSets: withCtx(s.daemonSets, ctx, applyDeltaToList(s.daemonSets[ctx], upserts, removed)),
+    })),
+  applyReplicaSetsDelta: (ctx, upserts, removed) =>
+    set((s) => ({
+      replicaSets: withCtx(s.replicaSets, ctx, applyDeltaToList(s.replicaSets[ctx], upserts, removed)),
+    })),
+  applyReplicationControllersDelta: (ctx, upserts, removed) =>
+    set((s) => ({
+      replicationControllers: withCtx(
+        s.replicationControllers,
+        ctx,
+        applyDeltaToList(s.replicationControllers[ctx], upserts, removed),
+      ),
+    })),
+  applyJobsDelta: (ctx, upserts, removed) =>
+    set((s) => ({ jobs: withCtx(s.jobs, ctx, applyDeltaToList(s.jobs[ctx], upserts, removed)) })),
+  applyCronJobsDelta: (ctx, upserts, removed) =>
+    set((s) => ({ cronJobs: withCtx(s.cronJobs, ctx, applyDeltaToList(s.cronJobs[ctx], upserts, removed)) })),
   setDeployments: (ctx, list) => set((s) => ({ deployments: withCtx(s.deployments, ctx, list) })),
   setServices: (ctx, list) => set((s) => ({ services: withCtx(s.services, ctx, list) })),
   setConfigMaps: (ctx, list) => set((s) => ({ configMaps: withCtx(s.configMaps, ctx, list) })),

@@ -21,6 +21,7 @@ function readyClass(ready: string): string {
 export function DeploymentsView() {
   const deployments = useResources((s) => s.deployments)
   const setDeployments = useResources((s) => s.setDeployments)
+  const applyDeploymentsDelta = useResources((s) => s.applyDeploymentsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -68,6 +69,7 @@ export function DeploymentsView() {
       scope="namespaced"
       data={deployments}
       setData={setDeployments}
+      applyDelta={applyDeploymentsDelta}
       fetch={api.listDeployments}
       columns={columns}
       onRowClick={(row, ctx) =>

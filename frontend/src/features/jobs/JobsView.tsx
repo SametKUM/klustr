@@ -27,6 +27,7 @@ function jobStatusClass(status: string): string {
 export function JobsView() {
   const jobs = useResources((s) => s.jobs)
   const setJobs = useResources((s) => s.setJobs)
+  const applyJobsDelta = useResources((s) => s.applyJobsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -57,6 +58,7 @@ export function JobsView() {
       scope="namespaced"
       data={jobs}
       setData={setJobs}
+      applyDelta={applyJobsDelta}
       fetch={api.listJobs}
       columns={columns}
       onRowClick={(row, ctx) =>

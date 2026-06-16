@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<ReplicationControllerInfo>()
 export function ReplicationControllersView() {
   const rcs = useResources((s) => s.replicationControllers)
   const setRCs = useResources((s) => s.setReplicationControllers)
+  const applyRCsDelta = useResources((s) => s.applyReplicationControllersDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -42,6 +43,7 @@ export function ReplicationControllersView() {
       scope="namespaced"
       data={rcs}
       setData={setRCs}
+      applyDelta={applyRCsDelta}
       fetch={api.listReplicationControllers}
       columns={columns}
       onRowClick={(row, ctx) =>

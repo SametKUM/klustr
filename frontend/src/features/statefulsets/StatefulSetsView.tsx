@@ -21,6 +21,7 @@ function readyClass(ready: string): string {
 export function StatefulSetsView() {
   const statefulSets = useResources((s) => s.statefulSets)
   const setStatefulSets = useResources((s) => s.setStatefulSets)
+  const applyStatefulSetsDelta = useResources((s) => s.applyStatefulSetsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -54,6 +55,7 @@ export function StatefulSetsView() {
       scope="namespaced"
       data={statefulSets}
       setData={setStatefulSets}
+      applyDelta={applyStatefulSetsDelta}
       fetch={api.listStatefulSets}
       columns={columns}
       onRowClick={(row, ctx) =>
