@@ -79,8 +79,8 @@ func makePod(i int) *corev1.Pod {
 			},
 		},
 		Status: corev1.PodStatus{
-			Phase:  corev1.PodRunning,
-			PodIP:  fmt.Sprintf("10.%d.%d.%d", i/256%256, i%256, i%200+1),
+			Phase: corev1.PodRunning,
+			PodIP: fmt.Sprintf("10.%d.%d.%d", i/256%256, i%256, i%200+1),
 			Conditions: []corev1.PodCondition{
 				{Type: corev1.PodReady, Status: corev1.ConditionTrue},
 			},
