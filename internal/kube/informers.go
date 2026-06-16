@@ -157,6 +157,12 @@ func (w *contextWatcher) ensureKind(kind string) {
 		return
 	}
 	informer := b.pick(f)
+	if b.indexers != nil {
+		// Precedes Start (AddIndexers rejects a running informer); the informer
+		// is freshly registered here so it can't be running yet. A failure is
+		// non-fatal — PodsOnNode falls back to a full scan without the index.
+		_ = informer.AddIndexers(b.indexers)
+	}
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj any) { w.touch(kind); callIf(b.sidecar, obj) },
 		UpdateFunc: func(_, obj any) { w.touch(kind); callIf(b.sidecar, obj) },
@@ -232,8 +238,9 @@ func (w *contextWatcher) start(parent context.Context) error {
 // kindBinding describes how to obtain a kind's informer from its routed
 // factory, plus an optional per-event sidecar (currently Secret → Helm).
 type kindBinding struct {
-	pick    func(informers.SharedInformerFactory) cache.SharedIndexInformer
-	sidecar func(obj any)
+	pick     func(informers.SharedInformerFactory) cache.SharedIndexInformer
+	sidecar  func(obj any)
+	indexers cache.Indexers
 }
 
 // kindBindings is the auditable routing table mapping every covered kind to
@@ -400,6 +407,13 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 	out := make(map[string]kindBinding, len(bindings)+1)
 	for _, b := range bindings {
 		out[b.kind] = kindBinding{pick: b.informer}
+	}
+
+	// Pod carries a by-node index so node detail resolves its pods without
+	// scanning the whole pod cache.
+	if pod, ok := out["Pod"]; ok {
+		pod.indexers = podIndexers
+		out["Pod"] = pod
 	}
 
 	// Secret carries a Helm-release piggyback so the Helm UI updates when a

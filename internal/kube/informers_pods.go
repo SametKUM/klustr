@@ -8,7 +8,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/tools/cache"
 )
+
+// podByNodeIndex lets PodsOnNode resolve a node's pods through the informer's
+// indexer (O(pods on the node)) instead of scanning the whole pod cache
+// (O(all pods)). The Pod binding wires these indexers in via ensureKind.
+const podByNodeIndex = "klustrPodByNode"
+
+var podIndexers = cache.Indexers{
+	podByNodeIndex: func(obj any) ([]string, error) {
+		pod, ok := obj.(*corev1.Pod)
+		if !ok || pod.Spec.NodeName == "" {
+			return nil, nil
+		}
+		return []string{pod.Spec.NodeName}, nil
+	},
+}
 
 type PodInfo struct {
 	Name         string              `json:"name"`
@@ -540,6 +556,18 @@ func (w *contextWatcher) PodsOnNode(nodeName string) []PodInfo {
 	if f == nil {
 		return []PodInfo{}
 	}
+	indexer := f.Core().V1().Pods().Informer().GetIndexer()
+	if objs, err := indexer.ByIndex(podByNodeIndex, nodeName); err == nil {
+		matched := make([]*corev1.Pod, 0, len(objs))
+		for _, o := range objs {
+			if p, ok := o.(*corev1.Pod); ok {
+				matched = append(matched, p)
+			}
+		}
+		return podInfosFrom(matched)
+	}
+	// Fall back to a full scan if the index isn't registered, so node detail
+	// stays correct even if indexer wiring was skipped.
 	all, err := f.Core().V1().Pods().Lister().List(labels.Everything())
 	if err != nil {
 		return []PodInfo{}
