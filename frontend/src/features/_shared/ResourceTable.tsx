@@ -250,6 +250,19 @@ export function ResourceTable<T>({
     [scope, selectedNamespaces],
   )
   const [filter, setFilter] = useState('')
+  // The input updates instantly; the value that actually drives TanStack's
+  // O(rows) getFilteredRowModel is debounced so a fast typist on a 5000-row
+  // table refilters once per pause instead of once per keystroke. Clearing
+  // applies immediately so Escape / "no results" feel snappy.
+  const [appliedFilter, setAppliedFilter] = useState('')
+  useEffect(() => {
+    if (filter === '') {
+      setAppliedFilter('')
+      return
+    }
+    const id = window.setTimeout(() => setAppliedFilter(filter), 180)
+    return () => window.clearTimeout(id)
+  }, [filter])
   const prefs = useTablePrefs((s) => s.byKind[kind])
   const persistedSizing = useMemo<ColumnSizingState>(
     () => prefs?.sizing ?? EMPTY_SIZING,
@@ -487,7 +500,7 @@ export function ResourceTable<T>({
     columns: tableColumns,
     state: {
       sorting,
-      globalFilter: filter,
+      globalFilter: appliedFilter,
       columnOrder,
       columnVisibility,
       columnSizing: liveSizing,
@@ -496,7 +509,7 @@ export function ResourceTable<T>({
       const next = typeof updater === 'function' ? updater(sorting) : updater
       setSortingPref(kind, next)
     },
-    onGlobalFilterChange: setFilter,
+    onGlobalFilterChange: setAppliedFilter,
     onColumnOrderChange: (updater) => {
       const next = typeof updater === 'function' ? updater(columnOrder) : updater
       setOrder(kind, next)
@@ -611,7 +624,7 @@ export function ResourceTable<T>({
   const total = mergedData.length
   const countLabel = !allLoaded
     ? `Loading ${noun.plural}…`
-    : filter
+    : appliedFilter
       ? `${filteredCount} of ${total} ${total === 1 ? noun.singular : noun.plural}`
       : `${total} ${total === 1 ? noun.singular : noun.plural}`
   const scopeLabel =
@@ -846,8 +859,8 @@ export function ResourceTable<T>({
                   colSpan={tableColumns.length + 2}
                   className="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
-                  {filter
-                    ? `No ${noun.plural} matching "${filter}".`
+                  {appliedFilter
+                    ? `No ${noun.plural} matching "${appliedFilter}".`
                     : `No ${noun.plural}${scope === 'namespaced' && selectedNamespaces.length > 0 ? scopeLabel : ''}.`}
                 </td>
               </tr>
