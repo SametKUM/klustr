@@ -187,13 +187,17 @@ func (w *contextWatcher) start(parent context.Context) error {
 
 	w.access = discoverAccess(ctx, w.cs, w.disco, w.defaultNS)
 	if w.access.HasAnyClusterWide() {
-		w.factory = informers.NewSharedInformerFactory(w.cs.(*kubernetes.Clientset), 0)
+		w.factory = informers.NewSharedInformerFactoryWithOptions(
+			w.cs.(*kubernetes.Clientset), 0,
+			informers.WithTransform(stripManagedFields),
+		)
 	}
 	if scopedNS := w.access.ScopedNamespace(); scopedNS != "" {
 		w.scopedNS = scopedNS
 		w.scoped = informers.NewSharedInformerFactoryWithOptions(
 			w.cs.(*kubernetes.Clientset), 0,
 			informers.WithNamespace(scopedNS),
+			informers.WithTransform(stripManagedFields),
 		)
 	}
 
