@@ -73,6 +73,7 @@ func (a *App) CheckForUpdate() (update.Result, error) {
 
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+	kube.StartPprofServer() // no-op unless KLUSTR_PPROF is set
 	go a.clients.ImportShellEnv()
 	a.clients.SetOnChange(func(c kube.ContextChange) {
 		runtime.EventsEmit(ctx, eventKubeChange, c.Context, c.Kind)
