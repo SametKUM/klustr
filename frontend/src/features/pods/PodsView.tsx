@@ -73,6 +73,7 @@ function statusClass(status: string): string {
 export function PodsView() {
   const pods = useResources((s) => s.pods)
   const setPods = useResources((s) => s.setPods)
+  const applyPodsDelta = useResources((s) => s.applyPodsDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
   const activeContexts = useActiveContexts()
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
@@ -140,6 +141,7 @@ export function PodsView() {
       scope="namespaced"
       data={pods}
       setData={setPods}
+      applyDelta={applyPodsDelta}
       fetch={api.listPods}
       columns={columns}
       onRowClick={(row, ctx) =>
