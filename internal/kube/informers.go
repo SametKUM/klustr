@@ -270,6 +270,20 @@ type kindBinding struct {
 	project func(obj any) (key string, info any, ok bool)
 }
 
+// projector builds a kindBinding.project from a single-object Info constructor,
+// so a kind wires delta support in one line: project: projector(xInfoFrom).
+// Cluster-scoped kinds get an empty namespace, so their key is "/name" — the
+// same shape the frontend keys by.
+func projector[T metav1.Object, I any](from func(T) I) func(obj any) (string, any, bool) {
+	return func(obj any) (string, any, bool) {
+		t, ok := obj.(T)
+		if !ok {
+			return "", nil, false
+		}
+		return t.GetNamespace() + "/" + t.GetName(), from(t), true
+	}
+}
+
 // kindBindings is the auditable routing table mapping every covered kind to
 // its informer constructor. Registration and start happen lazily per kind in
 // ensureKind; this table only declares what exists.
@@ -444,6 +458,23 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 		pod.project = projectPod
 		out["Pod"] = pod
 	}
+
+	// Delta-update projectors for the high-churn / high-count kinds. Low-
+	// cardinality kinds (cluster-scoped singletons, RBAC, admission, …) stay on
+	// the full-refetch path: a delta there is churn without payoff.
+	setProject := func(kind string, p func(obj any) (string, any, bool)) {
+		if b, ok := out[kind]; ok {
+			b.project = p
+			out[kind] = b
+		}
+	}
+	setProject("Deployment", projector(deploymentInfoFrom))
+	setProject("StatefulSet", projector(statefulSetInfoFrom))
+	setProject("DaemonSet", projector(daemonSetInfoFrom))
+	setProject("ReplicaSet", projector(replicaSetInfoFrom))
+	setProject("ReplicationController", projector(replicationControllerInfoFrom))
+	setProject("Job", projector(jobInfoFrom))
+	setProject("CronJob", projector(cronJobInfoFrom))
 
 	// Secret carries a Helm-release piggyback so the Helm UI updates when a
 	// release Secret lands; that's why this binding sits outside the table.

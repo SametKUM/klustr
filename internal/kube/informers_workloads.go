@@ -84,6 +84,148 @@ type CronJobInfo struct {
 	CreatedAt    string `json:"createdAt"`
 }
 
+func deploymentInfoFrom(d *appsv1.Deployment) DeploymentInfo {
+	var desired int32
+	if d.Spec.Replicas != nil {
+		desired = *d.Spec.Replicas
+	}
+	strategy := string(d.Spec.Strategy.Type)
+	if strategy == "" {
+		strategy = string(appsv1.RollingUpdateDeploymentStrategyType)
+	}
+	images := make([]string, 0, len(d.Spec.Template.Spec.Containers))
+	for _, c := range d.Spec.Template.Spec.Containers {
+		images = append(images, c.Image)
+	}
+	return DeploymentInfo{
+		Name:      d.Name,
+		Namespace: d.Namespace,
+		Ready:     fmt.Sprintf("%d/%d", d.Status.ReadyReplicas, desired),
+		UpToDate:  d.Status.UpdatedReplicas,
+		Available: d.Status.AvailableReplicas,
+		Strategy:  strategy,
+		Images:    strings.Join(images, ", "),
+		Paused:    d.Spec.Paused,
+		CreatedAt: d.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func statefulSetInfoFrom(s *appsv1.StatefulSet) StatefulSetInfo {
+	var desired int32
+	if s.Spec.Replicas != nil {
+		desired = *s.Spec.Replicas
+	}
+	images := make([]string, 0, len(s.Spec.Template.Spec.Containers))
+	for _, c := range s.Spec.Template.Spec.Containers {
+		images = append(images, c.Image)
+	}
+	return StatefulSetInfo{
+		Name:      s.Name,
+		Namespace: s.Namespace,
+		Ready:     fmt.Sprintf("%d/%d", s.Status.ReadyReplicas, desired),
+		Service:   s.Spec.ServiceName,
+		Images:    strings.Join(images, ", "),
+		CreatedAt: s.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func daemonSetInfoFrom(d *appsv1.DaemonSet) DaemonSetInfo {
+	return DaemonSetInfo{
+		Name:         d.Name,
+		Namespace:    d.Namespace,
+		Desired:      d.Status.DesiredNumberScheduled,
+		Current:      d.Status.CurrentNumberScheduled,
+		Ready:        d.Status.NumberReady,
+		UpToDate:     d.Status.UpdatedNumberScheduled,
+		Available:    d.Status.NumberAvailable,
+		NodeSelector: formatNodeSelector(d.Spec.Template.Spec.NodeSelector),
+		CreatedAt:    d.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func replicaSetInfoFrom(r *appsv1.ReplicaSet) ReplicaSetInfo {
+	var desired int32
+	if r.Spec.Replicas != nil {
+		desired = *r.Spec.Replicas
+	}
+	owner := ""
+	for _, o := range r.OwnerReferences {
+		if o.Controller != nil && *o.Controller {
+			owner = o.Kind + "/" + o.Name
+			break
+		}
+	}
+	images := make([]string, 0, len(r.Spec.Template.Spec.Containers))
+	for _, c := range r.Spec.Template.Spec.Containers {
+		images = append(images, c.Image)
+	}
+	return ReplicaSetInfo{
+		Name:      r.Name,
+		Namespace: r.Namespace,
+		Desired:   desired,
+		Current:   r.Status.Replicas,
+		Ready:     r.Status.ReadyReplicas,
+		OwnedBy:   owner,
+		Images:    strings.Join(images, ", "),
+		CreatedAt: r.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func replicationControllerInfoFrom(r *corev1.ReplicationController) ReplicationControllerInfo {
+	var desired int32
+	if r.Spec.Replicas != nil {
+		desired = *r.Spec.Replicas
+	}
+	images := make([]string, 0, len(r.Spec.Template.Spec.Containers))
+	for _, c := range r.Spec.Template.Spec.Containers {
+		images = append(images, c.Image)
+	}
+	return ReplicationControllerInfo{
+		Name:      r.Name,
+		Namespace: r.Namespace,
+		Desired:   desired,
+		Current:   r.Status.Replicas,
+		Ready:     r.Status.ReadyReplicas,
+		Images:    strings.Join(images, ", "),
+		CreatedAt: r.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func jobInfoFrom(j *batchv1.Job) JobInfo {
+	var desired int32 = 1
+	if j.Spec.Completions != nil {
+		desired = *j.Spec.Completions
+	}
+	return JobInfo{
+		Name:        j.Name,
+		Namespace:   j.Namespace,
+		Completions: fmt.Sprintf("%d/%d", j.Status.Succeeded, desired),
+		Duration:    jobDuration(j),
+		Status:      jobStatus(j),
+		CreatedAt:   j.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
+func cronJobInfoFrom(c *batchv1.CronJob) CronJobInfo {
+	suspend := false
+	if c.Spec.Suspend != nil {
+		suspend = *c.Spec.Suspend
+	}
+	last := "—"
+	if c.Status.LastScheduleTime != nil {
+		last = c.Status.LastScheduleTime.UTC().Format(time.RFC3339)
+	}
+	return CronJobInfo{
+		Name:         c.Name,
+		Namespace:    c.Namespace,
+		Schedule:     c.Spec.Schedule,
+		Suspend:      suspend,
+		Active:       len(c.Status.Active),
+		LastSchedule: last,
+		CreatedAt:    c.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
 func (w *contextWatcher) Deployments(namespace string) []DeploymentInfo {
 	f := w.factoryFor("Deployment")
 	if f == nil {
@@ -104,29 +246,7 @@ func (w *contextWatcher) Deployments(namespace string) []DeploymentInfo {
 	}
 	out := make([]DeploymentInfo, 0, len(deps))
 	for _, d := range deps {
-		var desired int32
-		if d.Spec.Replicas != nil {
-			desired = *d.Spec.Replicas
-		}
-		strategy := string(d.Spec.Strategy.Type)
-		if strategy == "" {
-			strategy = string(appsv1.RollingUpdateDeploymentStrategyType)
-		}
-		images := make([]string, 0, len(d.Spec.Template.Spec.Containers))
-		for _, c := range d.Spec.Template.Spec.Containers {
-			images = append(images, c.Image)
-		}
-		out = append(out, DeploymentInfo{
-			Name:      d.Name,
-			Namespace: d.Namespace,
-			Ready:     fmt.Sprintf("%d/%d", d.Status.ReadyReplicas, desired),
-			UpToDate:  d.Status.UpdatedReplicas,
-			Available: d.Status.AvailableReplicas,
-			Strategy:  strategy,
-			Images:    strings.Join(images, ", "),
-			Paused:    d.Spec.Paused,
-			CreatedAt: d.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, deploymentInfoFrom(d))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
@@ -152,22 +272,7 @@ func (w *contextWatcher) StatefulSets(namespace string) []StatefulSetInfo {
 	}
 	out := make([]StatefulSetInfo, 0, len(sets))
 	for _, s := range sets {
-		var desired int32
-		if s.Spec.Replicas != nil {
-			desired = *s.Spec.Replicas
-		}
-		images := make([]string, 0, len(s.Spec.Template.Spec.Containers))
-		for _, c := range s.Spec.Template.Spec.Containers {
-			images = append(images, c.Image)
-		}
-		out = append(out, StatefulSetInfo{
-			Name:      s.Name,
-			Namespace: s.Namespace,
-			Ready:     fmt.Sprintf("%d/%d", s.Status.ReadyReplicas, desired),
-			Service:   s.Spec.ServiceName,
-			Images:    strings.Join(images, ", "),
-			CreatedAt: s.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, statefulSetInfoFrom(s))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
@@ -193,17 +298,7 @@ func (w *contextWatcher) DaemonSets(namespace string) []DaemonSetInfo {
 	}
 	out := make([]DaemonSetInfo, 0, len(sets))
 	for _, d := range sets {
-		out = append(out, DaemonSetInfo{
-			Name:         d.Name,
-			Namespace:    d.Namespace,
-			Desired:      d.Status.DesiredNumberScheduled,
-			Current:      d.Status.CurrentNumberScheduled,
-			Ready:        d.Status.NumberReady,
-			UpToDate:     d.Status.UpdatedNumberScheduled,
-			Available:    d.Status.NumberAvailable,
-			NodeSelector: formatNodeSelector(d.Spec.Template.Spec.NodeSelector),
-			CreatedAt:    d.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, daemonSetInfoFrom(d))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
@@ -229,31 +324,7 @@ func (w *contextWatcher) ReplicaSets(namespace string) []ReplicaSetInfo {
 	}
 	out := make([]ReplicaSetInfo, 0, len(sets))
 	for _, r := range sets {
-		var desired int32
-		if r.Spec.Replicas != nil {
-			desired = *r.Spec.Replicas
-		}
-		owner := ""
-		for _, o := range r.OwnerReferences {
-			if o.Controller != nil && *o.Controller {
-				owner = o.Kind + "/" + o.Name
-				break
-			}
-		}
-		images := make([]string, 0, len(r.Spec.Template.Spec.Containers))
-		for _, c := range r.Spec.Template.Spec.Containers {
-			images = append(images, c.Image)
-		}
-		out = append(out, ReplicaSetInfo{
-			Name:      r.Name,
-			Namespace: r.Namespace,
-			Desired:   desired,
-			Current:   r.Status.Replicas,
-			Ready:     r.Status.ReadyReplicas,
-			OwnedBy:   owner,
-			Images:    strings.Join(images, ", "),
-			CreatedAt: r.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, replicaSetInfoFrom(r))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
@@ -279,23 +350,7 @@ func (w *contextWatcher) ReplicationControllers(namespace string) []ReplicationC
 	}
 	out := make([]ReplicationControllerInfo, 0, len(rcs))
 	for _, r := range rcs {
-		var desired int32
-		if r.Spec.Replicas != nil {
-			desired = *r.Spec.Replicas
-		}
-		images := make([]string, 0, len(r.Spec.Template.Spec.Containers))
-		for _, c := range r.Spec.Template.Spec.Containers {
-			images = append(images, c.Image)
-		}
-		out = append(out, ReplicationControllerInfo{
-			Name:      r.Name,
-			Namespace: r.Namespace,
-			Desired:   desired,
-			Current:   r.Status.Replicas,
-			Ready:     r.Status.ReadyReplicas,
-			Images:    strings.Join(images, ", "),
-			CreatedAt: r.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, replicationControllerInfoFrom(r))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
@@ -321,18 +376,7 @@ func (w *contextWatcher) Jobs(namespace string) []JobInfo {
 	}
 	out := make([]JobInfo, 0, len(jobs))
 	for _, j := range jobs {
-		var desired int32 = 1
-		if j.Spec.Completions != nil {
-			desired = *j.Spec.Completions
-		}
-		out = append(out, JobInfo{
-			Name:        j.Name,
-			Namespace:   j.Namespace,
-			Completions: fmt.Sprintf("%d/%d", j.Status.Succeeded, desired),
-			Duration:    jobDuration(j),
-			Status:      jobStatus(j),
-			CreatedAt:   j.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, jobInfoFrom(j))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
@@ -358,23 +402,7 @@ func (w *contextWatcher) CronJobs(namespace string) []CronJobInfo {
 	}
 	out := make([]CronJobInfo, 0, len(cjs))
 	for _, c := range cjs {
-		suspend := false
-		if c.Spec.Suspend != nil {
-			suspend = *c.Spec.Suspend
-		}
-		last := "—"
-		if c.Status.LastScheduleTime != nil {
-			last = c.Status.LastScheduleTime.UTC().Format(time.RFC3339)
-		}
-		out = append(out, CronJobInfo{
-			Name:         c.Name,
-			Namespace:    c.Namespace,
-			Schedule:     c.Spec.Schedule,
-			Suspend:      suspend,
-			Active:       len(c.Status.Active),
-			LastSchedule: last,
-			CreatedAt:    c.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, cronJobInfoFrom(c))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
