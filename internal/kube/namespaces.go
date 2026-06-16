@@ -46,9 +46,15 @@ func listAcrossNamespaces[T any](namespace string, list func(string) []T) []T {
 	if parts == nil {
 		return list(namespace)
 	}
-	out := []T{}
-	for _, ns := range parts {
-		out = append(out, list(ns)...)
+	chunks := make([][]T, len(parts))
+	total := 0
+	for i, ns := range parts {
+		chunks[i] = list(ns)
+		total += len(chunks[i])
+	}
+	out := make([]T, 0, total)
+	for _, c := range chunks {
+		out = append(out, c...)
 	}
 	return out
 }
@@ -58,13 +64,19 @@ func listAcrossNamespacesErr[T any](namespace string, list func(string) ([]T, er
 	if parts == nil {
 		return list(namespace)
 	}
-	out := []T{}
-	for _, ns := range parts {
+	chunks := make([][]T, len(parts))
+	total := 0
+	for i, ns := range parts {
 		items, err := list(ns)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, items...)
+		chunks[i] = items
+		total += len(items)
+	}
+	out := make([]T, 0, total)
+	for _, c := range chunks {
+		out = append(out, c...)
 	}
 	return out, nil
 }
