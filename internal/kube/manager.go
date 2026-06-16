@@ -35,9 +35,35 @@ type ServerVersion struct {
 	Platform   string `json:"platform"`
 }
 
+// DeltaOp is the net effect of one key's churn within a debounce window.
+type DeltaOp string
+
+const (
+	DeltaUpsert DeltaOp = "upsert" // add or update; the frontend keys by namespace/name
+	DeltaRemove DeltaOp = "remove"
+)
+
+// KindDelta is the per-(context,kind) incremental change set emitted after a
+// debounce window. Upserts carry the freshly projected Info struct (PodInfo,
+// etc.); Removed carries only "namespace/name" keys. Gen is a per-(context,kind)
+// monotonic counter the frontend uses to detect a missed/out-of-order batch and
+// fall back to a full refetch. Reset means "I can't describe this incrementally,
+// just refetch" (a non-delta-enabled kind, an unprojectable tombstone, or a
+// synthetic touch).
+type KindDelta struct {
+	Upserts []any    `json:"upserts"`
+	Removed []string `json:"removed"`
+	Gen     uint64   `json:"gen"`
+	Reset   bool     `json:"reset,omitempty"`
+}
+
 type ContextChange struct {
 	Context string
 	Kind    string
+	// Delta is nil for synthetic touches (_access, post-sync, denied kinds) and
+	// for kinds without a projector yet; a nil delta is today's "something
+	// changed, refetch" signal.
+	Delta *KindDelta
 }
 
 // ClientManager is the application-facing handle to every per-context
