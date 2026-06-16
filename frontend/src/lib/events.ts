@@ -1,7 +1,17 @@
 import { EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import type { CredentialStatus } from '@/lib/api'
 
-type Handler = (contextName: string) => void
+// KubeDelta mirrors the backend KindDelta: incremental upserts (projected Info
+// structs) + removed "namespace/name" keys, a per-(context,kind) generation for
+// gap detection, and a reset flag meaning "can't describe incrementally, refetch".
+export type KubeDelta = {
+  upserts: unknown[]
+  removed: string[]
+  gen: number
+  reset?: boolean
+}
+
+type Handler = (contextName: string, delta?: KubeDelta) => void
 
 const handlers = new Map<string, Set<Handler>>()
 let installed = false
@@ -25,7 +35,7 @@ function syncKey(contextName: string, kind: string): string {
 function install() {
   if (installed) return
   installed = true
-  kubeUnsub = EventsOn('kube:change', (contextName: string, kind: string) => {
+  kubeUnsub = EventsOn('kube:change', (contextName: string, kind: string, delta?: KubeDelta) => {
     // '_access' is not a real kind: the backend emits it after a watch is
     // rebuilt (credential capture/refresh) with the fresh watcher swapped in.
     // Fan it out to every registered handler so self-fetching views (overview,
@@ -37,7 +47,7 @@ function install() {
       return
     }
     syncedKinds.add(syncKey(contextName, kind))
-    handlers.get(kind)?.forEach((h) => h(contextName))
+    handlers.get(kind)?.forEach((h) => h(contextName, delta))
   })
 }
 
