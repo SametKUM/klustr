@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { applyDeltaToList } from '@/lib/applyDelta'
 import type {
   ConfigMapInfo,
   CronJobInfo,
@@ -118,6 +119,9 @@ type ResourcesState = {
   ipAddresses: ByContext<IPAddressInfo>
   setNamespaces: (ctx: string, list: NamespaceInfo[]) => void
   setPods: (ctx: string, list: PodInfo[]) => void
+  // Incremental delta apply (delta-update pilot kind). Coexists with setPods,
+  // which stays the full-load/resync path.
+  applyPodsDelta: (ctx: string, upserts: PodInfo[], removed: string[]) => void
   setDeployments: (ctx: string, list: DeploymentInfo[]) => void
   setServices: (ctx: string, list: ServiceInfo[]) => void
   setConfigMaps: (ctx: string, list: ConfigMapInfo[]) => void
@@ -275,6 +279,8 @@ export const useResources = create<ResourcesState>((set) => ({
   ...emptyMaps(),
   setNamespaces: (ctx, list) => set((s) => ({ namespaces: withCtx(s.namespaces, ctx, list) })),
   setPods: (ctx, list) => set((s) => ({ pods: withCtx(s.pods, ctx, list) })),
+  applyPodsDelta: (ctx, upserts, removed) =>
+    set((s) => ({ pods: withCtx(s.pods, ctx, applyDeltaToList(s.pods[ctx], upserts, removed)) })),
   setDeployments: (ctx, list) => set((s) => ({ deployments: withCtx(s.deployments, ctx, list) })),
   setServices: (ctx, list) => set((s) => ({ services: withCtx(s.services, ctx, list) })),
   setConfigMaps: (ctx, list) => set((s) => ({ configMaps: withCtx(s.configMaps, ctx, list) })),
