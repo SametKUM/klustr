@@ -172,3 +172,28 @@ func BenchmarkMarshalPodInfos(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkMarshalPodDelta marshals a small KindDelta (the per-churn-window
+// payload the delta protocol emits) so it can be compared head-to-head against
+// BenchmarkMarshalPodInfos/N=5000 — the full-list payload it replaces. The point
+// is that the delta cost tracks the change count, not the cluster size.
+func BenchmarkMarshalPodDelta(b *testing.B) {
+	infos := podInfosFrom(makePods(25))
+	ups := make([]any, len(infos))
+	for i := range infos {
+		ups[i] = infos[i]
+	}
+	d := &KindDelta{
+		Upserts: ups,
+		Removed: []string{"ns-01/pod-00001", "ns-02/pod-00002", "ns-03/pod-00003"},
+		Gen:     1,
+	}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		data, err := json.Marshal(d)
+		if err != nil {
+			b.Fatal(err)
+		}
+		_ = data
+	}
+}
