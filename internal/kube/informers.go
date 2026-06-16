@@ -245,6 +245,12 @@ type kindBinding struct {
 	pick     func(informers.SharedInformerFactory) cache.SharedIndexInformer
 	sidecar  func(obj any)
 	indexers cache.Indexers
+
+	// project turns a cached object into its frontend Info struct plus a
+	// "namespace/name" key, for the delta-update protocol. nil ⇒ the kind has
+	// no delta support yet and its handler degrades to a bare touch (a Reset
+	// delta), so a partial rollout is safe.
+	project func(obj any) (key string, info any, ok bool)
 }
 
 // kindBindings is the auditable routing table mapping every covered kind to
@@ -414,9 +420,11 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 	}
 
 	// Pod carries a by-node index so node detail resolves its pods without
-	// scanning the whole pod cache.
+	// scanning the whole pod cache, plus a projector so it is the delta-update
+	// pilot kind.
 	if pod, ok := out["Pod"]; ok {
 		pod.indexers = podIndexers
+		pod.project = projectPod
 		out["Pod"] = pod
 	}
 

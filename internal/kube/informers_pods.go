@@ -26,6 +26,16 @@ var podIndexers = cache.Indexers{
 	},
 }
 
+// projectPod is the Pod delta projector: a cached object becomes its
+// "namespace/name" key plus the same PodInfo the list path produces.
+func projectPod(obj any) (string, any, bool) {
+	p, ok := obj.(*corev1.Pod)
+	if !ok {
+		return "", nil, false
+	}
+	return p.Namespace + "/" + p.Name, podInfoFrom(p), true
+}
+
 type PodInfo struct {
 	Name         string              `json:"name"`
 	Namespace    string              `json:"namespace"`
