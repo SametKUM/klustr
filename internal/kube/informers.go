@@ -49,7 +49,22 @@ type ConditionDetail struct {
 	Message string `json:"message"`
 }
 
-type ChangeFunc func(kind string)
+type ChangeFunc func(kind string, delta *KindDelta)
+
+// pendingItem is the latest net op buffered for one (namespace/name) key within
+// a debounce window; info is the projected struct for an upsert, nil for a remove.
+type pendingItem struct {
+	op   DeltaOp
+	info any
+}
+
+// pendingKind buffers one kind's churn within a window. touched marks an event
+// that can't be described incrementally (no projector, unprojectable tombstone,
+// post-sync/denied touch) ⇒ the flushed delta is a Reset (full refetch).
+type pendingKind struct {
+	items   map[string]pendingItem
+	touched bool
+}
 
 // contextWatcher owns up to two SharedInformerFactories — one all-namespaces
 // (`factory`) and one optional namespaced fallback (`scoped`) — plus the
@@ -86,7 +101,8 @@ type contextWatcher struct {
 	started  map[string]bool
 
 	mu      sync.Mutex
-	pending map[string]struct{}
+	pending map[string]*pendingKind
+	gen     map[string]uint64 // per-kind monotonic delta generation
 	timer   *time.Timer
 	stopped bool
 }
@@ -98,7 +114,8 @@ func newContextWatcher(cs *kubernetes.Clientset, disco discovery.DiscoveryInterf
 		dyn:       dyn,
 		defaultNS: defaultNS,
 		onChange:  onChange,
-		pending:   make(map[string]struct{}),
+		pending:   make(map[string]*pendingKind),
+		gen:       make(map[string]uint64),
 	}
 	if gw != nil && hasGatewayAPIGroup(disco) {
 		w.gwFactory = gwinformers.NewSharedInformerFactory(gw, 0)
@@ -164,9 +181,9 @@ func (w *contextWatcher) ensureKind(kind string) {
 		_ = informer.AddIndexers(b.indexers)
 	}
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj any) { w.touch(kind); callIf(b.sidecar, obj) },
-		UpdateFunc: func(_, obj any) { w.touch(kind); callIf(b.sidecar, obj) },
-		DeleteFunc: func(obj any) { w.touch(kind); callIf(b.sidecar, obj) },
+		AddFunc:    func(obj any) { w.record(kind, b, DeltaUpsert, obj); callIf(b.sidecar, obj) },
+		UpdateFunc: func(_, obj any) { w.record(kind, b, DeltaUpsert, obj); callIf(b.sidecar, obj) },
+		DeleteFunc: func(obj any) { w.record(kind, b, DeltaRemove, obj); callIf(b.sidecar, obj) },
 	})
 	if err != nil {
 		return
@@ -462,20 +479,77 @@ func (w *contextWatcher) stop() {
 		w.timer.Stop()
 		w.timer = nil
 	}
-	w.pending = make(map[string]struct{})
+	w.pending = make(map[string]*pendingKind)
 	w.mu.Unlock()
 }
 
+// pendingKindLocked returns (creating if needed) the buffer for a kind. Caller
+// must hold w.mu.
+func (w *contextWatcher) pendingKindLocked(kind string) *pendingKind {
+	pk := w.pending[kind]
+	if pk == nil {
+		pk = &pendingKind{items: make(map[string]pendingItem)}
+		w.pending[kind] = pk
+	}
+	return pk
+}
+
+// armTimerLocked starts the debounce timer if it isn't already running. Caller
+// must hold w.mu.
+func (w *contextWatcher) armTimerLocked() {
+	if w.timer == nil {
+		w.timer = time.AfterFunc(debounceWindow, w.flush)
+	}
+}
+
+// touch marks a kind as changed in a way that can't be described incrementally
+// (post-sync, denied kind, CRD/Gateway events). The flushed delta is a Reset, so
+// the frontend refetches — exactly the pre-delta behavior. Keeps the func(string)
+// shape so existing callbacks (crdWatcher) wire in unchanged.
 func (w *contextWatcher) touch(kind string) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.stopped {
 		return
 	}
-	w.pending[kind] = struct{}{}
-	if w.timer == nil {
-		w.timer = time.AfterFunc(debounceWindow, w.flush)
+	w.pendingKindLocked(kind).touched = true
+	w.armTimerLocked()
+}
+
+// record buffers a single informer event as a net delta op. The projection runs
+// here, on the informer goroutine, while the cache object is valid; only the
+// projected struct + key cross into the buffer. Kinds without a projector, and
+// unprojectable tombstones, degrade to touch (a Reset/refetch).
+func (w *contextWatcher) record(kind string, b kindBinding, op DeltaOp, obj any) {
+	if b.project == nil {
+		w.touch(kind)
+		return
 	}
+	if op == DeltaRemove {
+		if tomb, isTomb := obj.(cache.DeletedFinalStateUnknown); isTomb {
+			obj = tomb.Obj
+		}
+	}
+	key, info, ok := b.project(obj)
+	if !ok {
+		w.touch(kind)
+		return
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.stopped {
+		return
+	}
+	pk := w.pendingKindLocked(kind)
+	// Latest op wins: an upsert carries the freshest projection and supersedes a
+	// prior remove; a remove supersedes a prior upsert (a born-and-died key flushes
+	// as a remove, which the frontend no-ops when the key is absent).
+	if op == DeltaUpsert {
+		pk.items[key] = pendingItem{op: DeltaUpsert, info: info}
+	} else {
+		pk.items[key] = pendingItem{op: DeltaRemove}
+	}
+	w.armTimerLocked()
 }
 
 func (w *contextWatcher) flush() {
@@ -486,20 +560,37 @@ func (w *contextWatcher) flush() {
 		w.mu.Unlock()
 		return
 	}
-	kinds := make([]string, 0, len(w.pending))
-	for k := range w.pending {
-		kinds = append(kinds, k)
-	}
-	w.pending = make(map[string]struct{})
+	pending := w.pending
+	w.pending = make(map[string]*pendingKind)
 	w.timer = nil
 	cb := w.onChange
+	deltas := make(map[string]*KindDelta, len(pending))
+	for kind, pk := range pending {
+		w.gen[kind]++
+		g := w.gen[kind]
+		// touched supersedes any buffered items: if part of the window couldn't be
+		// described incrementally, refetch the whole kind.
+		if pk.touched {
+			deltas[kind] = &KindDelta{Gen: g, Reset: true}
+			continue
+		}
+		d := &KindDelta{Gen: g, Upserts: []any{}, Removed: []string{}}
+		for key, it := range pk.items {
+			if it.op == DeltaRemove {
+				d.Removed = append(d.Removed, key)
+			} else {
+				d.Upserts = append(d.Upserts, it.info)
+			}
+		}
+		deltas[kind] = d
+	}
 	w.mu.Unlock()
 
 	if cb == nil {
 		return
 	}
-	for _, k := range kinds {
-		cb(k)
+	for kind, d := range deltas {
+		cb(kind, d)
 	}
 }
 

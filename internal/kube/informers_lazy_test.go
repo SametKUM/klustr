@@ -22,8 +22,9 @@ func newLazyTestWatcher(t *testing.T) (*contextWatcher, *fake.Clientset, func(st
 		factory: informers.NewSharedInformerFactory(cs, 0),
 		stopCh:  stopCh,
 		started: make(map[string]bool),
-		pending: make(map[string]struct{}),
-		onChange: func(kind string) {
+		pending: make(map[string]*pendingKind),
+		gen:     make(map[string]uint64),
+		onChange: func(kind string, _ *KindDelta) {
 			mu.Lock()
 			touched[kind] = true
 			mu.Unlock()

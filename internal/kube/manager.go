@@ -335,9 +335,9 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string) err
 	cb := m.onChange
 	m.mu.Unlock()
 
-	w := newContextWatcher(cs, disco, gw, dyn, defaultNS, func(kind string) {
+	w := newContextWatcher(cs, disco, gw, dyn, defaultNS, func(kind string, delta *KindDelta) {
 		if cb != nil {
-			cb(ContextChange{Context: contextName, Kind: kind})
+			cb(ContextChange{Context: contextName, Kind: kind, Delta: delta})
 		}
 	})
 	// The old watcher keeps serving (and stays registered) until the new one
