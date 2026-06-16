@@ -140,6 +140,8 @@ type ResourcesState = {
   applyEndpointSlicesDelta: (ctx: string, upserts: EndpointSliceInfo[], removed: string[]) => void
   applyIngressesDelta: (ctx: string, upserts: IngressInfo[], removed: string[]) => void
   applyNetworkPoliciesDelta: (ctx: string, upserts: NetworkPolicyInfo[], removed: string[]) => void
+  applyNodesDelta: (ctx: string, upserts: NodeInfo[], removed: string[]) => void
+  applyLeasesDelta: (ctx: string, upserts: LeaseInfo[], removed: string[]) => void
   setDeployments: (ctx: string, list: DeploymentInfo[]) => void
   setServices: (ctx: string, list: ServiceInfo[]) => void
   setConfigMaps: (ctx: string, list: ConfigMapInfo[]) => void
@@ -345,6 +347,10 @@ export const useResources = create<ResourcesState>((set) => ({
     set((s) => ({
       networkPolicies: withCtx(s.networkPolicies, ctx, applyDeltaToList(s.networkPolicies[ctx], upserts, removed)),
     })),
+  applyNodesDelta: (ctx, upserts, removed) =>
+    set((s) => ({ nodes: withCtx(s.nodes, ctx, applyDeltaToList(s.nodes[ctx], upserts, removed)) })),
+  applyLeasesDelta: (ctx, upserts, removed) =>
+    set((s) => ({ leases: withCtx(s.leases, ctx, applyDeltaToList(s.leases[ctx], upserts, removed)) })),
   setDeployments: (ctx, list) => set((s) => ({ deployments: withCtx(s.deployments, ctx, list) })),
   setServices: (ctx, list) => set((s) => ({ services: withCtx(s.services, ctx, list) })),
   setConfigMaps: (ctx, list) => set((s) => ({ configMaps: withCtx(s.configMaps, ctx, list) })),

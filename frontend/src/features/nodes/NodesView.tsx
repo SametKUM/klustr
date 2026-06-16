@@ -50,6 +50,7 @@ function NodeUsageCell({ node, ctx }: { node: NodeInfo; ctx: string }) {
 export function NodesView() {
   const nodes = useResources((s) => s.nodes)
   const setNodes = useResources((s) => s.setNodes)
+  const applyNodesDelta = useResources((s) => s.applyNodesDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
   const activeContexts = useActiveContexts()
   const metricsAvailable = useMetrics(selectMetricsAvailable(activeContexts))
@@ -137,6 +138,7 @@ export function NodesView() {
       scope="cluster"
       data={nodes}
       setData={setNodes}
+      applyDelta={applyNodesDelta}
       fetch={(ctx) => api.listNodes(ctx)}
       columns={columns}
       onRowClick={(row, ctx) => setSelectedResource({ kind: 'Node', namespace: '', name: row.name, context: ctx })}

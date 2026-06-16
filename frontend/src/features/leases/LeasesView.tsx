@@ -12,6 +12,7 @@ const columnHelper = createColumnHelper<LeaseInfo>()
 export function LeasesView() {
   const leases = useResources((s) => s.leases)
   const setLeases = useResources((s) => s.setLeases)
+  const applyLeasesDelta = useResources((s) => s.applyLeasesDelta)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
 
   const columns = useMemo(
@@ -36,6 +37,7 @@ export function LeasesView() {
       scope="namespaced"
       data={leases}
       setData={setLeases}
+      applyDelta={applyLeasesDelta}
       fetch={api.listLeases}
       columns={columns}
       onRowClick={(row, ctx) =>

@@ -209,6 +209,19 @@ func nodeInfo(n *corev1.Node) NodeInfo {
 	}
 }
 
+func leaseInfoFrom(l *coordv1.Lease) LeaseInfo {
+	holder := ""
+	if l.Spec.HolderIdentity != nil {
+		holder = *l.Spec.HolderIdentity
+	}
+	return LeaseInfo{
+		Name:      l.Name,
+		Namespace: l.Namespace,
+		Holder:    holder,
+		CreatedAt: l.CreationTimestamp.UTC().Format(time.RFC3339),
+	}
+}
+
 func (w *contextWatcher) Leases(namespace string) []LeaseInfo {
 	f := w.factoryFor("Lease")
 	if f == nil {
@@ -229,16 +242,7 @@ func (w *contextWatcher) Leases(namespace string) []LeaseInfo {
 	}
 	out := make([]LeaseInfo, 0, len(leases))
 	for _, l := range leases {
-		holder := ""
-		if l.Spec.HolderIdentity != nil {
-			holder = *l.Spec.HolderIdentity
-		}
-		out = append(out, LeaseInfo{
-			Name:      l.Name,
-			Namespace: l.Namespace,
-			Holder:    holder,
-			CreatedAt: l.CreationTimestamp.UTC().Format(time.RFC3339),
-		})
+		out = append(out, leaseInfoFrom(l))
 	}
 	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
