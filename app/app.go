@@ -76,7 +76,11 @@ func (a *App) Startup(ctx context.Context) {
 	kube.StartPprofServer() // no-op unless KLUSTR_PPROF is set
 	go a.clients.ImportShellEnv()
 	a.clients.SetOnChange(func(c kube.ContextChange) {
-		runtime.EventsEmit(ctx, eventKubeChange, c.Context, c.Kind)
+		if c.Delta != nil {
+			runtime.EventsEmit(ctx, eventKubeChange, c.Context, c.Kind, c.Delta)
+		} else {
+			runtime.EventsEmit(ctx, eventKubeChange, c.Context, c.Kind)
+		}
 	})
 	a.clients.SetPFChangeCallback(func() {
 		runtime.EventsEmit(ctx, "pf:update")
