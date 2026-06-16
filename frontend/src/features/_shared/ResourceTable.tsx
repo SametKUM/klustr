@@ -423,10 +423,20 @@ export function ResourceTable<T>({
         return
       }
       inflight.set(ctx, { dirty: false })
+      const t0 = import.meta.env.DEV ? performance.now() : 0
       fetchRef.current(ctx, query.apiNamespace).then((list) => {
         if (cancelled) return
+        const tFetched = import.meta.env.DEV ? performance.now() : 0
         const items = stableList(dataRef.current[ctx], list ?? [])
         setDataRef.current(ctx, items)
+        if (import.meta.env.DEV) {
+          const n = (list ?? []).length
+          // roundtrip = bridge + Go build + JSON parse; apply = stableList diff + setState.
+          console.debug(
+            `[perf] ${kind} ctx=${ctx} n=${n} ` +
+              `roundtrip=${(tFetched - t0).toFixed(1)}ms apply=${(performance.now() - tFetched).toFixed(1)}ms`,
+          )
+        }
         // An empty list is only trustworthy once the informer cache has synced;
         // before that, treat it as still loading so the skeleton stays up instead
         // of flashing "No X" and then popping in the real rows a moment later.

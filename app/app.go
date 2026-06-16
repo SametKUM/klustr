@@ -150,7 +150,10 @@ func (a *App) ListNamespaces(name string) []kube.NamespaceInfo {
 }
 
 func (a *App) ListPods(name, namespace string) []kube.PodInfo {
-	return a.clients.Pods(name, namespace)
+	start := time.Now()
+	out := a.clients.Pods(name, namespace)
+	kube.TraceList("Pod", len(out), start)
+	return out
 }
 
 func (a *App) PodsForOwner(contextName, kind, namespace, name string) ([]kube.PodInfo, error) {
