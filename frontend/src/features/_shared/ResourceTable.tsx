@@ -3,6 +3,7 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
@@ -12,7 +13,17 @@ import {
   type VisibilityState,
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { ArrowDown, ArrowUp, ChevronsUpDown, RotateCcw, Search, Trash2, X } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  RotateCcw,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { isKindSynced, onKubeChange } from '@/lib/events'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { stableList } from '@/lib/stableList'
@@ -24,11 +35,22 @@ import {
   type ResourceKind,
   type SelectedResource,
 } from '@/store/ui'
-import { useTablePrefs } from '@/store/tablePrefs'
+import {
+  useTablePrefs,
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+} from '@/store/tablePrefs'
 import { type ByContext } from '@/store/resources'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { ColumnControls } from './ColumnControls'
 import { RowContextMenu } from './RowContextMenu'
 import { BulkDeleteDialog, BulkRestartDialog, type BulkItem } from './BulkActionDialogs'
@@ -278,7 +300,10 @@ export function ResourceTable<T>({
   const setHidden = useTablePrefs((s) => s.setHidden)
   const setSizing = useTablePrefs((s) => s.setSizing)
   const setSortingPref = useTablePrefs((s) => s.setSorting)
+  const setPageSize = useTablePrefs((s) => s.setPageSize)
   const resetPrefs = useTablePrefs((s) => s.reset)
+  const pageSize = prefs?.pageSize ?? DEFAULT_PAGE_SIZE
+  const [pageIndex, setPageIndex] = useState(0)
   const [liveSizing, setLiveSizing] = useState<ColumnSizingState>(persistedSizing)
   const liveSizingRef = useRef(liveSizing)
   liveSizingRef.current = liveSizing
@@ -345,6 +370,9 @@ export function ResourceTable<T>({
   useEffect(() => {
     setSelectedKeys(new Set())
   }, [activeContexts, selectedNamespaces, kind])
+  useEffect(() => {
+    setPageIndex(0)
+  }, [activeContexts, selectedNamespaces, kind, appliedFilter, pageSize])
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
   const [loadedSet, setLoadedSet] = useState<Set<string>>(() => new Set())
@@ -539,6 +567,9 @@ export function ResourceTable<T>({
     return base.filter((s) => allColumnIds.includes(s.id))
   }, [prefs?.sorting, defaultSort, allColumnIds])
 
+  // pageSize 0 is the "All" sentinel — fall back to the full row count so the
+  // single page holds everything.
+  const effectivePageSize = pageSize === 0 ? Math.max(1, mergedData.length) : pageSize
   const table = useReactTable({
     data: mergedData,
     columns: tableColumns,
@@ -548,6 +579,18 @@ export function ResourceTable<T>({
       columnOrder,
       columnVisibility,
       columnSizing: liveSizing,
+      pagination: { pageIndex, pageSize: effectivePageSize },
+    },
+    // Live informer updates flow in constantly; the default auto-reset would
+    // bounce the user back to page 1 on every delta. We reset deliberately
+    // (scope/filter/pageSize change) and clamp out-of-range pages ourselves.
+    autoResetPageIndex: false,
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === 'function'
+          ? updater({ pageIndex, pageSize: effectivePageSize })
+          : updater
+      setPageIndex(next.pageIndex)
     },
     onSortingChange: (updater) => {
       const next = typeof updater === 'function' ? updater(sorting) : updater
@@ -580,7 +623,15 @@ export function ResourceTable<T>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   })
+
+  const pageCount = table.getPageCount()
+  useEffect(() => {
+    if (pageIndex > 0 && pageIndex >= pageCount) {
+      setPageIndex(Math.max(0, pageCount - 1))
+    }
+  }, [pageIndex, pageCount])
 
   const visibleRows = table.getRowModel().rows
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -664,7 +715,7 @@ export function ResourceTable<T>({
   }
 
   const allLoaded = activeContexts.every((c) => loadedSet.has(c))
-  const filteredCount = table.getRowModel().rows.length
+  const filteredCount = table.getPrePaginationRowModel().rows.length
   const total = mergedData.length
   const countLabel = !allLoaded
     ? `Loading ${noun.plural}…`
@@ -961,6 +1012,64 @@ export function ResourceTable<T>({
           </tbody>
         </table>
       </div>
+      {allLoaded && filteredCount > 0 && (
+        <div className="flex items-center gap-3 border-t border-border px-4 py-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <span>Rows per page</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs">
+                  {pageSize === 0 ? 'All' : pageSize}
+                  <ChevronsUpDown className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-24">
+                <DropdownMenuRadioGroup
+                  value={String(pageSize)}
+                  onValueChange={(v) => setPageSize(kind, Number(v))}
+                >
+                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                    <DropdownMenuRadioItem key={opt} value={String(opt)}>
+                      {opt === 0 ? 'All' : opt}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {pageCount > 1 && (
+            <div className="ml-auto flex items-center gap-2">
+              <span className="tabular-nums">
+                {pageIndex * effectivePageSize + 1}–
+                {Math.min((pageIndex + 1) * effectivePageSize, filteredCount)} of {filteredCount}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-7 p-0"
+                disabled={!table.getCanPreviousPage()}
+                onClick={() => table.previousPage()}
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="tabular-nums">
+                Page {pageIndex + 1} of {pageCount}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-7 p-0"
+                disabled={!table.getCanNextPage()}
+                onClick={() => table.nextPage()}
+                aria-label="Next page"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
       <BulkDeleteDialog
         items={selectedItems}
         open={bulkDeleteOpen}

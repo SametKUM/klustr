@@ -3,6 +3,11 @@ import { persist } from 'zustand/middleware'
 
 type SortRule = { id: string; desc: boolean }
 
+// Rows shown per page. 0 is the sentinel for "All"; absent falls back to
+// DEFAULT_PAGE_SIZE. The fixed option set offered in the UI.
+export const DEFAULT_PAGE_SIZE = 100
+export const PAGE_SIZE_OPTIONS = [25, 50, 100, 200, 500, 0] as const
+
 type ColumnPrefs = {
   order: string[]
   hidden: string[]
@@ -10,6 +15,7 @@ type ColumnPrefs = {
   // Absent means "never sorted this kind" (fall back to the view's default sort);
   // an empty array means the user explicitly cleared sorting.
   sorting?: SortRule[]
+  pageSize?: number
 }
 
 type State = {
@@ -18,6 +24,7 @@ type State = {
   setHidden: (kind: string, hidden: string[]) => void
   setSizing: (kind: string, sizing: Record<string, number>) => void
   setSorting: (kind: string, sorting: SortRule[]) => void
+  setPageSize: (kind: string, pageSize: number) => void
   reset: (kind: string) => void
 }
 
@@ -33,6 +40,8 @@ export const useTablePrefs = create<State>()(
         set((s) => ({ byKind: { ...s.byKind, [kind]: { ...prefsFor(s, kind), sizing } } })),
       setSorting: (kind, sorting) =>
         set((s) => ({ byKind: { ...s.byKind, [kind]: { ...prefsFor(s, kind), sorting } } })),
+      setPageSize: (kind, pageSize) =>
+        set((s) => ({ byKind: { ...s.byKind, [kind]: { ...prefsFor(s, kind), pageSize } } })),
       reset: (kind) =>
         set((s) => {
           const next = { ...s.byKind }
