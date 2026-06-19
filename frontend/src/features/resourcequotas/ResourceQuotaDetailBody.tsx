@@ -20,7 +20,7 @@ export function ResourceQuotaDetailBody({
   return (
     <div className="space-y-6">
       <Section title="Status">
-        <Field label="Scopes">{detail.scopes.join(', ') || '<none>'}</Field>
+        <Field label="Scopes">{detail.scopes.join(', ') || '—'}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
       {detail.entries.length > 0 && (
