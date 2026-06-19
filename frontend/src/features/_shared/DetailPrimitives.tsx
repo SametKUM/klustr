@@ -21,8 +21,8 @@ export function Field({
   mono?: boolean
 }) {
   return (
-    <div className="flex items-baseline gap-3 text-sm">
-      <div className="w-32 shrink-0 text-xs text-muted-foreground">{label}</div>
+    <div className="flex items-start gap-3 text-sm">
+      <div className="w-36 shrink-0 text-xs leading-snug text-muted-foreground">{label}</div>
       <div className={['min-w-0 flex-1 break-words', mono ? 'font-mono text-xs' : ''].join(' ')}>
         {children}
       </div>
