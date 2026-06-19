@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type PodDisruptionBudgetDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function PodDisruptionBudgetDetailBody({
@@ -44,7 +45,9 @@ export function PodDisruptionBudgetDetailBody({
                 {detail.conditions.map((c, i) => (
                   <tr key={i} className="border-t border-border">
                     <Td>{c.type}</Td>
-                    <Td>{c.status}</Td>
+                    <Td>
+                      <ConditionPill status={c.status} />
+                    </Td>
                     <Td>{c.reason || '—'}</Td>
                   </tr>
                 ))}

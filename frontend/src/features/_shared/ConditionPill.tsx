@@ -1,5 +1,8 @@
-// Small status pill used by Gateway API views to render the True / False /
-// Unknown status of a status condition (Programmed, Accepted, ResolvedRefs…).
+// Small status pill for the True / False / Unknown value of a metav1.Condition,
+// shared across detail views (Gateway, CSR, Flux, cert-manager, PVC, PDB).
+// Generic semantics: True=good, False=bad, anything else=warning. Do not use it
+// for kinds whose conditions are inverted (e.g. HPA ScalingLimited, several Node
+// conditions where True is the failure) — those need type-aware coloring.
 export function ConditionPill({ status }: { status: string }) {
   if (!status) {
     return <span className="text-muted-foreground/70">—</span>

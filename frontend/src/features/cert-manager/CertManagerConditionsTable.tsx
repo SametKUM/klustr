@@ -1,5 +1,6 @@
 import type { CertManagerCondition } from '@/lib/api'
 import { formatAge } from '@/lib/time'
+import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 
 // CertManagerConditionsTable renders the full .status.conditions[] block in
@@ -37,7 +38,7 @@ export function CertManagerConditionsTable({
               <tr key={c.type} className="border-t border-border align-top">
                 <Td className="font-mono">{c.type}</Td>
                 <Td>
-                  <span className={statusClass(c.status)}>{c.status}</span>
+                  <ConditionPill status={c.status} />
                 </Td>
                 <Td className="font-mono">{c.reason || '—'}</Td>
                 <Td className="whitespace-nowrap text-muted-foreground">
@@ -53,10 +54,4 @@ export function CertManagerConditionsTable({
       </div>
     </Section>
   )
-}
-
-function statusClass(status: string): string {
-  if (status === 'True') return 'text-emerald-600 dark:text-emerald-400 font-medium'
-  if (status === 'False') return 'text-destructive font-medium'
-  return 'text-muted-foreground'
 }
