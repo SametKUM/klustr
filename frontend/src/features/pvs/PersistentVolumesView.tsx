@@ -4,18 +4,11 @@ import { api, type PersistentVolumeInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
+import { phaseClass } from '@/features/_shared/phaseColor'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
 const columnHelper = createColumnHelper<PersistentVolumeInfo>()
-
-function phaseClass(phase: string): string {
-  if (phase === 'Bound') return 'text-emerald-600 dark:text-emerald-400'
-  if (phase === 'Available') return 'text-foreground'
-  if (phase === 'Released') return 'text-amber-600 dark:text-amber-400'
-  if (phase === 'Failed') return 'text-destructive'
-  return 'text-muted-foreground'
-}
 
 export function PersistentVolumesView() {
   const pvs = useResources((s) => s.persistentVolumes)

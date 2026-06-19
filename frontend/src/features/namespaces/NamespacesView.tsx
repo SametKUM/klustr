@@ -4,16 +4,11 @@ import { api, type NamespaceInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_SM } from '@/features/_shared/columnSizes'
+import { phaseClass } from '@/features/_shared/phaseColor'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
 const columnHelper = createColumnHelper<NamespaceInfo>()
-
-function phaseClass(phase: string): string {
-  if (phase === 'Active') return 'text-emerald-600 dark:text-emerald-400'
-  if (phase === 'Terminating') return 'text-amber-600 dark:text-amber-400'
-  return 'text-muted-foreground'
-}
 
 export function NamespacesView() {
   const namespaces = useResources((s) => s.namespaces)

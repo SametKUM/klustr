@@ -3,6 +3,7 @@ import { api, type PersistentVolumeClaimDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { phaseClass } from '@/features/_shared/phaseColor'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
@@ -26,7 +27,9 @@ export function PersistentVolumeClaimDetailBody({
     <div className="space-y-6">
       <div className="grid gap-6 sm:grid-cols-2">
         <Section title="Status">
-          <Field label="Status">{detail.status}</Field>
+          <Field label="Status">
+            <span className={phaseClass(detail.status)}>{detail.status}</span>
+          </Field>
           <Field label="Capacity">{detail.capacity || '—'}</Field>
           <Field label="Request">{detail.request || '—'}</Field>
           <Field label="Volume Mode">{detail.volumeMode || 'Filesystem'}</Field>
