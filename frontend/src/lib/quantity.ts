@@ -45,7 +45,7 @@ export function parseQuantity(raw: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-const MEMORY_UNITS = ['B', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi']
+const MEMORY_UNITS = ['B', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei']
 
 // formatMemoryQuantity turns a raw K8s memory quantity ("7962736Ki",
 // "2Gi", "500M") into a compact binary string ("7.6Gi", "2Gi", "477Mi").

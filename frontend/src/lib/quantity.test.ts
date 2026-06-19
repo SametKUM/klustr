@@ -48,4 +48,8 @@ describe('formatMemoryQuantity', () => {
     expect(formatMemoryQuantity('0')).toBe('0')
     expect(formatMemoryQuantity('0Ki')).toBe('0')
   })
+  it('reaches the Ei unit its parser supports instead of overflowing Pi', () => {
+    expect(formatMemoryQuantity('1Ei')).toBe('1.0Ei')
+    expect(formatMemoryQuantity('2Ei')).toBe('2.0Ei')
+  })
 })
