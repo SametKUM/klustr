@@ -149,7 +149,7 @@ function MiniBar({ metric }: { metric: HPAMetricTarget }) {
           style={{ width: fillPct + '%' }}
         />
       </div>
-      <span className="w-12 text-right text-[10px] tabular-nums text-muted-foreground">
+      <span className="shrink-0 whitespace-nowrap text-right text-[10px] tabular-nums text-muted-foreground">
         {metric.current}%/{metric.target}%
       </span>
     </div>
