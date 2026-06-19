@@ -85,16 +85,31 @@ func serviceInfoFrom(s *corev1.Service) ServiceInfo {
 //nolint:staticcheck // the Endpoints view intentionally projects the deprecated core/v1 Endpoints kind
 func endpointsInfoFrom(e *corev1.Endpoints) EndpointsInfo {
 	addrs := []string{}
+	seenAddr := map[string]struct{}{}
+	ports := []string{}
+	seenPort := map[int32]struct{}{}
 	for _, s := range e.Subsets {
 		for _, a := range s.Addresses {
-			for _, p := range s.Ports {
-				addrs = append(addrs, fmt.Sprintf("%s:%d", a.IP, p.Port))
+			if _, ok := seenAddr[a.IP]; ok {
+				continue
 			}
+			seenAddr[a.IP] = struct{}{}
+			addrs = append(addrs, a.IP)
+		}
+		for _, p := range s.Ports {
+			if _, ok := seenPort[p.Port]; ok {
+				continue
+			}
+			seenPort[p.Port] = struct{}{}
+			ports = append(ports, fmt.Sprintf("%d", p.Port))
 		}
 	}
 	joined := strings.Join(addrs, ", ")
 	if len(addrs) > 5 {
 		joined = strings.Join(addrs[:5], ", ") + fmt.Sprintf(" +%d more", len(addrs)-5)
+	}
+	if joined != "" && len(ports) > 0 {
+		joined += " · :" + strings.Join(ports, ", :")
 	}
 	return EndpointsInfo{
 		Name:      e.Name,
