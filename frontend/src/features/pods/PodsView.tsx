@@ -4,6 +4,7 @@ import { api, type PodInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { NodeLink } from '@/features/_shared/NodeLink'
 import { COL_MD, COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useActiveContexts, useUIStore } from '@/store/ui'
@@ -122,7 +123,10 @@ export function PodsView() {
         size: COL_XS,
         cell: (info) => <RestartBadge value={info.getValue()} />,
       }),
-      columnHelper.accessor('node', { header: 'Node' }),
+      columnHelper.accessor('node', {
+        header: 'Node',
+        cell: (info) => <NodeLink name={info.getValue()} context={info.row.original.__klustrCtx} />,
+      }),
       columnHelper.accessor('podIP', { header: 'IP', size: COL_SM }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
