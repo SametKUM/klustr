@@ -1051,9 +1051,7 @@ function GroupEditorDialog({
                         ? 'scale-110 ring-2 ring-offset-2 ring-ring ring-offset-background'
                         : 'hover:scale-105',
                     ].join(' ')}
-                  >
-                    {selected && <Check className="size-3 text-white" />}
-                  </button>
+                  />
                 )
               })}
             </div>

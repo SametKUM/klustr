@@ -87,9 +87,7 @@ function NewTagForm({
               onClick={() => setColor(c)}
               aria-label={c}
               className={`flex size-5 items-center justify-center rounded-full ${COLOR_PALETTE[c].dotClass} ${isSelected ? 'ring-2 ring-offset-1 ring-offset-popover ring-foreground/50' : ''}`}
-            >
-              {isSelected && <Check className="size-3 text-white" />}
-            </button>
+            />
           )
         })}
       </div>
