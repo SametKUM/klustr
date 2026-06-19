@@ -77,7 +77,7 @@ type ProviderMeta = {
   id: Provider
   label: string
   className: string
-  Icon: React.ComponentType<{ className?: string }>
+  Icon: React.ComponentType<{ className?: string; role?: string; 'aria-label'?: string }>
 }
 
 const META: Record<Provider, ProviderMeta> = {
@@ -141,6 +141,7 @@ export function ProviderIcon({ context, className }: { context: ContextInfo; cla
   return (
     <Icon
       className={[meta.className, className ?? 'size-3.5'].filter(Boolean).join(' ')}
+      role="img"
       aria-label={meta.label}
     />
   )
