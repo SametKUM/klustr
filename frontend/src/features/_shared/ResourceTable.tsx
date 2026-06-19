@@ -918,9 +918,10 @@ export function ResourceTable<T>({
                         onTouchStart={startResize(h.column.id)}
                         onClick={(e) => e.stopPropagation()}
                         className={[
-                          'absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none',
-                          'bg-border opacity-0 group-hover:opacity-100',
-                          'data-[resizing=true]:bg-primary data-[resizing=true]:opacity-100',
+                          'absolute right-0 top-0 h-full w-2 cursor-col-resize select-none touch-none',
+                          'after:absolute after:right-0 after:top-0 after:h-full after:w-0.5 after:bg-border after:opacity-0 after:content-[""]',
+                          'group-hover:after:opacity-100',
+                          'data-[resizing=true]:after:bg-primary data-[resizing=true]:after:opacity-100',
                         ].join(' ')}
                       />
                     </th>
