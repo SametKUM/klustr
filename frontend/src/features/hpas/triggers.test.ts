@@ -46,6 +46,11 @@ describe('humanizeTrigger', () => {
     expect(humanizeTrigger(raw)).toBe(raw)
   })
 
+  it('falls back to the raw string for a wrap-around day range (5-1)', () => {
+    const raw = 'cron (start=0 1 * * 5-1 end=0 2 * * 5-1 desiredReplicas=1)'
+    expect(humanizeTrigger(raw)).toBe(raw)
+  })
+
   it('brands prometheus and spaces out camelCase metadata keys', () => {
     expect(
       humanizeTrigger('prometheus (metricName=rate_in threshold=5 activationThreshold=2)'),

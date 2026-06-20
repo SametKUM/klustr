@@ -79,7 +79,10 @@ function describeDow(dow: string): string | null {
     if (range) {
       const a = Number(range[1])
       const b = Number(range[2])
-      if (a > 6 || b > 6) return null
+      // Bail on out-of-range or wrap-around (e.g. 5-1 = Fri..Mon): rendering it
+      // as "Fri–Mon" reads backwards, so fall back to the raw cron text rather
+      // than show a confidently wrong schedule.
+      if (a > 6 || b > 6 || b < a) return null
       out.push(`${DOW[a]}–${DOW[b]}`)
       continue
     }
