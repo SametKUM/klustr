@@ -115,6 +115,13 @@ func eventInfoFrom(e *corev1.Event) EventInfo {
 	if last.IsZero() {
 		last = e.EventTime.Time
 	}
+	if last.IsZero() {
+		// Both timestamps unset (some controllers only set one); fall back to
+		// the object's creation time so LastSeen isn't the year-1 zero value,
+		// which renders as an absurd multi-thousand-day age and poisons the
+		// recency sort.
+		last = e.CreationTimestamp.Time
+	}
 	if first.IsZero() {
 		first = last
 	}
