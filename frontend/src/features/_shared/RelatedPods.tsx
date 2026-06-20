@@ -44,11 +44,17 @@ function statusClass(status: string): string {
 export function RelatedPods({ contextName, kind, namespace, name, title }: Props) {
   const [pods, setPods] = useState<PodInfo[]>([])
   const [error, setError] = useState<string | null>(null)
+  // Distinguish "still loading the first list" from "loaded, genuinely empty"
+  // so the initial render doesn't flash a false "No pods" before data lands.
+  // Background onKubeChange refreshes keep loaded=true, so the table doesn't
+  // flicker on unrelated pod churn.
+  const [loaded, setLoaded] = useState(false)
   const openResource = useUIStore((s) => s.openResource)
 
   const refresh = useCallback(async () => {
     if (!contextName) {
       setPods([])
+      setLoaded(true)
       return
     }
     try {
@@ -57,10 +63,14 @@ export function RelatedPods({ contextName, kind, namespace, name, title }: Props
       setError(null)
     } catch (err) {
       setError(String(err))
+    } finally {
+      setLoaded(true)
     }
   }, [contextName, kind, namespace, name])
 
   useEffect(() => {
+    setLoaded(false)
+    setPods([])
     refresh()
     if (!contextName) return
     return onKubeChange('Pod', (ctx) => {
@@ -75,7 +85,10 @@ export function RelatedPods({ contextName, kind, namespace, name, title }: Props
   return (
     <Section title={`${heading} (${pods.length})`}>
       {error && <ErrorBox>{error}</ErrorBox>}
-      {!error && pods.length === 0 && (
+      {!error && !loaded && (
+        <div className="py-3 text-xs text-muted-foreground">Loading pods…</div>
+      )}
+      {!error && loaded && pods.length === 0 && (
         <div className="py-3 text-xs text-muted-foreground">No pods match this resource.</div>
       )}
       {pods.length > 0 && (
