@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -71,8 +71,15 @@ function reportOutcome(action: 'Deleted' | 'Restarted', ok: number, failed: numb
 
 export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: DialogProps) {
   const [typed, setTyped] = useState('')
-  const label = kindLabel(items)
-  const { shown, rest } = preview(items)
+  // onSuccess clears the selection, emptying `items` while the dialog is still
+  // mounted for its ~100ms close animation, which would flash "Delete 0" and an
+  // empty list. Render from the last non-empty snapshot so the closing view
+  // stays stable; the mutation still operates on the live `items`.
+  const displayRef = useRef(items)
+  if (items.length > 0) displayRef.current = items
+  const display = items.length > 0 ? items : displayRef.current
+  const label = kindLabel(display)
+  const { shown, rest } = preview(display)
   const confirmed = typed === 'DELETE'
 
   const del = useMutation({
@@ -102,7 +109,7 @@ export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: Dialo
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Delete {items.length} {label}?
+            Delete {display.length} {label}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             This issues DELETE against each item via the Kubernetes API. This cannot be undone.
@@ -151,7 +158,7 @@ export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: Dialo
             }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {del.isPending ? 'Deleting…' : `Delete ${items.length}`}
+            {del.isPending ? 'Deleting…' : `Delete ${display.length}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -160,8 +167,13 @@ export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: Dialo
 }
 
 export function BulkRestartDialog({ items, open, onOpenChange, onSuccess }: DialogProps) {
-  const label = kindLabel(items)
-  const { shown, rest } = preview(items)
+  // See BulkDeleteDialog: render from the last non-empty snapshot so the
+  // close animation doesn't flash "Restart 0" after the selection clears.
+  const displayRef = useRef(items)
+  if (items.length > 0) displayRef.current = items
+  const display = items.length > 0 ? items : displayRef.current
+  const label = kindLabel(display)
+  const { shown, rest } = preview(display)
 
   const restart = useMutation({
     mutationFn: async () => {
@@ -187,7 +199,7 @@ export function BulkRestartDialog({ items, open, onOpenChange, onSuccess }: Dial
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Restart {items.length} {label}?
+            Restart {display.length} {label}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             Triggers a rolling restart on each workload by patching
@@ -221,7 +233,7 @@ export function BulkRestartDialog({ items, open, onOpenChange, onSuccess }: Dial
               restart.mutate()
             }}
           >
-            {restart.isPending ? 'Restarting…' : `Restart ${items.length}`}
+            {restart.isPending ? 'Restarting…' : `Restart ${display.length}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
