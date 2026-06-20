@@ -233,7 +233,11 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
           })
           .finally(() => {
             activeStarts--
-            if (activeStarts === 0 && !cancelled) setStreaming(true)
+            // Only report "live" if at least one stream actually registered;
+            // if every start failed (e.g. cluster-wide RBAC denial) the per-line
+            // "# start failed" messages must not be contradicted by a green
+            // "● live" indicator.
+            if (activeStarts === 0 && !cancelled) setStreaming(sessions.length > 0)
           })
       })
     })
