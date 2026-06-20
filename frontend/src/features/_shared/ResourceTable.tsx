@@ -654,9 +654,15 @@ export function ResourceTable<T>({
         .filter((k): k is string => k !== null),
     [visibleRows],
   )
+  // Bulk actions and the "N selected" banner act on the full selection across
+  // every page (intersected with the current filter), not just the visible
+  // page — selectedKeys persists across pagination, so deriving from the
+  // post-pagination rows would silently drop off-page selections on a
+  // destructive path. getPrePaginationRowModel() is filtered but not paginated.
+  const selectableRows = table.getPrePaginationRowModel().rows
   const selectedItems = useMemo(() => {
     const items: BulkItem[] = []
-    for (const r of visibleRows) {
+    for (const r of selectableRows) {
       const tagged = r.original as Tagged<T>
       const ctx = tagged[KLUSTR_CTX]
       const ident = tagged as unknown as RowIdentity
@@ -671,7 +677,7 @@ export function ResourceTable<T>({
       })
     }
     return items
-  }, [visibleRows, selectedKeys, kind])
+  }, [selectableRows, selectedKeys, kind])
   const allVisibleSelected =
     visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k))
   const toggleRow = useCallback((key: string) => {
