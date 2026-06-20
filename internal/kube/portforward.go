@@ -165,10 +165,12 @@ func (mgr *pfManager) start(
 func (mgr *pfManager) stop(id string) {
 	mgr.mu.Lock()
 	sess, ok := mgr.sessions[id]
-	// An errored session's monitor goroutine has already exited, so the
-	// user's stop doubles as the acknowledgement that removes it.
-	dismissed := ok && sess.info.Status == "error"
-	if dismissed {
+	// Remove and notify synchronously for every stop, not just dismissing an
+	// errored one. Otherwise a healthy stop only updated the UI when the monitor
+	// goroutine woke as ForwardPorts returned, which can lag on a wedged SPDY
+	// connection. The monitor's ok-check no-ops on the already-removed id, and
+	// an errored session's monitor has already exited.
+	if ok {
 		delete(mgr.sessions, id)
 	}
 	mgr.mu.Unlock()
@@ -176,9 +178,7 @@ func (mgr *pfManager) stop(id string) {
 		return
 	}
 	sess.close()
-	if dismissed {
-		mgr.notify()
-	}
+	mgr.notify()
 }
 
 func (mgr *pfManager) list() []PortForwardInfo {
