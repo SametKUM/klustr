@@ -73,10 +73,21 @@ export function RelatedPods({ contextName, kind, namespace, name, title }: Props
     setPods([])
     refresh()
     if (!contextName) return
-    return onKubeChange('Pod', (ctx) => {
-      if (ctx === contextName) refresh()
+    return onKubeChange('Pod', (ctx, delta) => {
+      if (ctx !== contextName) return
+      // For a workload owner only this namespace's pods are relevant, so skip
+      // bursts that don't touch it (the event carries the changed/removed pods).
+      // A Node owner's pods span namespaces, and an absent/reset delta is
+      // unfiltered, so both fall through to a refresh.
+      if (kind !== 'Node' && delta && !delta.reset) {
+        const touches =
+          (delta.upserts as Array<{ namespace?: string }>).some((u) => u?.namespace === namespace) ||
+          delta.removed.some((k) => k.startsWith(`${namespace}/`))
+        if (!touches) return
+      }
+      refresh()
     })
-  }, [refresh, contextName])
+  }, [refresh, contextName, kind, namespace])
 
   const showNamespace = kind === 'Node'
   const showNode = kind !== 'Node'

@@ -91,10 +91,21 @@ export function RolloutHistoryTab({ contextName, kind, namespace, name }: Props)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load + subscription kickoff, reload manages its own loading state
     reload()
-    return onKubeChange(kind, (ctx) => {
-      if (ctx === contextName) reload()
+    return onKubeChange(kind, (ctx, delta) => {
+      if (ctx !== contextName) return
+      // Only a change to this exact workload affects its rollout history, so
+      // skip bursts from other objects of the same kind. Absent/reset deltas
+      // are unfiltered and fall through.
+      if (delta && !delta.reset) {
+        const touches =
+          (delta.upserts as Array<{ namespace?: string; name?: string }>).some(
+            (u) => u?.namespace === namespace && u?.name === name,
+          ) || delta.removed.includes(`${namespace}/${name}`)
+        if (!touches) return
+      }
+      reload()
     })
-  }, [reload, kind, contextName])
+  }, [reload, kind, contextName, namespace, name])
 
   useEffect(() => {
     if (diffRevision === null || activeRevision === null || !contextName) {
