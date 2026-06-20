@@ -311,6 +311,10 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
             bufferRef.current = []
             visibleLinesRef.current = []
             setBufferLength(0)
+            // clear() leaves the (now empty) view bottom-anchored, but atBottom
+            // only updates on scroll, so reset it here or the "Jump to bottom"
+            // pill lingers over an empty terminal until the next scroll/write.
+            setAtBottom(true)
           }}
         >
           <Eraser />
