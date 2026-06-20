@@ -156,6 +156,14 @@ export function StatusBar() {
         ? selectedNamespaces[0]
         : `${selectedNamespaces.length} namespaces`
 
+  // The standalone "Kubernetes vX" label retains the last cached version on a
+  // failed/slow ping, so flag it when the context isn't currently live instead
+  // of letting a stale version read as current.
+  const soloHealth =
+    !isAggregated && activeContexts.length === 1 ? healthByCtx[activeContexts[0]] : undefined
+  const soloVersionSuffix =
+    soloHealth?.status === 'error' ? ' · offline' : soloHealth?.status === 'stale' ? ' · stale' : ''
+
   return (
     <footer className="flex h-6 shrink-0 items-center gap-3 border-t border-border bg-background px-3 text-[10px] text-muted-foreground">
       {activeContexts.length === 0 ? (
@@ -213,8 +221,11 @@ export function StatusBar() {
           {namespaceText}
         </span>
       )}
-      {!isAggregated && activeContexts.length === 1 && healthByCtx[activeContexts[0]]?.version && (
-        <span className="font-mono">Kubernetes {healthByCtx[activeContexts[0]].version}</span>
+      {soloHealth?.version && (
+        <span className={soloVersionSuffix ? 'font-mono text-muted-foreground/70' : 'font-mono'}>
+          Kubernetes {soloHealth.version}
+          {soloVersionSuffix}
+        </span>
       )}
       {portForwards.length > 0 && (
         <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
