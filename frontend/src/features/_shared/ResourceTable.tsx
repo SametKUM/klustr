@@ -455,15 +455,15 @@ export function ResourceTable<T>({
     // bridge/render churn on busy clusters to roughly one refetch per fetch
     // latency instead of one per event.
     const inflight = new Map<string, { dirty: boolean }>()
-    const reload = (ctx: string) => {
+    const reload = (ctx: string): Promise<void> => {
       const st = inflight.get(ctx)
       if (st) {
         st.dirty = true
-        return
+        return Promise.resolve()
       }
       inflight.set(ctx, { dirty: false })
       const t0 = import.meta.env.DEV ? performance.now() : 0
-      fetchRef.current(ctx, query.apiNamespace).then((list) => {
+      return fetchRef.current(ctx, query.apiNamespace).then((list) => {
         if (cancelled) return
         const tFetched = import.meta.env.DEV ? performance.now() : 0
         const items = stableList(dataRef.current[ctx], list ?? [])
@@ -498,7 +498,17 @@ export function ResourceTable<T>({
         }
       })
     }
-    for (const ctx of activeContexts) reload(ctx)
+    // Bound the initial fan-out so a large aggregated group doesn't fire N
+    // simultaneous bridge round-trips on a context-set/namespace change; the
+    // per-context single-flight above handles steady-state kube:change bursts.
+    let nextCtx = 0
+    const runNext = (): Promise<void> => {
+      const i = nextCtx++
+      if (cancelled || i >= activeContexts.length) return Promise.resolve()
+      return reload(activeContexts[i]).then(runNext)
+    }
+    const initialConcurrency = Math.min(4, activeContexts.length)
+    for (let w = 0; w < initialConcurrency; w++) void runNext()
     const unsub = onKubeChange(kind, (ctx, delta) => {
       if (!activeContexts.includes(ctx)) return
       const apply = applyDeltaRef.current
