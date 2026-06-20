@@ -331,4 +331,17 @@ describe('context groups', () => {
     useUIStore.getState().removeContextGroup('g1')
     expect(useUIStore.getState().contextGroups).toEqual([])
   })
+
+  it('removeContextGroup clears activeGroupId when the active group is removed', () => {
+    useUIStore.getState().upsertContextGroup({
+      id: 'g1',
+      name: 'one',
+      contexts: ['a', 'b'],
+      color: 'sky',
+    })
+    useUIStore.getState().setAggregatedContexts(['a', 'b'], 'g1')
+    expect(useUIStore.getState().activeGroupId).toBe('g1')
+    useUIStore.getState().removeContextGroup('g1')
+    expect(useUIStore.getState().activeGroupId).toBeNull()
+  })
 })

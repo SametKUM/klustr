@@ -530,6 +530,13 @@ export const useUIStore = create<UIState>((set) => {
         const next = s.contextGroups.filter((g) => g.id !== id)
         if (next.length === s.contextGroups.length) return s
         persistContextGroups(next)
+        // If the removed group was active, clear the dangling association too,
+        // otherwise activeGroupId keeps pointing at a deleted id and the
+        // colored top-bar stripe / switcher highlight go inconsistent until the
+        // next context change. The aggregated contexts themselves stay.
+        if (s.activeGroupId === id) {
+          return { contextGroups: next, activeGroupId: null }
+        }
         return { contextGroups: next }
       }),
   }
