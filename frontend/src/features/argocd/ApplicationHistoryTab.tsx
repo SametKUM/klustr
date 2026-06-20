@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Bot, RotateCcw, User } from 'lucide-react'
 import { toast } from 'sonner'
@@ -28,14 +28,24 @@ export function ApplicationHistoryTab({ contextName, namespace, name }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<ArgoApplicationHistoryEntry | null>(null)
 
+  // The Argo detail panel keeps a navigation stack, so drilling App A → App B
+  // while A's history request is in flight would otherwise resolve the stale
+  // promise and overwrite B's rows. Gate setState on a generation token; the
+  // RollbackDialog's onSuccess reuses the same reload.
+  const genRef = useRef(0)
   const reload = useCallback(() => {
     if (!contextName) return
+    const gen = ++genRef.current
     setRows(null)
     setError(null)
     api
       .listArgoApplicationHistory(contextName, namespace, name)
-      .then((list) => setRows(list ?? []))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .then((list) => {
+        if (gen === genRef.current) setRows(list ?? [])
+      })
+      .catch((e) => {
+        if (gen === genRef.current) setError(e instanceof Error ? e.message : String(e))
+      })
   }, [contextName, namespace, name])
 
   useEffect(reload, [reload])
