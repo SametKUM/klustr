@@ -27,6 +27,7 @@ export function ContextSwitcher() {
   const toggleAggregated = useUIStore((s) => s.toggleAggregatedContext)
   const clearAggregated = useUIStore((s) => s.clearAggregatedContexts)
   const setAggregatedContexts = useUIStore((s) => s.setAggregatedContexts)
+  const setSelectedContext = useUIStore((s) => s.setSelectedContext)
   const autoConnectContext = useUIStore((s) => s.defaultContext)
   const contextTags = useUIStore((s) => s.contextTags)
   const customTags = useUIStore((s) => s.customTags)
@@ -126,7 +127,20 @@ export function ContextSwitcher() {
                         key={g.id}
                         value={`__group_${g.id}_${g.name}`}
                         onSelect={() => {
-                          setAggregatedContexts(g.contexts, g.id)
+                          // Activate only the members that exist in the live
+                          // kubeconfig — setAggregatedContexts just dedupes, it
+                          // doesn't drop stale names, so passing raw g.contexts
+                          // would attach a phantom context (wrong count, an empty
+                          // column, a permanently-red ping). Mirrors connectGroup.
+                          if (members.length === 0) return
+                          if (members.length === 1) {
+                            setSelectedContext(members[0].name)
+                          } else {
+                            setAggregatedContexts(
+                              members.map((m) => m.name),
+                              g.id,
+                            )
+                          }
                           setOpen(false)
                         }}
                         className="items-center gap-2.5 py-2"
