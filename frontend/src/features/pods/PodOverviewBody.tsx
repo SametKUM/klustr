@@ -182,8 +182,8 @@ function ContainerEnvSection({
                   </tr>
                 </thead>
                 <tbody>
-                  {c.env.map((e) => (
-                    <tr key={e.name} className="border-t border-border align-top">
+                  {c.env.map((e, i) => (
+                    <tr key={`${c.name}:${i}:${e.name}`} className="border-t border-border align-top">
                       <Td className="font-mono"><Copyable value={e.name} /></Td>
                       <Td className="break-all font-mono">
                         <EnvValueCell
