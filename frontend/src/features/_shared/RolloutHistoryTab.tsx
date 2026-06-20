@@ -190,21 +190,29 @@ export function RolloutHistoryTab({ contextName, kind, namespace, name }: Props)
           <tbody>
             {revisions.map((r) => {
               const isSelected = diffRevision === r.revision
+              const toggleDiff = () =>
+                setDiffRevision((cur) => (cur === r.revision || r.active ? null : r.revision))
               return (
                 <tr
                   key={r.revision}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  aria-label={`Diff revision ${r.revision}`}
                   className={[
                     'cursor-pointer border-t border-border align-top transition-colors',
+                    'focus:outline-none focus-visible:ring-1 focus-visible:ring-ring',
                     isSelected
                       ? 'bg-primary/10 hover:bg-primary/15'
                       : 'hover:bg-muted/40',
                   ].join(' ')}
-                  onClick={() =>
-                    setDiffRevision((cur) =>
-                      cur === r.revision || r.active ? null : r.revision,
-                    )
-                  }
-                  aria-selected={isSelected}
+                  onClick={toggleDiff}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      toggleDiff()
+                    }
+                  }}
                 >
                   <Td>
                     <div className="flex items-center gap-1.5">

@@ -93,18 +93,28 @@ export function RelatedPods({ contextName, kind, namespace, name, title }: Props
               </tr>
             </thead>
             <tbody>
-              {pods.map((p) => (
+              {pods.map((p) => {
+                const open = () =>
+                  openResource({
+                    kind: 'Pod',
+                    namespace: p.namespace,
+                    name: p.name,
+                    context: contextName ?? undefined,
+                  })
+                return (
                 <tr
                   key={`${p.namespace}/${p.name}`}
-                  className="cursor-pointer border-t border-border align-top hover:bg-muted/40"
-                  onClick={() =>
-                    openResource({
-                      kind: 'Pod',
-                      namespace: p.namespace,
-                      name: p.name,
-                      context: contextName ?? undefined,
-                    })
-                  }
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open pod ${p.name}`}
+                  className="cursor-pointer border-t border-border align-top hover:bg-muted/40 focus:bg-muted/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onClick={open}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      open()
+                    }
+                  }}
                 >
                   {showNamespace && <Td className="text-muted-foreground">{p.namespace}</Td>}
                   <Td className="font-mono">{p.name}</Td>
@@ -120,7 +130,8 @@ export function RelatedPods({ contextName, kind, namespace, name, title }: Props
                     {formatAge(p.createdAt)}
                   </Td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
