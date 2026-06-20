@@ -426,6 +426,7 @@ func (m *ClientManager) StopWatch(contextName string) {
 	m.metrics.invalidate(contextName)
 	m.helm.invalidate(contextName)
 	m.creds.pauseRefresh(contextName)
+	m.pf.stopForContext(contextName)
 	if ok {
 		w.stop()
 	}
