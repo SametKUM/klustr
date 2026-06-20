@@ -300,6 +300,14 @@ func TestDerivePodStatus(t *testing.T) {
 		t.Errorf("terminating: got %q", got)
 	}
 
+	gated := &corev1.Pod{Status: corev1.PodStatus{
+		Phase:      corev1.PodPending,
+		Conditions: []corev1.PodCondition{{Type: corev1.PodScheduled, Status: corev1.ConditionFalse, Reason: "SchedulingGated"}},
+	}}
+	if got := derivePodStatus(gated); got != "SchedulingGated" {
+		t.Errorf("scheduling gated: got %q, want SchedulingGated", got)
+	}
+
 	// A pod marked for deletion because its node went unreachable shows Unknown,
 	// not Terminating, matching kubectl.
 	nodeLost := &corev1.Pod{

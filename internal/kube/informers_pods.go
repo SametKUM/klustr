@@ -950,6 +950,15 @@ func derivePodStatus(p *corev1.Pod) string {
 	if p.Status.Reason != "" {
 		return p.Status.Reason
 	}
+	// A pod held by a scheduling gate has no container statuses, so it would
+	// otherwise read as a bare "Pending"; kubectl surfaces the gate.
+	if p.Status.Phase == corev1.PodPending {
+		for _, c := range p.Status.Conditions {
+			if c.Type == corev1.PodScheduled && c.Reason == "SchedulingGated" {
+				return "SchedulingGated"
+			}
+		}
+	}
 	return string(p.Status.Phase)
 }
 
