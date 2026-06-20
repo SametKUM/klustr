@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { api, type EventInfo } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -18,42 +18,54 @@ export function EventsView() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const ctxKey = activeContexts.join('|')
+  // Events have no informer (the API is List-only), so unlike every other list
+  // view this screen can't be fed by onKubeChange. Poll like metrics do, and
+  // gate setState on a generation token so a slow in-flight response from a
+  // previous context/namespace can't overwrite the current one.
+  const genRef = useRef(0)
 
-  const refresh = useCallback(async () => {
-    if (activeContexts.length === 0) return
-    setLoading(true)
-    setError(null)
-    try {
-      const { apiNamespace, matches } = namespaceQuery(selectedNamespaces)
-      const results = await Promise.all(
-        activeContexts.map((ctx) =>
-          api
-            .listEvents(ctx, apiNamespace, '', '')
-            .then((list) =>
-              list.map((e) => Object.assign(e, { contextName: ctx }) as TaggedEvent),
-            )
-            .catch(() => [] as TaggedEvent[]),
-        ),
-      )
-      const merged: TaggedEvent[] = []
-      for (const list of results) {
-        for (const e of list) {
-          if (selectedNamespaces.length > 1 && !matches(e.namespace)) continue
-          merged.push(e)
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (activeContexts.length === 0) return
+      const gen = ++genRef.current
+      if (!silent) setLoading(true)
+      setError(null)
+      try {
+        const { apiNamespace, matches } = namespaceQuery(selectedNamespaces)
+        const results = await Promise.all(
+          activeContexts.map((ctx) =>
+            api
+              .listEvents(ctx, apiNamespace, '', '')
+              .then((list) =>
+                list.map((e) => Object.assign(e, { contextName: ctx }) as TaggedEvent),
+              )
+              .catch(() => [] as TaggedEvent[]),
+          ),
+        )
+        if (gen !== genRef.current) return
+        const merged: TaggedEvent[] = []
+        for (const list of results) {
+          for (const e of list) {
+            if (selectedNamespaces.length > 1 && !matches(e.namespace)) continue
+            merged.push(e)
+          }
         }
+        merged.sort((a, b) => (b.lastSeen ?? '').localeCompare(a.lastSeen ?? ''))
+        setEvents(merged)
+      } catch (err) {
+        if (gen === genRef.current) setError(String(err))
+      } finally {
+        if (gen === genRef.current && !silent) setLoading(false)
       }
-      merged.sort((a, b) => (b.lastSeen ?? '').localeCompare(a.lastSeen ?? ''))
-      setEvents(merged)
-    } catch (err) {
-      setError(String(err))
-    } finally {
-      setLoading(false)
-    }
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctxKey, selectedNamespaces])
+    [ctxKey, selectedNamespaces],
+  )
 
   useEffect(() => {
     refresh()
+    const id = setInterval(() => refresh(true), 15_000)
+    return () => clearInterval(id)
   }, [refresh])
 
   if (activeContexts.length === 0) {
@@ -79,7 +91,7 @@ export function EventsView() {
         <Button
           size="sm"
           variant="ghost"
-          onClick={refresh}
+          onClick={() => refresh()}
           disabled={loading}
           className="ml-auto h-7 gap-1.5 text-xs"
         >
