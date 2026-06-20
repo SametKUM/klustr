@@ -127,6 +127,7 @@ import {
 import { useResources } from '@/store/resources'
 import { crdKey, useCRDStore } from '@/store/crds'
 import { useHelmStore } from '@/store/helm'
+import { useMetrics } from '@/store/metrics'
 import { usePortForwards } from '@/store/portForwards'
 import { useTerminalStore } from '@/store/terminals'
 import { kindAccessibleInAny, useAccessStore } from '@/store/access'
@@ -372,6 +373,7 @@ function App() {
   const setCRDs = useCRDStore((s) => s.setCRDs)
   const resetCRDs = useCRDStore((s) => s.reset)
   const resetHelm = useHelmStore((s) => s.reset)
+  const resetMetrics = useMetrics((s) => s.reset)
   const selectedCRDKey = useUIStore((s) => s.selectedCRDKey)
   const setSelectedCRD = useUIStore((s) => s.setSelectedCRD)
   const setAccess = useAccessStore((s) => s.set)
@@ -542,6 +544,7 @@ function App() {
     resetCRDs()
     resetHelm()
     resetAccess()
+    resetMetrics()
     if (activeContexts.length === 0) return
     resetSyncState(added)
     const fetchAccess = (ctx: string) =>
@@ -573,7 +576,7 @@ function App() {
     return () => {
       unsubAccess()
     }
-  }, [activeContexts, resetResources, resetCRDs, resetHelm, resetAccess, setAccess])
+  }, [activeContexts, resetResources, resetCRDs, resetHelm, resetAccess, resetMetrics, setAccess])
 
   useEffect(() => {
     if (activeContexts.length === 0) {
