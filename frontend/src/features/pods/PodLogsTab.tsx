@@ -74,7 +74,9 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
     pausedRef.current = paused
     if (!paused && termRef.current && bufferRef.current.length > 0) {
       const term = termRef.current
-      for (const line of bufferRef.current) term.writeln(line)
+      // One coalesced write instead of up to 5k synchronous writeln calls, which
+      // would block the main thread when unpausing after a busy period.
+      term.write(bufferRef.current.join('\r\n') + '\r\n')
       bufferRef.current = []
       setBufferLength(0)
     }
