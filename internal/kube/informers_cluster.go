@@ -175,6 +175,20 @@ func (w *contextWatcher) NodeInfoByName(name string) []NodeInfo {
 	return []NodeInfo{nodeInfo(n)}
 }
 
+// nodeOSImage returns the node's reported OS image from the informer cache, or
+// "" if the Node informer is unavailable or hasn't cached the node yet.
+func (w *contextWatcher) nodeOSImage(name string) string {
+	f := w.factoryFor("Node")
+	if f == nil {
+		return ""
+	}
+	n, err := f.Core().V1().Nodes().Lister().Get(name)
+	if err != nil {
+		return ""
+	}
+	return n.Status.NodeInfo.OSImage
+}
+
 func nodeInfo(n *corev1.Node) NodeInfo {
 	var memP, diskP, pidP bool
 	for _, c := range n.Status.Conditions {

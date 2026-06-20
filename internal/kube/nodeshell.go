@@ -73,9 +73,18 @@ func (m *ClientManager) StartNodeShell(
 		return "", err
 	}
 
+	// OS image picks the right nsenter shell (Bottlerocket can't --mount). Read
+	// it from the warm Node informer cache first — the frontend already shows
+	// it, so it's cached — and only fall back to a live Get on a cache miss, so
+	// a transient Get failure no longer silently lands on the wrong shell.
 	osImage := ""
-	if node, err := cs.CoreV1().Nodes().Get(parent, nodeName, metav1.GetOptions{}); err == nil {
-		osImage = node.Status.NodeInfo.OSImage
+	if w, ok := m.watcher(contextName); ok {
+		osImage = w.nodeOSImage(nodeName)
+	}
+	if osImage == "" {
+		if node, err := cs.CoreV1().Nodes().Get(parent, nodeName, metav1.GetOptions{}); err == nil {
+			osImage = node.Status.NodeInfo.OSImage
+		}
 	}
 
 	created, err := cs.CoreV1().Pods(nodeShellNamespace).Create(
