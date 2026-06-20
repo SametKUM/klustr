@@ -23,7 +23,8 @@ import { TerminalTab } from './TerminalTab'
 export function TerminalDrawer() {
   const drawerOpen = useTerminalStore((s) => s.drawerOpen)
   const drawerHeight = useTerminalStore((s) => s.drawerHeight)
-  const setDrawerHeight = useTerminalStore((s) => s.setDrawerHeight)
+  const setDrawerHeightLive = useTerminalStore((s) => s.setDrawerHeightLive)
+  const persistDrawerHeight = useTerminalStore((s) => s.persistDrawerHeight)
   const setDrawerOpen = useTerminalStore((s) => s.setDrawerOpen)
   const tabs = useTerminalStore((s) => s.tabs)
   const activeTabId = useTerminalStore((s) => s.activeTabId)
@@ -76,17 +77,19 @@ export function TerminalDrawer() {
       const onMove = (ev: MouseEvent) => {
         if (!draggingRef.current) return
         const delta = startY - ev.clientY
-        setDrawerHeight(startHeight + delta)
+        // In-memory only during the drag; persist once on mouseup.
+        setDrawerHeightLive(startHeight + delta)
       }
       const onUp = () => {
         draggingRef.current = false
         window.removeEventListener('mousemove', onMove)
         window.removeEventListener('mouseup', onUp)
+        persistDrawerHeight()
       }
       window.addEventListener('mousemove', onMove)
       window.addEventListener('mouseup', onUp)
     },
-    [drawerHeight, setDrawerHeight],
+    [drawerHeight, setDrawerHeightLive, persistDrawerHeight],
   )
 
   // Auto-create the first tab when the drawer is opened with the active

@@ -17,6 +17,11 @@ type State = {
   setDrawerOpen: (open: boolean) => void
   toggleDrawer: () => void
   setDrawerHeight: (height: number) => void
+  // Live (in-memory) height update for use during a resize drag; pair with
+  // persistDrawerHeight on mouseup so localStorage is written once, not per
+  // mousemove.
+  setDrawerHeightLive: (height: number) => void
+  persistDrawerHeight: () => void
   openTab: (contextName: string) => string
   closeTab: (tabId: string) => void
   setActiveTab: (tabId: string) => void
@@ -81,6 +86,12 @@ export const useTerminalStore = create<State>((set, get) => ({
     const clamped = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.round(height)))
     writeHeight(clamped)
     set({ drawerHeight: clamped })
+  },
+  setDrawerHeightLive: (height) => {
+    set({ drawerHeight: Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.round(height))) })
+  },
+  persistDrawerHeight: () => {
+    writeHeight(get().drawerHeight)
   },
   openTab: (contextName) => {
     const tabId = nextTabId()
