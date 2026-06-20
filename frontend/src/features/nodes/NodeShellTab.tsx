@@ -118,6 +118,10 @@ export function NodeShellTab({ contextName, nodeName }: Props) {
           }
         })
         api.resizeExec(id, term.cols, term.rows).catch(() => {})
+        // The tab mounts inside a Dialog whose focus management lands on the
+        // dialog, not the xterm textarea, so input goes nowhere until the user
+        // clicks in. Focus after the dialog settles (mirrors TerminalTab).
+        requestAnimationFrame(() => term.focus())
       })
       .catch((e: unknown) => {
         if (cancelled) return
