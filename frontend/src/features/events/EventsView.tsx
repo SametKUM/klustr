@@ -121,31 +121,40 @@ export function EventsView() {
                 </tr>
               </thead>
               <tbody>
-                {events.map((e) => (
-                  <tr
-                    key={e.contextName + '/' + e.namespace + '/' + e.name}
-                    className="cursor-pointer border-t border-border align-top hover:bg-muted/40"
-                    onClick={() => {
-                      if (!e.objectKind || !e.objectName) return
-                      setSelectedResource({
-                        kind: e.objectKind as any,
-                        namespace: e.namespace,
-                        name: e.objectName,
-                        context: e.contextName,
-                      })
-                    }}
-                  >
-                    {isAggregated && <Td className="font-mono text-xs">{e.contextName}</Td>}
-                    <Td><span className={typeClass(e.type)}>{e.type}</span></Td>
-                    <Td className="font-mono">{e.reason}</Td>
-                    <Td className="whitespace-nowrap text-muted-foreground">{formatAge(e.lastSeen)}</Td>
-                    <Td>{e.namespace || '—'}</Td>
-                    <Td className="font-mono text-xs">{e.objectKind}/{e.objectName}</Td>
-                    <Td className="text-muted-foreground">{e.source || '—'}</Td>
-                    <Td className="font-mono">{e.count}</Td>
-                    <Td className="max-w-[28rem] whitespace-pre-wrap break-words">{e.message}</Td>
-                  </tr>
-                ))}
+                {events.map((e) => {
+                  const clickable = !!(e.objectKind && e.objectName)
+                  return (
+                    <tr
+                      key={e.contextName + '/' + e.namespace + '/' + e.name}
+                      className={`border-t border-border align-top ${
+                        clickable ? 'cursor-pointer hover:bg-muted/40' : ''
+                      }`}
+                      onClick={
+                        clickable
+                          ? () =>
+                              setSelectedResource({
+                                kind: e.objectKind as any,
+                                namespace: e.namespace,
+                                name: e.objectName,
+                                context: e.contextName,
+                              })
+                          : undefined
+                      }
+                    >
+                      {isAggregated && <Td className="font-mono text-xs">{e.contextName}</Td>}
+                      <Td><span className={typeClass(e.type)}>{e.type}</span></Td>
+                      <Td className="font-mono">{e.reason}</Td>
+                      <Td className="whitespace-nowrap text-muted-foreground">{formatAge(e.lastSeen)}</Td>
+                      <Td>{e.namespace || '—'}</Td>
+                      <Td className="font-mono text-xs">
+                        {clickable ? `${e.objectKind}/${e.objectName}` : '—'}
+                      </Td>
+                      <Td className="text-muted-foreground">{e.source || '—'}</Td>
+                      <Td className="font-mono">{e.count}</Td>
+                      <Td className="max-w-[28rem] whitespace-pre-wrap break-words">{e.message}</Td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
