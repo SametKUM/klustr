@@ -318,7 +318,12 @@ export function RolloutHistoryTab({ contextName, kind, namespace, name }: Props)
             </Button>
             <Button
               onClick={() => {
-                if (diffRevision !== null) setTargetRevision(diffRevision)
+                if (diffRevision !== null) {
+                  setTargetRevision(diffRevision)
+                  // Close the diff dialog so the destructive confirmation is
+                  // the only visible modal instead of stacking on top of it.
+                  setDiffRevision(null)
+                }
               }}
               disabled={diffLoading || diffError !== null || rollback.isPending}
               className="gap-1"
