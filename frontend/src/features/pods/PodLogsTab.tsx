@@ -168,11 +168,19 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
         })
         unsubClose = EventsOn(`pod:logs:close:${id}`, (msg: string) => {
           setStreaming(false)
-          if (msg) {
-            term.writeln(`\x1b[31m# stream closed: ${msg}\x1b[0m`)
-          } else {
-            term.writeln(`\x1b[2m# stream ended\x1b[0m`)
+          const styled = msg
+            ? `\x1b[31m# stream closed: ${msg}\x1b[0m`
+            : `\x1b[2m# stream ended\x1b[0m`
+          // Route through the same pause buffer as live lines so the marker
+          // stays in chronological order instead of jumping ahead of buffered
+          // lines that preceded it.
+          if (pausedRef.current) {
+            bufferRef.current.push(styled)
+            if (bufferRef.current.length > 5_000) bufferRef.current.shift()
+            setBufferLength(bufferRef.current.length)
+            return
           }
+          term.writeln(styled)
         })
       })
       .catch((e: unknown) => {

@@ -219,9 +219,18 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
               term.writeln(styled)
             })
             const unsubClose = EventsOn(`pod:logs:close:${id}`, (msg: string) => {
-              if (msg) {
-                term.writeln(`${prefix}\x1b[31m# stream closed: ${msg}\x1b[0m`)
+              if (!msg) return
+              const styled = `${prefix}\x1b[31m# stream closed: ${msg}\x1b[0m`
+              // Route through the same pause buffer as live lines so the marker
+              // stays in chronological order instead of jumping ahead of
+              // buffered lines that preceded it.
+              if (pausedRef.current) {
+                bufferRef.current.push(styled)
+                if (bufferRef.current.length > 10_000) bufferRef.current.shift()
+                setBufferLength(bufferRef.current.length)
+                return
               }
+              term.writeln(styled)
             })
             sessions.push({ id, pod: target.pod, container, unsubLine, unsubClose })
           })
