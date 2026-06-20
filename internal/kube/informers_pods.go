@@ -882,6 +882,13 @@ func initRestartsAlways(p *corev1.Pod, name string) bool {
 // etc. instead of the coarse Pod.Status.Phase.
 func derivePodStatus(p *corev1.Pod) string {
 	if p.DeletionTimestamp != nil {
+		// A pod on an unreachable node is marked for deletion with
+		// Status.Reason=NodeLost (node.NodeUnreachablePodReason); kubectl shows
+		// "Unknown" for that, so a lost-node orphan reads differently from a
+		// graceful delete instead of both showing "Terminating".
+		if p.Status.Reason == "NodeLost" {
+			return "Unknown"
+		}
 		return "Terminating"
 	}
 

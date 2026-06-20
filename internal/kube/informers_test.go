@@ -300,6 +300,16 @@ func TestDerivePodStatus(t *testing.T) {
 		t.Errorf("terminating: got %q", got)
 	}
 
+	// A pod marked for deletion because its node went unreachable shows Unknown,
+	// not Terminating, matching kubectl.
+	nodeLost := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &now},
+		Status:     corev1.PodStatus{Reason: "NodeLost"},
+	}
+	if got := derivePodStatus(nodeLost); got != "Unknown" {
+		t.Errorf("node lost: got %q, want Unknown", got)
+	}
+
 	crash := &corev1.Pod{Status: corev1.PodStatus{
 		Phase: corev1.PodRunning,
 		ContainerStatuses: []corev1.ContainerStatus{
