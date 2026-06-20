@@ -117,18 +117,32 @@ export function ConnectionsScreen() {
     if (state.kind !== 'ready') return
     let cancelled = false
     setVersions({})
-    for (const c of contexts) {
-      api
-        .pingContext(c.name)
-        .then((v) => {
-          if (cancelled) return
-          setVersions((prev) => ({ ...prev, [c.name]: shortenK8sVersion(v.gitVersion) }))
-        })
-        .catch(() => {
-          if (cancelled) return
-          setVersions((prev) => ({ ...prev, [c.name]: null }))
-        })
+    // Skip exec-auth contexts: pinging them here, before any credential helper
+    // is mapped, invokes `aws eks get-token` / aws-vault and fails or hangs —
+    // a thundering herd on a large kubeconfig for a purely decorative version
+    // label. Bound the rest to a small worker pool instead of fanning out a
+    // /version call per context at once.
+    const targets = contexts.filter((c) => !c.awsExec && !c.awsVaultExec)
+    let next = 0
+    const worker = async () => {
+      while (!cancelled) {
+        const idx = next++
+        if (idx >= targets.length) return
+        const c = targets[idx]
+        try {
+          const v = await api.pingContext(c.name)
+          if (!cancelled) {
+            setVersions((prev) => ({ ...prev, [c.name]: shortenK8sVersion(v.gitVersion) }))
+          }
+        } catch {
+          if (!cancelled) {
+            setVersions((prev) => ({ ...prev, [c.name]: null }))
+          }
+        }
+      }
     }
+    const concurrency = Math.min(5, targets.length)
+    void Promise.all(Array.from({ length: concurrency }, () => worker()))
     return () => {
       cancelled = true
     }
