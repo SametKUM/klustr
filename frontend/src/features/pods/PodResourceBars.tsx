@@ -24,10 +24,16 @@ export function PodResourceBars({
     return <span className="text-muted-foreground">—</span>
   }
 
+  const cpuLimitLabel =
+    cpuLimitMC > 0 ? ` of ${formatCPU(cpuLimitMC)} limit` : cpuRequestMC > 0 ? ` of ${formatCPU(cpuRequestMC)} request` : ''
+  const memLimitLabel =
+    memLimitB > 0 ? ` of ${formatMem(memLimitB)} limit` : memRequestB > 0 ? ` of ${formatMem(memRequestB)} request` : ''
+  const label = `CPU ${formatCPU(cpuUsageMC)} used${cpuLimitLabel}; memory ${formatMem(memUsageB)} used${memLimitLabel}`
+
   return (
     <HoverCard openDelay={120} closeDelay={80}>
       <HoverCardTrigger asChild>
-        <div className="flex w-28 flex-col gap-1">
+        <div className="flex w-28 flex-col gap-1" tabIndex={0} role="img" aria-label={label}>
           <MiniBar label="C" value={cpu} usageColorClass={usageColor(cpu)} />
           <MiniBar label="M" value={mem} usageColorClass={usageColor(mem)} />
         </div>

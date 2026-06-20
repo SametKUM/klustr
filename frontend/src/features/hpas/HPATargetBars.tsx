@@ -16,10 +16,21 @@ export function HPATargetBars({ metrics, name, reference }: Props) {
   const kedaMetrics = metrics.filter((m) => m.source === 'keda')
   const otherMetrics = metrics.filter((m) => m.source !== 'keda')
 
+  const labelParts = otherMetrics.map((m) => `${m.name} ${readingFor(m) || '—'}`)
+  if (kedaMetrics.length > 0) {
+    labelParts.push(`${kedaMetrics.length} KEDA trigger${kedaMetrics.length === 1 ? '' : 's'}`)
+  }
+  const label = `Autoscaler metrics: ${labelParts.join('; ')}`
+
   return (
     <HoverCard openDelay={120} closeDelay={80}>
       <HoverCardTrigger asChild>
-        <div className="-mx-1 flex w-32 flex-col gap-1 rounded-sm px-1 transition-colors data-[state=open]:bg-muted/60">
+        <div
+          className="-mx-1 flex w-32 flex-col gap-1 rounded-sm px-1 transition-colors data-[state=open]:bg-muted/60"
+          tabIndex={0}
+          role="img"
+          aria-label={label}
+        >
           {otherMetrics.map((m, i) => (
             <MiniBar key={`row#${i}`} metric={m} />
           ))}

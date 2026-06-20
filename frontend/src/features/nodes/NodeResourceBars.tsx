@@ -18,10 +18,12 @@ export function NodeResourceBars({ cpuUsageMC, cpuAllocMC, memUsageB, memAllocB 
     return <span className="text-muted-foreground">—</span>
   }
 
+  const label = `CPU ${formatCPU(cpuUsageMC)} of ${cpuAllocMC > 0 ? formatCPU(cpuAllocMC) : '—'} allocatable; memory ${formatMem(memUsageB)} of ${memAllocB > 0 ? formatMem(memAllocB) : '—'} allocatable`
+
   return (
     <HoverCard openDelay={120} closeDelay={80}>
       <HoverCardTrigger asChild>
-        <div className="flex w-28 flex-col gap-1">
+        <div className="flex w-28 flex-col gap-1" tabIndex={0} role="img" aria-label={label}>
           <MiniBar label="C" value={cpu} />
           <MiniBar label="M" value={mem} />
         </div>

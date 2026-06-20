@@ -32,10 +32,13 @@ export function PodContainerSquares({
   const openLogs = (containerName: string) => {
     openResource({ kind: 'Pod', namespace, name, context, logContainer: containerName }, 'logs')
   }
+  const label = `${containers.length} container${containers.length === 1 ? '' : 's'}: ${containers
+    .map((c) => `${c.name}${c.init ? ' (init)' : ''} ${c.state}`)
+    .join(', ')}`
   return (
     <HoverCard openDelay={120} closeDelay={80}>
       <HoverCardTrigger asChild>
-        <div className="flex w-fit items-center">
+        <div className="flex w-fit items-center" tabIndex={0} role="img" aria-label={label}>
           {containers.map((c, i) => (
             <span
               key={i}
