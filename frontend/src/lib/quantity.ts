@@ -62,6 +62,7 @@ export function formatMemoryQuantity(raw: string): string {
     v /= 1024
     i++
   }
-  const decimals = v >= 100 || i === 0 ? 0 : 1
-  return v.toFixed(decimals) + MEMORY_UNITS[i]
+  const rounded = v.toFixed(v >= 100 || i === 0 ? 0 : 1)
+  const trimmed = rounded.endsWith('.0') ? rounded.slice(0, -2) : rounded
+  return trimmed + MEMORY_UNITS[i]
 }
