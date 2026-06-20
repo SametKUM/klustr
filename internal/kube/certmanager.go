@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/util/retry"
 )
 
 // cert-manager has served its core kinds at cert-manager.io/v1 since v1.0;
@@ -250,38 +251,46 @@ func (m *ClientManager) RenewCertificate(ctx context.Context, contextName, names
 		return err
 	}
 	ri := dyn.Resource(certManagerCertificateGVR).Namespace(namespace)
-	obj, err := ri.Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("get certificate %s/%s: %w", namespace, name, err)
-	}
-	conds, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
-	issuing := map[string]any{
-		"type":               "Issuing",
-		"status":             "True",
-		"reason":             certManagerIssuingReason,
-		"message":            "Certificate re-issuance manually triggered by Klustr",
-		"lastTransitionTime": time.Now().UTC().Format(time.RFC3339),
-		"observedGeneration": obj.GetGeneration(),
-	}
-	replaced := false
-	for i, c := range conds {
-		cm, ok := c.(map[string]any)
-		if !ok {
-			continue
+	// cert-manager controllers rewrite Certificate status constantly, so a bare
+	// Get → UpdateStatus races them and 409s; retry on conflict with a fresh Get
+	// each round (mirrors setArgoFinalizer). The callback returns raw errors so
+	// RetryOnConflict can detect the 409.
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		obj, err := ri.Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
-		if t, _ := cm["type"].(string); t == "Issuing" {
-			conds[i] = issuing
-			replaced = true
-			break
+		conds, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+		issuing := map[string]any{
+			"type":               "Issuing",
+			"status":             "True",
+			"reason":             certManagerIssuingReason,
+			"message":            "Certificate re-issuance manually triggered by Klustr",
+			"lastTransitionTime": time.Now().UTC().Format(time.RFC3339),
+			"observedGeneration": obj.GetGeneration(),
 		}
-	}
-	if !replaced {
-		conds = append(conds, issuing)
-	}
-	if err := unstructured.SetNestedSlice(obj.Object, conds, "status", "conditions"); err != nil {
+		replaced := false
+		for i, c := range conds {
+			cm, ok := c.(map[string]any)
+			if !ok {
+				continue
+			}
+			if t, _ := cm["type"].(string); t == "Issuing" {
+				conds[i] = issuing
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			conds = append(conds, issuing)
+		}
+		if err := unstructured.SetNestedSlice(obj.Object, conds, "status", "conditions"); err != nil {
+			return err
+		}
+		_, err = ri.UpdateStatus(ctx, obj, metav1.UpdateOptions{})
 		return err
-	}
-	if _, err := ri.UpdateStatus(ctx, obj, metav1.UpdateOptions{}); err != nil {
+	})
+	if err != nil {
 		return fmt.Errorf("renew certificate %s/%s: %w", namespace, name, err)
 	}
 	return nil

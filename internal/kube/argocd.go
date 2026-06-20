@@ -626,41 +626,49 @@ func (m *ClientManager) SetArgoApplicationAutomation(ctx context.Context, contex
 		return err
 	}
 	resource := dyn.Resource(argoApplicationGVR).Namespace(namespace)
-	obj, err := resource.Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("get application %s/%s: %w", namespace, name, err)
-	}
+	// The Argo application-controller writes .status on every reconcile, so a
+	// bare Get → Update of spec races it and 409s; retry on conflict with a
+	// fresh Get each round (mirrors setArgoFinalizer). The callback returns raw
+	// errors so RetryOnConflict can detect the 409.
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		obj, err := resource.Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
 
-	annotations := obj.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
+		annotations := obj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
 
-	if enabled {
-		var automated map[string]any
-		if raw, ok := annotations[argoAutomationBackupAnnotation]; ok && raw != "" {
-			if err := json.Unmarshal([]byte(raw), &automated); err != nil || automated == nil {
+		if enabled {
+			var automated map[string]any
+			if raw, ok := annotations[argoAutomationBackupAnnotation]; ok && raw != "" {
+				if err := json.Unmarshal([]byte(raw), &automated); err != nil || automated == nil {
+					automated = map[string]any{}
+				}
+				delete(annotations, argoAutomationBackupAnnotation)
+				obj.SetAnnotations(annotations)
+			} else {
 				automated = map[string]any{}
 			}
-			delete(annotations, argoAutomationBackupAnnotation)
-			obj.SetAnnotations(annotations)
-		} else {
-			automated = map[string]any{}
-		}
-		if err := unstructured.SetNestedField(obj.Object, automated, "spec", "syncPolicy", "automated"); err != nil {
-			return fmt.Errorf("set automated: %w", err)
-		}
-	} else {
-		if current, found, _ := unstructured.NestedMap(obj.Object, "spec", "syncPolicy", "automated"); found {
-			if data, err := json.Marshal(current); err == nil {
-				annotations[argoAutomationBackupAnnotation] = string(data)
-				obj.SetAnnotations(annotations)
+			if err := unstructured.SetNestedField(obj.Object, automated, "spec", "syncPolicy", "automated"); err != nil {
+				return err
 			}
+		} else {
+			if current, found, _ := unstructured.NestedMap(obj.Object, "spec", "syncPolicy", "automated"); found {
+				if data, err := json.Marshal(current); err == nil {
+					annotations[argoAutomationBackupAnnotation] = string(data)
+					obj.SetAnnotations(annotations)
+				}
+			}
+			unstructured.RemoveNestedField(obj.Object, "spec", "syncPolicy", "automated")
 		}
-		unstructured.RemoveNestedField(obj.Object, "spec", "syncPolicy", "automated")
-	}
 
-	if _, err := resource.Update(ctx, obj, metav1.UpdateOptions{}); err != nil {
+		_, err = resource.Update(ctx, obj, metav1.UpdateOptions{})
+		return err
+	})
+	if err != nil {
 		return fmt.Errorf("update automation on %s/%s: %w", namespace, name, err)
 	}
 	return nil
