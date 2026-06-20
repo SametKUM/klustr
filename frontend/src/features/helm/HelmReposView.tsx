@@ -2,9 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, RefreshCw, Search as SearchIcon, Trash2 } from 'lucide-react'
-import { api, type HelmChartSearchResult } from '@/lib/api'
+import { api, type HelmChartSearchResult, type HelmRepoInfo } from '@/lib/api'
 import { useHelmStore } from '@/store/helm'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { HelmInstallDialog } from './HelmInstallDialog'
 
 export function HelmReposView() {
@@ -16,6 +26,7 @@ export function HelmReposView() {
   const [newRepoName, setNewRepoName] = useState('')
   const [newRepoURL, setNewRepoURL] = useState('')
   const [installFor, setInstallFor] = useState<HelmChartSearchResult | null>(null)
+  const [pendingRemove, setPendingRemove] = useState<HelmRepoInfo | null>(null)
 
   const reloadRepos = useCallback(() => {
     api
@@ -149,7 +160,7 @@ export function HelmReposView() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeRepo.mutate(r.name)}
+                    onClick={() => setPendingRemove(r)}
                     className="rounded p-1 text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
                     aria-label={`Remove ${r.name}`}
                   >
@@ -195,6 +206,41 @@ export function HelmReposView() {
         initialVersion={installFor?.version ?? ''}
         initialName={installFor?.name ?? ''}
       />
+
+      <AlertDialog
+        open={pendingRemove !== null}
+        onOpenChange={(o) => {
+          if (!o) setPendingRemove(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove repository?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the Helm repository{' '}
+              <span className="font-mono text-foreground">{pendingRemove?.name}</span> (
+              <span className="font-mono">{pendingRemove?.url}</span>) and its chart index from
+              search. It does not affect any installed releases.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removeRepo.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={removeRepo.isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                if (!pendingRemove) return
+                removeRepo.mutate(pendingRemove.name, {
+                  onSettled: () => setPendingRemove(null),
+                })
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removeRepo.isPending ? 'Removing…' : 'Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
