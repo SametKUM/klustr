@@ -1254,7 +1254,6 @@ function ContextCard({
         role="button"
         tabIndex={0}
         aria-label={`Connect to ${context.name}`}
-        aria-pressed={isPicked}
         onClick={onConnect}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
