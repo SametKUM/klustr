@@ -6,6 +6,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { api, type ContainerDetail, type EnvVarRef, type PodDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { Copyable } from '@/features/_shared/Copyable'
 import { NodeLink } from '@/features/_shared/NodeLink'
 import { OwnerLink } from '@/features/_shared/OwnerLink'
@@ -90,8 +91,8 @@ export function PodOverviewBody({
                 {detail.conditions.map((c, i) => (
                   <tr key={i} className="border-t border-border">
                     <Td>{c.type}</Td>
-                    <Td className={c.status === 'True' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}>
-                      {c.status}
+                    <Td>
+                      <ConditionPill status={c.status} />
                     </Td>
                     <Td>{c.reason || '—'}</Td>
                   </tr>

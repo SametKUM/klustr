@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type DeploymentDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { ContainersTable } from '@/features/_shared/containerSummary'
 import { RelatedPods } from '@/features/_shared/RelatedPods'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
@@ -59,7 +60,9 @@ export function DeploymentDetailBody({
                 {detail.conditions.map((c, i) => (
                   <tr key={i} className="border-t border-border">
                     <Td>{c.type}</Td>
-                    <Td className={c.status === 'True' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}>{c.status}</Td>
+                    <Td>
+                      <ConditionPill status={c.status} />
+                    </Td>
                     <Td>{c.reason || '—'}</Td>
                   </tr>
                 ))}
