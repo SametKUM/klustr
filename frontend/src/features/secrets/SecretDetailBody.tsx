@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Check, Copy, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,15 @@ function SecretValueRow({
 }) {
   const [state, setState] = useState<RevealState>({ status: 'hidden' })
   const [justCopied, setJustCopied] = useState(false)
+
+  // Re-mask a revealed value after a short window so decoded secret material
+  // doesn't sit on screen indefinitely (shoulder-surfing). Resets on each
+  // reveal, cleared on hide/unmount.
+  useEffect(() => {
+    if (state.status !== 'shown') return
+    const t = setTimeout(() => setState({ status: 'hidden' }), 30_000)
+    return () => clearTimeout(t)
+  }, [state])
 
   const reveal = async () => {
     setState({ status: 'loading' })

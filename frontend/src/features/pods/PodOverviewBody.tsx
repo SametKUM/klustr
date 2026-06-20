@@ -330,6 +330,15 @@ function SecretEnvValue({
   const [state, setState] = useState<SecretRevealState>({ status: 'hidden' })
   const [justCopied, setJustCopied] = useState(false)
 
+  // Re-mask a revealed secret after a short window so decoded material doesn't
+  // sit on screen indefinitely (shoulder-surfing). The timer resets on each
+  // reveal and is cleared on hide/unmount.
+  useEffect(() => {
+    if (state.status !== 'shown') return
+    const t = setTimeout(() => setState({ status: 'hidden' }), 30_000)
+    return () => clearTimeout(t)
+  }, [state])
+
   const reveal = async () => {
     if (!contextName) return
     setState({ status: 'loading' })
