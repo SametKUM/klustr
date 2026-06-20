@@ -55,13 +55,19 @@ export function WorkloadsOverviewView() {
   const debounceRef = useRef<number | null>(null)
   const epochRef = useRef(0)
 
-  const pull = useCallback(() => {
+  const filterByNs = useCallback(
+    <T extends { namespace: string }>(list: T[]): T[] =>
+      multi ? list.filter((r) => matches(r.namespace)) : list,
+    [multi, matches],
+  )
+
+  // Workload counts are cheap informer-cache reads, so they refresh on every
+  // debounced kube:change burst. Events are a real apiserver List (there is no
+  // Events informer), so they're pulled separately on the slow poll only —
+  // otherwise pod churn would hammer the Events endpoint every ~300ms.
+  const pullCounts = useCallback(() => {
     if (activeContexts.length === 0) return
     const epoch = epochRef.current
-
-    const filterByNs = <T extends { namespace: string }>(list: T[]): T[] =>
-      multi ? list.filter((r) => matches(r.namespace)) : list
-
     const fetches = activeContexts.map((ctx) =>
       Promise.all([
         api.listPods(ctx, apiNamespace),
@@ -72,10 +78,8 @@ export function WorkloadsOverviewView() {
         api.listReplicationControllers(ctx, apiNamespace),
         api.listJobs(ctx, apiNamespace),
         api.listCronJobs(ctx, apiNamespace),
-        api.listEvents(ctx, apiNamespace, '', ''),
       ])
-        .then(([p, d, s, ds, rs, rc, j, cj, e]) => ({
-          ctx,
+        .then(([p, d, s, ds, rs, rc, j, cj]) => ({
           p: p ?? [],
           d: d ?? [],
           s: s ?? [],
@@ -84,11 +88,9 @@ export function WorkloadsOverviewView() {
           rc: rc ?? [],
           j: j ?? [],
           cj: cj ?? [],
-          e: e ?? [],
           err: null as string | null,
         }))
         .catch((err: unknown) => ({
-          ctx,
           p: [] as PodInfo[],
           d: [] as DeploymentInfo[],
           s: [] as StatefulSetInfo[],
@@ -97,7 +99,6 @@ export function WorkloadsOverviewView() {
           rc: [] as ReplicationControllerInfo[],
           j: [] as JobInfo[],
           cj: [] as CronJobInfo[],
-          e: [] as EventInfo[],
           err: String(err),
         })),
     )
@@ -113,7 +114,6 @@ export function WorkloadsOverviewView() {
         const mergedReplicationControllers: ReplicationControllerInfo[] = []
         const mergedJobs: JobInfo[] = []
         const mergedCronJobs: CronJobInfo[] = []
-        const mergedEvents: TaggedEvent[] = []
         const firstError = results.find((r) => r.err && !r.err.includes('no active watcher'))?.err
         for (const r of results) {
           mergedPods.push(...filterByNs(r.p))
@@ -124,11 +124,7 @@ export function WorkloadsOverviewView() {
           mergedReplicationControllers.push(...filterByNs(r.rc))
           mergedJobs.push(...filterByNs(r.j))
           mergedCronJobs.push(...filterByNs(r.cj))
-          for (const ev of filterByNs(r.e)) {
-            mergedEvents.push(Object.assign(ev, { contextName: r.ctx }) as TaggedEvent)
-          }
         }
-        mergedEvents.sort((a, b) => (b.lastSeen ?? '').localeCompare(a.lastSeen ?? ''))
         setPods(mergedPods)
         setDeployments(mergedDeployments)
         setStatefulSets(mergedStatefulSets)
@@ -137,7 +133,6 @@ export function WorkloadsOverviewView() {
         setReplicationControllers(mergedReplicationControllers)
         setJobs(mergedJobs)
         setCronJobs(mergedCronJobs)
-        setEvents(mergedEvents.slice(0, EVENTS_LIMIT))
         setError(firstError ?? null)
         setLastUpdatedAt(Date.now())
       })
@@ -145,7 +140,34 @@ export function WorkloadsOverviewView() {
         /* per-context errors handled above */
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctxKey, apiNamespace, matches, multi])
+  }, [ctxKey, apiNamespace, filterByNs])
+
+  const pullEvents = useCallback(() => {
+    if (activeContexts.length === 0) return
+    const epoch = epochRef.current
+    const fetches = activeContexts.map((ctx) =>
+      api
+        .listEvents(ctx, apiNamespace, '', '')
+        .then((e) => ({ ctx, e: e ?? [] }))
+        .catch(() => ({ ctx, e: [] as EventInfo[] })),
+    )
+    Promise.all(fetches)
+      .then((results) => {
+        if (epoch !== epochRef.current) return
+        const mergedEvents: TaggedEvent[] = []
+        for (const r of results) {
+          for (const ev of filterByNs(r.e)) {
+            mergedEvents.push(Object.assign(ev, { contextName: r.ctx }) as TaggedEvent)
+          }
+        }
+        mergedEvents.sort((a, b) => (b.lastSeen ?? '').localeCompare(a.lastSeen ?? ''))
+        setEvents(mergedEvents.slice(0, EVENTS_LIMIT))
+      })
+      .catch(() => {
+        /* per-context errors handled above */
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctxKey, apiNamespace, filterByNs])
 
   useEffect(() => {
     if (activeContexts.length === 0) {
@@ -160,17 +182,21 @@ export function WorkloadsOverviewView() {
       setEvents([])
       return
     }
-    pull()
+    pullCounts()
+    pullEvents()
 
     const scheduleSoon = () => {
       if (debounceRef.current !== null) return
       debounceRef.current = window.setTimeout(() => {
         debounceRef.current = null
-        pull()
+        pullCounts()
       }, 300)
     }
 
-    const id = window.setInterval(pull, POLL_INTERVAL_MS)
+    const id = window.setInterval(() => {
+      pullCounts()
+      pullEvents()
+    }, POLL_INTERVAL_MS)
     const kinds = [
       'Pod',
       'Deployment',
@@ -197,7 +223,7 @@ export function WorkloadsOverviewView() {
       unsubs.forEach((u) => u())
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctxKey, pull])
+  }, [ctxKey, pullCounts, pullEvents])
 
   if (activeContexts.length === 0) {
     return (
