@@ -117,18 +117,30 @@ func (m *ClientManager) DrainNode(ctx context.Context, contextName, nodeName str
 	report(NodeDrainProgress{Phase: "evicting", Total: total, Pending: podKeys(targets)})
 
 	for {
+		// One node-scoped List per round instead of a Get per remaining target.
+		// A target still present (by UID) is pending; absent means it's gone —
+		// evicted, or recreated elsewhere with a new UID (the cordon keeps it off
+		// this node, so it won't appear here at all).
+		cur, err := cs.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+			FieldSelector: "spec.nodeName=" + nodeName,
+		})
+		if err != nil {
+			report(NodeDrainProgress{Phase: "waiting", Total: total, Pending: podKeys(targets), Error: err.Error()})
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("drain interrupted with %d pod(s) still on the node: %w", len(targets), ctx.Err())
+			case <-time.After(drainPollInterval):
+			}
+			continue
+		}
+		byUID := make(map[string]corev1.Pod, len(cur.Items))
+		for i := range cur.Items {
+			byUID[string(cur.Items[i].UID)] = cur.Items[i]
+		}
 		pending := make([]corev1.Pod, 0, len(targets))
 		for _, p := range targets {
-			cur, err := cs.CoreV1().Pods(p.Namespace).Get(ctx, p.Name, metav1.GetOptions{})
-			switch {
-			case apierrors.IsNotFound(err):
-			case err == nil && cur.UID != p.UID:
-				// Same name, new pod: the controller recreated it elsewhere
-				// (the cordon keeps it off this node) — the original is gone.
-			case err != nil:
-				pending = append(pending, p)
-			default:
-				pending = append(pending, *cur)
+			if live, ok := byUID[string(p.UID)]; ok {
+				pending = append(pending, live)
 			}
 		}
 		if len(pending) == 0 {
