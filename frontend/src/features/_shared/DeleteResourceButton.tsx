@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
-import { useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
+import { sameResource, useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
 
 const CONFIRM_BY_TYPING_KINDS: ReadonlySet<ResourceKind> = new Set<ResourceKind>([
   'Namespace',
@@ -60,7 +60,8 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
     onSuccess: () => {
       toast.success(`Deleted ${resource.kind.toLowerCase()}/${resource.name}`)
       onOpenChange(false)
-      if (useUIStore.getState().selectedResource?.name === resource.name) {
+      const selected = useUIStore.getState().selectedResource
+      if (selected && sameResource(selected, resource)) {
         setSelectedResource(null)
       }
     },

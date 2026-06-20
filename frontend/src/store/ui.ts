@@ -127,7 +127,7 @@ type UIState = {
   removeContextGroup: (id: string) => void
 }
 
-function sameResource(a: SelectedResource, b: SelectedResource): boolean {
+export function sameResource(a: SelectedResource, b: SelectedResource): boolean {
   // context and gvr are part of the identity: in aggregated mode the same
   // namespace/name can exist in two clusters, and two CRDs can share a kind
   // name across API groups.
