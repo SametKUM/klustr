@@ -409,9 +409,9 @@ func (a *App) StartPodLogs(contextName, namespace, podName, container string, fo
 		container,
 		follow,
 		int64(tailLines),
-		func(line string) {
+		func(lines []string) {
 			if id := gate.wait(); id != "" {
-				runtime.EventsEmit(a.ctx, "pod:logs:line:"+id, line)
+				runtime.EventsEmit(a.ctx, "pod:logs:line:"+id, lines)
 			}
 		},
 		func(err error) {

@@ -202,21 +202,28 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
             }
             const prefix = `${color}${target.pod}/${container}${RESET} | `
             const rawPrefix = `${target.pod}/${container} | `
-            const unsubLine = EventsOn(`pod:logs:line:${id}`, (line: string) => {
-              const rawLine = rawPrefix + line
-              if (!predicateRef.current(rawLine)) return
-              const styled = prefix + highlightLogContent(line)
-              // Capture the raw line for Save regardless of pause; pausing only
-              // defers rendering to the terminal, not capture.
-              visibleLinesRef.current.push(rawLine)
-              if (visibleLinesRef.current.length > 100_000) visibleLinesRef.current.shift()
+            const unsubLine = EventsOn(`pod:logs:line:${id}`, (lines: string[]) => {
+              const styledOut: string[] = []
+              for (const line of lines) {
+                const rawLine = rawPrefix + line
+                if (!predicateRef.current(rawLine)) continue
+                // Capture the raw line for Save regardless of pause; pausing only
+                // defers rendering to the terminal, not capture.
+                visibleLinesRef.current.push(rawLine)
+                if (visibleLinesRef.current.length > 100_000) visibleLinesRef.current.shift()
+                styledOut.push(prefix + highlightLogContent(line))
+              }
+              if (styledOut.length === 0) return
               if (pausedRef.current) {
-                bufferRef.current.push(styled)
-                if (bufferRef.current.length > 10_000) bufferRef.current.shift()
+                for (const s of styledOut) {
+                  bufferRef.current.push(s)
+                  if (bufferRef.current.length > 10_000) bufferRef.current.shift()
+                }
                 setBufferLength(bufferRef.current.length)
                 return
               }
-              term.writeln(styled)
+              // One coalesced write per batch instead of a writeln per line.
+              term.write(styledOut.join('\r\n') + '\r\n')
             })
             const unsubClose = EventsOn(`pod:logs:close:${id}`, (msg: string) => {
               if (!msg) return

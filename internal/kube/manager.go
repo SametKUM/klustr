@@ -561,14 +561,14 @@ func (m *ClientManager) StartLogs(
 	contextName, namespace, podName, container string,
 	follow bool,
 	tailLines int64,
-	onLine LogLineFunc,
+	onBatch LogBatchFunc,
 	onClose LogCloseFunc,
 ) (string, error) {
 	cs, err := m.Clientset(contextName)
 	if err != nil {
 		return "", err
 	}
-	return m.logs.start(parent, cs, namespace, podName, container, follow, tailLines, onLine, onClose)
+	return m.logs.start(parent, cs, namespace, podName, container, follow, tailLines, onBatch, onClose)
 }
 
 func (m *ClientManager) StopLogs(id string) {

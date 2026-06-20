@@ -8,14 +8,22 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-const logScannerMaxLine = 1024 * 1024 // 1 MiB per line cap
+const (
+	logScannerMaxLine = 1024 * 1024 // 1 MiB per line cap
+	// Scanned lines are coalesced into batches before crossing the Wails bridge
+	// (one EventsEmit per flush instead of per line) so a chatty stream can't
+	// saturate the bridge / renderer. Flush on whichever comes first.
+	logFlushInterval = 60 * time.Millisecond
+	logFlushMaxLines = 256
+)
 
-type LogLineFunc func(line string)
+type LogBatchFunc func(lines []string)
 type LogCloseFunc func(err error)
 
 type logSession struct {
@@ -39,7 +47,7 @@ func (mgr *logSessionManager) start(
 	namespace, podName, container string,
 	follow bool,
 	tailLines int64,
-	onLine LogLineFunc,
+	onBatch LogBatchFunc,
 	onClose LogCloseFunc,
 ) (string, error) {
 	ctx, cancel := context.WithCancel(parent)
@@ -73,26 +81,63 @@ func (mgr *logSessionManager) start(
 			cancel()
 		}()
 
-		scanner := bufio.NewScanner(stream)
-		scanner.Buffer(make([]byte, 64*1024), logScannerMaxLine)
-		for scanner.Scan() {
-			if ctx.Err() != nil {
-				if onClose != nil {
-					onClose(nil)
+		// Producer: scan lines onto a channel. scanErr is set before lineCh is
+		// closed (deferred), and read by the consumer only after the channel
+		// closes, so the handoff is race-free.
+		lineCh := make(chan string, logFlushMaxLines)
+		var scanErr error
+		go func() {
+			defer close(lineCh)
+			scanner := bufio.NewScanner(stream)
+			scanner.Buffer(make([]byte, 64*1024), logScannerMaxLine)
+			for scanner.Scan() {
+				select {
+				case lineCh <- scanner.Text():
+				case <-ctx.Done():
+					return
 				}
+			}
+			if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) && ctx.Err() == nil {
+				scanErr = err
+			}
+		}()
+
+		// Consumer: coalesce into time/size-bounded batches.
+		ticker := time.NewTicker(logFlushInterval)
+		defer ticker.Stop()
+		batch := make([]string, 0, 64)
+		flush := func() {
+			if len(batch) == 0 {
 				return
 			}
-			onLine(scanner.Text())
+			onBatch(batch)
+			batch = make([]string, 0, 64)
 		}
-		err := scanner.Err()
-		if err != nil && !errors.Is(err, io.EOF) && ctx.Err() == nil {
-			if onClose != nil {
-				onClose(err)
+		for {
+			select {
+			case line, ok := <-lineCh:
+				if !ok {
+					// Drop any buffered lines on user/shutdown cancel; otherwise
+					// flush them before the close marker.
+					if ctx.Err() == nil {
+						flush()
+					}
+					if onClose != nil {
+						if ctx.Err() != nil {
+							onClose(nil)
+						} else {
+							onClose(scanErr)
+						}
+					}
+					return
+				}
+				batch = append(batch, line)
+				if len(batch) >= logFlushMaxLines {
+					flush()
+				}
+			case <-ticker.C:
+				flush()
 			}
-			return
-		}
-		if onClose != nil {
-			onClose(nil)
 		}
 	}()
 

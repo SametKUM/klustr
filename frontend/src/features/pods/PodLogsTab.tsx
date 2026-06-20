@@ -151,20 +151,27 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
         }
         sessionId = id
         setStreaming(true)
-        unsubLine = EventsOn(`pod:logs:line:${id}`, (line: string) => {
-          if (!predicateRef.current(line)) return
-          const styled = highlightLogContent(line)
-          // Record the raw line for Save regardless of pause; pausing only
-          // defers rendering to the terminal, not capture.
-          visibleLinesRef.current.push(line)
-          if (visibleLinesRef.current.length > 50_000) visibleLinesRef.current.shift()
+        unsubLine = EventsOn(`pod:logs:line:${id}`, (lines: string[]) => {
+          const styledOut: string[] = []
+          for (const line of lines) {
+            if (!predicateRef.current(line)) continue
+            // Record the raw line for Save regardless of pause; pausing only
+            // defers rendering to the terminal, not capture.
+            visibleLinesRef.current.push(line)
+            if (visibleLinesRef.current.length > 50_000) visibleLinesRef.current.shift()
+            styledOut.push(highlightLogContent(line))
+          }
+          if (styledOut.length === 0) return
           if (pausedRef.current) {
-            bufferRef.current.push(styled)
-            if (bufferRef.current.length > 5_000) bufferRef.current.shift()
+            for (const s of styledOut) {
+              bufferRef.current.push(s)
+              if (bufferRef.current.length > 5_000) bufferRef.current.shift()
+            }
             setBufferLength(bufferRef.current.length)
             return
           }
-          term.writeln(styled)
+          // One coalesced write per batch instead of a writeln per line.
+          term.write(styledOut.join('\r\n') + '\r\n')
         })
         unsubClose = EventsOn(`pod:logs:close:${id}`, (msg: string) => {
           setStreaming(false)
