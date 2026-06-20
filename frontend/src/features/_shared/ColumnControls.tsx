@@ -11,6 +11,7 @@ type Props<T> = {
 
 export function ColumnControls<T>({ table, onReset }: Props<T>) {
   const orderedColumns = table.getAllLeafColumns()
+  const visibleLeafCount = table.getVisibleLeafColumns().length
   const [dragId, setDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
 
@@ -51,6 +52,10 @@ export function ColumnControls<T>({ table, onReset }: Props<T>) {
             const label = labelFor(col)
             const isOver = overId === col.id && dragId !== null && dragId !== col.id
             const dragging = dragId === col.id
+            // Block unchecking the last visible column (an all-hidden table is
+            // confusing) and honor enableHiding so identity columns can be pinned.
+            const toggleDisabled =
+              !col.getCanHide() || (col.getIsVisible() && visibleLeafCount <= 1)
             return (
               <li
                 key={col.id}
@@ -87,9 +92,17 @@ export function ColumnControls<T>({ table, onReset }: Props<T>) {
                 <GripVertical className="size-3.5 shrink-0 cursor-grab text-muted-foreground active:cursor-grabbing" />
                 <input
                   type="checkbox"
-                  className="size-3.5 cursor-pointer accent-foreground"
+                  disabled={toggleDisabled}
+                  title={
+                    col.getIsVisible() && visibleLeafCount <= 1
+                      ? 'At least one column must stay visible'
+                      : undefined
+                  }
+                  className={`size-3.5 accent-foreground ${toggleDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                   checked={col.getIsVisible()}
-                  onChange={() => col.toggleVisibility()}
+                  onChange={() => {
+                    if (!toggleDisabled) col.toggleVisibility()
+                  }}
                 />
                 <span className="flex-1 truncate">{label}</span>
               </li>
