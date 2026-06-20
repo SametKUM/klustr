@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, RefreshCw, Search as SearchIcon, Trash2 } from 'lucide-react'
@@ -35,15 +35,42 @@ export function HelmReposView() {
       .catch((e) => toast.error(`Failed to load repos: ${String(e)}`))
   }, [setRepos])
 
-  const reloadSearch = useCallback(
+  // Guard against out-of-order responses: a slower earlier query must not
+  // clobber a later, more specific one.
+  const searchGenRef = useRef(0)
+  const searchTimerRef = useRef<number | null>(null)
+  const reloadSearch = useCallback((q: string) => {
+    const gen = ++searchGenRef.current
+    api
+      .searchHelmCharts(q)
+      .then((list) => {
+        if (gen === searchGenRef.current) setResults(list ?? [])
+      })
+      .catch(() => {
+        if (gen === searchGenRef.current) setResults([])
+      })
+  }, [])
+
+  // Debounce the per-keystroke search (~180ms, mirroring ResourceTable); clear
+  // immediately resets so emptying the box is instant.
+  const debouncedSearch = useCallback(
     (q: string) => {
-      api
-        .searchHelmCharts(q)
-        .then((list) => setResults(list ?? []))
-        .catch(() => setResults([]))
+      if (searchTimerRef.current !== null) window.clearTimeout(searchTimerRef.current)
+      if (q === '') {
+        reloadSearch('')
+        return
+      }
+      searchTimerRef.current = window.setTimeout(() => {
+        searchTimerRef.current = null
+        reloadSearch(q)
+      }, 180)
     },
-    [],
+    [reloadSearch],
   )
+
+  useEffect(() => () => {
+    if (searchTimerRef.current !== null) window.clearTimeout(searchTimerRef.current)
+  }, [])
 
   useEffect(() => {
     reloadRepos()
@@ -183,7 +210,7 @@ export function HelmReposView() {
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value)
-                reloadSearch(e.target.value)
+                debouncedSearch(e.target.value)
               }}
               placeholder="Search charts (name, description, keywords)"
               className="flex-1 bg-transparent text-xs outline-none"
