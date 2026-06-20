@@ -371,6 +371,46 @@ func TestDerivePodStatus(t *testing.T) {
 	if got := derivePodStatus(completedSidecarNotReady); got != "NotReady" {
 		t.Errorf("completed sidecar (not ready): got %q", got)
 	}
+
+	// A started native sidecar (restartable init container) must not pin the
+	// status at Init:i/N — the loop skips it and the main container wins.
+	always := corev1.ContainerRestartPolicyAlways
+	started := true
+	nativeSidecar := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			InitContainers: []corev1.Container{{Name: "istio-proxy", RestartPolicy: &always}},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+			InitContainerStatuses: []corev1.ContainerStatus{
+				{Name: "istio-proxy", Started: &started, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}},
+			},
+			ContainerStatuses: []corev1.ContainerStatus{
+				{Ready: true, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}},
+			},
+			Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}},
+		},
+	}
+	if got := derivePodStatus(nativeSidecar); got != "Running" {
+		t.Errorf("native sidecar started: got %q, want Running", got)
+	}
+
+	// A native sidecar that has not started yet still surfaces init progress.
+	notStarted := false
+	nativeSidecarStarting := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			InitContainers: []corev1.Container{{Name: "istio-proxy", RestartPolicy: &always}},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodPending,
+			InitContainerStatuses: []corev1.ContainerStatus{
+				{Name: "istio-proxy", Started: &notStarted, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "PodInitializing"}}},
+			},
+		},
+	}
+	if got := derivePodStatus(nativeSidecarStarting); got != "Init:0/1" {
+		t.Errorf("native sidecar starting: got %q, want Init:0/1", got)
+	}
 }
 
 func TestControllerOwnerRef(t *testing.T) {

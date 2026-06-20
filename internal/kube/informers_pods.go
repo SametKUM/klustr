@@ -857,6 +857,19 @@ func podResourceTotals(p *corev1.Pod) (cpuReq, cpuLim, memReq, memLim int64) {
 		max(base.memLim, initMax.memLim)
 }
 
+// initRestartsAlways reports whether the named init container is a native
+// sidecar (RestartPolicy: Always). Matched by name rather than index so it does
+// not assume the status slice and the spec slice share an order.
+func initRestartsAlways(p *corev1.Pod, name string) bool {
+	for i := range p.Spec.InitContainers {
+		if p.Spec.InitContainers[i].Name == name {
+			rp := p.Spec.InitContainers[i].RestartPolicy
+			return rp != nil && *rp == corev1.ContainerRestartPolicyAlways
+		}
+	}
+	return false
+}
+
 // derivePodStatus mirrors kubectl's STATUS column logic: it walks init
 // then regular container states to surface CrashLoopBackOff,
 // ImagePullBackOff, ContainerCreating, Completed, OOMKilled, Init:Reason
@@ -880,6 +893,11 @@ func derivePodStatus(p *corev1.Pod) string {
 			return fmt.Sprintf("Init:ExitCode:%d", init.State.Terminated.ExitCode)
 		case init.State.Waiting != nil && init.State.Waiting.Reason != "" && init.State.Waiting.Reason != "PodInitializing":
 			return "Init:" + init.State.Waiting.Reason
+		case initRestartsAlways(p, init.Name) && init.Started != nil && *init.Started:
+			// A native sidecar (restartable init container) never terminates;
+			// once started it stays Running, so without this it would pin the
+			// status at Init:i/N for the pod's whole life. kubectl skips it.
+			continue
 		default:
 			return fmt.Sprintf("Init:%d/%d", i, len(p.Spec.InitContainers))
 		}
