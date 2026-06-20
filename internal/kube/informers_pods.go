@@ -697,6 +697,12 @@ func podInfoFrom(p *corev1.Pod) PodInfo {
 		}
 		restarts += cs.RestartCount
 	}
+	// Fold in init/sidecar restarts the way kubectl's RESTARTS column does, so a
+	// crash-looping init container or a restarting native sidecar isn't hidden
+	// as 0. The Ready count/denominator stays over regular containers only.
+	for _, cs := range p.Status.InitContainerStatuses {
+		restarts += cs.RestartCount
+	}
 	cpuReq, cpuLim, memReq, memLim := podResourceTotals(p)
 	hasPorts := false
 	for _, c := range p.Spec.Containers {
