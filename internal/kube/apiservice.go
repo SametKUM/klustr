@@ -56,6 +56,10 @@ func (w *contextWatcher) startAPIServiceInformer(ctx context.Context) error {
 	}
 	w.apiSvcFactory = dynamicinformer.NewDynamicSharedInformerFactory(w.dyn, 0)
 	informer := w.apiSvcFactory.ForResource(apiSvcGVR).Informer()
+	// Strip managedFields before caching, matching the typed factories.
+	if err := informer.SetTransform(stripManagedFields); err != nil {
+		return err
+	}
 	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(any) { w.touch("APIService") },
 		UpdateFunc: func(any, any) { w.touch("APIService") },

@@ -110,6 +110,11 @@ func newCRDWatcher(dyn dynamic.Interface, stopCh <-chan struct{}, onTouch func(k
 
 func (w *crdWatcher) start() error {
 	informer := w.factory.ForResource(crdGVR).Informer()
+	// Strip managedFields before objects enter the cache, matching the typed
+	// factories — nothing reads it and CRD/CR objects carry large managedFields.
+	if err := informer.SetTransform(stripManagedFields); err != nil {
+		return err
+	}
 	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(any) { w.onTouch(crdsChangeKind) },
 		UpdateFunc: func(any, any) { w.onTouch(crdsChangeKind) },
@@ -327,6 +332,10 @@ func (w *crdWatcher) EnsureCRWatch(gvr schema.GroupVersionResource) error {
 	}
 
 	informer := w.crFactory.ForResource(gvr).Informer()
+	if err := informer.SetTransform(stripManagedFields); err != nil {
+		w.crMu.Unlock()
+		return err
+	}
 	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(any) { w.onTouch(crChangeKind(gvr)) },
 		UpdateFunc: func(any, any) { w.onTouch(crChangeKind(gvr)) },
