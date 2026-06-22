@@ -319,26 +319,38 @@ func (m *ClientManager) GetArgoApplicationSet(ctx context.Context, contextName, 
 	}
 	d := extractArgoApplicationSetDetail(obj)
 	if len(d.GeneratedApps) == 0 {
-		d.GeneratedApps = findArgoApplicationsOwnedBy(ctx, dyn, namespace, name)
+		d.GeneratedApps = m.findArgoApplicationsOwnedBy(ctx, contextName, dyn, namespace, name)
 	}
 	return &d, nil
 }
 
 // findArgoApplicationsOwnedBy lists every Application in `namespace` whose
 // ownerReferences contains an ApplicationSet pointing at `appSetName`, and
-// projects each into the same row shape progressive-sync reports.
-func findArgoApplicationsOwnedBy(
+// projects each into the same row shape progressive-sync reports. It reads from
+// the warm Application CR informer cache when it's running (the user has opened
+// the Applications view), and only falls back to a live List on a cold informer
+// — listCachedCRs returns nil there, so a bare cache read would otherwise
+// regress the table to empty.
+func (m *ClientManager) findArgoApplicationsOwnedBy(
 	ctx context.Context,
+	contextName string,
 	dyn dynamic.Interface,
 	namespace, appSetName string,
 ) []ArgoApplicationSetGeneratedApp {
-	list, err := dyn.Resource(argoApplicationGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return []ArgoApplicationSetGeneratedApp{}
+	apps := listCachedCRs(m, contextName, argoApplicationGVR, namespace)
+	if apps == nil {
+		list, err := dyn.Resource(argoApplicationGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return []ArgoApplicationSetGeneratedApp{}
+		}
+		apps = make([]*unstructured.Unstructured, len(list.Items))
+		for i := range list.Items {
+			apps[i] = &list.Items[i]
+		}
 	}
-	out := make([]ArgoApplicationSetGeneratedApp, 0, len(list.Items))
-	for _, app := range list.Items {
-		if !isOwnedByApplicationSet(&app, appSetName) {
+	out := make([]ArgoApplicationSetGeneratedApp, 0, len(apps))
+	for _, app := range apps {
+		if !isOwnedByApplicationSet(app, appSetName) {
 			continue
 		}
 		syncStatus, _, _ := unstructured.NestedString(app.Object, "status", "sync", "status")
