@@ -13,6 +13,7 @@ import {
 } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
 import { formatAge } from '@/lib/time'
+import { useNowTick } from '@/lib/nowTick'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { useActiveContexts, useIsAggregated, useUIStore, type ResourceView } from '@/store/ui'
 
@@ -410,12 +411,9 @@ function WorkloadCard({ kind, total, healthy, onClick }: WorkloadCardProps) {
 }
 
 function UpdatedAgo({ at }: { at: number | null }) {
-  const [, force] = useState(0)
-  useEffect(() => {
-    if (at === null) return
-    const id = window.setInterval(() => force((n) => n + 1), 5_000)
-    return () => window.clearInterval(id)
-  }, [at])
+  // Re-render on the shared 10s heartbeat instead of a per-instance interval,
+  // so aggregated mode doesn't run one ticking timer per visible context.
+  useNowTick()
   if (at === null) {
     return <span className="text-xs text-muted-foreground">Loading…</span>
   }
