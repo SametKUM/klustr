@@ -13,6 +13,24 @@ import { OwnerLink } from '@/features/_shared/OwnerLink'
 import { ServiceAccountLink } from '@/features/_shared/ServiceAccountLink'
 import { podDiagnosis } from './podDiagnosis'
 
+// A container that maps several keys from one ConfigMap renders one
+// ConfigMapEnvValue per key, each of which would otherwise fetch the whole
+// ConfigMap. Share a single in-flight fetch per (context, namespace, name) so
+// those N keys collapse to one bridge round-trip. The entry is dropped once the
+// fetch settles, so a later open always re-reads fresh (no staleness).
+const inflightConfigMap = new Map<string, ReturnType<typeof api.getConfigMap>>()
+
+function sharedGetConfigMap(contextName: string, namespace: string, name: string) {
+  const key = `${contextName}/${namespace}/${name}`
+  const existing = inflightConfigMap.get(key)
+  if (existing) return existing
+  const p = api.getConfigMap(contextName, namespace, name).finally(() => {
+    inflightConfigMap.delete(key)
+  })
+  inflightConfigMap.set(key, p)
+  return p
+}
+
 export function PodOverviewBody({
   contextName,
   detail,
@@ -278,8 +296,7 @@ function ConfigMapEnvValue({
   useEffect(() => {
     if (!contextName) return
     let cancelled = false
-    api
-      .getConfigMap(contextName, namespace, cmName)
+    sharedGetConfigMap(contextName, namespace, cmName)
       .then((cm) => {
         if (cancelled) return
         const v = cm.data?.[cmKey]
