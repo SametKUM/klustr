@@ -368,6 +368,7 @@ function App() {
   const activeGroupBarClass = activeGroup ? COLOR_PALETTE[activeGroup.color]?.barClass ?? null : null
   const topBarClass = currentTagMeta?.barClass ?? activeGroupBarClass ?? null
   const resetResources = useResources((s) => s.reset)
+  const clearResourceContext = useResources((s) => s.clearContext)
   const setPortForwards = usePortForwards((s) => s.setList)
   const crds = useCRDStore((s) => s.crds)
   const setCRDs = useCRDStore((s) => s.setCRDs)
@@ -540,7 +541,14 @@ function App() {
     for (const ctx of removed) {
       api.stopWatch(ctx).catch(console.error)
     }
-    resetResources()
+    // Only drop the resource data of contexts actually leaving the set; a full
+    // wipe would flash retained contexts' tables to skeleton until their
+    // (effect-driven) reload lands. Full reset on a true disconnect.
+    if (activeContexts.length === 0) {
+      resetResources()
+    } else {
+      for (const ctx of removed) clearResourceContext(ctx)
+    }
     resetCRDs()
     resetHelm()
     resetAccess()
@@ -576,7 +584,7 @@ function App() {
     return () => {
       unsubAccess()
     }
-  }, [activeContexts, resetResources, resetCRDs, resetHelm, resetAccess, resetMetrics, setAccess])
+  }, [activeContexts, resetResources, clearResourceContext, resetCRDs, resetHelm, resetAccess, resetMetrics, setAccess])
 
   useEffect(() => {
     if (activeContexts.length === 0) {
