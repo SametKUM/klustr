@@ -89,6 +89,10 @@ type crdWatcher struct {
 	mu       sync.Mutex
 	informer cache.SharedIndexInformer
 	started  bool
+	// crdCache memoizes the decoded + sorted CRD list (nil = stale). Every
+	// LookupCRDBy* and CRDs() call would otherwise reflectively decode and sort
+	// the entire CRD store; the CRD informer's handlers invalidate it on change.
+	crdCache []CRDInfo
 
 	crMu      sync.Mutex
 	crFactory dynamicinformer.DynamicSharedInformerFactory
@@ -116,9 +120,9 @@ func (w *crdWatcher) start() error {
 		return err
 	}
 	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.onTouch(crdsChangeKind) },
-		UpdateFunc: func(any, any) { w.onTouch(crdsChangeKind) },
-		DeleteFunc: func(any) { w.onTouch(crdsChangeKind) },
+		AddFunc:    func(any) { w.invalidateCRDCache(); w.onTouch(crdsChangeKind) },
+		UpdateFunc: func(any, any) { w.invalidateCRDCache(); w.onTouch(crdsChangeKind) },
+		DeleteFunc: func(any) { w.invalidateCRDCache(); w.onTouch(crdsChangeKind) },
 	}); err != nil {
 		return err
 	}
@@ -135,11 +139,15 @@ func (w *crdWatcher) start() error {
 	return nil
 }
 
-// CRDs returns the current set of CRDs known to this context's cache.
+// CRDs returns the current set of CRDs known to this context's cache. The
+// decoded + sorted result is memoized; the informer handlers invalidate it.
 func (w *crdWatcher) CRDs() []CRDInfo {
 	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.crdCache != nil {
+		return w.crdCache
+	}
 	inf := w.informer
-	w.mu.Unlock()
 	if inf == nil {
 		return []CRDInfo{}
 	}
@@ -162,7 +170,15 @@ func (w *crdWatcher) CRDs() []CRDInfo {
 		}
 		return out[i].Kind < out[j].Kind
 	})
+	w.crdCache = out
 	return out
+}
+
+// invalidateCRDCache drops the memoized CRD list so the next CRDs() rebuilds it.
+func (w *crdWatcher) invalidateCRDCache() {
+	w.mu.Lock()
+	w.crdCache = nil
+	w.mu.Unlock()
 }
 
 func crdInfoFromUnstructured(obj *unstructured.Unstructured) (CRDInfo, bool) {
