@@ -1,7 +1,6 @@
 package kube
 
 import (
-	"sort"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -64,12 +63,7 @@ func (w *contextWatcher) ConfigMaps(namespace string) []ConfigMapInfo {
 	for _, c := range cms {
 		out = append(out, configMapInfoFrom(c))
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Namespace != out[j].Namespace {
-			return out[i].Namespace < out[j].Namespace
-		}
-		return out[i].Name < out[j].Name
-	})
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -95,11 +89,6 @@ func (w *contextWatcher) Secrets(namespace string) []SecretInfo {
 	for _, s := range secs {
 		out = append(out, secretInfoFrom(s))
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Namespace != out[j].Namespace {
-			return out[i].Namespace < out[j].Namespace
-		}
-		return out[i].Name < out[j].Name
-	})
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
