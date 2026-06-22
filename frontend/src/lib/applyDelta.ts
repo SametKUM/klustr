@@ -29,11 +29,37 @@ export function applyDeltaToList<T extends Identified>(
   if (upserts.length === 0 && removed.length === 0) {
     return base as T[]
   }
-  const byKey = new Map<string, T>()
-  for (const it of base) byKey.set(deltaKey(it), it)
-  for (const k of removed) byKey.delete(k)
-  for (const u of upserts) byKey.set(deltaKey(u), u)
-  const out = Array.from(byKey.values())
-  out.sort(byNamespaceName)
+  // base is already sorted (the backend lister sorts, and this function keeps
+  // it sorted); upserts arrive in Go map order, so sort only that small slice
+  // and two-pointer merge into base — O(n + m·log m) with no full-list Map or
+  // re-sort. removed/overridden base items are skipped; an upsert always wins
+  // over a same-key removal in the same batch since it's emitted from `ups`.
+  const ups = upserts.length > 1 ? [...upserts].sort(byNamespaceName) : upserts
+  const removedSet = removed.length > 0 ? new Set(removed) : null
+  const upKeys = ups.length > 0 ? new Set(ups.map(deltaKey)) : null
+  const skip = (it: T): boolean => {
+    const k = deltaKey(it)
+    return (removedSet?.has(k) ?? false) || (upKeys?.has(k) ?? false)
+  }
+  const out: T[] = []
+  let i = 0
+  let j = 0
+  while (i < base.length && j < ups.length) {
+    if (skip(base[i])) {
+      i++
+      continue
+    }
+    if (byNamespaceName(base[i], ups[j]) <= 0) {
+      out.push(base[i])
+      i++
+    } else {
+      out.push(ups[j])
+      j++
+    }
+  }
+  for (; i < base.length; i++) {
+    if (!skip(base[i])) out.push(base[i])
+  }
+  for (; j < ups.length; j++) out.push(ups[j])
   return out
 }

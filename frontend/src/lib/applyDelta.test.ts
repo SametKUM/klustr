@@ -54,6 +54,16 @@ describe('applyDeltaToList', () => {
     expect(out[0].v).toBe(9)
   })
 
+  it('interleaves new upserts into the sorted base regardless of upsert order', () => {
+    const a = r('ns', 'a')
+    const c = r('ns', 'c')
+    const e = r('ns', 'e')
+    const out = applyDeltaToList([a, c, e], [r('ns', 'd'), r('ns', 'b')], [])
+    expect(out.map((x) => x.name)).toEqual(['a', 'b', 'c', 'd', 'e'])
+    expect(out.find((x) => x.name === 'a')).toBe(a) // untouched keep identity
+    expect(out.find((x) => x.name === 'e')).toBe(e)
+  })
+
   it('deltaKey joins namespace and name', () => {
     expect(deltaKey({ namespace: 'ns', name: 'a' })).toBe('ns/a')
     expect(deltaKey({ name: 'cluster-scoped' })).toBe('/cluster-scoped')
