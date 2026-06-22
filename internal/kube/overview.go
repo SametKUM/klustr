@@ -96,6 +96,13 @@ func (m *ClientManager) GetClusterOverview(ctx context.Context, contextName stri
 		overview.NamespaceCount = len(namespaces)
 	}
 
+	// Skip the (doomed, timeout-prone) cluster-wide metrics List during the
+	// cooldown after a recent unavailable response, re-probing at most once a
+	// minute instead of on every ~15s poll.
+	if m.metrics.metricsUnavailable(contextName) {
+		overview.MetricsError = "metrics.k8s.io API is not available"
+		return overview, nil
+	}
 	mc, err := m.metricsClient(contextName)
 	if err != nil {
 		overview.MetricsError = err.Error()
@@ -104,12 +111,14 @@ func (m *ClientManager) GetClusterOverview(ctx context.Context, contextName stri
 	list, err := mc.MetricsV1beta1().PodMetricses("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) || apierrors.IsServiceUnavailable(err) {
+			m.metrics.setMetricsUnavailable(contextName)
 			overview.MetricsError = "metrics.k8s.io API is not available"
 		} else {
 			overview.MetricsError = err.Error()
 		}
 		return overview, nil
 	}
+	m.metrics.clearMetricsUnavailable(contextName)
 
 	var cpuUsage, memUsage int64
 	for i := range list.Items {

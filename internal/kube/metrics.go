@@ -3,11 +3,17 @@ package kube
 import (
 	"context"
 	"sync"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metricsclient "k8s.io/metrics/pkg/client/clientset/versioned"
 )
+
+// metricsUnavailableCooldown is how long the overview skips its cluster-wide
+// pod-metrics List after metrics.k8s.io answered NotFound/ServiceUnavailable,
+// so a metrics-server-less cluster isn't probed (and timed out) every poll.
+const metricsUnavailableCooldown = time.Minute
 
 type PodMetrics struct {
 	Namespace string `json:"namespace"`
@@ -23,12 +29,37 @@ type NodeMetrics struct {
 }
 
 type metricsCache struct {
-	mu     sync.Mutex
-	client map[string]metricsclient.Interface
+	mu               sync.Mutex
+	client           map[string]metricsclient.Interface
+	unavailableUntil map[string]time.Time
 }
 
 func newMetricsCache() *metricsCache {
-	return &metricsCache{client: make(map[string]metricsclient.Interface)}
+	return &metricsCache{
+		client:           make(map[string]metricsclient.Interface),
+		unavailableUntil: make(map[string]time.Time),
+	}
+}
+
+// metricsUnavailable reports whether this context is within the cooldown after
+// a recent metrics-API-unavailable response.
+func (mc *metricsCache) metricsUnavailable(contextName string) bool {
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
+	until, ok := mc.unavailableUntil[contextName]
+	return ok && time.Now().Before(until)
+}
+
+func (mc *metricsCache) setMetricsUnavailable(contextName string) {
+	mc.mu.Lock()
+	mc.unavailableUntil[contextName] = time.Now().Add(metricsUnavailableCooldown)
+	mc.mu.Unlock()
+}
+
+func (mc *metricsCache) clearMetricsUnavailable(contextName string) {
+	mc.mu.Lock()
+	delete(mc.unavailableUntil, contextName)
+	mc.mu.Unlock()
 }
 
 func (m *ClientManager) ListPodMetrics(ctx context.Context, contextName, namespace string) ([]PodMetrics, error) {
@@ -116,6 +147,7 @@ func (mc *metricsCache) invalidate(contextName string) {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
 	delete(mc.client, contextName)
+	delete(mc.unavailableUntil, contextName)
 }
 
 func (m *ClientManager) metricsClient(contextName string) (metricsclient.Interface, error) {
