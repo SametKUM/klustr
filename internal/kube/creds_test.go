@@ -176,6 +176,27 @@ func TestSetMappingValidation(t *testing.T) {
 	}
 }
 
+func TestEnvForRejectsExpiredCredential(t *testing.T) {
+	p := &fakeProvider{name: "fake"}
+	p.set(validCred(), nil)
+	c := testCredManager(t, p)
+	_ = c.setMapping("ctx1", CredentialMapping{Provider: "fake", Profile: "p1"})
+	if _, err := c.ensureFresh(context.Background(), "ctx1"); err != nil {
+		t.Fatalf("ensureFresh: %v", err)
+	}
+	if env := c.envFor("ctx1"); env["AWS_ACCESS_KEY_ID"] != "a" {
+		t.Fatalf("envFor while valid = %v", env)
+	}
+	c.mu.Lock()
+	cred := c.captured["ctx1"]
+	cred.expiry = time.Now().Add(-time.Minute)
+	c.captured["ctx1"] = cred
+	c.mu.Unlock()
+	if env := c.envFor("ctx1"); env != nil {
+		t.Errorf("envFor after expiry = %v, want nil (dead token must not be injected)", env)
+	}
+}
+
 func TestClearMappingDropsCredentials(t *testing.T) {
 	p := &fakeProvider{name: "fake"}
 	p.set(validCred(), nil)

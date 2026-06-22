@@ -290,6 +290,7 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string) err
 	m.mu.Lock()
 	if m.appCtx == nil {
 		m.appCtx = ctx
+		m.creds.setBaseContext(ctx)
 	}
 	m.mu.Unlock()
 	// Auto-capture mapped helper credentials before any client is built. A

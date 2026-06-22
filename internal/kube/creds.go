@@ -17,12 +17,20 @@ const captureTimeout = 2 * time.Minute
 // profile mappings, captured secrets (memory only), per-context single-flight
 // capture and ahead-of-expiry refresh timers.
 type credentialManager struct {
-	mu          sync.Mutex
-	providers   []CredentialProvider
-	mappings    map[string]CredentialMapping
-	captured    map[string]CapturedCredentials
-	inflight    map[string]chan struct{}
-	timers      map[string]*time.Timer
+	mu        sync.Mutex
+	providers []CredentialProvider
+	mappings  map[string]CredentialMapping
+	captured  map[string]CapturedCredentials
+	inflight  map[string]chan struct{}
+	timers    map[string]*time.Timer
+	// refreshCancels holds the cancel func of each in-flight ahead-of-expiry
+	// refresh so stopAll (quit) / pauseRefresh (disconnect) can tear down a
+	// spawned helper subprocess promptly instead of letting it run out the
+	// 2-minute capture timeout on a detached context.
+	refreshCancels map[string]context.CancelFunc
+	// baseCtx is the app lifetime context refreshes derive from (set once the
+	// first Watch hands one in); context.Background() until then.
+	baseCtx     context.Context
 	lastErr     map[string]string
 	storePath   string
 	onEvent     func(CredentialStatus)
@@ -32,13 +40,15 @@ type credentialManager struct {
 
 func newCredentialManager() *credentialManager {
 	c := &credentialManager{
-		providers: []CredentialProvider{awsVaultProvider{}},
-		mappings:  map[string]CredentialMapping{},
-		captured:  map[string]CapturedCredentials{},
-		inflight:  map[string]chan struct{}{},
-		timers:    map[string]*time.Timer{},
-		lastErr:   map[string]string{},
-		now:       time.Now,
+		providers:      []CredentialProvider{awsVaultProvider{}},
+		mappings:       map[string]CredentialMapping{},
+		captured:       map[string]CapturedCredentials{},
+		inflight:       map[string]chan struct{}{},
+		timers:         map[string]*time.Timer{},
+		refreshCancels: map[string]context.CancelFunc{},
+		baseCtx:        context.Background(),
+		lastErr:        map[string]string{},
+		now:            time.Now,
 	}
 	if path, err := credsStorePath(); err == nil {
 		c.storePath = path
@@ -47,6 +57,14 @@ func newCredentialManager() *credentialManager {
 		}
 	}
 	return c
+}
+
+// setBaseContext gives the manager the app lifetime context so ahead-of-expiry
+// refreshes (and the helper subprocesses they spawn) are torn down on app quit.
+func (c *credentialManager) setBaseContext(ctx context.Context) {
+	c.mu.Lock()
+	c.baseCtx = ctx
+	c.mu.Unlock()
 }
 
 func (c *credentialManager) setOnEvent(cb func(CredentialStatus)) {
@@ -143,7 +161,11 @@ func (c *credentialManager) envFor(contextName string) map[string]string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	cred, ok := c.captured[contextName]
-	if !ok {
+	// Don't inject a credential our own clock considers dead — a stale
+	// AWS_SESSION_TOKEN would only make the exec auth fail confusingly. This
+	// also covers the narrow case of a credential captured with little life
+	// left, for which no refresh timer was armed.
+	if !ok || !cred.valid(c.now()) {
 		return nil
 	}
 	out := make(map[string]string, len(cred.env))
@@ -254,11 +276,22 @@ func (c *credentialManager) refresh(contextName string) {
 	c.mu.Lock()
 	mapping, ok := c.mappings[contextName]
 	cb := c.onRefreshed
+	base := c.baseCtx
 	c.mu.Unlock()
 	if !ok {
 		return
 	}
-	if err := c.capture(context.Background(), contextName, mapping); err != nil {
+	ctx, cancel := context.WithCancel(base)
+	c.mu.Lock()
+	c.refreshCancels[contextName] = cancel
+	c.mu.Unlock()
+	defer func() {
+		c.mu.Lock()
+		delete(c.refreshCancels, contextName)
+		c.mu.Unlock()
+		cancel()
+	}()
+	if err := c.capture(ctx, contextName, mapping); err != nil {
 		return
 	}
 	if cb != nil {
@@ -296,19 +329,32 @@ func (c *credentialManager) stopTimerLocked(contextName string) {
 // captured credentials stay in memory and the next Watch revalidates them.
 func (c *credentialManager) pauseRefresh(contextName string) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.stopTimerLocked(contextName)
+	cancel := c.refreshCancels[contextName]
+	delete(c.refreshCancels, contextName)
+	c.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 }
 
 func (c *credentialManager) stopAll() {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	for name, t := range c.timers {
 		t.Stop()
 		delete(c.timers, name)
 	}
+	cancels := make([]context.CancelFunc, 0, len(c.refreshCancels))
+	for name, cancel := range c.refreshCancels {
+		cancels = append(cancels, cancel)
+		delete(c.refreshCancels, name)
+	}
 	c.captured = map[string]CapturedCredentials{}
 	c.lastErr = map[string]string{}
+	c.mu.Unlock()
+	for _, cancel := range cancels {
+		cancel()
+	}
 }
 
 func (c *credentialManager) statuses() []CredentialStatus {
