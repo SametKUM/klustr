@@ -209,15 +209,30 @@ func (w *contextWatcher) helmLatestSecrets(namespace string) (map[string]*corev1
 	return latest, nil
 }
 
-// helmReleaseSecrets returns every Secret belonging to a given release.
+// helmReleaseSecrets returns every Secret belonging to a given release. It
+// filters at the lister by the release's labels (owner=helm, name=<release>)
+// instead of scanning every helm Secret in scope, then still verifies the
+// release secret type on the small result.
 func (w *contextWatcher) helmReleaseSecrets(namespace, name string) ([]*corev1.Secret, error) {
-	all, err := w.helmAllSecrets(namespace)
+	f := w.factoryFor("Secret")
+	if f == nil {
+		return nil, nil
+	}
+	sel := labels.SelectorFromSet(labels.Set{"owner": helmReleaseSecretOwner, "name": name})
+	lister := f.Core().V1().Secrets().Lister()
+	var raw []*corev1.Secret
+	var err error
+	if namespace == "" {
+		raw, err = lister.List(sel)
+	} else {
+		raw, err = lister.Secrets(namespace).List(sel)
+	}
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*corev1.Secret, 0, 4)
-	for _, s := range all {
-		if s.Labels["name"] != name {
+	out := make([]*corev1.Secret, 0, len(raw))
+	for _, s := range raw {
+		if !isHelmReleaseSecret(s) {
 			continue
 		}
 		out = append(out, s)
