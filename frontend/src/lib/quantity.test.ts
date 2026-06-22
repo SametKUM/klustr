@@ -27,6 +27,12 @@ describe('parseQuantity', () => {
     expect(parseQuantity('not-a-quantity')).toBeNull()
     expect(parseQuantity('1Zi')).toBeNull()
   })
+  it('handles the decimal exa suffix but rejects bare/garbage mantissas', () => {
+    expect(parseQuantity('2E')).toBe(2e18) // valid K8s decimal exa
+    expect(parseQuantity('E')).toBeNull() // bare suffix, not 0
+    expect(parseQuantity('0x10E')).toBeNull() // not hex
+    expect(parseQuantity('Ki')).toBeNull()
+  })
 })
 
 describe('formatMemoryQuantity', () => {

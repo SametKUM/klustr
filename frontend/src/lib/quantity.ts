@@ -24,6 +24,11 @@ const DECIMAL_SUFFIXES: Array<[string, number]> = [
   ['E', 1e18],
 ]
 
+// A plain decimal mantissa — guards the suffix branches against Number()
+// quirks: a bare suffix ("E") slices to "" (Number → 0) and hex ("0x10E")
+// parses to a number, neither of which is a valid quantity.
+const DECIMAL_MANTISSA = /^-?\d+(\.\d+)?$/
+
 // parseQuantity returns the value in base units (bytes for memory,
 // cores for cpu) or null if the input doesn't look like a quantity.
 export function parseQuantity(raw: string): number | null {
@@ -31,14 +36,14 @@ export function parseQuantity(raw: string): number | null {
   if (!s) return null
   for (const [suffix, mul] of BINARY_SUFFIXES) {
     if (s.endsWith(suffix)) {
-      const n = Number(s.slice(0, -suffix.length))
-      return Number.isFinite(n) ? n * mul : null
+      const rest = s.slice(0, -suffix.length)
+      return DECIMAL_MANTISSA.test(rest) ? Number(rest) * mul : null
     }
   }
   for (const [suffix, mul] of DECIMAL_SUFFIXES) {
     if (s.endsWith(suffix)) {
-      const n = Number(s.slice(0, -suffix.length))
-      return Number.isFinite(n) ? n * mul : null
+      const rest = s.slice(0, -suffix.length)
+      return DECIMAL_MANTISSA.test(rest) ? Number(rest) * mul : null
     }
   }
   const n = Number(s)
