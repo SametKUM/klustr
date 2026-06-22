@@ -53,10 +53,7 @@ func (w *contextWatcher) warmKEDA(ctx context.Context) {
 	}
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
-	for {
-		if w.crd.HasCRD(kedaScaledObjectGVR) {
-			break
-		}
+	for !w.crd.HasCRD(kedaScaledObjectGVR) {
 		select {
 		case <-ctx.Done():
 			return
