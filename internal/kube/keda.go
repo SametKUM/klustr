@@ -54,7 +54,7 @@ func (w *contextWatcher) warmKEDA(ctx context.Context) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
-		if _, ok := w.crd.LookupCRDByGVR(kedaScaledObjectGVR); ok {
+		if w.crd.HasCRD(kedaScaledObjectGVR) {
 			break
 		}
 		select {

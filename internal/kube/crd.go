@@ -288,6 +288,19 @@ func (w *crdWatcher) LookupCRDByGVR(gvr schema.GroupVersionResource) (CRDInfo, b
 	return CRDInfo{}, false
 }
 
+// HasCRD reports whether a CRD for the given group/resource is present via a
+// cheap indexer key lookup. CRDs are named "<plural>.<group>" and cluster-
+// scoped, so the store key is exactly that. Use this instead of
+// LookupCRDByGVR in poll/warm-up loops, which would otherwise re-decode and
+// sort the entire CRD set on every tick just to check for one CRD.
+func (w *crdWatcher) HasCRD(gvr schema.GroupVersionResource) bool {
+	if w.factory == nil {
+		return false
+	}
+	_, exists, err := w.factory.ForResource(crdGVR).Informer().GetStore().GetByKey(gvr.Resource + "." + gvr.Group)
+	return err == nil && exists
+}
+
 const crSyncTimeout = 5 * time.Second
 
 // EnsureCRWatch starts a dynamic informer for the given GVR if not already
