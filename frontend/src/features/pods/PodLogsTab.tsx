@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -46,15 +46,30 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
   const pausedRef = useRef(false)
   const bufferRef = useRef<string[]>([])
   const predicateRef = useRef<(line: string) => boolean>(() => true)
-  const visibleLinesRef = useRef<string[]>([])
+  const rawLinesRef = useRef<string[]>([])
+
+  // Repaint the terminal from the retained raw buffer through the current
+  // predicate. The filter is a view over captured logs, not just a gate on
+  // incoming lines — without this, typing a filter does nothing to lines that
+  // already streamed in.
+  const rerender = useCallback(() => {
+    const term = termRef.current
+    if (!term) return
+    term.reset()
+    const styled: string[] = []
+    for (const line of rawLinesRef.current) {
+      if (predicateRef.current(line)) styled.push(highlightLogContent(line))
+    }
+    if (styled.length > 0) term.write(styled.join('\r\n') + '\r\n')
+    bufferRef.current = []
+    setBufferLength(0)
+  }, [])
 
   useEffect(() => {
     if (!filterValue) {
       predicateRef.current = () => true
       setFilterError(null)
-      return
-    }
-    if (useRegex) {
+    } else if (useRegex) {
       try {
         const re = new RegExp(filterValue, 'i')
         predicateRef.current = (line) => re.test(line)
@@ -68,7 +83,8 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
       predicateRef.current = (line) => line.toLowerCase().includes(needle)
       setFilterError(null)
     }
-  }, [filterValue, useRegex])
+    rerender()
+  }, [filterValue, useRegex, rerender])
 
   useEffect(() => {
     pausedRef.current = paused
@@ -156,11 +172,11 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
         unsubLine = EventsOn(`pod:logs:line:${id}`, (lines: string[]) => {
           const styledOut: string[] = []
           for (const line of lines) {
+            // Retain every raw line (regardless of filter or pause) so the
+            // filter can repaint over the full buffer and Save reflects it.
+            rawLinesRef.current.push(line)
+            if (rawLinesRef.current.length > 50_000) rawLinesRef.current.shift()
             if (!predicateRef.current(line)) continue
-            // Record the raw line for Save regardless of pause; pausing only
-            // defers rendering to the terminal, not capture.
-            visibleLinesRef.current.push(line)
-            if (visibleLinesRef.current.length > 50_000) visibleLinesRef.current.shift()
             styledOut.push(highlightLogContent(line))
           }
           if (styledOut.length === 0) return
@@ -203,7 +219,7 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
       unsubLine?.()
       unsubClose?.()
       bufferRef.current = []
-      visibleLinesRef.current = []
+      rawLinesRef.current = []
       setBufferLength(0)
       if (sessionId) {
         api.stopPodLogs(sessionId).catch(() => {})
@@ -213,7 +229,7 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
   }, [selectedContext, detail.namespace, detail.name, container])
 
   const saveLogs = () => {
-    const lines = visibleLinesRef.current
+    const lines = rawLinesRef.current.filter((l) => predicateRef.current(l))
     if (lines.length === 0) {
       toast.info('No logs to save yet')
       return
@@ -257,7 +273,7 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
           onClick={() => {
             termRef.current?.clear()
             bufferRef.current = []
-            visibleLinesRef.current = []
+            rawLinesRef.current = []
             setBufferLength(0)
             // clear() leaves the (now empty) view bottom-anchored, but atBottom
             // only updates on scroll, so reset it here or the "Jump to bottom"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -71,9 +71,25 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
   const fitRef = useRef<FitAddon | null>(null)
   const pausedRef = useRef(false)
   const bufferRef = useRef<string[]>([])
-  const visibleLinesRef = useRef<string[]>([])
+  const rawLinesRef = useRef<{ raw: string; styled: string }[]>([])
   const predicateRef = useRef<(line: string) => boolean>(() => true)
   const sessionsRef = useRef<Session[]>([])
+
+  // Repaint the terminal from the retained buffer through the current predicate.
+  // The filter is a view over captured logs, not just a gate on incoming lines —
+  // without this, typing a filter does nothing to lines that already streamed in.
+  const rerender = useCallback(() => {
+    const term = termRef.current
+    if (!term) return
+    term.reset()
+    const styled: string[] = []
+    for (const item of rawLinesRef.current) {
+      if (predicateRef.current(item.raw)) styled.push(item.styled)
+    }
+    if (styled.length > 0) term.write(styled.join('\r\n') + '\r\n')
+    bufferRef.current = []
+    setBufferLength(0)
+  }, [])
 
   useEffect(() => {
     pausedRef.current = paused
@@ -91,9 +107,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
     if (!filterValue) {
       predicateRef.current = () => true
       setFilterError(null)
-      return
-    }
-    if (useRegex) {
+    } else if (useRegex) {
       try {
         const re = new RegExp(filterValue, 'i')
         predicateRef.current = (line) => re.test(line)
@@ -107,7 +121,8 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
       predicateRef.current = (line) => line.toLowerCase().includes(needle)
       setFilterError(null)
     }
-  }, [filterValue, useRegex])
+    rerender()
+  }, [filterValue, useRegex, rerender])
 
   useEffect(() => {
     if (!termHostRef.current) return
@@ -208,12 +223,13 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
               const styledOut: string[] = []
               for (const line of lines) {
                 const rawLine = rawPrefix + line
+                const styledLine = prefix + highlightLogContent(line)
+                // Retain every line (regardless of filter or pause) so the filter
+                // can repaint over the full buffer and Save reflects it.
+                rawLinesRef.current.push({ raw: rawLine, styled: styledLine })
+                if (rawLinesRef.current.length > 100_000) rawLinesRef.current.shift()
                 if (!predicateRef.current(rawLine)) continue
-                // Capture the raw line for Save regardless of pause; pausing only
-                // defers rendering to the terminal, not capture.
-                visibleLinesRef.current.push(rawLine)
-                if (visibleLinesRef.current.length > 100_000) visibleLinesRef.current.shift()
-                styledOut.push(prefix + highlightLogContent(line))
+                styledOut.push(styledLine)
               }
               if (styledOut.length === 0) return
               if (pausedRef.current) {
@@ -271,13 +287,13 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
       }
       sessionsRef.current = []
       bufferRef.current = []
-      visibleLinesRef.current = []
+      rawLinesRef.current = []
       setBufferLength(0)
     }
   }, [contextName, namespace, targets, title])
 
   const saveLogs = () => {
-    const lines = visibleLinesRef.current
+    const lines = rawLinesRef.current.filter((l) => predicateRef.current(l.raw)).map((l) => l.raw)
     if (lines.length === 0) {
       toast.info('No logs to save yet')
       return
@@ -318,7 +334,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
           onClick={() => {
             termRef.current?.clear()
             bufferRef.current = []
-            visibleLinesRef.current = []
+            rawLinesRef.current = []
             setBufferLength(0)
             // clear() leaves the (now empty) view bottom-anchored, but atBottom
             // only updates on scroll, so reset it here or the "Jump to bottom"
