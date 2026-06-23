@@ -25,6 +25,9 @@ type WorkloadHealth = {
   view: ResourceView
   total: number
   healthy: number
+  // Intentionally-inactive members (e.g. suspended CronJobs) — shown as a neutral
+  // segment, not red, so a deliberately-disabled resource doesn't read as broken.
+  neutral?: number
 }
 
 type TaggedEvent = EventInfo & { contextName: string }
@@ -262,13 +265,15 @@ export function WorkloadsOverviewView() {
     {
       kind: 'ReplicaSets',
       view: 'replicasets',
-      total: replicaSets.length,
+      // Scaled-down ReplicaSets (desired 0) are kept around for rollback and are
+      // not unhealthy; excluding them from the total keeps them out of the red bar.
+      total: replicaSets.filter((r) => r.desired > 0).length,
       healthy: replicaSets.filter((r) => r.desired > 0 && r.ready === r.desired).length,
     },
     {
       kind: 'ReplicationControllers',
       view: 'replicationcontrollers',
-      total: replicationControllers.length,
+      total: replicationControllers.filter((r) => r.desired > 0).length,
       healthy: replicationControllers.filter((r) => r.desired > 0 && r.ready === r.desired).length,
     },
     {
@@ -282,6 +287,7 @@ export function WorkloadsOverviewView() {
       view: 'cronjobs',
       total: cronJobs.length,
       healthy: cronJobs.filter((c) => !c.suspend).length,
+      neutral: cronJobs.filter((c) => c.suspend).length,
     },
   ]
 
@@ -326,6 +332,7 @@ export function WorkloadsOverviewView() {
             kind={c.kind}
             total={c.total}
             healthy={c.healthy}
+            neutral={c.neutral}
             onClick={() => setSelectedView(c.view)}
           />
         ))}
@@ -353,7 +360,10 @@ export function WorkloadsOverviewView() {
 }
 
 function isPodHealthy(p: PodInfo): boolean {
-  if (p.status === 'Succeeded') return true
+  // A finished pod reads as "Completed" (terminated-container reason) far more
+  // often than the bare "Succeeded" phase; both mean the pod did its job and
+  // must not be counted as failing.
+  if (p.status === 'Succeeded' || p.status === 'Completed') return true
   if (p.status !== 'Running') return false
   return isReadyString(p.ready)
 }
@@ -372,12 +382,14 @@ type WorkloadCardProps = {
   kind: string
   total: number
   healthy: number
+  neutral?: number
   onClick: () => void
 }
 
-function WorkloadCard({ kind, total, healthy, onClick }: WorkloadCardProps) {
-  const unhealthy = Math.max(0, total - healthy)
+function WorkloadCard({ kind, total, healthy, neutral = 0, onClick }: WorkloadCardProps) {
+  const unhealthy = Math.max(0, total - healthy - neutral)
   const healthyPct = total > 0 ? (healthy / total) * 100 : 0
+  const neutralPct = total > 0 ? (neutral / total) * 100 : 0
   const unhealthyPct = total > 0 ? (unhealthy / total) * 100 : 0
 
   return (
@@ -397,8 +409,12 @@ function WorkloadCard({ kind, total, healthy, onClick }: WorkloadCardProps) {
               style={{ width: `${healthyPct}%` }}
             />
             <div
+              className="absolute inset-y-0 bg-muted-foreground/50"
+              style={{ left: `${healthyPct}%`, width: `${neutralPct}%` }}
+            />
+            <div
               className="absolute inset-y-0 bg-destructive"
-              style={{ left: `${healthyPct}%`, width: `${unhealthyPct}%` }}
+              style={{ left: `${healthyPct + neutralPct}%`, width: `${unhealthyPct}%` }}
             />
           </>
         )}
