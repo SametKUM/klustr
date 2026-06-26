@@ -3,6 +3,7 @@ import { api, type ArgoApplicationSetDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { useUIStore } from '@/store/ui'
 import { useCRDStore } from '@/store/crds'
@@ -90,23 +91,23 @@ export function ApplicationSetDetailBody({
         <Section title="Template">
           {detail.templateName && (
             <Field label="Name pattern" mono>
-              {detail.templateName}
+              <Copyable value={detail.templateName} />
             </Field>
           )}
           {detail.templateProject && <Field label="Project">{detail.templateProject}</Field>}
           {detail.templateRepoURL && (
             <Field label="Repo URL" mono>
-              {detail.templateRepoURL}
+              <Copyable value={detail.templateRepoURL} />
             </Field>
           )}
           {detail.templatePath && (
             <Field label="Path" mono>
-              {detail.templatePath}
+              <Copyable value={detail.templatePath} />
             </Field>
           )}
           {detail.templateRevision && (
             <Field label="Target revision" mono>
-              {detail.templateRevision}
+              <Copyable value={detail.templateRevision} />
             </Field>
           )}
           {detail.templateDestNs && (
@@ -133,17 +134,19 @@ export function ApplicationSetDetailBody({
                 {detail.generatedApps.map((a, i) => (
                   <tr key={i} className="border-t border-border">
                     <Td>
-                      {argoAppCRD ? (
-                        <button
-                          type="button"
-                          className="cursor-pointer font-mono text-left hover:underline"
-                          onClick={() => openApp(a.application)}
-                        >
-                          {a.application}
-                        </button>
-                      ) : (
-                        <span className="font-mono">{a.application}</span>
-                      )}
+                      <Copyable value={a.application}>
+                        {argoAppCRD ? (
+                          <button
+                            type="button"
+                            className="cursor-pointer font-mono text-left hover:underline"
+                            onClick={() => openApp(a.application)}
+                          >
+                            {a.application}
+                          </button>
+                        ) : (
+                          <span className="font-mono">{a.application}</span>
+                        )}
+                      </Copyable>
                     </Td>
                     <Td>
                       <AppSetStatusPill value={a.status} />

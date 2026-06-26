@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type ArgoAppProjectDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function AppProjectDetailBody({
@@ -49,7 +50,7 @@ export function AppProjectDetailBody({
               <tbody>
                 {detail.destinations.map((d, i) => (
                   <tr key={i} className="border-t border-border">
-                    <Td className="font-mono">{d.server || '*'}</Td>
+                    <Td className="font-mono">{d.server ? <Copyable value={d.server} /> : '*'}</Td>
                     <Td className="font-mono">{d.namespace || '*'}</Td>
                     <Td className="font-mono">{d.name || '—'}</Td>
                   </tr>
@@ -181,7 +182,9 @@ function StringListSection({
     <Section title={`${title} (${items.length})`}>
       <ul className="space-y-1 font-mono text-xs">
         {items.map((s, i) => (
-          <li key={i}>{s}</li>
+          <li key={i}>
+            <Copyable value={s} />
+          </li>
         ))}
       </ul>
       {emptyHint && <p className="mt-1 text-[11px] text-muted-foreground">{emptyHint}</p>}
