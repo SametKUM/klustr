@@ -3,6 +3,7 @@ import { api, type CertManagerIssuerDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { CertManagerConditionsTable } from './CertManagerConditionsTable'
 
@@ -46,7 +47,7 @@ export function IssuerDetailBody({ contextName, namespace, name, cluster }: Prop
         <Section title="ACME">
           <Field label="Server">
             {detail.acmeServer ? (
-              <span className="font-mono text-xs">{detail.acmeServer}</span>
+              <Copyable className="font-mono text-xs" value={detail.acmeServer} />
             ) : (
               '—'
             )}

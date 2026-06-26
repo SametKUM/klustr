@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type CertManagerChallengeDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { CertManagerStatePill } from './CertManagerStatePill'
 
@@ -42,7 +43,7 @@ export function ChallengeDetailBody({ contextName, namespace, name }: Props) {
         </Field>
         <Field label="DNS name">
           {detail.dnsName ? (
-            <span className="font-mono text-xs">{detail.dnsName}</span>
+            <Copyable className="font-mono text-xs" value={detail.dnsName} />
           ) : (
             '—'
           )}
@@ -55,11 +56,15 @@ export function ChallengeDetailBody({ contextName, namespace, name }: Props) {
 
       <Section title="ACME">
         <Field label="Token">
-          {detail.token ? <span className="font-mono text-xs break-all">{detail.token}</span> : '—'}
+          {detail.token ? (
+            <Copyable className="font-mono text-xs break-all" value={detail.token} />
+          ) : (
+            '—'
+          )}
         </Field>
         <Field label="Authorization URL">
           {detail.authorizationURL ? (
-            <span className="font-mono text-xs break-all">{detail.authorizationURL}</span>
+            <Copyable className="font-mono text-xs break-all" value={detail.authorizationURL} />
           ) : (
             '—'
           )}

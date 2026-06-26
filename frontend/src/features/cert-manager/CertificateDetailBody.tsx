@@ -3,6 +3,7 @@ import { api, type CertManagerCertificateDetail } from '@/lib/api'
 import { formatAge, formatTimestamp } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { CertManagerConditionsTable } from './CertManagerConditionsTable'
 import { ExpiryCell } from './ExpiryCell'
@@ -40,11 +41,13 @@ export function CertificateDetailBody({ contextName, namespace, name }: Props) {
             <ConditionPill status={detail.ready} />
           </Field>
           <Field label="Status message">{detail.status || '—'}</Field>
-          <Field label="Common name">{detail.commonName || '—'}</Field>
+          <Field label="Common name">
+            {detail.commonName ? <Copyable value={detail.commonName} /> : '—'}
+          </Field>
           <Field label="Issuer">{issuer}</Field>
           <Field label="Secret name">
             {detail.secretName ? (
-              <span className="font-mono text-xs">{detail.secretName}</span>
+              <Copyable className="font-mono text-xs" value={detail.secretName} />
             ) : (
               '—'
             )}
@@ -77,17 +80,23 @@ export function CertificateDetailBody({ contextName, namespace, name }: Props) {
         <Section title="Subject Alternative Names">
           {detail.dnsNames.length > 0 && (
             <Field label="DNS names">
-              <span className="font-mono text-xs">{detail.dnsNames.join(', ')}</span>
+              <Copyable className="font-mono text-xs" value={detail.dnsNames.join(',')}>
+                {detail.dnsNames.join(', ')}
+              </Copyable>
             </Field>
           )}
           {detail.ipAddresses.length > 0 && (
             <Field label="IP addresses">
-              <span className="font-mono text-xs">{detail.ipAddresses.join(', ')}</span>
+              <Copyable className="font-mono text-xs" value={detail.ipAddresses.join(',')}>
+                {detail.ipAddresses.join(', ')}
+              </Copyable>
             </Field>
           )}
           {detail.uris.length > 0 && (
             <Field label="URIs">
-              <span className="font-mono text-xs">{detail.uris.join(', ')}</span>
+              <Copyable className="font-mono text-xs" value={detail.uris.join(',')}>
+                {detail.uris.join(', ')}
+              </Copyable>
             </Field>
           )}
         </Section>

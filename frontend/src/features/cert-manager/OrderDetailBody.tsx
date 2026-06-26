@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type CertManagerOrderDetail } from '@/lib/api'
 import { formatAge, formatTimestamp } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { CertManagerStatePill } from './CertManagerStatePill'
 
@@ -30,7 +31,9 @@ export function OrderDetailBody({ contextName, namespace, name }: Props) {
         <Field label="Common name">{detail.commonName || '—'}</Field>
         <Field label="DNS names">
           {detail.dnsNameList.length > 0 ? (
-            <span className="font-mono text-xs">{detail.dnsNameList.join(', ')}</span>
+            <Copyable className="font-mono text-xs" value={detail.dnsNameList.join(',')}>
+              {detail.dnsNameList.join(', ')}
+            </Copyable>
           ) : (
             '—'
           )}
@@ -46,11 +49,15 @@ export function OrderDetailBody({ contextName, namespace, name }: Props) {
 
       <Section title="ACME">
         <Field label="Order URL">
-          {detail.url ? <span className="font-mono text-xs break-all">{detail.url}</span> : '—'}
+          {detail.url ? (
+            <Copyable className="font-mono text-xs break-all" value={detail.url} />
+          ) : (
+            '—'
+          )}
         </Field>
         <Field label="Finalize URL">
           {detail.finalizeURL ? (
-            <span className="font-mono text-xs break-all">{detail.finalizeURL}</span>
+            <Copyable className="font-mono text-xs break-all" value={detail.finalizeURL} />
           ) : (
             '—'
           )}
