@@ -26,6 +26,7 @@ import {
   Th,
 } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { CSRConditionPill } from './CSRConditionPill'
 
@@ -59,10 +60,10 @@ export function CSRDetailBody({
           <CSRConditionPill condition={detail.condition} />
         </Field>
         <Field label="Signer" mono>
-          {detail.signerName}
+          <Copyable value={detail.signerName} />
         </Field>
         <Field label="Requester" mono>
-          {detail.requester}
+          <Copyable value={detail.requester} />
         </Field>
         {detail.groups.length > 0 && (
           <Field label="Groups">{detail.groups.join(', ')}</Field>

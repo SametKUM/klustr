@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type RoleBindingDetail, type SubjectDetail, type RoleRefDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { useUIStore } from '@/store/ui'
 
@@ -53,20 +54,22 @@ export function RoleRefBlock({
     <Section title="Role Reference">
       <Field label="Kind">{roleRef.kind}</Field>
       <Field label="Name">
-        <button
-          type="button"
-          onClick={() =>
-            openResource({
-              kind: targetKind,
-              namespace: targetNamespace,
-              name: roleRef.name,
-              context: contextName ?? undefined,
-            })
-          }
-          className="font-mono text-xs underline-offset-2 hover:underline"
-        >
-          {roleRef.name}
-        </button>
+        <Copyable value={roleRef.name}>
+          <button
+            type="button"
+            onClick={() =>
+              openResource({
+                kind: targetKind,
+                namespace: targetNamespace,
+                name: roleRef.name,
+                context: contextName ?? undefined,
+              })
+            }
+            className="font-mono text-xs underline-offset-2 hover:underline"
+          >
+            {roleRef.name}
+          </button>
+        </Copyable>
       </Field>
       <Field label="API Group">{roleRef.apiGroup || '—'}</Field>
       <Field label="Age">{formatAge(createdAt)}</Field>
@@ -107,24 +110,26 @@ export function SubjectsTable({
                     <Td>{s.kind}</Td>
                     <Td className="font-mono">{ns || '—'}</Td>
                     <Td className="font-mono">
-                      {isSA ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openResource({
-                              kind: 'ServiceAccount',
-                              namespace: ns,
-                              name: s.name,
-                              context: contextName ?? undefined,
-                            })
-                          }
-                          className="underline-offset-2 hover:underline"
-                        >
-                          {s.name}
-                        </button>
-                      ) : (
-                        s.name
-                      )}
+                      <Copyable value={s.name}>
+                        {isSA ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openResource({
+                                kind: 'ServiceAccount',
+                                namespace: ns,
+                                name: s.name,
+                                context: contextName ?? undefined,
+                              })
+                            }
+                            className="underline-offset-2 hover:underline"
+                          >
+                            {s.name}
+                          </button>
+                        ) : (
+                          s.name
+                        )}
+                      </Copyable>
                     </Td>
                   </tr>
                 )
