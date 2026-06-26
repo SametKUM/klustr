@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type VolumeAttachmentDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function VolumeAttachmentDetailBody({
@@ -23,13 +24,13 @@ export function VolumeAttachmentDetailBody({
     <div className="space-y-6">
       <Section title="Volume attachment">
         <Field label="Driver" mono>
-          {detail.attacher}
+          <Copyable value={detail.attacher} />
         </Field>
         <Field label="Node" mono>
-          {detail.node}
+          <Copyable value={detail.node} />
         </Field>
         <Field label="PV" mono>
-          {detail.pv || '—'}
+          {detail.pv ? <Copyable value={detail.pv} /> : '—'}
         </Field>
         <Field label="Attached">{detail.attached ? 'yes' : 'no'}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>

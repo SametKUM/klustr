@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type StorageClassDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function StorageClassDetailBody({
@@ -18,7 +19,7 @@ export function StorageClassDetailBody({
   return (
     <div className="space-y-6">
       <Section title="Status">
-        <Field label="Provisioner">{detail.provisioner}</Field>
+        <Field label="Provisioner"><Copyable value={detail.provisioner} /></Field>
         <Field label="Reclaim Policy">{detail.reclaimPolicy || '—'}</Field>
         <Field label="Volume Binding">{detail.volumeBindingMode || '—'}</Field>
         <Field label="Allow Expansion">{detail.allowExpansion ? 'Yes' : 'No'}</Field>

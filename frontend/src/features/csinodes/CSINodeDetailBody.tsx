@@ -10,6 +10,7 @@ import {
   Td,
   Th,
 } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function CSINodeDetailBody({
@@ -45,8 +46,8 @@ export function CSINodeDetailBody({
               <tbody>
                 {detail.drivers.map((d) => (
                   <tr key={d.name} className="border-t border-border">
-                    <Td className="font-mono">{d.name}</Td>
-                    <Td className="font-mono break-all">{d.nodeID}</Td>
+                    <Td className="font-mono"><Copyable value={d.name} /></Td>
+                    <Td className="font-mono break-all"><Copyable value={d.nodeID} /></Td>
                     <Td className="font-mono">{d.topologyKeys.join(', ') || '—'}</Td>
                     <Td>{d.allocatableMax || '—'}</Td>
                   </tr>
