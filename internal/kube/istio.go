@@ -132,9 +132,9 @@ func (m *ClientManager) GetIstioVirtualService(ctx context.Context, contextName,
 func extractVirtualService(obj *unstructured.Unstructured) IstioVirtualServiceInfo {
 	hosts, _, _ := unstructured.NestedStringSlice(obj.Object, "spec", "hosts")
 	gateways, _, _ := unstructured.NestedStringSlice(obj.Object, "spec", "gateways")
-	httpRules, _, _ := unstructured.NestedSlice(obj.Object, "spec", "http")
-	tlsRules, _, _ := unstructured.NestedSlice(obj.Object, "spec", "tls")
-	tcpRules, _, _ := unstructured.NestedSlice(obj.Object, "spec", "tcp")
+	httpRules, _, _ := nestedSliceNoCopy(obj.Object, "spec", "http")
+	tlsRules, _, _ := nestedSliceNoCopy(obj.Object, "spec", "tls")
+	tcpRules, _, _ := nestedSliceNoCopy(obj.Object, "spec", "tcp")
 	return IstioVirtualServiceInfo{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
@@ -148,7 +148,7 @@ func extractVirtualService(obj *unstructured.Unstructured) IstioVirtualServiceIn
 }
 
 func extractRouteRules(obj *unstructured.Unstructured, field string) []IstioRouteRule {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, "spec", field)
+	raw, _, _ := nestedSliceNoCopy(obj.Object, "spec", field)
 	out := make([]IstioRouteRule, 0, len(raw))
 	for _, item := range raw {
 		rule, ok := item.(map[string]any)
@@ -317,7 +317,7 @@ func extractDestinationRule(obj *unstructured.Unstructured) IstioDestinationRule
 }
 
 func extractSubsets(obj *unstructured.Unstructured) []IstioSubset {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, "spec", "subsets")
+	raw, _, _ := nestedSliceNoCopy(obj.Object, "spec", "subsets")
 	out := make([]IstioSubset, 0, len(raw))
 	for _, item := range raw {
 		sm, ok := item.(map[string]any)
@@ -417,7 +417,7 @@ func extractPeerAuthentication(obj *unstructured.Unstructured) IstioPeerAuthenti
 }
 
 func extractPortLevelMTLS(obj *unstructured.Unstructured) []IstioPortMTLS {
-	raw, found, _ := unstructured.NestedMap(obj.Object, "spec", "portLevelMtls")
+	raw, found, _ := nestedMapNoCopy(obj.Object, "spec", "portLevelMtls")
 	if !found {
 		return []IstioPortMTLS{}
 	}

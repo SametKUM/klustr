@@ -438,7 +438,7 @@ func (m *ClientManager) GetCertManagerOrder(ctx context.Context, contextName, na
 	url, _, _ := unstructured.NestedString(obj.Object, "status", "url")
 	finalizeURL, _, _ := unstructured.NestedString(obj.Object, "status", "finalizeURL")
 	failureTime, _, _ := unstructured.NestedString(obj.Object, "status", "failureTime")
-	authz, _, _ := unstructured.NestedSlice(obj.Object, "status", "authorizations")
+	authz, _, _ := nestedSliceNoCopy(obj.Object, "status", "authorizations")
 	return &CertManagerOrderDetail{
 		CertManagerOrderInfo: extractCertManagerOrder(obj),
 		CommonName:           commonName,
@@ -560,7 +560,7 @@ func extractCertManagerChallenge(obj *unstructured.Unstructured) CertManagerChal
 // metav1.Condition shape. Returns an empty slice (not nil) so the JSON
 // encoder never emits null for a resource cert-manager hasn't reconciled yet.
 func extractCertManagerConditions(obj *unstructured.Unstructured) []CertManagerCondition {
-	raw, found, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	raw, found, _ := nestedSliceNoCopy(obj.Object, "status", "conditions")
 	if !found {
 		return []CertManagerCondition{}
 	}
@@ -649,7 +649,7 @@ func formatIssuerRef(obj *unstructured.Unstructured) string {
 // issuerType reports which provider block an Issuer/ClusterIssuer spec
 // carries. cert-manager's spec is a one-of, so the first present key wins.
 func issuerType(obj *unstructured.Unstructured) string {
-	spec, found, _ := unstructured.NestedMap(obj.Object, "spec")
+	spec, found, _ := nestedMapNoCopy(obj.Object, "spec")
 	if !found {
 		return ""
 	}

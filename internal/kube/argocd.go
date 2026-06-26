@@ -64,7 +64,7 @@ func extractArgoApplication(obj *unstructured.Unstructured) ArgoApplicationInfo 
 	// Multi-source Applications carry spec.sources (a list) instead of the
 	// singular spec.source; surface the first source so the row isn't blank.
 	if repoURL == "" {
-		if sources, found, _ := unstructured.NestedSlice(obj.Object, "spec", "sources"); found && len(sources) > 0 {
+		if sources, found, _ := nestedSliceNoCopy(obj.Object, "spec", "sources"); found && len(sources) > 0 {
 			if first, ok := sources[0].(map[string]any); ok {
 				repoURL, _ = first["repoURL"].(string)
 				path, _ = first["path"].(string)
@@ -76,7 +76,7 @@ func extractArgoApplication(obj *unstructured.Unstructured) ArgoApplicationInfo 
 		}
 	}
 	autoSync, selfHeal, prune := false, false, false
-	if automated, found, _ := unstructured.NestedMap(obj.Object, "spec", "syncPolicy", "automated"); found && automated != nil {
+	if automated, found, _ := nestedMapNoCopy(obj.Object, "spec", "syncPolicy", "automated"); found && automated != nil {
 		autoSync = true
 		if v, ok := automated["selfHeal"].(bool); ok {
 			selfHeal = v
@@ -249,7 +249,7 @@ func (m *ClientManager) ListArgoApplicationResources(ctx context.Context, contex
 }
 
 func extractArgoResources(obj *unstructured.Unstructured) []ArgoApplicationResource {
-	raw, found, err := unstructured.NestedSlice(obj.Object, "status", "resources")
+	raw, found, err := nestedSliceNoCopy(obj.Object, "status", "resources")
 	if err != nil || !found {
 		return []ArgoApplicationResource{}
 	}
@@ -407,7 +407,7 @@ func (m *ClientManager) ListArgoApplicationHistory(ctx context.Context, contextN
 	if err != nil {
 		return nil, err
 	}
-	raw, found, err := unstructured.NestedSlice(obj.Object, "status", "history")
+	raw, found, err := nestedSliceNoCopy(obj.Object, "status", "history")
 	if err != nil || !found {
 		return []ArgoApplicationHistoryEntry{}, nil
 	}
@@ -549,7 +549,7 @@ func (m *ClientManager) GetArgoApplicationOperationState(ctx context.Context, co
 
 func extractArgoOperationState(obj *unstructured.Unstructured) ArgoOperationState {
 	out := ArgoOperationState{Resources: []ArgoSyncResultResource{}}
-	opState, found, _ := unstructured.NestedMap(obj.Object, "status", "operationState")
+	opState, found, _ := nestedMapNoCopy(obj.Object, "status", "operationState")
 	if !found || opState == nil {
 		return out
 	}

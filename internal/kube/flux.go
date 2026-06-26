@@ -119,7 +119,7 @@ func (m *ClientManager) GetFluxKustomization(ctx context.Context, contextName, n
 		return nil, err
 	}
 	info := extractFluxKustomization(obj)
-	dependsOn, _, _ := unstructured.NestedSlice(obj.Object, "spec", "dependsOn")
+	dependsOn, _, _ := nestedSliceNoCopy(obj.Object, "spec", "dependsOn")
 	targetNS, _, _ := unstructured.NestedString(obj.Object, "spec", "targetNamespace")
 	serviceAccount, _, _ := unstructured.NestedString(obj.Object, "spec", "serviceAccountName")
 	prune, _, _ := unstructured.NestedBool(obj.Object, "spec", "prune")
@@ -149,7 +149,7 @@ func extractFluxKustomization(obj *unstructured.Unstructured) FluxKustomizationI
 	interval, _, _ := unstructured.NestedString(obj.Object, "spec", "interval")
 	revision, _, _ := unstructured.NestedString(obj.Object, "status", "lastAttemptedRevision")
 	appliedRev, _, _ := unstructured.NestedString(obj.Object, "status", "lastAppliedRevision")
-	sourceRef, _, _ := unstructured.NestedMap(obj.Object, "spec", "sourceRef")
+	sourceRef, _, _ := nestedMapNoCopy(obj.Object, "spec", "sourceRef")
 	return FluxKustomizationInfo{
 		Name:                obj.GetName(),
 		Namespace:           obj.GetNamespace(),
@@ -218,7 +218,7 @@ func (m *ClientManager) GetFluxHelmRelease(ctx context.Context, contextName, nam
 	storageNS, _, _ := unstructured.NestedString(obj.Object, "spec", "storageNamespace")
 	serviceAccount, _, _ := unstructured.NestedString(obj.Object, "spec", "serviceAccountName")
 	timeout, _, _ := unstructured.NestedString(obj.Object, "spec", "timeout")
-	dependsOn, _, _ := unstructured.NestedSlice(obj.Object, "spec", "dependsOn")
+	dependsOn, _, _ := nestedSliceNoCopy(obj.Object, "spec", "dependsOn")
 	return &FluxHelmReleaseDetail{
 		FluxHelmReleaseInfo: info,
 		Conditions:          extractFluxConditions(obj),
@@ -239,7 +239,7 @@ func extractFluxHelmRelease(obj *unstructured.Unstructured) FluxHelmReleaseInfo 
 	appliedRev, _, _ := unstructured.NestedString(obj.Object, "status", "lastAppliedRevision")
 	if appliedRev == "" {
 		// Older Flux installs surface this under history[0].
-		if hist, found, _ := unstructured.NestedSlice(obj.Object, "status", "history"); found && len(hist) > 0 {
+		if hist, found, _ := nestedSliceNoCopy(obj.Object, "status", "history"); found && len(hist) > 0 {
 			if h0, ok := hist[0].(map[string]any); ok {
 				if r, _ := h0["chartVersion"].(string); r != "" {
 					appliedRev = r
@@ -273,7 +273,7 @@ func extractFluxHelmRelease(obj *unstructured.Unstructured) FluxHelmReleaseInfo 
 // and the chartRef (Flux 2.3+) shapes. Empty strings when neither block is
 // populated — the caller renders "—" placeholders in that case.
 func extractHelmReleaseChart(obj *unstructured.Unstructured) (chart, version, sourceRef string) {
-	if chartTemplate, found, _ := unstructured.NestedMap(obj.Object, "spec", "chart", "spec"); found && chartTemplate != nil {
+	if chartTemplate, found, _ := nestedMapNoCopy(obj.Object, "spec", "chart", "spec"); found && chartTemplate != nil {
 		chart, _ = chartTemplate["chart"].(string)
 		version, _ = chartTemplate["version"].(string)
 		if sr, ok := chartTemplate["sourceRef"].(map[string]any); ok {
@@ -281,7 +281,7 @@ func extractHelmReleaseChart(obj *unstructured.Unstructured) (chart, version, so
 		}
 		return
 	}
-	if chartRef, found, _ := unstructured.NestedMap(obj.Object, "spec", "chartRef"); found && chartRef != nil {
+	if chartRef, found, _ := nestedMapNoCopy(obj.Object, "spec", "chartRef"); found && chartRef != nil {
 		chart, _ = chartRef["name"].(string)
 		sourceRef = formatSourceRef(chartRef, obj.GetNamespace())
 	}
@@ -334,7 +334,7 @@ func (m *ClientManager) GetFluxGitRepository(ctx context.Context, contextName, n
 	ignore, _, _ := unstructured.NestedString(obj.Object, "spec", "ignore")
 	verifyMode, _, _ := unstructured.NestedString(obj.Object, "spec", "verify", "mode")
 	secretRef := ""
-	if sr, _, _ := unstructured.NestedMap(obj.Object, "spec", "secretRef"); sr != nil {
+	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
 		secretRef, _ = sr["name"].(string)
 	}
 	return &FluxGitRepositoryDetail{
@@ -372,7 +372,7 @@ func extractFluxGitRepository(obj *unstructured.Unstructured) FluxGitRepositoryI
 // Flux accepts branch/tag/semver/commit as alternative one-of fields; the
 // CRD doesn't forbid setting more than one, so pick the most specific.
 func extractGitRef(obj *unstructured.Unstructured) string {
-	ref, _, _ := unstructured.NestedMap(obj.Object, "spec", "ref")
+	ref, _, _ := nestedMapNoCopy(obj.Object, "spec", "ref")
 	if ref == nil {
 		return ""
 	}
@@ -443,7 +443,7 @@ func (m *ClientManager) GetFluxHelmRepository(ctx context.Context, contextName, 
 	timeout, _, _ := unstructured.NestedString(obj.Object, "spec", "timeout")
 	passCreds, _, _ := unstructured.NestedBool(obj.Object, "spec", "passCredentials")
 	secretRef := ""
-	if sr, _, _ := unstructured.NestedMap(obj.Object, "spec", "secretRef"); sr != nil {
+	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
 		secretRef, _ = sr["name"].(string)
 	}
 	return &FluxHelmRepositoryDetail{
@@ -538,11 +538,11 @@ func (m *ClientManager) GetFluxOCIRepository(ctx context.Context, contextName, n
 	insecure, _, _ := unstructured.NestedBool(obj.Object, "spec", "insecure")
 	sa, _, _ := unstructured.NestedString(obj.Object, "spec", "serviceAccountName")
 	secretRef := ""
-	if sr, _, _ := unstructured.NestedMap(obj.Object, "spec", "secretRef"); sr != nil {
+	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
 		secretRef, _ = sr["name"].(string)
 	}
 	certSecret := ""
-	if cs, _, _ := unstructured.NestedMap(obj.Object, "spec", "certSecretRef"); cs != nil {
+	if cs, _, _ := nestedMapNoCopy(obj.Object, "spec", "certSecretRef"); cs != nil {
 		certSecret, _ = cs["name"].(string)
 	}
 	verifyMode, _, _ := unstructured.NestedString(obj.Object, "spec", "verify", "provider")
@@ -585,7 +585,7 @@ func extractFluxOCIRepository(obj *unstructured.Unstructured) FluxOCIRepositoryI
 // GitRepository's ref block, OCI accepts digest/semver/tag as alternative
 // one-of fields — pick the most specific the CR actually carries.
 func extractOCIRef(obj *unstructured.Unstructured) string {
-	ref, _, _ := unstructured.NestedMap(obj.Object, "spec", "ref")
+	ref, _, _ := nestedMapNoCopy(obj.Object, "spec", "ref")
 	if ref == nil {
 		return ""
 	}
@@ -652,7 +652,7 @@ func (m *ClientManager) GetFluxBucket(ctx context.Context, contextName, namespac
 	insecure, _, _ := unstructured.NestedBool(obj.Object, "spec", "insecure")
 	prefix, _, _ := unstructured.NestedString(obj.Object, "spec", "prefix")
 	secretRef := ""
-	if sr, _, _ := unstructured.NestedMap(obj.Object, "spec", "secretRef"); sr != nil {
+	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
 		secretRef, _ = sr["name"].(string)
 	}
 	return &FluxBucketDetail{
@@ -744,11 +744,11 @@ func (m *ClientManager) GetFluxProvider(ctx context.Context, contextName, namesp
 	timeout, _, _ := unstructured.NestedString(obj.Object, "spec", "timeout")
 	proxy, _, _ := unstructured.NestedString(obj.Object, "spec", "proxy")
 	secretRef := ""
-	if sr, _, _ := unstructured.NestedMap(obj.Object, "spec", "secretRef"); sr != nil {
+	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
 		secretRef, _ = sr["name"].(string)
 	}
 	certSecret := ""
-	if cs, _, _ := unstructured.NestedMap(obj.Object, "spec", "certSecretRef"); cs != nil {
+	if cs, _, _ := nestedMapNoCopy(obj.Object, "spec", "certSecretRef"); cs != nil {
 		certSecret, _ = cs["name"].(string)
 	}
 	return &FluxProviderDetail{
@@ -774,7 +774,7 @@ func extractFluxProvider(obj *unstructured.Unstructured) FluxProviderInfo {
 	// awkward dash.
 	fromSecret := false
 	if address == "" {
-		if sr, _, _ := unstructured.NestedMap(obj.Object, "spec", "secretRef"); sr != nil {
+		if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
 			fromSecret = true
 		}
 	}
@@ -869,7 +869,7 @@ func extractFluxAlert(obj *unstructured.Unstructured) FluxAlertInfo {
 	readyStatus, readyMsg := readySummary(conds)
 	suspended, _, _ := unstructured.NestedBool(obj.Object, "spec", "suspend")
 	provider := ""
-	if pr, _, _ := unstructured.NestedMap(obj.Object, "spec", "providerRef"); pr != nil {
+	if pr, _, _ := nestedMapNoCopy(obj.Object, "spec", "providerRef"); pr != nil {
 		provider, _ = pr["name"].(string)
 	}
 	severity, _, _ := unstructured.NestedString(obj.Object, "spec", "eventSeverity")
@@ -891,7 +891,7 @@ func extractFluxAlert(obj *unstructured.Unstructured) FluxAlertInfo {
 }
 
 func extractFluxAlertSources(obj *unstructured.Unstructured, parentNS string) []FluxAlertSource {
-	raw, found, _ := unstructured.NestedSlice(obj.Object, "spec", "eventSources")
+	raw, found, _ := nestedSliceNoCopy(obj.Object, "spec", "eventSources")
 	if !found {
 		return []FluxAlertSource{}
 	}
@@ -1009,7 +1009,7 @@ func extractFluxReceiver(obj *unstructured.Unstructured) FluxReceiverInfo {
 	// — that's by design: the path is derived from the receiver's token.
 	webhookPath, _, _ := unstructured.NestedString(obj.Object, "status", "webhookPath")
 	secretRef := ""
-	if sr, _, _ := unstructured.NestedMap(obj.Object, "spec", "secretRef"); sr != nil {
+	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
 		secretRef, _ = sr["name"].(string)
 	}
 	resources := extractFluxReceiverResources(obj, obj.GetNamespace())
@@ -1031,7 +1031,7 @@ func extractFluxReceiver(obj *unstructured.Unstructured) FluxReceiverInfo {
 // identical (kind+name+namespace), and rendering them through the same
 // component avoids two near-identical UI pieces.
 func extractFluxReceiverResources(obj *unstructured.Unstructured, parentNS string) []FluxAlertSource {
-	raw, found, _ := unstructured.NestedSlice(obj.Object, "spec", "resources")
+	raw, found, _ := nestedSliceNoCopy(obj.Object, "spec", "resources")
 	if !found {
 		return []FluxAlertSource{}
 	}
@@ -1150,7 +1150,7 @@ func sortFluxRows[T any](rows []T, key func(int) (string, string)) {
 // shape every Flux CR uses. Returns an empty slice (not nil) so the JSON
 // encoder never emits `null` for a missing status block.
 func extractFluxConditions(obj *unstructured.Unstructured) []FluxCondition {
-	raw, found, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	raw, found, _ := nestedSliceNoCopy(obj.Object, "status", "conditions")
 	if !found {
 		return []FluxCondition{}
 	}

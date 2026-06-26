@@ -6,7 +6,39 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+// nestedSliceNoCopy / nestedMapNoCopy mirror unstructured.NestedSlice /
+// NestedMap but skip the deep copy those make (runtime.DeepCopyJSONValue of the
+// whole sub-tree). They are safe ONLY for read-only access: the returned value
+// aliases obj, so callers must not mutate it. The signature matches the
+// stdlib helpers (error is always nil; a present-but-wrong-typed field reads as
+// not-found, the same practical result the call sites already handle). Used by
+// the integration list/detail extractors, which run per row on every refresh.
+func nestedSliceNoCopy(obj map[string]any, fields ...string) ([]any, bool, error) {
+	v, found, err := unstructured.NestedFieldNoCopy(obj, fields...)
+	if err != nil || !found {
+		return nil, false, err
+	}
+	s, ok := v.([]any)
+	if !ok {
+		return nil, false, nil
+	}
+	return s, true, nil
+}
+
+func nestedMapNoCopy(obj map[string]any, fields ...string) (map[string]any, bool, error) {
+	v, found, err := unstructured.NestedFieldNoCopy(obj, fields...)
+	if err != nil || !found {
+		return nil, false, err
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil, false, nil
+	}
+	return m, true, nil
+}
 
 // ContainerSummary is the per-container shape rendered in workload detail
 // dialogs. It is shared by every workload kind (Deployment, StatefulSet,

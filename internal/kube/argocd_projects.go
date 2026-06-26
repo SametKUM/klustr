@@ -122,9 +122,9 @@ func (m *ClientManager) GetArgoAppProject(ctx context.Context, contextName, name
 func extractArgoAppProjectInfo(obj *unstructured.Unstructured) ArgoAppProjectInfo {
 	description, _, _ := unstructured.NestedString(obj.Object, "spec", "description")
 	sourceRepos, _, _ := unstructured.NestedStringSlice(obj.Object, "spec", "sourceRepos")
-	destinations, _, _ := unstructured.NestedSlice(obj.Object, "spec", "destinations")
-	roles, _, _ := unstructured.NestedSlice(obj.Object, "spec", "roles")
-	syncWindows, _, _ := unstructured.NestedSlice(obj.Object, "spec", "syncWindows")
+	destinations, _, _ := nestedSliceNoCopy(obj.Object, "spec", "destinations")
+	roles, _, _ := nestedSliceNoCopy(obj.Object, "spec", "roles")
+	syncWindows, _, _ := nestedSliceNoCopy(obj.Object, "spec", "syncWindows")
 	return ArgoAppProjectInfo{
 		Name:             obj.GetName(),
 		Namespace:        obj.GetNamespace(),
@@ -157,7 +157,7 @@ func extractArgoAppProjectDetail(obj *unstructured.Unstructured) ArgoAppProjectD
 }
 
 func readArgoProjectDestinations(obj *unstructured.Unstructured, path ...string) []ArgoAppProjectDestination {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, path...)
+	raw, _, _ := nestedSliceNoCopy(obj.Object, path...)
 	out := make([]ArgoAppProjectDestination, 0, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]any)
@@ -174,7 +174,7 @@ func readArgoProjectDestinations(obj *unstructured.Unstructured, path ...string)
 }
 
 func readArgoProjectGroupKinds(obj *unstructured.Unstructured, path ...string) []ArgoAppProjectGroupKind {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, path...)
+	raw, _, _ := nestedSliceNoCopy(obj.Object, path...)
 	out := make([]ArgoAppProjectGroupKind, 0, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]any)
@@ -190,7 +190,7 @@ func readArgoProjectGroupKinds(obj *unstructured.Unstructured, path ...string) [
 }
 
 func readArgoProjectRoles(obj *unstructured.Unstructured) []ArgoAppProjectRole {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, "spec", "roles")
+	raw, _, _ := nestedSliceNoCopy(obj.Object, "spec", "roles")
 	out := make([]ArgoAppProjectRole, 0, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]any)
@@ -208,7 +208,7 @@ func readArgoProjectRoles(obj *unstructured.Unstructured) []ArgoAppProjectRole {
 }
 
 func readArgoProjectSyncWindows(obj *unstructured.Unstructured) []ArgoAppProjectSyncWindow {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, "spec", "syncWindows")
+	raw, _, _ := nestedSliceNoCopy(obj.Object, "spec", "syncWindows")
 	out := make([]ArgoAppProjectSyncWindow, 0, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]any)
@@ -415,7 +415,7 @@ func extractArgoApplicationSetDetail(obj *unstructured.Unstructured) ArgoApplica
 // (list, git, clusters, …) in spec order — used for the list-view chips
 // without paying for full summaries.
 func readArgoApplicationSetGeneratorTypes(obj *unstructured.Unstructured) []string {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, "spec", "generators")
+	raw, _, _ := nestedSliceNoCopy(obj.Object, "spec", "generators")
 	out := make([]string, 0, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]any)
@@ -430,7 +430,7 @@ func readArgoApplicationSetGeneratorTypes(obj *unstructured.Unstructured) []stri
 }
 
 func readArgoApplicationSetGenerators(obj *unstructured.Unstructured) []ArgoApplicationSetGenerator {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, "spec", "generators")
+	raw, _, _ := nestedSliceNoCopy(obj.Object, "spec", "generators")
 	out := make([]ArgoApplicationSetGenerator, 0, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]any)
@@ -511,7 +511,7 @@ func summarizeArgoApplicationSetGenerator(t string, body any) string {
 }
 
 func readArgoApplicationSetGeneratedApps(obj *unstructured.Unstructured) []ArgoApplicationSetGeneratedApp {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, "status", "applicationStatus")
+	raw, _, _ := nestedSliceNoCopy(obj.Object, "status", "applicationStatus")
 	out := make([]ArgoApplicationSetGeneratedApp, 0, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]any)
@@ -539,7 +539,7 @@ func readArgoApplicationSetGeneratedApps(obj *unstructured.Unstructured) []ArgoA
 }
 
 func readArgoApplicationSetConditions(obj *unstructured.Unstructured) []ConditionDetail {
-	raw, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	raw, _, _ := nestedSliceNoCopy(obj.Object, "status", "conditions")
 	out := make([]ConditionDetail, 0, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]any)
