@@ -10,6 +10,7 @@ import {
   Td,
   Th,
 } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function ResourceSliceDetailBody({
@@ -27,10 +28,10 @@ export function ResourceSliceDetailBody({
     <div className="space-y-6">
       <Section title="ResourceSlice">
         <Field label="Driver" mono>
-          {detail.driver}
+          <Copyable value={detail.driver} />
         </Field>
         <Field label="Pool" mono>
-          {detail.poolName}
+          <Copyable value={detail.poolName} />
         </Field>
         <Field label="Node">{detail.nodeName || (detail.allNodes ? 'all nodes' : '—')}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
@@ -51,7 +52,7 @@ export function ResourceSliceDetailBody({
               <tbody>
                 {detail.devices.map((d, i) => (
                   <tr key={i} className="border-t border-border align-top">
-                    <Td className="font-mono">{d.name}</Td>
+                    <Td className="font-mono"><Copyable value={d.name} /></Td>
                     <Td className="font-mono">{d.attributes.join(', ') || '—'}</Td>
                     <Td className="font-mono">{d.capacities.join(', ') || '—'}</Td>
                     <Td>{d.bindsToNode ? 'node-bound' : '—'}</Td>

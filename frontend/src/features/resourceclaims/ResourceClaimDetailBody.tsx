@@ -10,6 +10,7 @@ import {
   Td,
   Th,
 } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function ResourceClaimDetailBody({
@@ -50,10 +51,10 @@ export function ResourceClaimDetailBody({
               <tbody>
                 {detail.allocatedDevices.map((d, i) => (
                   <tr key={i} className="border-t border-border">
-                    <Td className="font-mono">{d.request}</Td>
-                    <Td className="font-mono">{d.driver}</Td>
-                    <Td className="font-mono">{d.pool}</Td>
-                    <Td className="font-mono">{d.device}</Td>
+                    <Td className="font-mono"><Copyable value={d.request} /></Td>
+                    <Td className="font-mono"><Copyable value={d.driver} /></Td>
+                    <Td className="font-mono"><Copyable value={d.pool} /></Td>
+                    <Td className="font-mono"><Copyable value={d.device} /></Td>
                   </tr>
                 ))}
               </tbody>
@@ -98,8 +99,8 @@ export function DeviceRequestsSection({ requests }: { requests: DeviceRequestDet
           <tbody>
             {requests.map((r, i) => (
               <tr key={i} className="border-t border-border align-top">
-                <Td className="font-mono">{r.name}</Td>
-                <Td className="font-mono">{r.deviceClassName || '—'}</Td>
+                <Td className="font-mono"><Copyable value={r.name} /></Td>
+                <Td className="font-mono">{r.deviceClassName ? <Copyable value={r.deviceClassName} /> : '—'}</Td>
                 <Td>{r.allocationMode || '—'}</Td>
                 <Td>{r.count || '—'}</Td>
                 <Td>{r.adminAccess ? 'yes' : '—'}</Td>
