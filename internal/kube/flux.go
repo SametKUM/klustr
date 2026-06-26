@@ -104,13 +104,8 @@ type FluxKustomizationDetail struct {
 }
 
 func (m *ClientManager) ListFluxKustomizations(contextName, namespace string) []FluxKustomizationInfo {
-	objs := listCachedCRs(m, contextName, fluxKustomizationGVR, namespace)
-	out := make([]FluxKustomizationInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractFluxKustomization(obj))
-	}
-	sortFluxRows(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listFluxRows(m, contextName, fluxKustomizationGVR, namespace, extractFluxKustomization,
+		func(r FluxKustomizationInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxKustomization(ctx context.Context, contextName, namespace, name string) (*FluxKustomizationDetail, error) {
@@ -198,13 +193,8 @@ type FluxHelmReleaseDetail struct {
 }
 
 func (m *ClientManager) ListFluxHelmReleases(contextName, namespace string) []FluxHelmReleaseInfo {
-	objs := listCachedCRs(m, contextName, fluxHelmReleaseGVR, namespace)
-	out := make([]FluxHelmReleaseInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractFluxHelmRelease(obj))
-	}
-	sortFluxRows(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listFluxRows(m, contextName, fluxHelmReleaseGVR, namespace, extractFluxHelmRelease,
+		func(r FluxHelmReleaseInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxHelmRelease(ctx context.Context, contextName, namespace, name string) (*FluxHelmReleaseDetail, error) {
@@ -315,13 +305,8 @@ type FluxGitRepositoryDetail struct {
 }
 
 func (m *ClientManager) ListFluxGitRepositories(contextName, namespace string) []FluxGitRepositoryInfo {
-	objs := listCachedCRs(m, contextName, fluxGitRepositoryGVR, namespace)
-	out := make([]FluxGitRepositoryInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractFluxGitRepository(obj))
-	}
-	sortFluxRows(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listFluxRows(m, contextName, fluxGitRepositoryGVR, namespace, extractFluxGitRepository,
+		func(r FluxGitRepositoryInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxGitRepository(ctx context.Context, contextName, namespace, name string) (*FluxGitRepositoryDetail, error) {
@@ -333,10 +318,7 @@ func (m *ClientManager) GetFluxGitRepository(ctx context.Context, contextName, n
 	timeout, _, _ := unstructured.NestedString(obj.Object, "spec", "timeout")
 	ignore, _, _ := unstructured.NestedString(obj.Object, "spec", "ignore")
 	verifyMode, _, _ := unstructured.NestedString(obj.Object, "spec", "verify", "mode")
-	secretRef := ""
-	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
-		secretRef, _ = sr["name"].(string)
-	}
+	secretRef := nestedRefName(obj, "spec", "secretRef")
 	return &FluxGitRepositoryDetail{
 		FluxGitRepositoryInfo: info,
 		Conditions:            extractFluxConditions(obj),
@@ -425,13 +407,8 @@ type FluxHelmRepositoryDetail struct {
 }
 
 func (m *ClientManager) ListFluxHelmRepositories(contextName, namespace string) []FluxHelmRepositoryInfo {
-	objs := listCachedCRs(m, contextName, fluxHelmRepositoryGVR, namespace)
-	out := make([]FluxHelmRepositoryInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractFluxHelmRepository(obj))
-	}
-	sortFluxRows(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listFluxRows(m, contextName, fluxHelmRepositoryGVR, namespace, extractFluxHelmRepository,
+		func(r FluxHelmRepositoryInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxHelmRepository(ctx context.Context, contextName, namespace, name string) (*FluxHelmRepositoryDetail, error) {
@@ -442,10 +419,7 @@ func (m *ClientManager) GetFluxHelmRepository(ctx context.Context, contextName, 
 	info := extractFluxHelmRepository(obj)
 	timeout, _, _ := unstructured.NestedString(obj.Object, "spec", "timeout")
 	passCreds, _, _ := unstructured.NestedBool(obj.Object, "spec", "passCredentials")
-	secretRef := ""
-	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
-		secretRef, _ = sr["name"].(string)
-	}
+	secretRef := nestedRefName(obj, "spec", "secretRef")
 	return &FluxHelmRepositoryDetail{
 		FluxHelmRepositoryInfo: info,
 		Conditions:             extractFluxConditions(obj),
@@ -519,13 +493,8 @@ type FluxOCIRepositoryDetail struct {
 }
 
 func (m *ClientManager) ListFluxOCIRepositories(contextName, namespace string) []FluxOCIRepositoryInfo {
-	objs := listCachedCRs(m, contextName, fluxOCIRepositoryGVR, namespace)
-	out := make([]FluxOCIRepositoryInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractFluxOCIRepository(obj))
-	}
-	sortFluxRows(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listFluxRows(m, contextName, fluxOCIRepositoryGVR, namespace, extractFluxOCIRepository,
+		func(r FluxOCIRepositoryInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxOCIRepository(ctx context.Context, contextName, namespace, name string) (*FluxOCIRepositoryDetail, error) {
@@ -537,14 +506,8 @@ func (m *ClientManager) GetFluxOCIRepository(ctx context.Context, contextName, n
 	timeout, _, _ := unstructured.NestedString(obj.Object, "spec", "timeout")
 	insecure, _, _ := unstructured.NestedBool(obj.Object, "spec", "insecure")
 	sa, _, _ := unstructured.NestedString(obj.Object, "spec", "serviceAccountName")
-	secretRef := ""
-	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
-		secretRef, _ = sr["name"].(string)
-	}
-	certSecret := ""
-	if cs, _, _ := nestedMapNoCopy(obj.Object, "spec", "certSecretRef"); cs != nil {
-		certSecret, _ = cs["name"].(string)
-	}
+	secretRef := nestedRefName(obj, "spec", "secretRef")
+	certSecret := nestedRefName(obj, "spec", "certSecretRef")
 	verifyMode, _, _ := unstructured.NestedString(obj.Object, "spec", "verify", "provider")
 	return &FluxOCIRepositoryDetail{
 		FluxOCIRepositoryInfo: info,
@@ -633,13 +596,8 @@ type FluxBucketDetail struct {
 }
 
 func (m *ClientManager) ListFluxBuckets(contextName, namespace string) []FluxBucketInfo {
-	objs := listCachedCRs(m, contextName, fluxBucketGVR, namespace)
-	out := make([]FluxBucketInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractFluxBucket(obj))
-	}
-	sortFluxRows(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listFluxRows(m, contextName, fluxBucketGVR, namespace, extractFluxBucket,
+		func(r FluxBucketInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxBucket(ctx context.Context, contextName, namespace, name string) (*FluxBucketDetail, error) {
@@ -651,10 +609,7 @@ func (m *ClientManager) GetFluxBucket(ctx context.Context, contextName, namespac
 	timeout, _, _ := unstructured.NestedString(obj.Object, "spec", "timeout")
 	insecure, _, _ := unstructured.NestedBool(obj.Object, "spec", "insecure")
 	prefix, _, _ := unstructured.NestedString(obj.Object, "spec", "prefix")
-	secretRef := ""
-	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
-		secretRef, _ = sr["name"].(string)
-	}
+	secretRef := nestedRefName(obj, "spec", "secretRef")
 	return &FluxBucketDetail{
 		FluxBucketInfo: info,
 		Conditions:     extractFluxConditions(obj),
@@ -726,13 +681,8 @@ type FluxProviderDetail struct {
 }
 
 func (m *ClientManager) ListFluxProviders(contextName, namespace string) []FluxProviderInfo {
-	objs := listCachedCRs(m, contextName, fluxProviderGVR, namespace)
-	out := make([]FluxProviderInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractFluxProvider(obj))
-	}
-	sortFluxRows(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listFluxRows(m, contextName, fluxProviderGVR, namespace, extractFluxProvider,
+		func(r FluxProviderInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxProvider(ctx context.Context, contextName, namespace, name string) (*FluxProviderDetail, error) {
@@ -743,14 +693,8 @@ func (m *ClientManager) GetFluxProvider(ctx context.Context, contextName, namesp
 	info := extractFluxProvider(obj)
 	timeout, _, _ := unstructured.NestedString(obj.Object, "spec", "timeout")
 	proxy, _, _ := unstructured.NestedString(obj.Object, "spec", "proxy")
-	secretRef := ""
-	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
-		secretRef, _ = sr["name"].(string)
-	}
-	certSecret := ""
-	if cs, _, _ := nestedMapNoCopy(obj.Object, "spec", "certSecretRef"); cs != nil {
-		certSecret, _ = cs["name"].(string)
-	}
+	secretRef := nestedRefName(obj, "spec", "secretRef")
+	certSecret := nestedRefName(obj, "spec", "certSecretRef")
 	return &FluxProviderDetail{
 		FluxProviderInfo: info,
 		Conditions:       extractFluxConditions(obj),
@@ -833,13 +777,8 @@ type FluxAlertDetail struct {
 }
 
 func (m *ClientManager) ListFluxAlerts(contextName, namespace string) []FluxAlertInfo {
-	objs := listCachedCRs(m, contextName, fluxAlertGVR, namespace)
-	out := make([]FluxAlertInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractFluxAlert(obj))
-	}
-	sortFluxRows(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listFluxRows(m, contextName, fluxAlertGVR, namespace, extractFluxAlert,
+		func(r FluxAlertInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxAlert(ctx context.Context, contextName, namespace, name string) (*FluxAlertDetail, error) {
@@ -857,7 +796,7 @@ func (m *ClientManager) GetFluxAlert(ctx context.Context, contextName, namespace
 	return &FluxAlertDetail{
 		FluxAlertInfo: info,
 		Conditions:    extractFluxConditions(obj),
-		EventSources:  extractFluxAlertSources(obj, obj.GetNamespace()),
+		EventSources:  extractFluxObjectRefs(obj, obj.GetNamespace(), "eventSources"),
 		InclusionList: append([]string{}, inclusion...),
 		ExclusionList: append([]string{}, exclusion...),
 		EventMetadata: metadata,
@@ -868,13 +807,10 @@ func extractFluxAlert(obj *unstructured.Unstructured) FluxAlertInfo {
 	conds := extractFluxConditions(obj)
 	readyStatus, readyMsg := readySummary(conds)
 	suspended, _, _ := unstructured.NestedBool(obj.Object, "spec", "suspend")
-	provider := ""
-	if pr, _, _ := nestedMapNoCopy(obj.Object, "spec", "providerRef"); pr != nil {
-		provider, _ = pr["name"].(string)
-	}
+	provider := nestedRefName(obj, "spec", "providerRef")
 	severity, _, _ := unstructured.NestedString(obj.Object, "spec", "eventSeverity")
 	summary, _, _ := unstructured.NestedString(obj.Object, "spec", "summary")
-	sources := extractFluxAlertSources(obj, obj.GetNamespace())
+	sources := extractFluxObjectRefs(obj, obj.GetNamespace(), "eventSources")
 	return FluxAlertInfo{
 		Name:        obj.GetName(),
 		Namespace:   obj.GetNamespace(),
@@ -888,31 +824,6 @@ func extractFluxAlert(obj *unstructured.Unstructured) FluxAlertInfo {
 		SourceCount: len(sources),
 		CreatedAt:   obj.GetCreationTimestamp().UTC().Format(time.RFC3339),
 	}
-}
-
-func extractFluxAlertSources(obj *unstructured.Unstructured, parentNS string) []FluxAlertSource {
-	raw, found, _ := nestedSliceNoCopy(obj.Object, "spec", "eventSources")
-	if !found {
-		return []FluxAlertSource{}
-	}
-	out := make([]FluxAlertSource, 0, len(raw))
-	for _, item := range raw {
-		m, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		kind, _ := m["kind"].(string)
-		name, _ := m["name"].(string)
-		ns, _ := m["namespace"].(string)
-		if ns == "" {
-			ns = parentNS
-		}
-		if kind == "" {
-			continue
-		}
-		out = append(out, FluxAlertSource{Kind: kind, Name: name, Namespace: ns})
-	}
-	return out
 }
 
 // summariseAlertSources collapses up to two sources into "Kind/name" form
@@ -974,13 +885,8 @@ type FluxReceiverDetail struct {
 }
 
 func (m *ClientManager) ListFluxReceivers(contextName, namespace string) []FluxReceiverInfo {
-	objs := listCachedCRs(m, contextName, fluxReceiverGVR, namespace)
-	out := make([]FluxReceiverInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractFluxReceiver(obj))
-	}
-	sortFluxRows(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listFluxRows(m, contextName, fluxReceiverGVR, namespace, extractFluxReceiver,
+		func(r FluxReceiverInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxReceiver(ctx context.Context, contextName, namespace, name string) (*FluxReceiverDetail, error) {
@@ -995,7 +901,7 @@ func (m *ClientManager) GetFluxReceiver(ctx context.Context, contextName, namesp
 		FluxReceiverInfo: info,
 		Conditions:       extractFluxConditions(obj),
 		Events:           append([]string{}, events...),
-		Resources:        extractFluxReceiverResources(obj, obj.GetNamespace()),
+		Resources:        extractFluxObjectRefs(obj, obj.GetNamespace(), "resources"),
 		Interval:         interval,
 	}, nil
 }
@@ -1008,11 +914,8 @@ func extractFluxReceiver(obj *unstructured.Unstructured) FluxReceiverInfo {
 	// .status.webhookPath shows up only after the receiver becomes Ready
 	// — that's by design: the path is derived from the receiver's token.
 	webhookPath, _, _ := unstructured.NestedString(obj.Object, "status", "webhookPath")
-	secretRef := ""
-	if sr, _, _ := nestedMapNoCopy(obj.Object, "spec", "secretRef"); sr != nil {
-		secretRef, _ = sr["name"].(string)
-	}
-	resources := extractFluxReceiverResources(obj, obj.GetNamespace())
+	secretRef := nestedRefName(obj, "spec", "secretRef")
+	resources := extractFluxObjectRefs(obj, obj.GetNamespace(), "resources")
 	return FluxReceiverInfo{
 		Name:          obj.GetName(),
 		Namespace:     obj.GetNamespace(),
@@ -1025,34 +928,6 @@ func extractFluxReceiver(obj *unstructured.Unstructured) FluxReceiverInfo {
 		SecretRef:     secretRef,
 		CreatedAt:     obj.GetCreationTimestamp().UTC().Format(time.RFC3339),
 	}
-}
-
-// extractFluxReceiverResources reuses FluxAlertSource — the shape is
-// identical (kind+name+namespace), and rendering them through the same
-// component avoids two near-identical UI pieces.
-func extractFluxReceiverResources(obj *unstructured.Unstructured, parentNS string) []FluxAlertSource {
-	raw, found, _ := nestedSliceNoCopy(obj.Object, "spec", "resources")
-	if !found {
-		return []FluxAlertSource{}
-	}
-	out := make([]FluxAlertSource, 0, len(raw))
-	for _, item := range raw {
-		m, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		kind, _ := m["kind"].(string)
-		name, _ := m["name"].(string)
-		ns, _ := m["namespace"].(string)
-		if ns == "" {
-			ns = parentNS
-		}
-		if kind == "" {
-			continue
-		}
-		out = append(out, FluxAlertSource{Kind: kind, Name: name, Namespace: ns})
-	}
-	return out
 }
 
 // ---------------------------------------------------------------------------
@@ -1144,6 +1019,64 @@ func sortFluxRows[T any](rows []T, key func(int) (string, string)) {
 		}
 		return nameI < nameJ
 	})
+}
+
+// listFluxRows reads the cached CRs for a Flux GVR, projects each through
+// extract, and returns the rows sorted by (namespace, name). Collapses the nine
+// otherwise-identical ListFlux* bodies.
+func listFluxRows[I any](
+	m *ClientManager,
+	contextName string,
+	gvr schema.GroupVersionResource,
+	namespace string,
+	extract func(*unstructured.Unstructured) I,
+	key func(I) (string, string),
+) []I {
+	objs := listCachedCRs(m, contextName, gvr, namespace)
+	out := make([]I, 0, len(objs))
+	for _, obj := range objs {
+		out = append(out, extract(obj))
+	}
+	sortFluxRows(out, func(i int) (string, string) { return key(out[i]) })
+	return out
+}
+
+// nestedRefName reads the ".name" of a Flux object reference (secretRef,
+// certSecretRef, providerRef, …) at the given path, returning "" when absent.
+func nestedRefName(obj *unstructured.Unstructured, fields ...string) string {
+	if ref, _, _ := nestedMapNoCopy(obj.Object, fields...); ref != nil {
+		name, _ := ref["name"].(string)
+		return name
+	}
+	return ""
+}
+
+// extractFluxObjectRefs projects a spec list of {kind,name,namespace} object
+// references (Alert .spec.eventSources, Receiver .spec.resources) into
+// FluxAlertSource rows, defaulting an omitted namespace to the parent's.
+func extractFluxObjectRefs(obj *unstructured.Unstructured, parentNS, specKey string) []FluxAlertSource {
+	raw, found, _ := nestedSliceNoCopy(obj.Object, "spec", specKey)
+	if !found {
+		return []FluxAlertSource{}
+	}
+	out := make([]FluxAlertSource, 0, len(raw))
+	for _, item := range raw {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		kind, _ := m["kind"].(string)
+		name, _ := m["name"].(string)
+		ns, _ := m["namespace"].(string)
+		if ns == "" {
+			ns = parentNS
+		}
+		if kind == "" {
+			continue
+		}
+		out = append(out, FluxAlertSource{Kind: kind, Name: name, Namespace: ns})
+	}
+	return out
 }
 
 // extractFluxConditions reads .status.conditions[] in the metav1.Condition
