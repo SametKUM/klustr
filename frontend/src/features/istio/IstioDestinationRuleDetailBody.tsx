@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type IstioDestinationRuleDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 type Props = {
@@ -27,7 +28,7 @@ export function IstioDestinationRuleDetailBody({ contextName, namespace, name }:
     <div className="space-y-6">
       <Section title="DestinationRule">
         <Field label="Host">
-          {detail.host ? <span className="font-mono text-xs">{detail.host}</span> : '—'}
+          {detail.host ? <Copyable className="font-mono text-xs" value={detail.host} /> : '—'}
         </Field>
         <Field label="TLS mode">{detail.tlsMode || '—'}</Field>
         <Field label="Load balancer">{detail.loadBalancer || '—'}</Field>

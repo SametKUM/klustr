@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type IstioRouteRule, type IstioVirtualServiceDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 type Props = {
@@ -31,7 +32,9 @@ export function IstioVirtualServiceDetailBody({ contextName, namespace, name }: 
       <Section title="VirtualService">
         <Field label="Hosts">
           {detail.hosts.length > 0 ? (
-            <span className="font-mono text-xs">{detail.hosts.join(', ')}</span>
+            <Copyable className="font-mono text-xs" value={detail.hosts.join(',')}>
+              {detail.hosts.join(', ')}
+            </Copyable>
           ) : (
             '—'
           )}
@@ -72,7 +75,7 @@ function RouteRulesSection({ title, rules }: { title: string; rules: IstioRouteR
                     ) : (
                       r.destinations.map((d, j) => (
                         <div key={j} className="font-mono">
-                          {destinationLabel(d.host, d.subset, d.port)}
+                          <Copyable value={destinationLabel(d.host, d.subset, d.port)} />
                           {d.weight > 0 && (
                             <span className="ml-1.5 text-muted-foreground">{d.weight}%</span>
                           )}
