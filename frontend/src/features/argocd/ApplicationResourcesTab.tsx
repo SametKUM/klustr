@@ -95,7 +95,7 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+    <div className="h-full overflow-y-auto px-6 py-4">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
