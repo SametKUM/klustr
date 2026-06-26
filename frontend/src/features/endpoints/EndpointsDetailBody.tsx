@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type EndpointsDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function EndpointsDetailBody({
@@ -52,8 +53,8 @@ export function EndpointsDetailBody({
                 <tbody>
                   {s.addresses.map((a, j) => (
                     <tr key={j} className="border-t border-border">
-                      <Td className="font-mono">{a.ip}</Td>
-                      <Td>{a.hostname || '—'}</Td>
+                      <Td className="font-mono"><Copyable value={a.ip} /></Td>
+                      <Td>{a.hostname ? <Copyable value={a.hostname} /> : '—'}</Td>
                       <Td>{a.nodeName || '—'}</Td>
                       <Td className={a.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
                         {a.ready ? '✓' : '·'}

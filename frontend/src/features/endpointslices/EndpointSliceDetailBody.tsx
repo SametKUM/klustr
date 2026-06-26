@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type EndpointSliceDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function EndpointSliceDetailBody({
@@ -21,7 +22,7 @@ export function EndpointSliceDetailBody({
     <div className="space-y-6">
       <Section title="Status">
         <Field label="Address Type">{detail.addressType}</Field>
-        <Field label="Service">{detail.service || '—'}</Field>
+        <Field label="Service">{detail.service ? <Copyable value={detail.service} /> : '—'}</Field>
         <Field label="Endpoints">{detail.endpoints.length}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
@@ -55,7 +56,7 @@ export function EndpointSliceDetailBody({
               <tbody>
                 {detail.endpoints.map((e, i) => (
                   <tr key={i} className="border-t border-border align-top">
-                    <Td className="font-mono">{e.addresses.join(', ')}</Td>
+                    <Td className="font-mono"><Copyable value={e.addresses.join(',')}>{e.addresses.join(', ')}</Copyable></Td>
                     <Td>{e.nodeName || '—'}</Td>
                     <Td>{e.hostname || '—'}</Td>
                     <Td className={e.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>

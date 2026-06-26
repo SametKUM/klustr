@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type IngressClassDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function IngressClassDetailBody({
@@ -18,7 +19,7 @@ export function IngressClassDetailBody({
   return (
     <div className="space-y-6">
       <Section title="Status">
-        <Field label="Controller">{detail.controller}</Field>
+        <Field label="Controller"><Copyable value={detail.controller} /></Field>
         <Field label="Default">{detail.isDefault ? 'Yes' : 'No'}</Field>
         <Field label="Parameters">{detail.parameters || '—'}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
