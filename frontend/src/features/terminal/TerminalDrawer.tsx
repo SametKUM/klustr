@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { ExternalLink, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,10 @@ import {
 } from '@/store/ui'
 import { resolveTagMeta } from '@/features/contexts/contextTagMeta'
 import { TerminalAppPickerDialog } from './TerminalAppPickerDialog'
-import { TerminalTab } from './TerminalTab'
+
+// TerminalTab pulls in xterm.js (+ its CSS); load it lazily so the terminal
+// bundle stays out of the eager startup graph until a session is actually open.
+const TerminalTab = lazy(() => import('./TerminalTab').then((m) => ({ default: m.TerminalTab })))
 
 export function TerminalDrawer() {
   const drawerOpen = useTerminalStore((s) => s.drawerOpen)
@@ -196,14 +199,22 @@ export function TerminalDrawer() {
             onPick={(ctx) => openTab(ctx)}
           />
         ) : (
-          tabs.map((tab) => (
-            <TerminalTab
-              key={tab.tabId}
-              tabId={tab.tabId}
-              contextName={tab.contextName}
-              active={tab.tabId === activeTabId}
-            />
-          ))
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                Loading terminal…
+              </div>
+            }
+          >
+            {tabs.map((tab) => (
+              <TerminalTab
+                key={tab.tabId}
+                tabId={tab.tabId}
+                contextName={tab.contextName}
+                active={tab.tabId === activeTabId}
+              />
+            ))}
+          </Suspense>
         )}
       </div>
 

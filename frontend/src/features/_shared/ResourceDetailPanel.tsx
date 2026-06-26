@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, RefreshCcw } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,6 @@ import { CopyButton } from './Copyable'
 import { ErrorBox } from './DetailPrimitives'
 import { SkeletonDetail } from './SkeletonDetail'
 import { ResourceYAMLTab } from './ResourceYAMLTab'
-import { MultiPodLogsTab } from './MultiPodLogsTab'
 import { EventsTab } from './EventsTab'
 import { DeleteResourceButton } from './DeleteResourceButton'
 import { PauseDeploymentButton, isPausable } from './PauseDeploymentButton'
@@ -20,7 +19,6 @@ import { ScaleResourceButton, isScalable } from './ScaleResourceButton'
 import { PortForwardButton } from '@/features/portforward/PortForwardButton'
 import type { ResourceKind } from '@/store/ui'
 import { PodOverviewBody } from '@/features/pods/PodOverviewBody'
-import { PodLogsTab } from '@/features/pods/PodLogsTab'
 import { ApplicationResourcesTab } from '@/features/argocd/ApplicationResourcesTab'
 import { ApplicationHistoryTab } from '@/features/argocd/ApplicationHistoryTab'
 import { AppProjectDetailBody } from '@/features/argocd/AppProjectDetailBody'
@@ -30,7 +28,6 @@ import {
   isArgoApplication,
 } from '@/features/argocd/DeleteArgoApplicationButton'
 import { SyncArgoApplicationButton } from '@/features/argocd/SyncArgoApplicationButton'
-import { PodExecTab } from '@/features/pods/PodExecTab'
 import { ResizePodButton } from '@/features/pods/ResizePodButton'
 import { DeploymentDetailBody } from '@/features/deployments/DeploymentDetailBody'
 import { StatefulSetDetailBody } from '@/features/statefulsets/StatefulSetDetailBody'
@@ -79,7 +76,6 @@ import { GRPCRouteDetailBody } from '@/features/grpcroutes/GRPCRouteDetailBody'
 import { GatewayClassDetailBody } from '@/features/gatewayclasses/GatewayClassDetailBody'
 import { ReferenceGrantDetailBody } from '@/features/referencegrants/ReferenceGrantDetailBody'
 import { NodeDetailBody } from '@/features/nodes/NodeDetailBody'
-import { NodeShellTab } from '@/features/nodes/NodeShellTab'
 import { CordonNodeButton } from '@/features/nodes/CordonNodeButton'
 import { DrainNodeButton } from '@/features/nodes/DrainNodeButton'
 import { KarpenterNodesTab } from '@/features/karpenter-nodepools/KarpenterNodesTab'
@@ -131,6 +127,30 @@ import {
   stripFluxKindPrefix,
 } from '@/features/flux/fluxKinds'
 import type { FluxKind, HelmReleaseDetail } from '@/lib/api'
+
+// The Logs / Exec / Shell tabs pull in xterm.js (+ its CSS). Loading them lazily
+// keeps that ~86 kB-gzip chunk out of the eager startup graph for the many
+// sessions that never open a terminal, mirroring how Monaco is code-split.
+const PodLogsTab = lazy(() =>
+  import('@/features/pods/PodLogsTab').then((m) => ({ default: m.PodLogsTab })),
+)
+const PodExecTab = lazy(() =>
+  import('@/features/pods/PodExecTab').then((m) => ({ default: m.PodExecTab })),
+)
+const MultiPodLogsTab = lazy(() =>
+  import('./MultiPodLogsTab').then((m) => ({ default: m.MultiPodLogsTab })),
+)
+const NodeShellTab = lazy(() =>
+  import('@/features/nodes/NodeShellTab').then((m) => ({ default: m.NodeShellTab })),
+)
+
+function TerminalFallback() {
+  return (
+    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+      Loading terminal…
+    </div>
+  )
+}
 
 type Props = {
   contextName: string | null
@@ -828,7 +848,9 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
       )}
       {hasNodeShell && (
         <TabsContent value="shell" className="min-h-0 flex-1 p-0">
-          <NodeShellTab contextName={contextName} nodeName={resource.name} />
+          <Suspense fallback={<TerminalFallback />}>
+            <NodeShellTab contextName={contextName} nodeName={resource.name} />
+          </Suspense>
         </TabsContent>
       )}
       {hasEvents && (
@@ -920,12 +942,14 @@ function WorkloadLogs({ contextName, resource }: { contextName: string | null; r
     )
   }
   return (
-    <MultiPodLogsTab
-      contextName={contextName}
-      namespace={resource.namespace}
-      selector={state.selector}
-      title={resource.name}
-    />
+    <Suspense fallback={<TerminalFallback />}>
+      <MultiPodLogsTab
+        contextName={contextName}
+        namespace={resource.namespace}
+        selector={state.selector}
+        title={resource.name}
+      />
+    </Suspense>
   )
 }
 
@@ -963,10 +987,18 @@ function PodTabs({
         {detail && <PodOverviewBody contextName={contextName} detail={detail} />}
       </TabsContent>
       <TabsContent value="logs" className="min-h-0 flex-1 p-0">
-        {detail && <PodLogsTab detail={detail} contextName={contextName} initialContainer={requestedContainer} />}
+        {detail && (
+          <Suspense fallback={<TerminalFallback />}>
+            <PodLogsTab detail={detail} contextName={contextName} initialContainer={requestedContainer} />
+          </Suspense>
+        )}
       </TabsContent>
       <TabsContent value="exec" className="min-h-0 flex-1 p-0">
-        {detail && <PodExecTab detail={detail} contextName={contextName} />}
+        {detail && (
+          <Suspense fallback={<TerminalFallback />}>
+            <PodExecTab detail={detail} contextName={contextName} />
+          </Suspense>
+        )}
       </TabsContent>
       <TabsContent value="events" className="min-h-0 flex-1 p-0">
         <EventsTab contextName={contextName} namespace={namespace} kind="Pod" name={name} />
