@@ -1,6 +1,7 @@
 import type { WebhookConfigurationDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 type Loader = (ctx: string) => Promise<WebhookConfigurationDetail>
@@ -40,8 +41,8 @@ export function WebhookConfigurationDetailBody({
               <tbody>
                 {detail.webhooks.map((w, i) => (
                   <tr key={i} className="border-t border-border align-top">
-                    <Td className="font-mono">{w.name}</Td>
-                    <Td className="font-mono">{w.clientCfg}</Td>
+                    <Td className="font-mono"><Copyable value={w.name} /></Td>
+                    <Td className="font-mono"><Copyable value={w.clientCfg} /></Td>
                     <Td>{w.failPolicy || '—'}</Td>
                     <Td>{w.sideEffects || '—'}</Td>
                     <Td>{w.operations.join(', ')}</Td>

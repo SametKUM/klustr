@@ -11,6 +11,7 @@ import {
   Th,
 } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function APIServiceDetailBody({
@@ -34,7 +35,7 @@ export function APIServiceDetailBody({
           {detail.version}
         </Field>
         <Field label="Backend" mono>
-          {detail.service}
+          <Copyable value={detail.service} />
         </Field>
         <Field label="Group priority">{detail.groupPriorityMinimum}</Field>
         <Field label="Version priority">{detail.versionPriority}</Field>

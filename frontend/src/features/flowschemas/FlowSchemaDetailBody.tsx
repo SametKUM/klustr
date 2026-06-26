@@ -11,6 +11,7 @@ import {
   Th,
 } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function FlowSchemaDetailBody({
@@ -28,7 +29,7 @@ export function FlowSchemaDetailBody({
     <div className="space-y-6">
       <Section title="FlowSchema">
         <Field label="Priority level" mono>
-          {detail.priorityLevel}
+          <Copyable value={detail.priorityLevel} />
         </Field>
         <Field label="Matching precedence">{detail.matchingPrecedence}</Field>
         <Field label="Distinguisher">{detail.distinguisher || '—'}</Field>

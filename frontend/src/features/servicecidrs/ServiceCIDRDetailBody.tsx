@@ -11,6 +11,7 @@ import {
   Th,
 } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function ServiceCIDRDetailBody({
@@ -28,7 +29,7 @@ export function ServiceCIDRDetailBody({
     <div className="space-y-6">
       <Section title="ServiceCIDR">
         <Field label="CIDRs" mono>
-          {detail.cidrs.join(', ')}
+          <Copyable value={detail.cidrs.join(',')}>{detail.cidrs.join(', ')}</Copyable>
         </Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
