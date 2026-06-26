@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-type ExecDataFunc func(data []byte)
+type ExecDataFunc func(data string)
 type ExecCloseFunc func(err error)
 
 type execSession struct {
@@ -178,7 +178,9 @@ type execWriter struct {
 }
 
 func (w *execWriter) Write(p []byte) (int, error) {
-	w.onData(append([]byte(nil), p...))
+	// string(p) copies into an immutable string the consumer needs anyway, so
+	// the buffer is safe to reuse after Write returns without a second copy.
+	w.onData(string(p))
 	return len(p), nil
 }
 

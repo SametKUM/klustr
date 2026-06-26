@@ -17,7 +17,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-type TerminalDataFunc func(data []byte)
+type TerminalDataFunc func(data string)
 type TerminalCloseFunc func(err error)
 
 type terminalSession struct {
@@ -119,7 +119,9 @@ func (mgr *terminalSessionManager) start(
 		for {
 			n, err := ptmx.Read(buf)
 			if n > 0 {
-				onData(append([]byte(nil), buf[:n]...))
+				// string copies out of the reused read buffer in one pass — the
+				// consumer wants a string anyway, so no separate []byte copy.
+				onData(string(buf[:n]))
 			}
 			if err != nil {
 				break

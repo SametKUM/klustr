@@ -442,9 +442,9 @@ func (a *App) StartExec(contextName, namespace, podName, container string, comma
 	gate := newSessionGate()
 	id, err := a.clients.StartExec(
 		a.ctx, contextName, namespace, podName, container, command,
-		func(data []byte) {
+		func(data string) {
 			if id := gate.wait(); id != "" {
-				runtime.EventsEmit(a.ctx, "exec:out:"+id, string(data))
+				runtime.EventsEmit(a.ctx, "exec:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -495,9 +495,9 @@ func (a *App) StartNodeShell(contextName, nodeName string) (string, error) {
 	gate := newSessionGate()
 	id, err := a.clients.StartNodeShell(
 		a.ctx, contextName, nodeName,
-		func(data []byte) {
+		func(data string) {
 			if id := gate.wait(); id != "" {
-				runtime.EventsEmit(a.ctx, "exec:out:"+id, string(data))
+				runtime.EventsEmit(a.ctx, "exec:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -549,9 +549,9 @@ func (a *App) OpenLocalTerminal(contextName string, cols, rows int) (string, err
 	gate := newSessionGate()
 	id, err := a.clients.StartLocalTerminal(
 		a.ctx, contextName, clampDim(cols), clampDim(rows),
-		func(data []byte) {
+		func(data string) {
 			if id := gate.wait(); id != "" {
-				runtime.EventsEmit(a.ctx, "term:out:"+id, string(data))
+				runtime.EventsEmit(a.ctx, "term:out:"+id, data)
 			}
 		},
 		func(err error) {
