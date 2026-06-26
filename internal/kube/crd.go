@@ -93,6 +93,16 @@ type crdWatcher struct {
 	// LookupCRDBy* and CRDs() call would otherwise reflectively decode and sort
 	// the entire CRD store; the CRD informer's handlers invalidate it on change.
 	crdCache []CRDInfo
+	// crCellCache memoizes the compiled printer-column JSONPath evaluators per
+	// GVR (guarded by mu, invalidated with crdCache on any CRD change). The
+	// evaluators depend only on the CRD's columns, so recompiling them on every
+	// CR list refresh — the per-change-event hot path — is pure waste.
+	crCellCache map[schema.GroupVersionResource][]compiledPrinterColumn
+
+	// crCellMu serializes use of a cached evaluator slice: jsonpath.JSONPath
+	// mutates internal range-tracking state during Execute, so a shared
+	// (cached) evaluator must never be run from two goroutines at once.
+	crCellMu sync.Mutex
 
 	crMu      sync.Mutex
 	crFactory dynamicinformer.DynamicSharedInformerFactory
@@ -174,11 +184,43 @@ func (w *crdWatcher) CRDs() []CRDInfo {
 	return out
 }
 
-// invalidateCRDCache drops the memoized CRD list so the next CRDs() rebuilds it.
+// invalidateCRDCache drops the memoized CRD list and the compiled printer-column
+// evaluators so the next CRDs() / ListCustomResources rebuilds them.
 func (w *crdWatcher) invalidateCRDCache() {
 	w.mu.Lock()
 	w.crdCache = nil
+	w.crCellCache = nil
 	w.mu.Unlock()
+}
+
+// compiledColumns returns the cached printer-column evaluators for a GVR,
+// compiling and memoizing them on first use. The compile (LookupCRDByGVR takes
+// mu internally) runs outside the lock, so a concurrent miss may compile twice
+// — harmless and idempotent, the last store wins. Callers must hold crCellMu
+// while running the returned evaluators (see the field comment).
+func (w *crdWatcher) compiledColumns(gvr schema.GroupVersionResource) []compiledPrinterColumn {
+	w.mu.Lock()
+	if w.crCellCache != nil {
+		if cols, ok := w.crCellCache[gvr]; ok {
+			w.mu.Unlock()
+			return cols
+		}
+	}
+	w.mu.Unlock()
+
+	var printerColumns []PrinterColumn
+	if info, found := w.LookupCRDByGVR(gvr); found {
+		printerColumns = info.PrinterColumns
+	}
+	compiled := compileJSONPaths(printerColumns)
+
+	w.mu.Lock()
+	if w.crCellCache == nil {
+		w.crCellCache = make(map[schema.GroupVersionResource][]compiledPrinterColumn)
+	}
+	w.crCellCache[gvr] = compiled
+	w.mu.Unlock()
+	return compiled
 }
 
 func crdInfoFromUnstructured(obj *unstructured.Unstructured) (CRDInfo, bool) {
@@ -432,12 +474,9 @@ func (w *crdWatcher) ListCustomResources(gvr schema.GroupVersionResource, namesp
 	if err != nil {
 		return []CustomResourceInfo{}
 	}
-	var printerColumns []PrinterColumn
-	if info, found := w.LookupCRDByGVR(gvr); found {
-		printerColumns = info.PrinterColumns
-	}
-	evaluators := compileJSONPaths(printerColumns)
+	evaluators := w.compiledColumns(gvr)
 	out := make([]CustomResourceInfo, 0, len(objs))
+	w.crCellMu.Lock()
 	for _, raw := range objs {
 		obj, ok := raw.(*unstructured.Unstructured)
 		if !ok {
@@ -450,6 +489,7 @@ func (w *crdWatcher) ListCustomResources(gvr schema.GroupVersionResource, namesp
 			Cells:     evaluateCells(evaluators, obj),
 		})
 	}
+	w.crCellMu.Unlock()
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Namespace != out[j].Namespace {
 			return out[i].Namespace < out[j].Namespace
