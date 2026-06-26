@@ -551,6 +551,34 @@ func (w *crdWatcher) GetCustomResource(ctx context.Context, gvr schema.GroupVers
 	return ri.Get(ctx, name, metav1.GetOptions{})
 }
 
+// getCROrLive returns the CR for the given GVR preferring the warm informer
+// cache, falling back to a live GET only when this GVR's informer has not been
+// started yet. Integration detail builders read only fields the list path
+// already caches, so the cache hit avoids both a fresh dynamic-client build and
+// an apiserver round-trip on every detail open. Unlike GetCustomResource (the
+// YAML tab, which always wants live server state), the cache is fresh enough
+// here — the watch keeps it within a debounce window of the server.
+func (w *crdWatcher) getCROrLive(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string) (*unstructured.Unstructured, error) {
+	if obj, found := w.GetCachedCustomResource(gvr, namespace, name); found {
+		return obj, nil
+	}
+	return w.GetCustomResource(ctx, gvr, namespace, name)
+}
+
+// crForDetail fetches a CR for a detail builder, cache-first via the context's
+// crdWatcher, and only builds a fresh dynamic client + does a live GET when no
+// watcher exists for the context (which a detail path normally never hits).
+func (m *ClientManager) crForDetail(ctx context.Context, contextName string, gvr schema.GroupVersionResource, namespace, name string) (*unstructured.Unstructured, error) {
+	if w, ok := m.watcher(contextName); ok && w.crd != nil {
+		return w.crd.getCROrLive(ctx, gvr, namespace, name)
+	}
+	dyn, err := m.dynamicClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+	return resourceFor(dyn, gvr, namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
 // MarshalCustomResourceYAML strips the noisy server-managed metadata fields
 // the same way the built-in YAML path does and returns the YAML rendering.
 func MarshalCustomResourceYAML(obj *unstructured.Unstructured) (string, error) {

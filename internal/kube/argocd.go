@@ -241,11 +241,7 @@ func (m *ClientManager) SyncArgoApplication(ctx context.Context, contextName, na
 // and returns it in a typed form so the frontend can render a table of
 // managed resources and let the user drill into each one.
 func (m *ClientManager) ListArgoApplicationResources(ctx context.Context, contextName, namespace, name string) ([]ArgoApplicationResource, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(argoApplicationGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, argoApplicationGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -407,11 +403,7 @@ type ArgoApplicationHistoryEntry struct {
 // ListArgoApplicationHistory returns the .status.history[] entries newest-
 // first. Empty slice (not nil) when the Application has no history yet.
 func (m *ClientManager) ListArgoApplicationHistory(ctx context.Context, contextName, namespace, name string) ([]ArgoApplicationHistoryEntry, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(argoApplicationGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, argoApplicationGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -548,11 +540,7 @@ type ArgoOperationState struct {
 // GetArgoApplicationOperationState reads .status.operationState. Empty
 // state (phase="") when Argo has never run an operation on this Application.
 func (m *ClientManager) GetArgoApplicationOperationState(ctx context.Context, contextName, namespace, name string) (ArgoOperationState, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return ArgoOperationState{}, err
-	}
-	obj, err := dyn.Resource(argoApplicationGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, argoApplicationGVR, namespace, name)
 	if err != nil {
 		return ArgoOperationState{}, err
 	}

@@ -114,11 +114,7 @@ func (m *ClientManager) ListFluxKustomizations(contextName, namespace string) []
 }
 
 func (m *ClientManager) GetFluxKustomization(ctx context.Context, contextName, namespace, name string) (*FluxKustomizationDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(fluxKustomizationGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, fluxKustomizationGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -212,11 +208,7 @@ func (m *ClientManager) ListFluxHelmReleases(contextName, namespace string) []Fl
 }
 
 func (m *ClientManager) GetFluxHelmRelease(ctx context.Context, contextName, namespace, name string) (*FluxHelmReleaseDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(fluxHelmReleaseGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, fluxHelmReleaseGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -333,11 +325,7 @@ func (m *ClientManager) ListFluxGitRepositories(contextName, namespace string) [
 }
 
 func (m *ClientManager) GetFluxGitRepository(ctx context.Context, contextName, namespace, name string) (*FluxGitRepositoryDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(fluxGitRepositoryGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, fluxGitRepositoryGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -447,11 +435,7 @@ func (m *ClientManager) ListFluxHelmRepositories(contextName, namespace string) 
 }
 
 func (m *ClientManager) GetFluxHelmRepository(ctx context.Context, contextName, namespace, name string) (*FluxHelmRepositoryDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(fluxHelmRepositoryGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, fluxHelmRepositoryGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -545,11 +529,7 @@ func (m *ClientManager) ListFluxOCIRepositories(contextName, namespace string) [
 }
 
 func (m *ClientManager) GetFluxOCIRepository(ctx context.Context, contextName, namespace, name string) (*FluxOCIRepositoryDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(fluxOCIRepositoryGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, fluxOCIRepositoryGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -663,11 +643,7 @@ func (m *ClientManager) ListFluxBuckets(contextName, namespace string) []FluxBuc
 }
 
 func (m *ClientManager) GetFluxBucket(ctx context.Context, contextName, namespace, name string) (*FluxBucketDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(fluxBucketGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, fluxBucketGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -760,11 +736,7 @@ func (m *ClientManager) ListFluxProviders(contextName, namespace string) []FluxP
 }
 
 func (m *ClientManager) GetFluxProvider(ctx context.Context, contextName, namespace, name string) (*FluxProviderDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(fluxProviderGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, fluxProviderGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -871,11 +843,7 @@ func (m *ClientManager) ListFluxAlerts(contextName, namespace string) []FluxAler
 }
 
 func (m *ClientManager) GetFluxAlert(ctx context.Context, contextName, namespace, name string) (*FluxAlertDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(fluxAlertGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, fluxAlertGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -1016,11 +984,7 @@ func (m *ClientManager) ListFluxReceivers(contextName, namespace string) []FluxR
 }
 
 func (m *ClientManager) GetFluxReceiver(ctx context.Context, contextName, namespace, name string) (*FluxReceiverDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(fluxReceiverGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, fluxReceiverGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}

@@ -90,11 +90,7 @@ func (m *ClientManager) ListCertManagerCertificates(contextName, namespace strin
 }
 
 func (m *ClientManager) GetCertManagerCertificate(ctx context.Context, contextName, namespace, name string) (*CertManagerCertificateDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(certManagerCertificateGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, certManagerCertificateGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -196,17 +192,7 @@ func (m *ClientManager) GetCertManagerClusterIssuer(ctx context.Context, context
 }
 
 func (m *ClientManager) getCertManagerIssuer(ctx context.Context, contextName string, gvr schema.GroupVersionResource, namespace, name string) (*CertManagerIssuerDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	ri := dyn.Resource(gvr)
-	var obj *unstructured.Unstructured
-	if namespace == "" {
-		obj, err = ri.Get(ctx, name, metav1.GetOptions{})
-	} else {
-		obj, err = ri.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
-	}
+	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -354,11 +340,7 @@ func certificateRequestRows(objs []*unstructured.Unstructured) []CertManagerCert
 }
 
 func (m *ClientManager) GetCertManagerCertificateRequest(ctx context.Context, contextName, namespace, name string) (*CertManagerCertificateRequestDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(certManagerCertificateRequestGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, certManagerCertificateRequestGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -447,11 +429,7 @@ func orderRows(objs []*unstructured.Unstructured) []CertManagerOrderInfo {
 }
 
 func (m *ClientManager) GetCertManagerOrder(ctx context.Context, contextName, namespace, name string) (*CertManagerOrderDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(certManagerOrderGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, certManagerOrderGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -539,11 +517,7 @@ func challengeRows(objs []*unstructured.Unstructured) []CertManagerChallengeInfo
 }
 
 func (m *ClientManager) GetCertManagerChallenge(ctx context.Context, contextName, namespace, name string) (*CertManagerChallengeDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(certManagerChallengeGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, certManagerChallengeGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}

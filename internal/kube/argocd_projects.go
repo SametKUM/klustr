@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 )
 
 // argoAppProjectGVR is the canonical GVR for AppProject. Argo CD ships
@@ -112,11 +111,7 @@ func (m *ClientManager) ListArgoAppProjects(contextName, namespace string) []Arg
 
 // GetArgoAppProject reads one AppProject for the detail panel.
 func (m *ClientManager) GetArgoAppProject(ctx context.Context, contextName, namespace, name string) (*ArgoAppProjectDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(argoAppProjectGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, argoAppProjectGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -309,17 +304,13 @@ func (m *ClientManager) ListArgoApplicationSets(contextName, namespace string) [
 // default unless the user explicitly opted into progressive sync. Without
 // that fallback the Generated Applications table would always be empty.
 func (m *ClientManager) GetArgoApplicationSet(ctx context.Context, contextName, namespace, name string) (*ArgoApplicationSetDetail, error) {
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(argoApplicationSetGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, argoApplicationSetGVR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
 	d := extractArgoApplicationSetDetail(obj)
 	if len(d.GeneratedApps) == 0 {
-		d.GeneratedApps = m.findArgoApplicationsOwnedBy(ctx, contextName, dyn, namespace, name)
+		d.GeneratedApps = m.findArgoApplicationsOwnedBy(ctx, contextName, namespace, name)
 	}
 	return &d, nil
 }
@@ -334,11 +325,14 @@ func (m *ClientManager) GetArgoApplicationSet(ctx context.Context, contextName, 
 func (m *ClientManager) findArgoApplicationsOwnedBy(
 	ctx context.Context,
 	contextName string,
-	dyn dynamic.Interface,
 	namespace, appSetName string,
 ) []ArgoApplicationSetGeneratedApp {
 	apps := listCachedCRs(m, contextName, argoApplicationGVR, namespace)
 	if apps == nil {
+		dyn, err := m.dynamicClient(contextName)
+		if err != nil {
+			return []ArgoApplicationSetGeneratedApp{}
+		}
 		list, err := dyn.Resource(argoApplicationGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return []ArgoApplicationSetGeneratedApp{}

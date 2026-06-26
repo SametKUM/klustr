@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -118,11 +117,7 @@ func (m *ClientManager) GetIstioVirtualService(ctx context.Context, contextName,
 	if !ok {
 		return nil, fmt.Errorf("istio VirtualService CRD not found")
 	}
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -291,11 +286,7 @@ func (m *ClientManager) GetIstioDestinationRule(ctx context.Context, contextName
 	if !ok {
 		return nil, fmt.Errorf("istio DestinationRule CRD not found")
 	}
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -389,11 +380,7 @@ func (m *ClientManager) GetIstioPeerAuthentication(ctx context.Context, contextN
 	if !ok {
 		return nil, fmt.Errorf("istio PeerAuthentication CRD not found")
 	}
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := dyn.Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
 	if err != nil {
 		return nil, err
 	}
