@@ -11,6 +11,7 @@ import {
   Th,
 } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function GatewayClassDetailBody({
@@ -28,7 +29,7 @@ export function GatewayClassDetailBody({
     <div className="space-y-6">
       <Section title="GatewayClass">
         <Field label="Controller" mono>
-          {detail.controller}
+          <Copyable value={detail.controller} />
         </Field>
         {detail.description && <Field label="Description">{detail.description}</Field>}
         <Field label="Age">{formatAge(detail.createdAt)}</Field>

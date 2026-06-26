@@ -11,6 +11,7 @@ import {
   Th,
 } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function GatewayDetailBody({
@@ -31,7 +32,11 @@ export function GatewayDetailBody({
       <Section title="Gateway">
         <Field label="Class">{detail.class || '—'}</Field>
         <Field label="Addresses" mono>
-          {detail.addresses.length > 0 ? detail.addresses.join(', ') : '—'}
+          {detail.addresses.length > 0 ? (
+            <Copyable value={detail.addresses.join(',')}>{detail.addresses.join(', ')}</Copyable>
+          ) : (
+            '—'
+          )}
         </Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
@@ -54,7 +59,9 @@ export function GatewayDetailBody({
                 {detail.listeners.map((l) => (
                   <tr key={l.name} className="border-t border-border">
                     <Td className="font-mono">{l.name}</Td>
-                    <Td className="font-mono">{l.hostname || '*'}</Td>
+                    <Td className="font-mono">
+                      {l.hostname ? <Copyable value={l.hostname} /> : '*'}
+                    </Td>
                     <Td>{l.protocol}</Td>
                     <Td className="font-mono">{l.port}</Td>
                     <Td>{l.allowedNamespaces || 'Same'}</Td>

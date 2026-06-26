@@ -17,12 +17,17 @@ import {
   Th,
 } from '@/features/_shared/DetailPrimitives'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 function backendLabel(b: BackendRefDetail, ownNS: string): string {
   const ns = b.namespace && b.namespace !== ownNS ? `${b.namespace}/` : ''
   const port = b.port ? `:${b.port}` : ''
   return `${ns}${b.name}${port}`
+}
+
+function parentLabel(p: { namespace?: string; name: string }, ownNS: string): string {
+  return p.namespace && p.namespace !== ownNS ? `${p.namespace}/${p.name}` : p.name
 }
 
 function matchLabel(m: HTTPRouteMatchDetail): string {
@@ -61,18 +66,20 @@ export function HTTPRouteDetailBody({
             ? detail.hostnames.map((h, i) => (
                 <Fragment key={h}>
                   {i > 0 && ', '}
-                  {h.startsWith('*') ? (
-                    h
-                  ) : (
-                    <button
-                      type="button"
-                      className="cursor-pointer text-left hover:underline"
-                      onClick={() => BrowserOpenURL(`https://${h}`)}
-                      title={`Open https://${h}`}
-                    >
-                      {h}
-                    </button>
-                  )}
+                  <Copyable value={h}>
+                    {h.startsWith('*') ? (
+                      h
+                    ) : (
+                      <button
+                        type="button"
+                        className="cursor-pointer text-left hover:underline"
+                        onClick={() => BrowserOpenURL(`https://${h}`)}
+                        title={`Open https://${h}`}
+                      >
+                        {h}
+                      </button>
+                    )}
+                  </Copyable>
                 </Fragment>
               ))
             : '*'}
@@ -97,9 +104,7 @@ export function HTTPRouteDetailBody({
                   <tr key={i} className="border-t border-border">
                     <Td>{p.kind || 'Gateway'}</Td>
                     <Td className="font-mono">
-                      {p.namespace && p.namespace !== detail.namespace
-                        ? `${p.namespace}/${p.name}`
-                        : p.name}
+                      <Copyable value={parentLabel(p, detail.namespace)} />
                     </Td>
                     <Td className="font-mono">{p.sectionName || '—'}</Td>
                     <Td className="font-mono">{p.port || '—'}</Td>
@@ -143,7 +148,9 @@ export function HTTPRouteDetailBody({
                         : rule.backends.map((b, bi) => (
                             <tr key={`${mi}-${bi}`} className="border-t border-border">
                               <Td className="font-mono">{matchLabel(m)}</Td>
-                              <Td className="font-mono">{backendLabel(b, detail.namespace)}</Td>
+                              <Td className="font-mono">
+                                <Copyable value={backendLabel(b, detail.namespace)} />
+                              </Td>
                               <Td className="font-mono">{b.weight || '—'}</Td>
                             </tr>
                           )),
@@ -162,11 +169,11 @@ export function HTTPRouteDetailBody({
             <div key={i} className="mb-3 overflow-hidden rounded border border-border last:mb-0">
               <div className="flex items-center justify-between bg-muted/40 px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 <span className="font-mono normal-case">
-                  {sp.parent.namespace && sp.parent.namespace !== detail.namespace
-                    ? `${sp.parent.namespace}/${sp.parent.name}`
-                    : sp.parent.name}
+                  <Copyable value={parentLabel(sp.parent, detail.namespace)} />
                 </span>
-                <span className="font-mono normal-case">{sp.controller}</span>
+                <span className="font-mono normal-case">
+                  <Copyable value={sp.controller} />
+                </span>
               </div>
               <table className="w-full text-xs">
                 <thead className="bg-muted/20 text-muted-foreground">
