@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type FluxHelmReleaseDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { FluxReadyPill } from './FluxReadyPill'
 import { FluxConditionsTable } from './FluxConditionsTable'
@@ -47,7 +48,7 @@ export function FluxHelmReleaseDetailBody({ contextName, namespace, name }: Prop
         <Field label="Timeout">{detail.timeout || '—'}</Field>
         <Field label="Last applied chart version">
           {detail.lastAppliedRevision ? (
-            <span className="font-mono text-xs">{detail.lastAppliedRevision}</span>
+            <Copyable className="font-mono text-xs" value={detail.lastAppliedRevision} />
           ) : (
             '—'
           )}

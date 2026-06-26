@@ -3,6 +3,7 @@ import { Lock } from 'lucide-react'
 import { api, type FluxProviderDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { FluxReadyPill } from './FluxReadyPill'
 import { FluxConditionsTable } from './FluxConditionsTable'
@@ -42,7 +43,7 @@ export function FluxProviderDetailBody({ contextName, namespace, name }: Props) 
               <Lock className="size-3" /> from Secret
             </span>
           ) : detail.address ? (
-            <span className="font-mono text-xs break-all">{detail.address}</span>
+            <Copyable className="font-mono text-xs break-all" value={detail.address} />
           ) : (
             '—'
           )}

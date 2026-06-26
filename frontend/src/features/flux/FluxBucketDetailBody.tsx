@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type FluxBucketDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { FluxReadyPill } from './FluxReadyPill'
 import { FluxConditionsTable } from './FluxConditionsTable'
@@ -35,7 +36,7 @@ export function FluxBucketDetailBody({ contextName, namespace, name }: Props) {
         <Field label="Provider">{detail.provider}</Field>
         <Field label="Bucket name">{detail.bucketName || '—'}</Field>
         <Field label="Endpoint">
-          {detail.endpoint ? <span className="font-mono text-xs">{detail.endpoint}</span> : '—'}
+          {detail.endpoint ? <Copyable className="font-mono text-xs" value={detail.endpoint} /> : '—'}
         </Field>
         <Field label="Region">{detail.region || '—'}</Field>
         <Field label="Interval">{detail.interval || '—'}</Field>
@@ -45,7 +46,7 @@ export function FluxBucketDetailBody({ contextName, namespace, name }: Props) {
       <Section title="Artifact">
         <Field label="Last fetched revision">
           {detail.revision ? (
-            <span className="font-mono text-xs">{detail.revision}</span>
+            <Copyable className="font-mono text-xs" value={detail.revision} />
           ) : (
             '—'
           )}

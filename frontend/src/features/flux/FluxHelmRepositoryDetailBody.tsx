@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type FluxHelmRepositoryDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { FluxReadyPill } from './FluxReadyPill'
 import { FluxConditionsTable } from './FluxConditionsTable'
@@ -35,7 +36,7 @@ export function FluxHelmRepositoryDetailBody({ contextName, namespace, name }: P
         <Field label="Type">{detail.type}</Field>
         <Field label="Provider">{detail.provider || 'generic'}</Field>
         <Field label="URL">
-          {detail.url ? <span className="font-mono text-xs">{detail.url}</span> : '—'}
+          {detail.url ? <Copyable className="font-mono text-xs" value={detail.url} /> : '—'}
         </Field>
         <Field label="Interval">{detail.interval || '—'}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
@@ -51,7 +52,7 @@ export function FluxHelmRepositoryDetailBody({ contextName, namespace, name }: P
         <Section title="Artifact">
           <Field label="Last fetched revision">
             {detail.revision ? (
-              <span className="font-mono text-xs">{detail.revision}</span>
+              <Copyable className="font-mono text-xs" value={detail.revision} />
             ) : (
               '—'
             )}

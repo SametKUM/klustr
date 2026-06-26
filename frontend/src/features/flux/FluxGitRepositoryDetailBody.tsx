@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type FluxGitRepositoryDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
+import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { FluxReadyPill } from './FluxReadyPill'
 import { FluxConditionsTable } from './FluxConditionsTable'
@@ -33,7 +34,7 @@ export function FluxGitRepositoryDetailBody({ contextName, namespace, name }: Pr
         </Field>
         <Field label="Status message">{detail.status || '—'}</Field>
         <Field label="URL">
-          {detail.url ? <span className="font-mono text-xs">{detail.url}</span> : '—'}
+          {detail.url ? <Copyable className="font-mono text-xs" value={detail.url} /> : '—'}
         </Field>
         <Field label="Ref">{detail.ref || '—'}</Field>
         <Field label="Interval">{detail.interval || '—'}</Field>
@@ -43,7 +44,7 @@ export function FluxGitRepositoryDetailBody({ contextName, namespace, name }: Pr
       <Section title="Artifact">
         <Field label="Last fetched revision">
           {detail.revision ? (
-            <span className="font-mono text-xs">{detail.revision}</span>
+            <Copyable className="font-mono text-xs" value={detail.revision} />
           ) : (
             '—'
           )}
