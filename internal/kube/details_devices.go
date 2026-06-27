@@ -2,6 +2,7 @@ package kube
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -178,10 +179,12 @@ func (w *contextWatcher) ResourceSlice(name string) (*ResourceSliceDetail, error
 			}
 			attrs = append(attrs, fmt.Sprintf("%s=%s", string(k), val))
 		}
+		sort.Strings(attrs) // map iteration is random; keep rows stable across reopens
 		caps := make([]string, 0, len(d.Capacity))
 		for k, v := range d.Capacity {
 			caps = append(caps, fmt.Sprintf("%s=%s", string(k), v.Value.String()))
 		}
+		sort.Strings(caps)
 		binds := false
 		if d.BindsToNode != nil {
 			binds = *d.BindsToNode
