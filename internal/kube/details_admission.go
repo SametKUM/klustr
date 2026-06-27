@@ -37,35 +37,7 @@ func (w *contextWatcher) ValidatingWebhookConfiguration(name string) (*WebhookCo
 	}
 	whs := make([]WebhookSummary, 0, len(c.Webhooks))
 	for _, h := range c.Webhooks {
-		summary := WebhookSummary{Name: h.Name, Operations: []string{}, Resources: []string{}}
-		if h.ClientConfig.Service != nil {
-			summary.ClientCfg = h.ClientConfig.Service.Namespace + "/" + h.ClientConfig.Service.Name
-		} else if h.ClientConfig.URL != nil {
-			summary.ClientCfg = *h.ClientConfig.URL
-		}
-		if h.FailurePolicy != nil {
-			summary.FailPolicy = string(*h.FailurePolicy)
-		}
-		if h.SideEffects != nil {
-			summary.SideEffects = string(*h.SideEffects)
-		}
-		seenOps := map[string]struct{}{}
-		seenRes := map[string]struct{}{}
-		for _, r := range h.Rules {
-			for _, op := range r.Operations {
-				if _, ok := seenOps[string(op)]; !ok {
-					seenOps[string(op)] = struct{}{}
-					summary.Operations = append(summary.Operations, string(op))
-				}
-			}
-			for _, rs := range r.Resources {
-				if _, ok := seenRes[rs]; !ok {
-					seenRes[rs] = struct{}{}
-					summary.Resources = append(summary.Resources, rs)
-				}
-			}
-		}
-		whs = append(whs, summary)
+		whs = append(whs, webhookSummary(h.Name, h.ClientConfig, h.FailurePolicy, h.SideEffects, h.Rules))
 	}
 	return &WebhookConfigurationDetail{
 		Name:        c.Name,
@@ -88,35 +60,7 @@ func (w *contextWatcher) MutatingWebhookConfiguration(name string) (*WebhookConf
 	}
 	whs := make([]WebhookSummary, 0, len(c.Webhooks))
 	for _, h := range c.Webhooks {
-		summary := WebhookSummary{Name: h.Name, Operations: []string{}, Resources: []string{}}
-		if h.ClientConfig.Service != nil {
-			summary.ClientCfg = h.ClientConfig.Service.Namespace + "/" + h.ClientConfig.Service.Name
-		} else if h.ClientConfig.URL != nil {
-			summary.ClientCfg = *h.ClientConfig.URL
-		}
-		if h.FailurePolicy != nil {
-			summary.FailPolicy = string(*h.FailurePolicy)
-		}
-		if h.SideEffects != nil {
-			summary.SideEffects = string(*h.SideEffects)
-		}
-		seenOps := map[string]struct{}{}
-		seenRes := map[string]struct{}{}
-		for _, r := range h.Rules {
-			for _, op := range r.Operations {
-				if _, ok := seenOps[string(op)]; !ok {
-					seenOps[string(op)] = struct{}{}
-					summary.Operations = append(summary.Operations, string(op))
-				}
-			}
-			for _, rs := range r.Resources {
-				if _, ok := seenRes[rs]; !ok {
-					seenRes[rs] = struct{}{}
-					summary.Resources = append(summary.Resources, rs)
-				}
-			}
-		}
-		whs = append(whs, summary)
+		whs = append(whs, webhookSummary(h.Name, h.ClientConfig, h.FailurePolicy, h.SideEffects, h.Rules))
 	}
 	return &WebhookConfigurationDetail{
 		Name:        c.Name,
@@ -126,6 +70,47 @@ func (w *contextWatcher) MutatingWebhookConfiguration(name string) (*WebhookConf
 		Annotations: c.Annotations,
 		CreatedAt:   c.CreationTimestamp.UTC().Format(time.RFC3339),
 	}, nil
+}
+
+// webhookSummary projects one admission webhook into a WebhookSummary. The
+// Validating and Mutating webhook types are distinct structs but share these
+// field types, so the per-webhook body is the same for both.
+func webhookSummary(
+	name string,
+	cc admissionregv1.WebhookClientConfig,
+	failurePolicy *admissionregv1.FailurePolicyType,
+	sideEffects *admissionregv1.SideEffectClass,
+	rules []admissionregv1.RuleWithOperations,
+) WebhookSummary {
+	summary := WebhookSummary{Name: name, Operations: []string{}, Resources: []string{}}
+	if cc.Service != nil {
+		summary.ClientCfg = cc.Service.Namespace + "/" + cc.Service.Name
+	} else if cc.URL != nil {
+		summary.ClientCfg = *cc.URL
+	}
+	if failurePolicy != nil {
+		summary.FailPolicy = string(*failurePolicy)
+	}
+	if sideEffects != nil {
+		summary.SideEffects = string(*sideEffects)
+	}
+	seenOps := map[string]struct{}{}
+	seenRes := map[string]struct{}{}
+	for _, r := range rules {
+		for _, op := range r.Operations {
+			if _, ok := seenOps[string(op)]; !ok {
+				seenOps[string(op)] = struct{}{}
+				summary.Operations = append(summary.Operations, string(op))
+			}
+		}
+		for _, rs := range r.Resources {
+			if _, ok := seenRes[rs]; !ok {
+				seenRes[rs] = struct{}{}
+				summary.Resources = append(summary.Resources, rs)
+			}
+		}
+	}
+	return summary
 }
 
 type AdmissionPolicyValidation struct {

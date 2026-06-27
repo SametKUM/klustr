@@ -100,12 +100,7 @@ func (m *ClientManager) ListArgoAppProjects(contextName, namespace string) []Arg
 	for _, obj := range objs {
 		out = append(out, extractArgoAppProjectInfo(obj))
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Namespace != out[j].Namespace {
-			return out[i].Namespace < out[j].Namespace
-		}
-		return out[i].Name < out[j].Name
-	})
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -288,12 +283,7 @@ func (m *ClientManager) ListArgoApplicationSets(contextName, namespace string) [
 	for _, obj := range objs {
 		out = append(out, extractArgoApplicationSetInfo(obj))
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Namespace != out[j].Namespace {
-			return out[i].Namespace < out[j].Namespace
-		}
-		return out[i].Name < out[j].Name
-	})
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 

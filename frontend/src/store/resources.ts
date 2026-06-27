@@ -281,20 +281,6 @@ function withoutCtx<T>(map: ByContext<T>, ctx: string): ByContext<T> {
   return next
 }
 
-export function mergeForContexts<T>(
-  byContext: ByContext<T>,
-  contexts: readonly string[],
-): T[] {
-  const out: T[] = []
-  for (const ctx of contexts) {
-    const list = byContext[ctx]
-    if (list && list.length > 0) {
-      for (const item of list) out.push(item)
-    }
-  }
-  return out
-}
-
 export const useResources = create<ResourcesState>((set) => ({
   ...emptyMaps(),
   setNamespaces: (ctx, list) => set((s) => ({ namespaces: withCtx(s.namespaces, ctx, list) })),

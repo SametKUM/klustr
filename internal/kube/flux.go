@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1007,20 +1006,6 @@ func (m *ClientManager) SetFluxResourceSuspended(ctx context.Context, contextNam
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-// sortFluxRows sorts any of the FluxXxxInfo slices by (namespace, name).
-// Defined as a generic helper instead of a per-type sort so the list
-// methods stay short and consistent.
-func sortFluxRows[T any](rows []T, key func(int) (string, string)) {
-	sort.Slice(rows, func(i, j int) bool {
-		ni, nameI := key(i)
-		nj, nameJ := key(j)
-		if ni != nj {
-			return ni < nj
-		}
-		return nameI < nameJ
-	})
-}
-
 // listFluxRows reads the cached CRs for a Flux GVR, projects each through
 // extract, and returns the rows sorted by (namespace, name). Collapses the nine
 // otherwise-identical ListFlux* bodies.
@@ -1037,7 +1022,7 @@ func listFluxRows[I any](
 	for _, obj := range objs {
 		out = append(out, extract(obj))
 	}
-	sortFluxRows(out, func(i int) (string, string) { return key(out[i]) })
+	sortByNamespaceName(out, func(i int) (string, string) { return key(out[i]) })
 	return out
 }
 
@@ -1083,27 +1068,9 @@ func extractFluxObjectRefs(obj *unstructured.Unstructured, parentNS, specKey str
 // shape every Flux CR uses. Returns an empty slice (not nil) so the JSON
 // encoder never emits `null` for a missing status block.
 func extractFluxConditions(obj *unstructured.Unstructured) []FluxCondition {
-	raw, found, _ := nestedSliceNoCopy(obj.Object, "status", "conditions")
-	if !found {
-		return []FluxCondition{}
-	}
-	out := make([]FluxCondition, 0, len(raw))
-	for _, item := range raw {
-		m, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		t, _ := m["type"].(string)
-		s, _ := m["status"].(string)
-		if t == "" || s == "" {
-			continue
-		}
-		reason, _ := m["reason"].(string)
-		message, _ := m["message"].(string)
-		ts, _ := m["lastTransitionTime"].(string)
-		out = append(out, FluxCondition{Type: t, Status: s, Reason: reason, Message: message, LastTransitionTime: ts})
-	}
-	return out
+	return extractConditions(obj, func(t, s, reason, message, ts string) FluxCondition {
+		return FluxCondition{Type: t, Status: s, Reason: reason, Message: message, LastTransitionTime: ts}
+	})
 }
 
 // readySummary returns the (status, message) pair of the Ready condition,

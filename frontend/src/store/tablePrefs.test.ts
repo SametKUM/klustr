@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { selectPrefs, useTablePrefs } from './tablePrefs'
+import { useTablePrefs } from './tablePrefs'
 
 const emptyPrefs = { order: [], hidden: [], sizing: {} }
+
+// Mirrors how ResourceTable reads prefs: byKind[kind], defaulting to empty.
+const prefsOf = (kind: string) => useTablePrefs.getState().byKind[kind] ?? emptyPrefs
 
 function reset() {
   localStorage.clear()
@@ -11,9 +14,8 @@ function reset() {
 describe('useTablePrefs', () => {
   beforeEach(reset)
 
-  it('returns empty defaults via selectPrefs for unknown kinds', () => {
-    const prefs = selectPrefs('Pod')(useTablePrefs.getState())
-    expect(prefs).toEqual(emptyPrefs)
+  it('returns empty defaults for unknown kinds', () => {
+    expect(prefsOf('Pod')).toEqual(emptyPrefs)
   })
 
   it('persists order, hidden and sizing per kind', () => {
@@ -22,7 +24,7 @@ describe('useTablePrefs', () => {
     setHidden('Pod', ['age'])
     setSizing('Pod', { name: 200 })
 
-    const prefs = selectPrefs('Pod')(useTablePrefs.getState())
+    const prefs = prefsOf('Pod')
     expect(prefs.order).toEqual(['name', 'status'])
     expect(prefs.hidden).toEqual(['age'])
     expect(prefs.sizing).toEqual({ name: 200 })
@@ -31,20 +33,20 @@ describe('useTablePrefs', () => {
   it('persists sorting per kind and distinguishes unset from cleared', () => {
     const { setSorting } = useTablePrefs.getState()
     setSorting('Pod', [{ id: 'age', desc: true }])
-    expect(selectPrefs('Pod')(useTablePrefs.getState()).sorting).toEqual([{ id: 'age', desc: true }])
+    expect(prefsOf('Pod').sorting).toEqual([{ id: 'age', desc: true }])
     // An unknown kind has no sorting key, so the view falls back to its default sort.
-    expect(selectPrefs('Service')(useTablePrefs.getState()).sorting).toBeUndefined()
+    expect(prefsOf('Service').sorting).toBeUndefined()
     // An explicit clear persists as an empty array, distinct from unset.
     setSorting('Pod', [])
-    expect(selectPrefs('Pod')(useTablePrefs.getState()).sorting).toEqual([])
+    expect(prefsOf('Pod').sorting).toEqual([])
   })
 
   it('keeps kinds isolated from each other', () => {
     useTablePrefs.getState().setOrder('Pod', ['a', 'b'])
     useTablePrefs.getState().setOrder('Service', ['x'])
 
-    expect(selectPrefs('Pod')(useTablePrefs.getState()).order).toEqual(['a', 'b'])
-    expect(selectPrefs('Service')(useTablePrefs.getState()).order).toEqual(['x'])
+    expect(prefsOf('Pod').order).toEqual(['a', 'b'])
+    expect(prefsOf('Service').order).toEqual(['x'])
   })
 
   it('reset removes prefs for a single kind only', () => {
@@ -53,8 +55,8 @@ describe('useTablePrefs', () => {
 
     useTablePrefs.getState().reset('Pod')
 
-    expect(selectPrefs('Pod')(useTablePrefs.getState())).toEqual(emptyPrefs)
-    expect(selectPrefs('Service')(useTablePrefs.getState()).order).toEqual(['x'])
+    expect(prefsOf('Pod')).toEqual(emptyPrefs)
+    expect(prefsOf('Service').order).toEqual(['x'])
   })
 
   it('writes through zustand/persist to localStorage', () => {

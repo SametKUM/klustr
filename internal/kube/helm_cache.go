@@ -9,7 +9,6 @@ import (
 	"io"
 	"sort"
 	"strconv"
-	"time"
 
 	"helm.sh/helm/v3/pkg/release"
 	corev1 "k8s.io/api/core/v1"
@@ -264,17 +263,4 @@ func (w *contextWatcher) helmAllSecrets(namespace string) ([]*corev1.Secret, err
 		out = append(out, s)
 	}
 	return out, nil
-}
-
-// helmReleaseFromInfo enriches a HelmReleaseInfo with the absolute updated
-// time; useful when sorting clients want a parsed time.Time.
-func parseHelmInfoTime(info HelmReleaseInfo) time.Time {
-	if info.Updated == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC3339, info.Updated)
-	if err != nil {
-		return time.Time{}
-	}
-	return t
 }

@@ -40,31 +40,6 @@ func (m *ClientManager) istioGVR(contextName, group, resource string) (schema.Gr
 }
 
 // ---------------------------------------------------------------------------
-// shared helpers
-// ---------------------------------------------------------------------------
-
-func istioToInt64(v any) int64 {
-	switch n := v.(type) {
-	case int64:
-		return n
-	case float64:
-		return int64(n)
-	}
-	return 0
-}
-
-func sortByNS[T any](rows []T, key func(int) (string, string)) {
-	sort.SliceStable(rows, func(i, j int) bool {
-		ni, nameI := key(i)
-		nj, nameJ := key(j)
-		if ni != nj {
-			return ni < nj
-		}
-		return nameI < nameJ
-	})
-}
-
-// ---------------------------------------------------------------------------
 // VirtualService
 // ---------------------------------------------------------------------------
 
@@ -108,7 +83,7 @@ func (m *ClientManager) ListIstioVirtualServices(contextName, namespace string) 
 	for _, obj := range objs {
 		out = append(out, extractVirtualService(obj))
 	}
-	sortByNS(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -179,13 +154,13 @@ func extractDestinations(rule map[string]any) []IstioDestinationWeight {
 		subset, _ := dest["subset"].(string)
 		var port int64
 		if p, ok := dest["port"].(map[string]any); ok {
-			port = istioToInt64(p["number"])
+			port = toInt64(p["number"])
 		}
 		out = append(out, IstioDestinationWeight{
 			Host:   host,
 			Subset: subset,
 			Port:   port,
-			Weight: istioToInt64(rm["weight"]),
+			Weight: toInt64(rm["weight"]),
 		})
 	}
 	return out
@@ -232,7 +207,7 @@ func summariseMatch(rule map[string]any) string {
 			parts = append(parts, "sni "+strings.Join(hosts, ","))
 		}
 		if port, ok := mm["port"]; ok {
-			if n := istioToInt64(port); n > 0 {
+			if n := toInt64(port); n > 0 {
 				parts = append(parts, fmt.Sprintf("port %d", n))
 			}
 		}
@@ -277,7 +252,7 @@ func (m *ClientManager) ListIstioDestinationRules(contextName, namespace string)
 	for _, obj := range objs {
 		out = append(out, extractDestinationRule(obj))
 	}
-	sortByNS(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -371,7 +346,7 @@ func (m *ClientManager) ListIstioPeerAuthentications(contextName, namespace stri
 	for _, obj := range objs {
 		out = append(out, extractPeerAuthentication(obj))
 	}
-	sortByNS(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 

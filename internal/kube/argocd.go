@@ -44,12 +44,7 @@ func (m *ClientManager) ListArgoApplications(contextName, namespace string) []Ar
 	for _, obj := range objs {
 		out = append(out, extractArgoApplication(obj))
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Namespace != out[j].Namespace {
-			return out[i].Namespace < out[j].Namespace
-		}
-		return out[i].Name < out[j].Name
-	})
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -423,22 +418,8 @@ func (m *ClientManager) ListArgoApplicationHistory(ctx context.Context, contextN
 	return out, nil
 }
 
-// argoNumber accepts both float64 (JSON default) and int64 because the
-// dynamic client's deserialization may yield either depending on path.
-func argoNumber(v any) int64 {
-	switch n := v.(type) {
-	case int64:
-		return n
-	case float64:
-		return int64(n)
-	case int:
-		return int64(n)
-	}
-	return 0
-}
-
 func extractArgoHistoryEntry(m map[string]any) ArgoApplicationHistoryEntry {
-	id := argoNumber(m["id"])
+	id := toInt64(m["id"])
 	revision, _ := m["revision"].(string)
 	deployedAt, _ := m["deployedAt"].(string)
 	deployStartedAt, _ := m["deployStartedAt"].(string)

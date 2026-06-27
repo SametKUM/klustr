@@ -55,8 +55,7 @@ export const useTablePrefs = create<State>()(
 
 // Shared frozen default so an absent kind always yields the same reference —
 // otherwise a fresh object each call would defeat zustand v5's getSnapshot
-// identity check and infinite-loop if selectPrefs were ever used as a hook
-// selector. Setters spread it, so the frozen value is never mutated.
+// identity check. Setters spread it, so the frozen value is never mutated.
 const EMPTY_PREFS: ColumnPrefs = Object.freeze({
   order: [] as string[],
   hidden: [] as string[],
@@ -67,6 +66,3 @@ function prefsFor(s: State, kind: string): ColumnPrefs {
   return s.byKind[kind] ?? EMPTY_PREFS
 }
 
-export function selectPrefs(kind: string) {
-  return (s: State): ColumnPrefs => s.byKind[kind] ?? EMPTY_PREFS
-}

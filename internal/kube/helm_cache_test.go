@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"testing"
-	"time"
 
 	"helm.sh/helm/v3/pkg/release"
 	corev1 "k8s.io/api/core/v1"
@@ -76,21 +75,6 @@ func TestHelmSecretVersion(t *testing.T) {
 				t.Fatalf("got %d, want %d", got, tc.want)
 			}
 		})
-	}
-}
-
-func TestParseHelmInfoTime(t *testing.T) {
-	if got := parseHelmInfoTime(HelmReleaseInfo{}); !got.IsZero() {
-		t.Errorf("empty input should return zero time, got %v", got)
-	}
-	if got := parseHelmInfoTime(HelmReleaseInfo{Updated: "not-a-date"}); !got.IsZero() {
-		t.Errorf("invalid input should return zero time, got %v", got)
-	}
-	in := "2026-05-22T10:00:00Z"
-	got := parseHelmInfoTime(HelmReleaseInfo{Updated: in})
-	want, _ := time.Parse(time.RFC3339, in)
-	if !got.Equal(want) {
-		t.Errorf("got %v, want %v", got, want)
 	}
 }
 

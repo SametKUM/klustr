@@ -149,11 +149,8 @@ func replicaSetInfoFrom(r *appsv1.ReplicaSet) ReplicaSetInfo {
 		desired = *r.Spec.Replicas
 	}
 	owner := ""
-	for _, o := range r.OwnerReferences {
-		if o.Controller != nil && *o.Controller {
-			owner = o.Kind + "/" + o.Name
-			break
-		}
+	if o := controllerOwnerRef(r.OwnerReferences); o != nil {
+		owner = o.Kind + "/" + o.Name
 	}
 	images := make([]string, 0, len(r.Spec.Template.Spec.Containers))
 	for _, c := range r.Spec.Template.Spec.Containers {

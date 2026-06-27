@@ -9,6 +9,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -81,7 +82,6 @@ type pendingKind struct {
 type contextWatcher struct {
 	factory        informers.SharedInformerFactory // cluster-wide; nil when user has no cluster-wide list at all
 	scoped         informers.SharedInformerFactory // namespaced fallback; nil when no kind needs it
-	scopedNS       string                          // namespace `scoped` is bound to (informers.WithNamespace)
 	access         *contextAccess                  // per-kind routing decisions; nil ⇒ assume cluster-wide
 	defaultNS      string                          // kubeconfig context.namespace, used as the scoped probe target
 	cs             kubernetes.Interface            // kept around for SelfSubjectAccessReview
@@ -210,7 +210,6 @@ func (w *contextWatcher) start(parent context.Context) error {
 		)
 	}
 	if scopedNS := w.access.ScopedNamespace(); scopedNS != "" {
-		w.scopedNS = scopedNS
 		w.scoped = informers.NewSharedInformerFactoryWithOptions(
 			w.cs.(*kubernetes.Clientset), 0,
 			informers.WithNamespace(scopedNS),
@@ -646,6 +645,49 @@ func sortByNamespaceName[T any](slice []T, key func(int) (string, string)) {
 		}
 		return n < m
 	})
+}
+
+// toInt64 coerces a dynamic-client JSON number (which deserializes as float64,
+// int64 or int depending on path) to int64. Zero for any other type.
+func toInt64(v any) int64 {
+	switch n := v.(type) {
+	case int64:
+		return n
+	case float64:
+		return int64(n)
+	case int:
+		return int64(n)
+	}
+	return 0
+}
+
+// extractConditions reads .status.conditions[] in the metav1.Condition shape
+// (type/status/reason/message/lastTransitionTime) every integration CR uses and
+// projects each entry through ctor. Returns an empty slice (not nil) so the JSON
+// encoder never emits `null` for a missing status block. Entries lacking a type
+// or status are skipped.
+func extractConditions[T any](obj *unstructured.Unstructured, ctor func(typ, status, reason, message, ts string) T) []T {
+	raw, found, _ := nestedSliceNoCopy(obj.Object, "status", "conditions")
+	if !found {
+		return []T{}
+	}
+	out := make([]T, 0, len(raw))
+	for _, item := range raw {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		t, _ := m["type"].(string)
+		s, _ := m["status"].(string)
+		if t == "" || s == "" {
+			continue
+		}
+		reason, _ := m["reason"].(string)
+		message, _ := m["message"].(string)
+		ts, _ := m["lastTransitionTime"].(string)
+		out = append(out, ctor(t, s, reason, message, ts))
+	}
+	return out
 }
 
 func formatLabelSelector(sel *metav1.LabelSelector) string {

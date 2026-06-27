@@ -85,7 +85,7 @@ func (m *ClientManager) ListCertManagerCertificates(contextName, namespace strin
 	for _, obj := range objs {
 		out = append(out, extractCertManagerCertificate(obj))
 	}
-	sortByNS(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -179,7 +179,7 @@ func (m *ClientManager) listCertManagerIssuers(contextName string, gvr schema.Gr
 	for _, obj := range objs {
 		out = append(out, extractCertManagerIssuer(obj))
 	}
-	sortByNS(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -335,7 +335,7 @@ func certificateRequestRows(objs []*unstructured.Unstructured) []CertManagerCert
 	for _, obj := range objs {
 		out = append(out, extractCertManagerCertificateRequest(obj))
 	}
-	sortByNS(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -424,7 +424,7 @@ func orderRows(objs []*unstructured.Unstructured) []CertManagerOrderInfo {
 	for _, obj := range objs {
 		out = append(out, extractCertManagerOrder(obj))
 	}
-	sortByNS(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -512,7 +512,7 @@ func challengeRows(objs []*unstructured.Unstructured) []CertManagerChallengeInfo
 	for _, obj := range objs {
 		out = append(out, extractCertManagerChallenge(obj))
 	}
-	sortByNS(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
+	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
 	return out
 }
 
@@ -560,27 +560,9 @@ func extractCertManagerChallenge(obj *unstructured.Unstructured) CertManagerChal
 // metav1.Condition shape. Returns an empty slice (not nil) so the JSON
 // encoder never emits null for a resource cert-manager hasn't reconciled yet.
 func extractCertManagerConditions(obj *unstructured.Unstructured) []CertManagerCondition {
-	raw, found, _ := nestedSliceNoCopy(obj.Object, "status", "conditions")
-	if !found {
-		return []CertManagerCondition{}
-	}
-	out := make([]CertManagerCondition, 0, len(raw))
-	for _, item := range raw {
-		cm, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		t, _ := cm["type"].(string)
-		s, _ := cm["status"].(string)
-		if t == "" || s == "" {
-			continue
-		}
-		reason, _ := cm["reason"].(string)
-		message, _ := cm["message"].(string)
-		ts, _ := cm["lastTransitionTime"].(string)
-		out = append(out, CertManagerCondition{Type: t, Status: s, Reason: reason, Message: message, LastTransitionTime: ts})
-	}
-	return out
+	return extractConditions(obj, func(t, s, reason, message, ts string) CertManagerCondition {
+		return CertManagerCondition{Type: t, Status: s, Reason: reason, Message: message, LastTransitionTime: ts}
+	})
 }
 
 // conditionStatusByType returns the status ("True"/"False"/"Unknown") of the

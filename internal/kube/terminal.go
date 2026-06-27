@@ -280,18 +280,11 @@ func userShell() string {
 // prompts, aliases and shell functions look like a regular Terminal tab.
 func loginShellArgs(shell string) []string {
 	switch {
-	case endsWith(shell, "zsh"), endsWith(shell, "bash"):
+	case strings.HasSuffix(shell, "zsh"), strings.HasSuffix(shell, "bash"):
 		return []string{"-l"}
 	default:
 		return nil
 	}
-}
-
-func endsWith(s, suffix string) bool {
-	if len(s) < len(suffix) {
-		return false
-	}
-	return s[len(s)-len(suffix):] == suffix
 }
 
 // writeContextKubeconfig writes a minified kubeconfig containing only

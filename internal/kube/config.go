@@ -2,6 +2,7 @@ package kube
 
 import (
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -70,20 +71,11 @@ func applyExecHints(info *ContextInfo, exec *clientcmdapi.ExecConfig) {
 	base := filepath.Base(exec.Command)
 	switch base {
 	case "aws":
-		info.AWSExec = hasArgPair(exec.Args, "eks", "get-token") || hasArg(exec.Args, "get-token")
+		info.AWSExec = hasArgPair(exec.Args, "eks", "get-token") || slices.Contains(exec.Args, "get-token")
 	case "aws-vault":
 		info.AWSVaultExec = true
 	}
 	info.AWSProfileHint = awsProfileHint(exec)
-}
-
-func hasArg(args []string, want string) bool {
-	for _, a := range args {
-		if a == want {
-			return true
-		}
-	}
-	return false
 }
 
 func hasArgPair(args []string, first, second string) bool {
