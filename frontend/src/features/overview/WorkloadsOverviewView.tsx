@@ -229,15 +229,9 @@ export function WorkloadsOverviewView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctxKey, pullCounts, pullEvents])
 
-  if (activeContexts.length === 0) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-        Select a context to see the workloads overview.
-      </div>
-    )
-  }
-
-  const cards: WorkloadHealth[] = [
+  // ponytail: memoize so typing in the events search (same component) doesn't
+  // re-filter all 8 workload lists on every keystroke — they didn't change.
+  const cards = useMemo<WorkloadHealth[]>(() => [
     {
       kind: 'Pods',
       view: 'pods',
@@ -289,7 +283,15 @@ export function WorkloadsOverviewView() {
       healthy: cronJobs.filter((c) => !c.suspend).length,
       neutral: cronJobs.filter((c) => c.suspend).length,
     },
-  ]
+  ], [pods, deployments, statefulSets, daemonSets, replicaSets, replicationControllers, jobs, cronJobs])
+
+  if (activeContexts.length === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+        Select a context to see the workloads overview.
+      </div>
+    )
+  }
 
   const filteredEvents = filterEvents(events, query)
   const scopeLabel = isAggregated
