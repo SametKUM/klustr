@@ -361,26 +361,37 @@ func isOwnedByApplicationSet(app *unstructured.Unstructured, appSetName string) 
 }
 
 func extractArgoApplicationSetInfo(obj *unstructured.Unstructured) ArgoApplicationSetInfo {
-	gens := readArgoApplicationSetGeneratorTypes(obj)
-	apps := readArgoApplicationSetGeneratedApps(obj)
-	healthy, synced := 0, 0
-	for _, a := range apps {
-		if a.Status == "Healthy" {
-			healthy++
-		}
-		if a.Status == "Synced" {
-			synced++
-		}
-	}
+	total, healthy, synced := countArgoApplicationSetApps(obj)
 	return ArgoApplicationSetInfo{
 		Name:           obj.GetName(),
 		Namespace:      obj.GetNamespace(),
-		GeneratorTypes: gens,
-		AppCount:       len(apps),
+		GeneratorTypes: readArgoApplicationSetGeneratorTypes(obj),
+		AppCount:       total,
 		HealthyCount:   healthy,
 		SyncedCount:    synced,
 		CreatedAt:      obj.GetCreationTimestamp().UTC().Format(time.RFC3339),
 	}
+}
+
+// countArgoApplicationSetApps tallies status.applicationStatus[] for the list
+// row, reading only the status string instead of building a per-app struct each
+// (the detail path does that via readArgoApplicationSetGeneratedApps).
+func countArgoApplicationSetApps(obj *unstructured.Unstructured) (total, healthy, synced int) {
+	raw, _, _ := nestedSliceNoCopy(obj.Object, "status", "applicationStatus")
+	for _, item := range raw {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		total++
+		switch s, _ := m["status"].(string); s {
+		case "Healthy":
+			healthy++
+		case "Synced":
+			synced++
+		}
+	}
+	return
 }
 
 func extractArgoApplicationSetDetail(obj *unstructured.Unstructured) ArgoApplicationSetDetail {
