@@ -66,6 +66,21 @@ klustr/
 │       ├── argocd.go                Application list + Sync / Refresh through the K8s API
 │       │                            (no argocd CLI, no argocd-server dependency)
 │       ├── gateway.go               typed Gateway API informers + status / route helpers
+│       ├── karpenter.go             Karpenter NodePool / NodeClaim views (CRD-gated)
+│       ├── flux.go                  Flux Kustomization / source views (CRD-gated)
+│       ├── istio.go                 Istio networking views (CRD-gated)
+│       ├── certmanager.go           cert-manager Certificate / Issuer views (CRD-gated)
+│       ├── keda.go                  KEDA ScaledObject views (CRD-gated)
+│       ├── apiservice.go            aggregated APIService list + availability status
+│       ├── rbac_review.go           Access Review (SelfSubjectAccessReview helpers)
+│       ├── namespaces.go            Namespace lister/detail helpers
+│       ├── mutate_csr.go            CertificateSigningRequest approve / deny
+│       ├── terminal.go / sysshell.go  local system + node terminal sessions
+│       ├── *_devices.go             DRA: DeviceClass / ResourceClaim(Template) / ResourceSlice
+│       │                            (details_/informers_/manager_devices.go)
+│       ├── transform.go             informer-store managedFields/noise trim (perf)
+│       ├── pprof.go / timing.go     opt-in profiling + timing instrumentation (perf)
+│       ├── doc.go                   package overview (the internal/kube ↔ app split)
 │       ├── rollout.go               Deployment / StatefulSet / DaemonSet rollout history
 │       │                            and one-click revert (kubectl rollout undo path)
 │       ├── install.go               one-click metrics-server install / uninstall from
@@ -105,6 +120,8 @@ klustr/
 │       │   │                       (fed by creds:update; mappings persist backend-side)
 │       │   ├── helm.ts             helm release index per (context, namespace, name)
 │       │   ├── namespaceFavorites.ts  per-context starred namespaces
+│       │   ├── access.ts           RBAC Access Review (SelfSubjectAccessReview) results
+│       │   ├── terminals.ts        active system / node terminal sessions
 │       │   ├── tablePrefs.ts       per-kind column order / size / visibility (persisted)
 │       │   ├── ui.ts               Zustand store + useActiveContexts / useIsAggregated selectors
 │       │   ├── ui.types.ts         pure type declarations (ResourceView, ResourceKind, …)
@@ -161,11 +178,16 @@ K8s API ──watch──> Informer ──cache+events──> Wails event ──
 2. When the user navigates into a CR list view, `EnsureCRWatch(group, version, resource)` lazily starts a **dynamic** informer for that GVR. Subsequent list/get calls hit the local cache — no on-demand list calls to the apiserver.
 3. CR list/detail go through the dynamic client only — there is no typed clientset for CRs. The detail dialog shows YAML by default.
 
-Two CRDs upgrade the sidebar from "browse" to "first-class integration":
-- `gateway.networking.k8s.io` (any kind) → adds the **Gateway** group (see Gateway API section below).
-- `applications.argoproj.io` → adds the **Argo CD** group (see Argo CD section).
+Several CRD families upgrade the sidebar from "browse" to "first-class integration", each with its own typed-ish view (`<name>.go` in `internal/kube`, feature folder in `frontend/src/features`):
+- `gateway.networking.k8s.io` → **Gateway API** group (`gateway.go`; see Gateway API section below).
+- `applications.argoproj.io` → **Argo CD** group (`argocd.go` + `argocd_projects.go`; see Argo CD section).
+- `karpenter.sh` → **Karpenter** group (`karpenter.go`; NodePools + NodeClaims).
+- `kustomize.toolkit.fluxcd.io` (kustomizations) → **Flux** group (`flux.go`).
+- `networking.istio.io` → **Istio** group (`istio.go`).
+- `cert-manager.io` (certificates) → **cert-manager** group (`certmanager.go`).
+- KEDA (`keda.go`) follows the same pattern.
 
-Both detections live in `App.tsx` (`hasGatewayAPI`, `hasArgoApplications`) by group/resource so reacting to a brand-new CRD install requires no rebuild.
+All detections live in `App.tsx` (`hasGatewayAPI`, `hasArgoApplications`, `hasKarpenter`, `hasFluxCD`, `hasIstio`, `hasCertManager`, …) by group/resource so reacting to a brand-new CRD install requires no rebuild. They are gated on single-context mode (`!isAggregated`). Adding another integration means: a `<name>.go` builder, an `App.tsx` detection flag, and a feature folder — no change to the generic CRD watcher.
 
 ### Helm — release Secrets via the informer cache
 
@@ -257,7 +279,7 @@ Four-region layout:
 
 - **Top color stripe** (optional): reflects active context tag / group color.
 - **Header**: app name, context switcher, namespace selector, context-tag picker, port-forward indicator, disconnect button, theme picker.
-- **Sidebar**: collapsible resource-type navigation. Static groups in order: **Cluster** (Overview, Nodes, Namespaces, API Services, Flow Schemas, Priority Levels, Events) / **Workloads** (Overview, Pods, Deployments, StatefulSets, DaemonSets, ReplicaSets, ReplicationControllers, Jobs, CronJobs) / **Config** (ConfigMaps, Secrets, ResourceQuotas, LimitRanges, PriorityClasses, RuntimeClasses, Leases) / **Autoscaling** (HorizontalPodAutoscalers, PodDisruptionBudgets) / **Admission** (MutatingWebhooks, ValidatingWebhooks) / **Network** (Services, Ingresses, NetworkPolicies, EndpointSlices, Endpoints, IngressClasses) / **Storage** (PVCs, PVs, StorageClasses, CSI Drivers, CSI Nodes, Volume Attachments) / **Access Control** (Access Review, Service Accounts, Cluster Roles, Roles, Cluster Role Bindings, Role Bindings, CSRs) / **Helm** (always shown). Conditional groups: **Gateway API** (when the `gateway.networking.k8s.io` CRDs are present) and **Argo CD** (when the `applications.argoproj.io` CRD is present). Discovered CRDs (anything outside the above) are listed by API group below the static groups.
+- **Sidebar**: collapsible resource-type navigation. Static groups in order: **Cluster** (Overview, Nodes, Namespaces, API Services, Flow Schemas, Priority Levels, Events) / **Workloads** (Overview, Pods, Deployments, StatefulSets, DaemonSets, ReplicaSets, ReplicationControllers, Jobs, CronJobs) / **Config** (ConfigMaps, Secrets, ResourceQuotas, LimitRanges, PriorityClasses, RuntimeClasses, Leases) / **Autoscaling** (HorizontalPodAutoscalers, PodDisruptionBudgets) / **Admission** (MutatingWebhooks, ValidatingWebhooks) / **Network** (Services, Ingresses, NetworkPolicies, EndpointSlices, Endpoints, IngressClasses) / **Storage** (PVCs, PVs, StorageClasses, CSI Drivers, CSI Nodes, Volume Attachments) / **Access Control** (Access Review, Service Accounts, Cluster Roles, Roles, Cluster Role Bindings, Role Bindings, CSRs) / **Helm** (always shown). Conditional groups (each shown only when its CRDs are detected in single-context mode): **Gateway API** (`gateway.networking.k8s.io`), **Argo CD** (`applications.argoproj.io`), **Karpenter** (`karpenter.sh`), **Flux** (`kustomize.toolkit.fluxcd.io`), **Istio** (`networking.istio.io`), **cert-manager** (`cert-manager.io`) and **KEDA**. A static **Devices** group covers Dynamic Resource Allocation (DeviceClasses, ResourceSlices, ResourceClaims, ResourceClaimTemplates) — like every static group it just renders empty if the `resource.k8s.io` API isn't served. Discovered CRDs (anything outside the above) are listed by API group below the static groups.
 - **Main**: resource list (`ResourceTable` generic over `<T>`) → detail Dialog with `Overview / Logs / Exec / Events / History / YAML` tabs as relevant.
 - **Status bar** (bottom): per-active-context ping dots, port-forward count, GitHub repo link, version label.
 
@@ -347,7 +369,7 @@ The test surface is **headless unit tests only** — Vitest+jsdom for frontend, 
 - Importing Wails-specific packages into `internal/kube/...`.
 - Returning nil slices from Go: the JSON encoder emits `null` and React `.length` access blows up. Use `append([]string{}, src...)`.
 - Passing a fresh object literal into TanStack `state.columnSizing` (or similar controlled props) every render — TanStack fires the change handler and the controlled store ping-pongs into an infinite loop.
-- Adding global stores beyond the documented layers — current legal set is `resources`, `metrics`, `portForwards`, `crds`, `helm`, `credentials`, `namespaceFavorites`, `ui`, `tablePrefs`. Anything new needs a reason in the PR.
+- Adding global stores beyond the documented layers — current legal set is `resources`, `metrics`, `portForwards`, `crds`, `helm`, `credentials`, `namespaceFavorites`, `access` (RBAC Access Review state), `terminals` (system/node terminal sessions), `ui`, `tablePrefs`. Anything new needs a reason in the PR.
 - Generating boilerplate docs (CHANGELOG, CODE_OF_CONDUCT, SECURITY, PR templates) before they're needed. The contributor-facing surface today is `CONTRIBUTING.md` and a single `.github/ISSUE_TEMPLATE/bug_report.yml`.
 - Marketing-style copy or emoji in UI strings unless explicitly requested.
 - Editing auto-generated Wails bindings.
