@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
-import { api, type ArgoApplicationResource } from '@/lib/api'
+import {
+  api,
+  type ArgoApplicationHealth,
+  type ArgoApplicationResource,
+} from '@/lib/api'
 import { useCRDStore } from '@/store/crds'
 import { useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
 
@@ -44,6 +48,7 @@ type Props = {
 
 export function ApplicationResourcesTab({ contextName, namespace, name }: Props) {
   const [rows, setRows] = useState<ArgoApplicationResource[] | null>(null)
+  const [health, setHealth] = useState<ArgoApplicationHealth | null>(null)
   const [error, setError] = useState<string | null>(null)
   const openResource = useUIStore((s) => s.openResource)
   const crds = useCRDStore((s) => s.crds)
@@ -52,6 +57,7 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
     if (!contextName) return
     let cancelled = false
     setRows(null)
+    setHealth(null)
     setError(null)
     api
       .listArgoApplicationResources(contextName, namespace, name)
@@ -63,6 +69,12 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
         if (cancelled) return
         setError(e instanceof Error ? e.message : String(e))
       })
+    api
+      .getArgoApplicationHealth(contextName, namespace, name)
+      .then((h) => {
+        if (!cancelled) setHealth(h)
+      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
@@ -96,6 +108,7 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
 
   return (
     <div className="h-full overflow-y-auto px-6 py-4">
+      <HealthBanner health={health} resourceHasHealth={rows.some((r) => !!r.health)} />
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
@@ -170,6 +183,63 @@ function isClickable(
 ): boolean {
   if (BUILTIN_KINDS.has(row.kind as ResourceKind)) return true
   return crds.some((c) => c.group === row.group && c.kind === row.kind)
+}
+
+function HealthBanner({
+  health,
+  resourceHasHealth,
+}: {
+  health: ArgoApplicationHealth | null
+  resourceHasHealth: boolean
+}) {
+  if (!health) return null
+  const { status, message, conditions } = health
+  const isHealthy = status === '' || status === 'Healthy'
+  // Nothing worth a banner: app is Healthy and Argo logged no conditions.
+  if (isHealthy && conditions.length === 0) return null
+
+  const dest = health.destName || health.destServer
+  const destLabel = [dest, health.destNamespace].filter(Boolean).join(' / ')
+  const degraded = status === 'Degraded' || status === 'Missing'
+  // Argo's per-resource degraded reason lives only in argocd-server's resource
+  // tree. When the controller doesn't persist resource health into the CR and
+  // carries no app-level message/condition, there is genuinely no reason for
+  // Klustr to show from the K8s API — say so instead of looking like a bug.
+  const reasonAbsent =
+    degraded && !message && conditions.length === 0 && !health.resourceHealthPersisted && !resourceHasHealth
+
+  const tone = degraded
+    ? 'border-rose-500/40 bg-rose-500/10'
+    : status === 'Progressing' || status === 'Suspended'
+      ? 'border-amber-500/40 bg-amber-500/10'
+      : 'border-border bg-muted/40'
+
+  return (
+    <div className={`mb-4 rounded-md border px-3 py-2.5 text-xs ${tone}`}>
+      <div className="flex items-center gap-2">
+        <HealthPill value={status} />
+        {destLabel && (
+          <span className="text-muted-foreground">
+            destination: <span className="font-mono">{destLabel}</span>
+          </span>
+        )}
+      </div>
+      {message && <p className="mt-1.5 text-foreground/90">{message}</p>}
+      {conditions.map((c, i) => (
+        <p key={`${c.type}/${i}`} className="mt-1.5">
+          <span className="font-medium">{c.type}:</span>{' '}
+          <span className="text-foreground/90">{c.message}</span>
+        </p>
+      ))}
+      {reasonAbsent && (
+        <p className="mt-1.5 text-muted-foreground">
+          Argo CD did not persist per-resource health for this Application, so the degraded reason
+          is not in the cluster API — it lives only in the Argo CD server's resource tree. Open the
+          managed resources{destLabel ? ` on ${destLabel}` : ''} to see which one is unhealthy.
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function SyncPill({ value }: { value: string }) {

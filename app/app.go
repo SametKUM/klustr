@@ -1014,6 +1014,10 @@ func (a *App) ListArgoApplicationResources(contextName, namespace, name string) 
 	return a.clients.ListArgoApplicationResources(a.ctx, contextName, namespace, name)
 }
 
+func (a *App) GetArgoApplicationHealth(contextName, namespace, name string) (kube.ArgoApplicationHealth, error) {
+	return a.clients.GetArgoApplicationHealth(a.ctx, contextName, namespace, name)
+}
+
 func (a *App) ListArgoApplications(contextName, namespace string) []kube.ArgoApplicationInfo {
 	return a.clients.ListArgoApplications(contextName, namespace)
 }

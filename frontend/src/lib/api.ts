@@ -22,6 +22,7 @@ import {
   RollbackArgoApplication,
   GetArgoApplicationOperationState,
   ListArgoApplicationResources,
+  GetArgoApplicationHealth,
   ListArgoApplications,
   ListArgoAppProjects,
   GetArgoAppProject,
@@ -434,6 +435,7 @@ export type HelmInstallOptions = kube.HelmInstallOptions
 export type HelmDryRunResult = kube.HelmDryRunResult
 export type MutationDiff = kube.MutationDiff
 export type ArgoApplicationResource = kube.ArgoApplicationResource
+export type ArgoApplicationHealth = kube.ArgoApplicationHealth
 export type ArgoApplicationInfo = kube.ArgoApplicationInfo
 export type ArgoApplicationHistoryEntry = kube.ArgoApplicationHistoryEntry
 export type ArgoAppProjectInfo = kube.ArgoAppProjectInfo
@@ -1048,6 +1050,12 @@ export const api = {
     name: string,
   ): Promise<ArgoApplicationResource[]> =>
     ListArgoApplicationResources(contextName, namespace, name),
+  getArgoApplicationHealth: (
+    contextName: string,
+    namespace: string,
+    name: string,
+  ): Promise<ArgoApplicationHealth> =>
+    GetArgoApplicationHealth(contextName, namespace, name),
   listArgoApplications: (
     contextName: string,
     namespace: string,

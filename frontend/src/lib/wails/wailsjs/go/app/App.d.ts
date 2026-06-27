@@ -41,6 +41,8 @@ export function GetAPIService(arg1:string,arg2:string):Promise<kube.APIServiceDe
 
 export function GetArgoAppProject(arg1:string,arg2:string,arg3:string):Promise<kube.ArgoAppProjectDetail>;
 
+export function GetArgoApplicationHealth(arg1:string,arg2:string,arg3:string):Promise<kube.ArgoApplicationHealth>;
+
 export function GetArgoApplicationOperationState(arg1:string,arg2:string,arg3:string):Promise<kube.ArgoOperationState>;
 
 export function GetArgoApplicationSet(arg1:string,arg2:string,arg3:string):Promise<kube.ArgoApplicationSetDetail>;

@@ -78,6 +78,10 @@ export function GetArgoAppProject(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetArgoAppProject'](arg1, arg2, arg3);
 }
 
+export function GetArgoApplicationHealth(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetArgoApplicationHealth'](arg1, arg2, arg3);
+}
+
 export function GetArgoApplicationOperationState(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetArgoApplicationOperationState'](arg1, arg2, arg3);
 }

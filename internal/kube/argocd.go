@@ -282,6 +282,80 @@ func extractArgoResources(obj *unstructured.Unstructured) []ArgoApplicationResou
 	return out
 }
 
+// ArgoApplicationCondition is one entry of .status.conditions — Argo records
+// sync/comparison errors and warnings here (ComparisonError, SyncError,
+// InvalidSpecError, …), separate from the aggregate health status.
+type ArgoApplicationCondition struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+}
+
+// ArgoApplicationHealth is the app-level health summary the detail banner
+// renders. It surfaces what the Application CR itself carries — Argo's
+// aggregate health, any health message, sync/comparison conditions and the
+// destination — so a Degraded app explains itself instead of showing a red
+// badge over all-green rows. The per-resource degraded reason lives only in
+// argocd-server's resource tree, which Klustr (pure K8s API) does not read;
+// ResourceHealthPersisted tells the frontend whether Argo even wrote
+// per-resource health into the CR, so it can say so rather than imply a bug.
+type ArgoApplicationHealth struct {
+	Status                  string                     `json:"status"`
+	Message                 string                     `json:"message"`
+	DestServer              string                     `json:"destServer"`
+	DestName                string                     `json:"destName"`
+	DestNamespace           string                     `json:"destNamespace"`
+	ResourceHealthPersisted bool                       `json:"resourceHealthPersisted"`
+	Conditions              []ArgoApplicationCondition `json:"conditions"`
+}
+
+// GetArgoApplicationHealth projects the app-level health summary from the
+// Application CR.
+func (m *ClientManager) GetArgoApplicationHealth(ctx context.Context, contextName, namespace, name string) (ArgoApplicationHealth, error) {
+	obj, err := m.crForDetail(ctx, contextName, argoApplicationGVR, namespace, name)
+	if err != nil {
+		return ArgoApplicationHealth{}, err
+	}
+	return extractArgoHealth(obj), nil
+}
+
+func extractArgoHealth(obj *unstructured.Unstructured) ArgoApplicationHealth {
+	out := ArgoApplicationHealth{Conditions: []ArgoApplicationCondition{}}
+	out.Status, _, _ = unstructured.NestedString(obj.Object, "status", "health", "status")
+	out.Message, _, _ = unstructured.NestedString(obj.Object, "status", "health", "message")
+	out.DestServer, _, _ = unstructured.NestedString(obj.Object, "spec", "destination", "server")
+	out.DestName, _, _ = unstructured.NestedString(obj.Object, "spec", "destination", "name")
+	out.DestNamespace, _, _ = unstructured.NestedString(obj.Object, "spec", "destination", "namespace")
+
+	if conds, found, _ := nestedSliceNoCopy(obj.Object, "status", "conditions"); found {
+		for _, item := range conds {
+			cm, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			t, _ := cm["type"].(string)
+			msg, _ := cm["message"].(string)
+			if t == "" && msg == "" {
+				continue
+			}
+			out.Conditions = append(out.Conditions, ArgoApplicationCondition{Type: t, Message: msg})
+		}
+	}
+
+	if resources, found, _ := nestedSliceNoCopy(obj.Object, "status", "resources"); found {
+		for _, item := range resources {
+			rm, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			if h, ok := rm["health"].(map[string]any); ok && h["status"] != nil {
+				out.ResourceHealthPersisted = true
+				break
+			}
+		}
+	}
+	return out
+}
+
 // argoResourcesFinalizer is the finalizer Argo CD's application-controller
 // watches for. Its presence tells Argo to clean up every resource the
 // Application manages before allowing the Application CR itself to be

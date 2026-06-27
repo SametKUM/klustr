@@ -176,3 +176,53 @@ func TestExtractArgoResources(t *testing.T) {
 		}
 	})
 }
+
+func TestExtractArgoHealth(t *testing.T) {
+	t.Run("degraded without persisted resource health", func(t *testing.T) {
+		obj := &unstructured.Unstructured{Object: map[string]any{
+			"spec": map[string]any{
+				"destination": map[string]any{"name": "dev-primary", "namespace": "staging"},
+			},
+			"status": map[string]any{
+				"health": map[string]any{"status": "Degraded"},
+				"resources": []any{
+					map[string]any{"kind": "Deployment", "name": "x", "status": "Synced"},
+				},
+			},
+		}}
+		h := extractArgoHealth(obj)
+		if h.Status != "Degraded" || h.DestName != "dev-primary" || h.DestNamespace != "staging" {
+			t.Fatalf("got %+v", h)
+		}
+		if h.ResourceHealthPersisted {
+			t.Errorf("expected ResourceHealthPersisted=false, got true")
+		}
+		if len(h.Conditions) != 0 {
+			t.Errorf("expected no conditions, got %+v", h.Conditions)
+		}
+	})
+
+	t.Run("persisted resource health and conditions", func(t *testing.T) {
+		obj := &unstructured.Unstructured{Object: map[string]any{
+			"status": map[string]any{
+				"health": map[string]any{"status": "Degraded", "message": "boom"},
+				"conditions": []any{
+					map[string]any{"type": "ComparisonError", "message": "cannot compare"},
+				},
+				"resources": []any{
+					map[string]any{"kind": "Deployment", "name": "x", "health": map[string]any{"status": "Degraded"}},
+				},
+			},
+		}}
+		h := extractArgoHealth(obj)
+		if !h.ResourceHealthPersisted {
+			t.Errorf("expected ResourceHealthPersisted=true")
+		}
+		if h.Message != "boom" {
+			t.Errorf("got message %q", h.Message)
+		}
+		if len(h.Conditions) != 1 || h.Conditions[0].Type != "ComparisonError" {
+			t.Fatalf("got conditions %+v", h.Conditions)
+		}
+	})
+}
