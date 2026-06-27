@@ -7,8 +7,15 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	metricsclient "k8s.io/metrics/pkg/client/clientset/versioned"
 )
+
+// podMetricsTTL caches the cluster-wide pod-metrics list briefly so the Overview
+// and the pod table (both ~15s polls) don't each hit metrics.k8s.io. Metrics are
+// approximate and already 15s-polled, so this much staleness is noise.
+// ponytail: only pays off when both views poll within the window; cheap + safe regardless.
+const podMetricsTTL = 10 * time.Second
 
 // metricsUnavailableCooldown is how long the overview skips its cluster-wide
 // pod-metrics List after metrics.k8s.io answered NotFound/ServiceUnavailable,
@@ -28,16 +35,23 @@ type NodeMetrics struct {
 	MemB  int64  `json:"memB"`
 }
 
+type cachedPodList struct {
+	at   time.Time
+	list *metricsv1beta1.PodMetricsList
+}
+
 type metricsCache struct {
 	mu               sync.Mutex
 	client           map[string]metricsclient.Interface
 	unavailableUntil map[string]time.Time
+	podList          map[string]cachedPodList
 }
 
 func newMetricsCache() *metricsCache {
 	return &metricsCache{
 		client:           make(map[string]metricsclient.Interface),
 		unavailableUntil: make(map[string]time.Time),
+		podList:          make(map[string]cachedPodList),
 	}
 }
 
@@ -76,7 +90,12 @@ func (m *ClientManager) ListPodMetrics(ctx context.Context, contextName, namespa
 	if nsFilter != nil {
 		ns = ""
 	}
-	list, err := c.MetricsV1beta1().PodMetricses(ns).List(ctx, metav1.ListOptions{})
+	var list *metricsv1beta1.PodMetricsList
+	if ns == "" {
+		list, err = m.clusterPodMetrics(ctx, c, contextName)
+	} else {
+		list, err = c.MetricsV1beta1().PodMetricses(ns).List(ctx, metav1.ListOptions{})
+	}
 	if err != nil {
 		if apierrors.IsNotFound(err) || apierrors.IsServiceUnavailable(err) {
 			// Deliberate nil (JSON null): "metrics API unavailable", distinct
@@ -148,16 +167,38 @@ func (mc *metricsCache) invalidate(contextName string) {
 	defer mc.mu.Unlock()
 	delete(mc.client, contextName)
 	delete(mc.unavailableUntil, contextName)
+	delete(mc.podList, contextName)
 }
 
-func (m *ClientManager) metricsClient(contextName string) (metricsclient.Interface, error) {
+// clusterPodMetrics returns the cluster-wide pod-metrics list, served from a
+// short TTL cache so overlapping Overview / pod-table polls share one List.
+func (m *ClientManager) clusterPodMetrics(ctx context.Context, c metricsclient.Interface, contextName string) (*metricsv1beta1.PodMetricsList, error) {
 	m.metrics.mu.Lock()
-	if c, ok := m.metrics.client[contextName]; ok {
+	if e, ok := m.metrics.podList[contextName]; ok && time.Since(e.at) < podMetricsTTL {
 		m.metrics.mu.Unlock()
-		return c, nil
+		return e.list, nil
 	}
 	m.metrics.mu.Unlock()
 
+	list, err := c.MetricsV1beta1().PodMetricses("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	m.metrics.mu.Lock()
+	m.metrics.podList[contextName] = cachedPodList{at: time.Now(), list: list}
+	m.metrics.mu.Unlock()
+	return list, nil
+}
+
+func (m *ClientManager) metricsClient(contextName string) (metricsclient.Interface, error) {
+	// Hold the lock across the build: two overlapping polls would otherwise both
+	// miss and each construct a client (new transport/conn pool), the second
+	// clobbering the first. restConfig+NewForConfig is cheap and rarely runs.
+	m.metrics.mu.Lock()
+	defer m.metrics.mu.Unlock()
+	if c, ok := m.metrics.client[contextName]; ok {
+		return c, nil
+	}
 	cfg, err := m.restConfig(contextName)
 	if err != nil {
 		return nil, err
@@ -166,9 +207,6 @@ func (m *ClientManager) metricsClient(contextName string) (metricsclient.Interfa
 	if err != nil {
 		return nil, err
 	}
-
-	m.metrics.mu.Lock()
 	m.metrics.client[contextName] = c
-	m.metrics.mu.Unlock()
 	return c, nil
 }

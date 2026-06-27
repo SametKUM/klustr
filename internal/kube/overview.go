@@ -6,7 +6,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
@@ -108,7 +107,7 @@ func (m *ClientManager) GetClusterOverview(ctx context.Context, contextName stri
 		overview.MetricsError = err.Error()
 		return overview, nil
 	}
-	list, err := mc.MetricsV1beta1().PodMetricses("").List(ctx, metav1.ListOptions{})
+	list, err := m.clusterPodMetrics(ctx, mc, contextName)
 	if err != nil {
 		if apierrors.IsNotFound(err) || apierrors.IsServiceUnavailable(err) {
 			m.metrics.setMetricsUnavailable(contextName)
