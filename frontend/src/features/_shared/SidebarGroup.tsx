@@ -76,29 +76,41 @@ export function SidebarGroup({
                 item.view === selectedView &&
                 selectedCRDKey === null
               return (
-                <li key={item.label}>
-                  <button
-                    type="button"
-                    aria-disabled={!enabled}
-                    onClick={() => {
-                      if (item.view) onSelectView(item.view)
-                    }}
-                    className={[
-                      'flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm transition-colors',
-                      enabled
-                        ? 'cursor-pointer text-popover-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                        : 'cursor-default text-muted-foreground/60',
-                      active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
-                    ].join(' ')}
-                  >
-                    {Icon ? (
-                      <Icon
-                        className={`size-4 shrink-0 ${enabled ? '' : 'opacity-50'}`}
-                        aria-hidden
-                      />
-                    ) : null}
-                    <span className="truncate">{item.label}</span>
-                  </button>
+                <li
+                  key={item.label}
+                  aria-disabled={!enabled}
+                  onClick={() => {
+                    if (item.view) onSelectView(item.view)
+                  }}
+                  className={[
+                    'group/sidebar-item flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm transition-colors',
+                    enabled
+                      ? 'cursor-pointer text-popover-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                      : 'cursor-default text-muted-foreground/60',
+                    active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
+                  ].join(' ')}
+                >
+                  {Icon ? (
+                    <Icon
+                      className={`size-4 shrink-0 ${enabled ? '' : 'opacity-50'}`}
+                      aria-hidden
+                    />
+                  ) : null}
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {onHideItem && item.view && (
+                    <button
+                      type="button"
+                      aria-label={`Hide ${item.label} from sidebar`}
+                      title="Hide from sidebar"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onHideItem(item.view!)
+                      }}
+                      className="ml-auto flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-foreground focus-visible:opacity-100 group-hover/sidebar-item:opacity-100"
+                    >
+                      <EyeOff className="size-3" aria-hidden />
+                    </button>
+                  )}
                 </li>
               )
             })}
