@@ -270,12 +270,17 @@ export function ResourceTable<T>({
   const readOnly = useUIStore((s) => s.globalReadOnly)
   const selectedResource = useUIStore((s) => s.selectedResource)
   const lastSelectedResource = useUIStore((s) => s.lastSelectedResource)
+  // ponytail: key on the selection *content*, not the array ref — the store
+  // hands back a fresh array even for an unchanged selection, and a new query
+  // object would tear down the fetch effect and refetch every context.
+  const nsKey = selectedNamespaces.join(',')
   const query = useMemo(
     () =>
       scope === 'namespaced'
         ? namespaceQuery(selectedNamespaces)
         : { apiNamespace: '', matches: () => true },
-    [scope, selectedNamespaces],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nsKey is the content key for selectedNamespaces
+    [scope, nsKey],
   )
   const [filter, setFilter] = useState('')
   // The input updates instantly; the value that actually drives TanStack's
@@ -731,7 +736,7 @@ export function ResourceTable<T>({
   }
 
   const allLoaded = activeContexts.every((c) => loadedSet.has(c))
-  const filteredCount = table.getPrePaginationRowModel().rows.length
+  const filteredCount = selectableRows.length
   const total = mergedData.length
   const countLabel = !allLoaded
     ? `Loading ${noun.plural}…`
@@ -948,7 +953,7 @@ export function ResourceTable<T>({
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.length === 0 && !allLoaded ? (
+            {visibleRows.length === 0 && !allLoaded ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={`skeleton-${i}`} className="border-b border-border last:border-b-0">
                   <td className="px-2 py-1.5 align-middle">
@@ -965,7 +970,7 @@ export function ResourceTable<T>({
                   <td aria-hidden />
                 </tr>
               ))
-            ) : table.getRowModel().rows.length === 0 ? (
+            ) : visibleRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={tableColumns.length + 2}
