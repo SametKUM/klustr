@@ -111,7 +111,9 @@ func (mgr *logSessionManager) start(
 				return
 			}
 			onBatch(batch)
-			batch = make([]string, 0, 64)
+			// onBatch (EventsEmit) marshals synchronously before returning, so the
+			// backing array is free to reuse — no per-flush reallocation.
+			batch = batch[:0]
 		}
 		for {
 			select {
