@@ -60,6 +60,8 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 - 🚀 **Flux CD.** Kustomization · HelmRelease · GitRepository · HelmRepository · OCIRepository · Bucket · Provider · Alert · Receiver — each with Reconcile + Suspend/Resume buttons that hit the standard Flux annotations, no `flux` CLI.
 - 🌉 **Gateway API.** Typed informers; **listener table**, per-rule **match → backend → weight** matrix and `RouteParentStatus` so a misrouted parent or `RefNotPermitted` backend is one click away. Vendor-neutral.
 - 🔐 **cert-manager.** Certificates, Issuers / ClusterIssuers, and the full issuance chain — CertificateRequest → Order → Challenge — with ready/expiry status and a drill-down across the chain. One-click **Renew**, no `cmctl` CLI.
+- 🕸️ **Istio.** VirtualServices, DestinationRules and PeerAuthentications, watch-backed; the served API version is read from the discovered CRD rather than hardcoded.
+- 🌳 **Karpenter.** NodePools and NodeClaims with provisioning status, surfaced automatically when the `karpenter.sh` CRDs are present.
 - 📜 **Logs.** Stern-style multi-pod streaming with per-pod ANSI colors, follow, save and regex.
 - 🖥️ **In-app exec.** SPDY shell into any container.
 - 🐚 **Node shell.** Root shell on any node via a temporary privileged `nsenter` pod that's removed when the session ends — no SSH, nothing pre-installed.
@@ -212,6 +214,8 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] Helm support — release browser, dry-run diff, install / upgrade / rollback / uninstall, repo management
 - [x] Gateway API — Gateways, HTTPRoutes, GRPCRoutes, GatewayClasses, ReferenceGrants (typed informers, status pills, listener / rule / RouteParentStatus tables)
 - [x] cert-manager — Certificates, Issuers / ClusterIssuers, CertificateRequests, Orders, Challenges (issuance-chain drill-down, ready/expiry status, one-click Renew)
+- [x] Istio — VirtualServices, DestinationRules, PeerAuthentications (served version read from the discovered CRD)
+- [x] Karpenter — NodePools, NodeClaims (provisioning status, auto-detected via the `karpenter.sh` CRDs)
 - [x] Multi-cluster aggregated mode + named context groups + per-context health ping
 - [x] Notarized macOS build — signed with a Developer ID Application certificate and notarized by Apple
 - [x] Linux (amd64) release distribution
