@@ -382,6 +382,14 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string) err
 		// watch lock and it is not reentrant.
 		return m.watchLocked(ctx, contextName)
 	}
+	// Announce the attach now that the watcher is registered: a frontend list
+	// call that raced the watch hit no watcher, got an empty answer and
+	// started no informer for its kind — with lazy informer start nothing
+	// would ever re-trigger it. The frontend replays every open view's fetch
+	// on this event.
+	if cb != nil {
+		cb(ContextChange{Context: contextName, Kind: "_access"})
+	}
 	return nil
 }
 
@@ -482,20 +490,14 @@ func (m *ClientManager) onCredentialsRefreshed(contextName string) {
 	delete(m.cache, contextName)
 	_, active := m.watchers[contextName]
 	appCtx := m.appCtx
-	cb := m.onChange
 	m.mu.Unlock()
 	if !active || appCtx == nil {
 		return
 	}
-	if err := m.Watch(appCtx, contextName); err != nil {
-		return
-	}
-	// The rebuilt watcher re-ran access discovery with the new credentials;
-	// tell the frontend so it re-fetches AccessibleKinds — its copy was
-	// snapshotted right after the original (possibly all-denied) connect.
-	if cb != nil {
-		cb(ContextChange{Context: contextName, Kind: "_access"})
-	}
+	// The rebuilt watcher re-runs access discovery with the new credentials;
+	// watchLocked announces the swap via "_access" so the frontend re-fetches
+	// AccessibleKinds and replays open views.
+	_ = m.Watch(appCtx, contextName)
 }
 
 // ---- Credential helpers -------------------------------------------------
