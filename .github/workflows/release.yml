@@ -59,7 +59,7 @@ jobs:
 
       - name: Cache Wails CLI
         id: wails-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/go/bin/wails
           key: wails-cli-v2.12.0-${{ runner.os }}
