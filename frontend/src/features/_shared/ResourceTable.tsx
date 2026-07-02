@@ -2,7 +2,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
@@ -64,6 +63,7 @@ import {
   type BulkItem,
 } from './BulkActionDialogs'
 import { isRestartable } from './RestartWorkloadButton'
+import { parseSearch, rowMatchesSearch } from './rowSearch'
 
 type RowIdentity = { namespace?: string; name?: string }
 
@@ -292,10 +292,10 @@ export function ResourceTable<T>({
     [scope, nsKey],
   )
   const [filter, setFilter] = useState('')
-  // The input updates instantly; the value that actually drives TanStack's
-  // O(rows) getFilteredRowModel is debounced so a fast typist on a 5000-row
-  // table refilters once per pause instead of once per keystroke. Clearing
-  // applies immediately so Escape / "no results" feel snappy.
+  // The input updates instantly; the value that actually drives the O(rows)
+  // row search is debounced so a fast typist on a 5000-row table refilters
+  // once per pause instead of once per keystroke. Clearing applies
+  // immediately so Escape / "no results" feel snappy.
   const [appliedFilter, setAppliedFilter] = useState('')
   useEffect(() => {
     if (filter === '') {
@@ -572,6 +572,30 @@ export function ResourceTable<T>({
   }, [columns, isAggregated])
 
   const allColumnIds = useMemo(() => tableColumns.map((c) => columnId(c)), [tableColumns])
+  // Search runs over the row data itself (not TanStack's per-column global
+  // filter, which silently skips columns whose values aren't plain
+  // strings/numbers — array columns like hostnames were unsearchable). Column
+  // accessors are kept only so `column:value` terms can scope a match.
+  const columnGetters = useMemo(() => {
+    const m = new Map<string, (row: Tagged<T>) => unknown>()
+    for (const c of tableColumns) {
+      const id = columnId(c).toLowerCase()
+      if (!id) continue
+      const ak = (c as { accessorKey?: string }).accessorKey
+      const af = (c as { accessorFn?: (row: Tagged<T>, index: number) => unknown }).accessorFn
+      if (ak) m.set(id, (row) => (row as Record<string, unknown>)[ak])
+      else if (af) m.set(id, (row) => af(row, 0))
+    }
+    return m
+  }, [tableColumns])
+  const searchedData = useMemo(() => {
+    const terms = parseSearch(appliedFilter)
+    if (terms.length === 0) return mergedData
+    const ids = [...columnGetters.keys()]
+    return mergedData.filter((row) =>
+      rowMatchesSearch(row, terms, ids, (r, id) => columnGetters.get(id)?.(r as Tagged<T>)),
+    )
+  }, [mergedData, appliedFilter, columnGetters])
   const columnOrder = useMemo(() => {
     const saved = prefs?.order ?? []
     if (!isAggregated || saved.includes('klustrContext')) {
@@ -595,13 +619,12 @@ export function ResourceTable<T>({
 
   // pageSize 0 is the "All" sentinel — fall back to the full row count so the
   // single page holds everything.
-  const effectivePageSize = pageSize === 0 ? Math.max(1, mergedData.length) : pageSize
+  const effectivePageSize = pageSize === 0 ? Math.max(1, searchedData.length) : pageSize
   const table = useReactTable({
-    data: mergedData,
+    data: searchedData,
     columns: tableColumns,
     state: {
       sorting,
-      globalFilter: appliedFilter,
       columnOrder,
       columnVisibility,
       columnSizing: liveSizing,
@@ -622,7 +645,6 @@ export function ResourceTable<T>({
       const next = typeof updater === 'function' ? updater(sorting) : updater
       setSortingPref(kind, next)
     },
-    onGlobalFilterChange: setAppliedFilter,
     onColumnOrderChange: (updater) => {
       const next = typeof updater === 'function' ? updater(columnOrder) : updater
       setOrder(kind, next)
@@ -648,7 +670,6 @@ export function ResourceTable<T>({
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   })
 
@@ -857,6 +878,7 @@ export function ResourceTable<T>({
               }
             }}
             placeholder={`Filter ${noun.plural}   ⌨ /`}
+            title="Terms are AND-matched against every field of the row, including arrays. Scope a term to a column with column:value, e.g. name:api or host:gateway."
             className="h-7 w-full rounded border border-border bg-background pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring"
           />
           {filter && (
