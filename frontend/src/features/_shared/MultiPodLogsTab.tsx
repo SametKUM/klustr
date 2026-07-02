@@ -211,7 +211,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
       target.containers.forEach((container) => {
         activeStarts++
         api
-          .startPodLogs(contextName, namespace, target.pod, container, true, TAIL_LINES)
+          .startPodLogs(contextName, namespace, target.pod, container, true, false, TAIL_LINES)
           .then((id) => {
             if (cancelled) {
               api.stopPodLogs(id).catch(() => {})

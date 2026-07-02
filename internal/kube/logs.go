@@ -45,7 +45,7 @@ func (mgr *logSessionManager) start(
 	parent context.Context,
 	cs *kubernetes.Clientset,
 	namespace, podName, container string,
-	follow bool,
+	follow, previous bool,
 	tailLines int64,
 	onBatch LogBatchFunc,
 	onClose LogCloseFunc,
@@ -53,7 +53,8 @@ func (mgr *logSessionManager) start(
 	ctx, cancel := context.WithCancel(parent)
 	opts := &corev1.PodLogOptions{
 		Container: container,
-		Follow:    follow,
+		Follow:    follow && !previous,
+		Previous:  previous,
 	}
 	if tailLines > 0 {
 		opts.TailLines = &tailLines

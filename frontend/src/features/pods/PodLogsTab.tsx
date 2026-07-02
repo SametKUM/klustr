@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
-import { ArrowDownToLine, Download, Eraser, Filter, Pause, Play, Regex } from 'lucide-react'
+import { ArrowDownToLine, Download, Eraser, Filter, History, Pause, Play, Regex } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
@@ -32,6 +32,13 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
   const [container, setContainer] = useState(
     initialContainer && containerNames.includes(initialContainer) ? initialContainer : defaultContainer,
   )
+  const [previous, setPrevious] = useState(false)
+  // A previous (terminated) instance only exists once the container restarted.
+  const canPrevious = useMemo(() => {
+    const c = [...detail.containers, ...detail.initContainers].find((c) => c.name === container)
+    return (c?.restartCount ?? 0) > 0
+  }, [detail.containers, detail.initContainers, container])
+  const showPrevious = previous && canPrevious
   const [error, setError] = useState<string | null>(null)
   const [streaming, setStreaming] = useState(false)
   const [paused, setPaused] = useState(false)
@@ -152,7 +159,11 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
     if (!term) return
 
     term.clear()
-    term.writeln(`\x1b[2m# streaming ${container} (last ${TAIL_LINES} lines)\x1b[0m`)
+    term.writeln(
+      showPrevious
+        ? `\x1b[2m# previous instance of ${container} (last ${TAIL_LINES} lines before termination)\x1b[0m`
+        : `\x1b[2m# streaming ${container} (last ${TAIL_LINES} lines)\x1b[0m`,
+    )
     setError(null)
 
     let cancelled = false
@@ -161,7 +172,7 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
     let unsubClose: (() => void) | null = null
 
     api
-      .startPodLogs(selectedContext, detail.namespace, detail.name, container, true, TAIL_LINES)
+      .startPodLogs(selectedContext, detail.namespace, detail.name, container, !showPrevious, showPrevious, TAIL_LINES)
       .then((id) => {
         if (cancelled) {
           api.stopPodLogs(id).catch(() => {})
@@ -226,7 +237,7 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
         EventsOff(`pod:logs:line:${sessionId}`, `pod:logs:close:${sessionId}`)
       }
     }
-  }, [selectedContext, detail.namespace, detail.name, container])
+  }, [selectedContext, detail.namespace, detail.name, container, showPrevious])
 
   const saveLogs = () => {
     const lines = rawLinesRef.current.filter((l) => predicateRef.current(l))
@@ -234,7 +245,7 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
       toast.info('No logs to save yet')
       return
     }
-    const safeName = `${detail.namespace}-${detail.name}-${container}.log`.replace(/[^A-Za-z0-9._-]+/g, '-')
+    const safeName = `${detail.namespace}-${detail.name}-${container}${showPrevious ? '-previous' : ''}.log`.replace(/[^A-Za-z0-9._-]+/g, '-')
     api
       .saveTextFile(safeName, lines.join('\n') + '\n')
       .then((path) => {
@@ -256,6 +267,19 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
           ariaLabel="Select container"
           minWidth={140}
         />
+        {canPrevious && (
+          <Button
+            type="button"
+            size="xs"
+            variant={showPrevious ? 'default' : 'outline'}
+            aria-pressed={showPrevious}
+            title="Logs of the previous (terminated) container instance — kubectl logs --previous"
+            onClick={() => setPrevious((v) => !v)}
+          >
+            <History />
+            Previous
+          </Button>
+        )}
 
         <Button
           type="button"

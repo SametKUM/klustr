@@ -399,7 +399,7 @@ func (g *sessionGate) wait() string {
 	return g.id
 }
 
-func (a *App) StartPodLogs(contextName, namespace, podName, container string, follow bool, tailLines int) (string, error) {
+func (a *App) StartPodLogs(contextName, namespace, podName, container string, follow, previous bool, tailLines int) (string, error) {
 	gate := newSessionGate()
 	id, err := a.clients.StartLogs(
 		a.ctx,
@@ -408,6 +408,7 @@ func (a *App) StartPodLogs(contextName, namespace, podName, container string, fo
 		podName,
 		container,
 		follow,
+		previous,
 		int64(tailLines),
 		func(lines []string) {
 			if id := gate.wait(); id != "" {

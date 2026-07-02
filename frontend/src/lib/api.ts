@@ -733,9 +733,10 @@ export const api = {
     podName: string,
     container: string,
     follow: boolean,
+    previous: boolean,
     tailLines: number,
   ): Promise<string> =>
-    StartPodLogs(contextName, namespace, podName, container, follow, tailLines),
+    StartPodLogs(contextName, namespace, podName, container, follow, previous, tailLines),
   stopPodLogs: (sessionId: string): Promise<void> => StopPodLogs(sessionId),
   startExec: (
     contextName: string,

@@ -560,7 +560,7 @@ func (m *ClientManager) contextDefaultNamespace(contextName string) string {
 func (m *ClientManager) StartLogs(
 	parent context.Context,
 	contextName, namespace, podName, container string,
-	follow bool,
+	follow, previous bool,
 	tailLines int64,
 	onBatch LogBatchFunc,
 	onClose LogCloseFunc,
@@ -569,7 +569,7 @@ func (m *ClientManager) StartLogs(
 	if err != nil {
 		return "", err
 	}
-	return m.logs.start(parent, cs, namespace, podName, container, follow, tailLines, onBatch, onClose)
+	return m.logs.start(parent, cs, namespace, podName, container, follow, previous, tailLines, onBatch, onClose)
 }
 
 func (m *ClientManager) StopLogs(id string) {
