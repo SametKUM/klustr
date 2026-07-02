@@ -16,9 +16,12 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   ArrowDown,
   ArrowUp,
+  Ban,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
+  CircleCheck,
+  MoveDownLeft,
   RotateCcw,
   Search,
   Trash2,
@@ -53,7 +56,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ColumnControls } from './ColumnControls'
 import { RowContextMenu } from './RowContextMenu'
-import { BulkDeleteDialog, BulkRestartDialog, type BulkItem } from './BulkActionDialogs'
+import {
+  BulkCordonDialog,
+  BulkDeleteDialog,
+  BulkDrainDialog,
+  BulkRestartDialog,
+  type BulkItem,
+} from './BulkActionDialogs'
 import { isRestartable } from './RestartWorkloadButton'
 
 type RowIdentity = { namespace?: string; name?: string }
@@ -372,6 +381,8 @@ export function ResourceTable<T>({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkRestartOpen, setBulkRestartOpen] = useState(false)
+  const [bulkCordon, setBulkCordon] = useState<'cordon' | 'uncordon' | null>(null)
+  const [bulkDrainOpen, setBulkDrainOpen] = useState(false)
   useEffect(() => {
     setSelectedKeys(new Set())
   }, [activeContexts, selectedNamespaces, kind])
@@ -754,23 +765,13 @@ export function ResourceTable<T>({
   const contextLabel = isAggregated ? ` across ${activeContexts.length} contexts` : ''
 
   const canRestart = isRestartable(kind)
+  const isNodeKind = kind === 'Node'
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {selectedItems.length > 0 && (
         <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs">
           <span className="font-medium text-foreground">{selectedItems.length} selected</span>
-          {!readOnly && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setBulkDeleteOpen(true)}
-              className="h-7 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Trash2 className="size-3.5" />
-              Delete
-            </Button>
-          )}
           {!readOnly && canRestart && (
             <Button
               size="sm"
@@ -780,6 +781,48 @@ export function ResourceTable<T>({
             >
               <RotateCcw className="size-3.5" />
               Restart
+            </Button>
+          )}
+          {!readOnly && isNodeKind && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBulkCordon('cordon')}
+                className="h-7 gap-1.5"
+              >
+                <Ban className="size-3.5" />
+                Cordon
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBulkCordon('uncordon')}
+                className="h-7 gap-1.5"
+              >
+                <CircleCheck className="size-3.5" />
+                Uncordon
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBulkDrainOpen(true)}
+                className="h-7 gap-1.5"
+              >
+                <MoveDownLeft className="size-3.5" />
+                Drain
+              </Button>
+            </>
+          )}
+          {!readOnly && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setBulkDeleteOpen(true)}
+              className="h-7 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" />
+              Delete
             </Button>
           )}
           <button
@@ -1104,6 +1147,23 @@ export function ResourceTable<T>({
         onOpenChange={setBulkRestartOpen}
         onSuccess={clearSelection}
       />
+      {isNodeKind && (
+        <>
+          <BulkCordonDialog
+            items={selectedItems}
+            open={bulkCordon !== null}
+            onOpenChange={(next) => setBulkCordon(next ? bulkCordon : null)}
+            onSuccess={clearSelection}
+            cordon={bulkCordon !== 'uncordon'}
+          />
+          <BulkDrainDialog
+            items={selectedItems}
+            open={bulkDrainOpen}
+            onOpenChange={setBulkDrainOpen}
+            onSuccess={clearSelection}
+          />
+        </>
+      )}
     </div>
   )
 }
