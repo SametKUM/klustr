@@ -250,7 +250,7 @@ func (w *contextWatcher) startGatewayInformers(ctx context.Context) error {
 	// case. A future enhancement could route per-kind like the built-in
 	// factory does.
 	gvr := kindToGVR["Gateway"]
-	if !canList(ctx, w.cs, gvr, "") {
+	if ok, _ := canList(ctx, w.cs, gvr, ""); !ok {
 		w.gwFactory = nil
 		return nil
 	}

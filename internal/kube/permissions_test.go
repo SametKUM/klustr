@@ -2,6 +2,8 @@ package kube
 
 import (
 	"context"
+	"errors"
+	"sync"
 	"testing"
 
 	authv1 "k8s.io/api/authorization/v1"
@@ -145,6 +147,37 @@ func TestDiscoverAccessUnservedKindDenied(t *testing.T) {
 	}
 	if got.For("DeviceClass").Mode != AccessDenied {
 		t.Errorf("unserved DeviceClass should be denied despite SSAR allow: got %v", got.For("DeviceClass").Mode)
+	}
+}
+
+// A probe that errors (cold exec token, transient network failure) must not
+// pin the kind to Denied — the retry pass answers with the real access.
+func TestDiscoverAccessRetriesErroredProbes(t *testing.T) {
+	cs := fake.NewClientset()
+	var mu sync.Mutex
+	failedOnce := make(map[string]bool)
+	cs.PrependReactor("create", "selfsubjectaccessreviews",
+		func(action clienttesting.Action) (bool, runtime.Object, error) {
+			create := action.(clienttesting.CreateAction)
+			ssar := create.GetObject().(*authv1.SelfSubjectAccessReview)
+			r := ssar.Spec.ResourceAttributes
+			mu.Lock()
+			defer mu.Unlock()
+			if !failedOnce[r.Resource] {
+				failedOnce[r.Resource] = true
+				return true, nil, errors.New("token still minting")
+			}
+			return true, &authv1.SelfSubjectAccessReview{
+				Spec:   ssar.Spec,
+				Status: authv1.SubjectAccessReviewStatus{Allowed: r.Resource == "nodes"},
+			}, nil
+		})
+	got := discoverAccess(context.Background(), cs, cs.Discovery(), "")
+	if got.For("Node").Mode != AccessCluster {
+		t.Errorf("Node should recover to cluster-wide on retry: got %v", got.For("Node").Mode)
+	}
+	if got.For("Pod").Mode != AccessDenied {
+		t.Errorf("Pod retry answered denied, should stay denied: got %v", got.For("Pod").Mode)
 	}
 }
 

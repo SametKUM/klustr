@@ -132,14 +132,16 @@ var clusterScopedKinds = map[string]struct{}{
 	"IPAddress":                        {},
 }
 
+type kindGVR struct {
+	kind string
+	gvr  schema.GroupVersionResource
+}
+
 // watchedKinds is the slice of (kind, gvr) pairs the watcher's informers
 // cover. We discover access for each one so the routing table is complete
 // before any factory starts. Pulled from kindToGVR but filtered to the
 // kinds informers.go actually wires up.
-func watchedKinds() []struct {
-	kind string
-	gvr  schema.GroupVersionResource
-} {
+func watchedKinds() []kindGVR {
 	wanted := []string{
 		"Pod", "Deployment", "StatefulSet", "DaemonSet", "ReplicaSet",
 		"ReplicationController", "Job", "CronJob",
@@ -164,19 +166,13 @@ func watchedKinds() []struct {
 		"DeviceClass", "ResourceClaim", "ResourceClaimTemplate", "ResourceSlice",
 		"ServiceCIDR", "IPAddress",
 	}
-	out := make([]struct {
-		kind string
-		gvr  schema.GroupVersionResource
-	}, 0, len(wanted))
+	out := make([]kindGVR, 0, len(wanted))
 	for _, k := range wanted {
 		gvr, ok := kindToGVR[k]
 		if !ok {
 			continue
 		}
-		out = append(out, struct {
-			kind string
-			gvr  schema.GroupVersionResource
-		}{k, gvr})
+		out = append(out, kindGVR{k, gvr})
 	}
 	return out
 }
@@ -192,36 +188,48 @@ const accessProbeTimeout = 8 * time.Second
 // latency is one round-trip, not N. The rest.Config has been bumped to
 // QPS=50/Burst=100 so this burst doesn't trigger client-side throttling.
 func discoverAccess(parent context.Context, cs kubernetes.Interface, disco discovery.DiscoveryInterface, candidateNS string) *contextAccess {
-	ctx, cancel := context.WithTimeout(parent, accessProbeTimeout)
-	defer cancel()
-
 	out := &contextAccess{kinds: make(map[string]KindAccess, 40)}
-	kinds := watchedKinds()
 	served := servedResources(disco)
 
-	var (
-		wg sync.WaitGroup
-		mu sync.Mutex
-	)
-	for _, k := range kinds {
-		wg.Add(1)
-		go func(kind string, gvr schema.GroupVersionResource) {
-			defer wg.Done()
-			var mode KindAccess
-			if served != nil && !served[gvr] {
-				// An SSAR can say "allowed" for an RBAC wildcard even when the
-				// apiserver doesn't serve this resource version, which would
-				// 404-loop the informer. Treat unserved kinds as denied.
-				mode = KindAccess{Mode: AccessDenied}
-			} else {
-				mode = probeAccess(ctx, cs, kind, gvr, candidateNS)
-			}
-			mu.Lock()
-			out.kinds[kind] = mode
-			mu.Unlock()
-		}(k.kind, k.gvr)
+	// A probe that *errors* (cold exec token still minting behind the burst,
+	// transient network hiccup, probe timeout) is not a denial — recording it
+	// as Denied blanks that kind for the watcher's whole lifetime with no
+	// self-heal. Errored kinds get one retry with a fresh timeout; by then
+	// the exec token is warm and the retry answers authoritatively.
+	remaining := watchedKinds()
+	for attempt := 0; attempt < 2 && len(remaining) > 0; attempt++ {
+		ctx, cancel := context.WithTimeout(parent, accessProbeTimeout)
+		var (
+			wg      sync.WaitGroup
+			mu      sync.Mutex
+			errored []kindGVR
+		)
+		for _, k := range remaining {
+			wg.Add(1)
+			go func(k kindGVR) {
+				defer wg.Done()
+				if served != nil && !served[k.gvr] {
+					// An SSAR can say "allowed" for an RBAC wildcard even when the
+					// apiserver doesn't serve this resource version, which would
+					// 404-loop the informer. Treat unserved kinds as denied.
+					mu.Lock()
+					out.kinds[k.kind] = KindAccess{Mode: AccessDenied}
+					mu.Unlock()
+					return
+				}
+				mode, err := probeAccess(ctx, cs, k.kind, k.gvr, candidateNS)
+				mu.Lock()
+				out.kinds[k.kind] = mode
+				if err != nil {
+					errored = append(errored, k)
+				}
+				mu.Unlock()
+			}(k)
+		}
+		wg.Wait()
+		cancel()
+		remaining = errored
 	}
-	wg.Wait()
 	return out
 }
 
@@ -247,27 +255,34 @@ func servedResources(d discovery.DiscoveryInterface) map[schema.GroupVersionReso
 	return served
 }
 
-func probeAccess(ctx context.Context, cs kubernetes.Interface, kind string, gvr schema.GroupVersionResource, candidateNS string) KindAccess {
-	if canList(ctx, cs, gvr, "") {
-		return KindAccess{Mode: AccessCluster}
+// probeAccess returns a non-nil error when the decision rests on a probe
+// that errored rather than answered — the caller retries those kinds.
+func probeAccess(ctx context.Context, cs kubernetes.Interface, kind string, gvr schema.GroupVersionResource, candidateNS string) (KindAccess, error) {
+	allowed, err := canList(ctx, cs, gvr, "")
+	if allowed {
+		return KindAccess{Mode: AccessCluster}, nil
+	}
+	if err != nil {
+		return KindAccess{Mode: AccessDenied}, err
 	}
 	if candidateNS == "" {
-		return KindAccess{Mode: AccessDenied}
+		return KindAccess{Mode: AccessDenied}, nil
 	}
 	if _, clusterScoped := clusterScopedKinds[kind]; clusterScoped {
-		return KindAccess{Mode: AccessDenied}
+		return KindAccess{Mode: AccessDenied}, nil
 	}
-	if canList(ctx, cs, gvr, candidateNS) {
-		return KindAccess{Mode: AccessNamespaced, Namespace: candidateNS}
+	allowed, err = canList(ctx, cs, gvr, candidateNS)
+	if allowed {
+		return KindAccess{Mode: AccessNamespaced, Namespace: candidateNS}, nil
 	}
-	return KindAccess{Mode: AccessDenied}
+	return KindAccess{Mode: AccessDenied}, err
 }
 
 // canList issues a SelfSubjectAccessReview for the (gvr, namespace, verb=list)
 // triple and reports whether the API server says yes. We probe `list` (not
 // `watch`) because the apiserver's RBAC evaluator returns the same answer
 // for both and `list` is the universally-implemented verb.
-func canList(ctx context.Context, cs kubernetes.Interface, gvr schema.GroupVersionResource, namespace string) bool {
+func canList(ctx context.Context, cs kubernetes.Interface, gvr schema.GroupVersionResource, namespace string) (bool, error) {
 	review := &authv1.SelfSubjectAccessReview{
 		Spec: authv1.SelfSubjectAccessReviewSpec{
 			ResourceAttributes: &authv1.ResourceAttributes{
@@ -281,7 +296,7 @@ func canList(ctx context.Context, cs kubernetes.Interface, gvr schema.GroupVersi
 	}
 	result, err := cs.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
 	if err != nil {
-		return false
+		return false, err
 	}
-	return result.Status.Allowed
+	return result.Status.Allowed, nil
 }

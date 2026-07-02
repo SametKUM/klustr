@@ -60,7 +60,7 @@ func (w *contextWatcher) warmKEDA(ctx context.Context) {
 		case <-ticker.C:
 		}
 	}
-	if !canList(ctx, w.cs, kedaScaledObjectGVR, "") {
+	if ok, _ := canList(ctx, w.cs, kedaScaledObjectGVR, ""); !ok {
 		return
 	}
 	if err := w.crd.EnsureCRWatch(kedaScaledObjectGVR); err != nil {

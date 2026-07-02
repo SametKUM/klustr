@@ -221,7 +221,7 @@ func (w *contextWatcher) start(parent context.Context) error {
 	// Skip the cluster-wide CRD watcher when the user can't list CRDs —
 	// otherwise client-go's reflector retries on a tight loop and floods
 	// the log with 403s.
-	if canList(ctx, w.cs, crdGVR, "") {
+	if ok, _ := canList(ctx, w.cs, crdGVR, ""); ok {
 		if err := w.crd.start(); err != nil {
 			cancel()
 			return err
