@@ -22,6 +22,7 @@ export function NamespaceSelector() {
   const activeContexts = useActiveContexts()
   const selectedContext = useUIStore((s) => s.selectedContext)
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
+  const setSelectedNamespaces = useUIStore((s) => s.setSelectedNamespaces)
   const toggleSelectedNamespace = useUIStore((s) => s.toggleSelectedNamespace)
   const clearSelectedNamespaces = useUIStore((s) => s.clearSelectedNamespaces)
   const namespacesByContext = useResources((s) => s.namespaces)
@@ -94,7 +95,10 @@ export function NamespaceSelector() {
             <CommandGroup heading="Scope">
               <CommandItem
                 value="__all__ All namespaces"
-                onSelect={() => clearSelectedNamespaces()}
+                onSelect={() => {
+                  clearSelectedNamespaces()
+                  setOpen(false)
+                }}
               >
                 <Checkbox checked={selectedNamespaces.length === 0} />
                 <span className="flex-1 truncate text-sm">All namespaces</span>
@@ -122,6 +126,10 @@ export function NamespaceSelector() {
                       key={ns.name}
                       ns={ns}
                       selected={selectedNamespaces.includes(ns.name)}
+                      onSelectOnly={() => {
+                        setSelectedNamespaces([ns.name])
+                        setOpen(false)
+                      }}
                       favorite
                       onToggleSelect={() => toggleSelectedNamespace(ns.name)}
                       onToggleFavorite={() =>
@@ -141,6 +149,10 @@ export function NamespaceSelector() {
                       key={ns.name}
                       ns={ns}
                       selected={selectedNamespaces.includes(ns.name)}
+                      onSelectOnly={() => {
+                        setSelectedNamespaces([ns.name])
+                        setOpen(false)
+                      }}
                       favorite={false}
                       onToggleSelect={() => toggleSelectedNamespace(ns.name)}
                       onToggleFavorite={() =>
@@ -162,14 +174,22 @@ type RowProps = {
   ns: NamespaceInfo
   selected: boolean
   favorite: boolean
+  onSelectOnly: () => void
   onToggleSelect: () => void
   onToggleFavorite: () => void
 }
 
-function NamespaceRow({ ns, selected, favorite, onToggleSelect, onToggleFavorite }: RowProps) {
+function NamespaceRow({
+  ns,
+  selected,
+  favorite,
+  onSelectOnly,
+  onToggleSelect,
+  onToggleFavorite,
+}: RowProps) {
   return (
-    <CommandItem value={ns.name} onSelect={onToggleSelect}>
-      <Checkbox checked={selected} />
+    <CommandItem value={ns.name} onSelect={onSelectOnly}>
+      <Checkbox checked={selected} onToggle={onToggleSelect} />
       <span className="flex-1 truncate text-sm">{ns.name}</span>
       {ns.phase !== 'Active' && (
         <span className="rounded bg-muted px-1 py-px text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -181,8 +201,8 @@ function NamespaceRow({ ns, selected, favorite, onToggleSelect, onToggleFavorite
   )
 }
 
-function Checkbox({ checked }: { checked: boolean }) {
-  return (
+function Checkbox({ checked, onToggle }: { checked: boolean; onToggle?: () => void }) {
+  const box = (
     <span
       aria-hidden
       className={[
@@ -206,6 +226,20 @@ function Checkbox({ checked }: { checked: boolean }) {
         </svg>
       )}
     </span>
+  )
+  if (!onToggle) return box
+  return (
+    <button
+      type="button"
+      aria-label={checked ? 'Remove from selection' : 'Add to selection'}
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle()
+      }}
+      className="-m-1.5 shrink-0 rounded p-1.5 transition-colors hover:bg-muted"
+    >
+      {box}
+    </button>
   )
 }
 

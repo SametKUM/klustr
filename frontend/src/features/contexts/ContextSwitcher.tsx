@@ -188,10 +188,13 @@ export function ContextSwitcher() {
                     <CommandItem
                       key={c.name}
                       value={c.name}
-                      onSelect={() => toggleAggregated(c.name)}
+                      onSelect={() => {
+                        setSelectedContext(c.name)
+                        setOpen(false)
+                      }}
                       className="items-center gap-2.5 py-2"
                     >
-                      <Checkbox checked={isActive} />
+                      <Checkbox checked={isActive} onToggle={() => toggleAggregated(c.name)} />
                       <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted leading-none shadow-sm">
                         <ProviderIcon context={c} className="block size-4 shrink-0" />
                       </span>
@@ -233,8 +236,8 @@ export function ContextSwitcher() {
   )
 }
 
-function Checkbox({ checked }: { checked: boolean }) {
-  return (
+function Checkbox({ checked, onToggle }: { checked: boolean; onToggle?: () => void }) {
+  const box = (
     <span
       aria-hidden
       className={[
@@ -258,5 +261,19 @@ function Checkbox({ checked }: { checked: boolean }) {
         </svg>
       )}
     </span>
+  )
+  if (!onToggle) return box
+  return (
+    <button
+      type="button"
+      aria-label={checked ? 'Remove from selection' : 'Add to selection'}
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle()
+      }}
+      className="-m-1.5 shrink-0 rounded p-1.5 transition-colors hover:bg-muted"
+    >
+      {box}
+    </button>
   )
 }
