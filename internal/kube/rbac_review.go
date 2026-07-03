@@ -195,7 +195,7 @@ func expandSubjectIdentities(s AccessSubject) []subjectIdentity {
 	out := []subjectIdentity{{kind: s.Kind, name: s.Name, namespace: s.Namespace}}
 	if s.Kind == rbacv1.ServiceAccountKind && s.Namespace != "" && s.Name != "" {
 		out = append(out,
-			subjectIdentity{kind: rbacv1.GroupKind, name: "system:serviceaccount:" + s.Namespace + ":" + s.Name, viaGroup: "system:serviceaccount:" + s.Namespace + ":" + s.Name},
+			subjectIdentity{kind: rbacv1.UserKind, name: "system:serviceaccount:" + s.Namespace + ":" + s.Name},
 			subjectIdentity{kind: rbacv1.GroupKind, name: "system:serviceaccounts:" + s.Namespace, viaGroup: "system:serviceaccounts:" + s.Namespace},
 			subjectIdentity{kind: rbacv1.GroupKind, name: "system:serviceaccounts", viaGroup: "system:serviceaccounts"},
 			subjectIdentity{kind: rbacv1.GroupKind, name: "system:authenticated", viaGroup: "system:authenticated"},

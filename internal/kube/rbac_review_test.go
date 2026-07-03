@@ -239,22 +239,28 @@ func traceJoin(rules []SubjectAccessRule) string {
 
 func TestExpandSubjectIdentities(t *testing.T) {
 	got := expandSubjectIdentities(AccessSubject{Kind: rbacv1.ServiceAccountKind, Namespace: "default", Name: "ci"})
-	wantGroups := []string{
-		"system:serviceaccount:default:ci",
-		"system:serviceaccounts:default",
-		"system:serviceaccounts",
-		"system:authenticated",
+
+	// The singular system:serviceaccount:<ns>:<name> is the SA's authenticated
+	// USER name, not a group. Its implicit groups are only the plural forms.
+	want := []struct {
+		kind string
+		name string
+	}{
+		{rbacv1.UserKind, "system:serviceaccount:default:ci"},
+		{rbacv1.GroupKind, "system:serviceaccounts:default"},
+		{rbacv1.GroupKind, "system:serviceaccounts"},
+		{rbacv1.GroupKind, "system:authenticated"},
 	}
-	for _, g := range wantGroups {
+	for _, w := range want {
 		found := false
 		for _, id := range got {
-			if id.kind == rbacv1.GroupKind && id.name == g {
+			if id.kind == w.kind && id.name == w.name {
 				found = true
 				break
 			}
 		}
 		if !found {
-			t.Errorf("missing implicit group %q in %+v", g, got)
+			t.Errorf("missing implicit identity %s/%q in %+v", w.kind, w.name, got)
 		}
 	}
 }
