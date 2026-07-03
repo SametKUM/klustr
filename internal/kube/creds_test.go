@@ -113,6 +113,39 @@ func TestEnsureFreshClearsPaused(t *testing.T) {
 	}
 }
 
+// A capture that was blocked on the prompt must not store its result if the
+// context was remapped to a different profile meanwhile — otherwise the old
+// profile's keys authenticate under the new profile's label.
+func TestCaptureDiscardsResultIfRemappedDuringPrompt(t *testing.T) {
+	p := &fakeProvider{name: "fake", block: make(chan struct{})}
+	p.set(validCred(), nil)
+	c := testCredManager(t, p)
+	if err := c.setMapping("ctx1", CredentialMapping{Provider: "fake", Profile: "profileA"}); err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		_, _ = c.ensureFresh(context.Background(), "ctx1")
+		close(done)
+	}()
+
+	// Let the capture reach the (blocked) provider, then remap to profileB.
+	time.Sleep(50 * time.Millisecond)
+	if err := c.setMapping("ctx1", CredentialMapping{Provider: "fake", Profile: "profileB"}); err != nil {
+		t.Fatal(err)
+	}
+	close(p.block)
+	<-done
+
+	c.mu.Lock()
+	_, stored := c.captured["ctx1"]
+	c.mu.Unlock()
+	if stored {
+		t.Error("capture stored a result for a context remapped mid-prompt")
+	}
+}
+
 func testCredManager(t *testing.T, p CredentialProvider) *credentialManager {
 	t.Helper()
 	return &credentialManager{

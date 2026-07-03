@@ -248,6 +248,13 @@ func (c *credentialManager) capture(ctx context.Context, contextName string, map
 	}
 
 	c.mu.Lock()
+	// The prompt can block for minutes; if the context was remapped or cleared
+	// meanwhile, storing these keys would authenticate as (and re-arm a refresh
+	// for) a profile the UI no longer shows. Discard the stale result.
+	if cur, ok := c.mappings[contextName]; !ok || cur != mapping {
+		c.mu.Unlock()
+		return nil
+	}
 	c.captured[contextName] = cred
 	delete(c.lastErr, contextName)
 	c.mu.Unlock()
