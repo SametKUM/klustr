@@ -1,12 +1,73 @@
 package kube
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	clienttesting "k8s.io/client-go/testing"
 )
+
+// pageRecentEvents must keep the most-recent N events by LastSeen (not the
+// alphabetical prefix a server-side Limit returns) and apply nsFilter before
+// the cap, across paginated responses.
+func TestPageRecentEventsRetainsNewestAcrossPages(t *testing.T) {
+	base := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	evt := func(ns, name string, minute int) corev1.Event {
+		return corev1.Event{
+			ObjectMeta:    metav1.ObjectMeta{Namespace: ns, Name: name},
+			Type:          "Normal",
+			LastTimestamp: metav1.NewTime(base.Add(time.Duration(minute) * time.Minute)),
+		}
+	}
+	// zzz is late in the alphabet: a server-side Limit would drop it first. Its
+	// newest events must still win over aaa (which nsFilter excludes anyway).
+	page1 := []corev1.Event{
+		evt("aaa", "a1", 100), // filtered out by nsFilter
+		evt("zzz", "z-old", 1),
+		evt("zzz", "z-mid", 5),
+	}
+	page2 := []corev1.Event{
+		evt("aaa", "a2", 200), // filtered out
+		evt("zzz", "z-new1", 9),
+		evt("zzz", "z-new2", 7),
+	}
+
+	cs := fake.NewSimpleClientset()
+	calls := 0
+	cs.PrependReactor("list", "events", func(clienttesting.Action) (bool, runtime.Object, error) {
+		calls++
+		if calls == 1 {
+			return true, &corev1.EventList{ListMeta: metav1.ListMeta{Continue: "next"}, Items: page1}, nil
+		}
+		return true, &corev1.EventList{Items: page2}, nil
+	})
+
+	onlyZZZ := func(ns string) bool { return ns == "zzz" }
+	got, err := pageRecentEvents(context.Background(), cs, "", onlyZZZ, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 {
+		t.Errorf("expected 2 pages consumed via Continue, got %d list calls", calls)
+	}
+	// The 3 newest zzz events by minute, sorted descending: 9, 7, 5. aaa's
+	// larger minutes (100, 200) must be excluded by nsFilter, not retained.
+	wantMinutes := []int{9, 7, 5}
+	if len(got) != len(wantMinutes) {
+		t.Fatalf("got %d events, want %d: %+v", len(got), len(wantMinutes), got)
+	}
+	for i, m := range wantMinutes {
+		want := base.Add(time.Duration(m) * time.Minute)
+		if !got[i].LastSeen.Equal(want) {
+			t.Errorf("position %d: got LastSeen %v, want %v (full: %+v)", i, got[i].LastSeen, want, got)
+		}
+	}
+}
 
 func TestEventInfoFromUsesLastTimestamp(t *testing.T) {
 	first := metav1.NewTime(time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC))

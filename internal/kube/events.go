@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
 )
 
 // eventMinHeap keeps the most-recent N events while paging a large warning set:
@@ -59,6 +60,10 @@ type EventInfo struct {
 // maxWarningEventsScan bounds how many warning events one overview refresh
 // pulls from a pathologically noisy cluster before sorting.
 const maxWarningEventsScan = 5000
+
+// maxEventsRetain is how many most-recent events the namespace-wide Events view
+// keeps while paging.
+const maxEventsRetain = 200
 
 func (m *ClientManager) ListClusterWarningEvents(ctx context.Context, contextName string, limit int) ([]EventInfo, error) {
 	cs, err := m.Clientset(contextName)
@@ -111,15 +116,6 @@ func (m *ClientManager) ListEvents(ctx context.Context, contextName, namespace, 
 		return nil, err
 	}
 
-	opts := metav1.ListOptions{Limit: 200}
-	if kind != "" && name != "" {
-		selector := fields.AndSelectors(
-			fields.OneTermEqualSelector("involvedObject.name", name),
-			fields.OneTermEqualSelector("involvedObject.kind", kind),
-		)
-		opts.FieldSelector = selector.String()
-	}
-
 	// A multi-namespace selection lists cluster-wide in one call and filters
 	// locally — Events have no informer here and N namespaced calls would
 	// multiply apiserver round trips.
@@ -133,18 +129,67 @@ func (m *ClientManager) ListEvents(ctx context.Context, contextName, namespace, 
 		nsFilter = nil
 	}
 
-	list, err := cs.CoreV1().Events(ns).List(ctx, opts)
-	if err != nil {
-		return nil, err
+	// Detail Events tab: field-selected to one object, which rarely has 200+
+	// events, so a single truncated list is fine.
+	if kind != "" && name != "" {
+		opts := metav1.ListOptions{
+			Limit: 200,
+			FieldSelector: fields.AndSelectors(
+				fields.OneTermEqualSelector("involvedObject.name", name),
+				fields.OneTermEqualSelector("involvedObject.kind", kind),
+			).String(),
+		}
+		list, err := cs.CoreV1().Events(ns).List(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]EventInfo, 0, len(list.Items))
+		for i := range list.Items {
+			if nsFilter != nil && !nsFilter(list.Items[i].Namespace) {
+				continue
+			}
+			out = append(out, eventInfoFrom(&list.Items[i]))
+		}
+		sort.Slice(out, func(i, j int) bool { return out[i].LastSeen.After(out[j].LastSeen) })
+		return out, nil
 	}
 
-	out := make([]EventInfo, 0, len(list.Items))
-	for i := range list.Items {
-		if nsFilter != nil && !nsFilter(list.Items[i].Namespace) {
-			continue
+	// Namespace-wide list view: page the full set and keep the most-recent N.
+	return pageRecentEvents(ctx, cs, ns, nsFilter, maxEventsRetain)
+}
+
+// pageRecentEvents pages every event in ns and keeps the most-recent `retain`
+// in a min-heap. A server-side Limit truncates in etcd key order (alphabetical
+// by namespace/name), which would drop recent events before the recency sort
+// and can starve later-alphabet namespaces to zero. nsFilter is applied before
+// insertion so the cap counts only matching events.
+func pageRecentEvents(ctx context.Context, cs kubernetes.Interface, ns string, nsFilter func(string) bool, retain int) ([]EventInfo, error) {
+	opts := metav1.ListOptions{Limit: 500}
+	h := &eventMinHeap{}
+	scanned := 0
+	for {
+		list, err := cs.CoreV1().Events(ns).List(ctx, opts)
+		if err != nil {
+			return nil, err
 		}
-		out = append(out, eventInfoFrom(&list.Items[i]))
+		for i := range list.Items {
+			if nsFilter != nil && !nsFilter(list.Items[i].Namespace) {
+				continue
+			}
+			if h.Len() < retain {
+				heap.Push(h, eventInfoFrom(&list.Items[i]))
+			} else if eventLastSeen(&list.Items[i]).After((*h)[0].LastSeen) {
+				heap.Pop(h)
+				heap.Push(h, eventInfoFrom(&list.Items[i]))
+			}
+		}
+		scanned += len(list.Items)
+		if list.Continue == "" || scanned >= maxWarningEventsScan {
+			break
+		}
+		opts.Continue = list.Continue
 	}
+	out := []EventInfo(*h)
 	sort.Slice(out, func(i, j int) bool { return out[i].LastSeen.After(out[j].LastSeen) })
 	return out, nil
 }
