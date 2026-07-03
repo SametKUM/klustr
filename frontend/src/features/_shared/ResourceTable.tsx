@@ -73,6 +73,11 @@ type Noun = { singular: string; plural: string }
 
 export const KLUSTR_CTX = '__klustrCtx' as const
 
+// Skeleton grace fallback: re-check every step while the kind is still syncing,
+// giving up (showing the possibly-empty result) only at the hard cap.
+const GRACE_STEP_MS = 5_000
+const GRACE_HARD_CAP_MS = 30_000
+
 export type Tagged<T> = T & { [KLUSTR_CTX]: string }
 
 // Each source item gets exactly one tagged twin so the merged rows keep
@@ -547,12 +552,25 @@ export function ResourceTable<T>({
       const filtered = ups.filter((u) => query.matches((u as RowIdentity).namespace ?? ''))
       apply(ctx, filtered, delta.removed)
     })
-    // Fallback for kinds that never emit a sync event (e.g. RBAC-denied kinds get
-    // no informer at all): stop waiting after a grace period and show the result.
-    const graceTimer = window.setTimeout(() => {
+    // Fallback for kinds that never emit a sync event. Synced contexts are
+    // already marked by the reload path (empty result + isKindSynced), so this
+    // only decides when to give up on a context still syncing. Hold the skeleton
+    // while the kind is unsynced — a slow initial LIST (e.g. all Secrets behind
+    // the Helm view, or 10k pods) must not flash "No X" before the cache lands —
+    // and give up after a hard cap so a genuinely never-syncing kind still shows.
+    let graceWaited = 0
+    let graceTimer = window.setTimeout(function giveUp() {
       if (cancelled) return
+      graceWaited += GRACE_STEP_MS
+      const stillSyncing =
+        graceWaited < GRACE_HARD_CAP_MS &&
+        activeContexts.some((ctx) => !isKindSynced(ctx, kind))
+      if (stillSyncing) {
+        graceTimer = window.setTimeout(giveUp, GRACE_STEP_MS)
+        return
+      }
       setLoadedSet(new Set(activeContexts))
-    }, 5_000)
+    }, GRACE_STEP_MS)
     return () => {
       cancelled = true
       unsub()
