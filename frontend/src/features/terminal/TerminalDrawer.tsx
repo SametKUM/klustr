@@ -105,7 +105,10 @@ export function TerminalDrawer() {
     }
   }, [drawerOpen, tabs.length, activeContexts, openTab])
 
-  if (!drawerOpen) return null
+  // Only unmount when there is nothing to preserve. With open tabs, hiding the
+  // panel must not tear down the TerminalTabs (that would kill their PTYs and
+  // discard scrollback) — keep them mounted and hide the drawer visually below.
+  if (!drawerOpen && tabs.length === 0) return null
 
   const addPickerContexts = activeContexts.length > 0 ? activeContexts : selectedContext ? [selectedContext] : []
 
@@ -118,7 +121,7 @@ export function TerminalDrawer() {
 
   return (
     <div
-      className="flex shrink-0 flex-col border-t border-border bg-card"
+      className={`flex shrink-0 flex-col border-t border-border bg-card ${drawerOpen ? '' : 'hidden'}`}
       style={{ height: drawerHeight }}
     >
       <div
@@ -211,7 +214,7 @@ export function TerminalDrawer() {
                 key={tab.tabId}
                 tabId={tab.tabId}
                 contextName={tab.contextName}
-                active={tab.tabId === activeTabId}
+                active={tab.tabId === activeTabId && drawerOpen}
               />
             ))}
           </Suspense>
