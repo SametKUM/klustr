@@ -3,8 +3,10 @@ package kube
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -19,6 +21,7 @@ import (
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/repo"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -113,9 +116,10 @@ type helmManager struct {
 	mu      sync.Mutex
 	configs map[string]*action.Configuration
 	rules   *clientcmd.ClientConfigLoadingRules
+	creds   *credentialManager
 }
 
-func newHelmManager(rules *clientcmd.ClientConfigLoadingRules) (*helmManager, error) {
+func newHelmManager(rules *clientcmd.ClientConfigLoadingRules, creds *credentialManager) (*helmManager, error) {
 	// Inherit helm CLI's repo config + cache paths (cli.New() honors HELM_* env
 	// vars and falls back to helm's platform defaults). Sharing the paths means
 	// repositories added via `helm repo add` are immediately usable inside
@@ -132,6 +136,7 @@ func newHelmManager(rules *clientcmd.ClientConfigLoadingRules) (*helmManager, er
 		settings: settings,
 		configs:  map[string]*action.Configuration{},
 		rules:    rules,
+		creds:    creds,
 	}, nil
 }
 
@@ -164,7 +169,7 @@ func (h *helmManager) configFor(contextName, namespace string) (*action.Configur
 		return cfg, nil
 	}
 
-	getter := &restClientGetter{rules: h.rules, contextName: contextName, namespace: namespace}
+	getter := &restClientGetter{rules: h.rules, contextName: contextName, namespace: namespace, creds: h.creds}
 	c := &action.Configuration{}
 	if err := c.Init(getter, namespace, "secret", func(format string, v ...interface{}) {}); err != nil {
 		return nil, err
@@ -186,6 +191,7 @@ type restClientGetter struct {
 	rules       *clientcmd.ClientConfigLoadingRules
 	contextName string
 	namespace   string
+	creds       *credentialManager
 }
 
 func (g *restClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
@@ -197,7 +203,22 @@ func (g *restClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
 }
 
 func (g *restClientGetter) ToRESTConfig() (*rest.Config, error) {
-	return g.ToRawKubeConfigLoader().ClientConfig()
+	cfg, err := g.ToRawKubeConfigLoader().ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	// Mirror ClientManager.restConfig: inject the credential-helper env into the
+	// kubeconfig exec plugin (aws eks get-token, …). Without this, Helm
+	// mutations against an aws-vault-mapped context run the exec plugin with no
+	// captured credentials and fail auth, while the informer-backed release list
+	// (which uses the credential-injected client) still works.
+	if cfg.ExecProvider != nil && g.creds != nil {
+		env := g.creds.envFor(g.contextName)
+		for _, k := range slices.Sorted(maps.Keys(env)) {
+			cfg.ExecProvider.Env = append(cfg.ExecProvider.Env, clientcmdapi.ExecEnvVar{Name: k, Value: env[k]})
+		}
+	}
+	return cfg, nil
 }
 
 func (g *restClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {

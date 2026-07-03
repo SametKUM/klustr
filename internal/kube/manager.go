@@ -97,7 +97,8 @@ type ClientManager struct {
 
 func NewClientManager() *ClientManager {
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
-	helm, _ := newHelmManager(rules)
+	creds := newCredentialManager()
+	helm, _ := newHelmManager(rules, creds)
 	m := &ClientManager{
 		rules:       rules,
 		cache:       make(map[string]*kubernetes.Clientset),
@@ -112,7 +113,7 @@ func NewClientManager() *ClientManager {
 		readOnly:    make(map[string]bool),
 		draining:    make(map[string]bool),
 		envReady:    make(chan struct{}),
-		creds:       newCredentialManager(),
+		creds:       creds,
 		credRewatch: make(map[string]bool),
 	}
 	m.creds.setOnRefreshed(m.onCredentialsRefreshed)
@@ -486,6 +487,9 @@ func (m *ClientManager) restConfig(contextName string) (*rest.Config, error) {
 // the old env, so the cache entry is dropped and an active watch restarted
 // (Watch swaps the informer set without blanking the frontend caches).
 func (m *ClientManager) onCredentialsRefreshed(contextName string) {
+	// Helm builds its own rest.Config from a cached action.Configuration; drop
+	// it so the next Helm op rebuilds with the freshly captured credentials.
+	m.helm.invalidate(contextName)
 	m.mu.Lock()
 	delete(m.cache, contextName)
 	_, active := m.watchers[contextName]
