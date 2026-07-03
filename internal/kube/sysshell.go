@@ -17,6 +17,15 @@ type SystemTerminal struct {
 	Name string `json:"name"`
 }
 
+// shellQuote wraps s in single quotes for safe interpolation into a /bin/sh
+// script. Single quotes disable all expansion, so $(...), backticks and $VARS
+// are inert; an embedded single quote is closed, escaped, and reopened. Use
+// this instead of %q for any value reaching a sourced shell: %q yields a
+// double-quoted form that still runs $(...).
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
 type darwinTerminalApp struct {
 	id      string
 	name    string
@@ -100,7 +109,7 @@ func writePodExecLauncher(kubeconfigPath, contextName, namespace, podName, conta
 
 	containerArg := ""
 	if container != "" {
-		containerArg = fmt.Sprintf("-c %q ", container)
+		containerArg = "-c " + shellQuote(container) + " "
 	}
 
 	// We explicitly check for kubectl before invoking it so that if the
@@ -108,12 +117,12 @@ func writePodExecLauncher(kubeconfigPath, contextName, namespace, podName, conta
 	// readable message instead of the terminal flashing closed with
 	// exit 127.
 	body := fmt.Sprintf(`#!/bin/sh
-KC=%q
-SCRIPT=%q
+KC=%s
+SCRIPT=%s
 trap 'rm -f "$KC" "$SCRIPT"' EXIT
 export KUBECONFIG="$KC"
-export KLUSTR_CONTEXT=%q
-export KUBE_CONTEXT=%q
+export KLUSTR_CONTEXT=%s
+export KUBE_CONTEXT=%s
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "kubectl not found on PATH. Install kubectl or use the in-app Exec tab."
   echo
@@ -121,8 +130,8 @@ if ! command -v kubectl >/dev/null 2>&1; then
   read _
   exit 127
 fi
-kubectl exec -it -n %q %s%q -- %q
-`, kubeconfigPath, path, contextName, contextName, namespace, containerArg, podName, shellPath)
+kubectl exec -it -n %s %s%s -- %s
+`, shellQuote(kubeconfigPath), shellQuote(path), shellQuote(contextName), shellQuote(contextName), shellQuote(namespace), containerArg, shellQuote(podName), shellQuote(shellPath))
 
 	if _, err := f.WriteString(body); err != nil {
 		_ = f.Close()
@@ -189,20 +198,21 @@ func writeLauncherScript(kubeconfigPath, contextName string) (string, error) {
 	}
 	path := f.Name()
 
-	// %q produces a shell-safe double-quoted form for paths that may
-	// contain spaces or other special characters. The EXIT trap cleans
-	// up both files even when the user closes the terminal window —
-	// only an outright SIGKILL leaks them.
+	// shellQuote single-quotes every interpolated value: the context name
+	// comes from an untrusted kubeconfig, and Go's %q leaves $(...) and
+	// backticks live inside shell double quotes (a host-RCE vector). The
+	// EXIT trap cleans up both files even when the user closes the terminal
+	// window — only an outright SIGKILL leaks them.
 	body := fmt.Sprintf(`#!/bin/sh
-KC=%q
-SCRIPT=%q
+KC=%s
+SCRIPT=%s
 trap 'rm -f "$KC" "$SCRIPT"' EXIT
 export KUBECONFIG="$KC"
-export KLUSTR_CONTEXT=%q
-export KUBE_CONTEXT=%q
+export KLUSTR_CONTEXT=%s
+export KUBE_CONTEXT=%s
 cd "$HOME" 2>/dev/null || true
 "${SHELL:-/bin/sh}" -l
-`, kubeconfigPath, path, contextName, contextName)
+`, shellQuote(kubeconfigPath), shellQuote(path), shellQuote(contextName), shellQuote(contextName))
 
 	if _, err := f.WriteString(body); err != nil {
 		_ = f.Close()
