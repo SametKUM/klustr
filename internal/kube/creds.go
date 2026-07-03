@@ -131,7 +131,7 @@ func (c *credentialManager) setMapping(contextName string, mapping CredentialMap
 	delete(c.captured, contextName)
 	delete(c.lastErr, contextName)
 	c.stopTimerLocked(contextName)
-	mappings := c.mappings
+	mappings := maps.Clone(c.mappings)
 	path := c.storePath
 	c.mu.Unlock()
 	if path == "" {
@@ -146,7 +146,7 @@ func (c *credentialManager) clearMapping(contextName string) error {
 	delete(c.captured, contextName)
 	delete(c.lastErr, contextName)
 	c.stopTimerLocked(contextName)
-	mappings := c.mappings
+	mappings := maps.Clone(c.mappings)
 	path := c.storePath
 	c.mu.Unlock()
 	if path == "" {

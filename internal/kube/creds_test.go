@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -41,6 +42,28 @@ func (f *fakeProvider) set(cred CapturedCredentials, err error) {
 	defer f.mu.Unlock()
 	f.cred = cred
 	f.err = err
+}
+
+// setMapping/clearMapping marshal the store outside the lock, so the clone
+// must be taken under the lock — otherwise a concurrent mutation triggers the
+// "concurrent map iteration and map write" runtime fatal. Run with -race.
+func TestMappingWritesAreConcurrencySafe(t *testing.T) {
+	p := &fakeProvider{name: "fake"}
+	c := testCredManager(t, p)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			ctx := fmt.Sprintf("ctx%d", i)
+			for j := 0; j < 200; j++ {
+				_ = c.setMapping(ctx, CredentialMapping{Provider: "fake", Profile: "p1"})
+				_ = c.clearMapping(ctx)
+			}
+		}(i)
+	}
+	wg.Wait()
 }
 
 func testCredManager(t *testing.T, p CredentialProvider) *credentialManager {
