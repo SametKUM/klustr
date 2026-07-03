@@ -9,10 +9,13 @@ import (
 	"io"
 	"sort"
 	"strconv"
+	"sync"
+	"time"
 
 	"helm.sh/helm/v3/pkg/release"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/tools/cache"
 )
 
 // Helm v3 release storage layout in core/v1 Secrets:
@@ -213,6 +216,7 @@ func (w *contextWatcher) helmLatestSecrets(namespace string) (map[string]*corev1
 // instead of scanning every helm Secret in scope, then still verifies the
 // release secret type on the small result.
 func (w *contextWatcher) helmReleaseSecrets(namespace, name string) ([]*corev1.Secret, error) {
+	w.ensureSecretSynced()
 	f := w.factoryFor("Secret")
 	if f == nil {
 		return nil, nil
@@ -239,7 +243,42 @@ func (w *contextWatcher) helmReleaseSecrets(namespace, name string) ([]*corev1.S
 	return out, nil
 }
 
+// helmSyncWaitTimeout bounds the one-time wait a Helm read pays for the Secret
+// informer to sync, so a stalled watch can't hang the bridge call forever.
+const helmSyncWaitTimeout = 15 * time.Second
+
+// ensureSecretSynced blocks until the Secret informer's cache has synced (the
+// Helm views read releases from it). Without this, the first read during the
+// initial LIST returns a premature-empty list — the UI would flash "No
+// releases" and then pop in the real rows once the cache lands. The first Helm
+// read pays this once; later reads return immediately since the cache stays
+// synced. Bounded by helmSyncWaitTimeout and the watcher's stop channel.
+func (w *contextWatcher) ensureSecretSynced() {
+	f := w.factoryFor("Secret")
+	if f == nil {
+		return
+	}
+	informer := f.Core().V1().Secrets().Informer()
+	if informer.HasSynced() {
+		return
+	}
+	stop := make(chan struct{})
+	var once sync.Once
+	closeStop := func() { once.Do(func() { close(stop) }) }
+	timer := time.AfterFunc(helmSyncWaitTimeout, closeStop)
+	defer timer.Stop()
+	go func() {
+		select {
+		case <-w.stopCh:
+			closeStop()
+		case <-stop:
+		}
+	}()
+	cache.WaitForCacheSync(stop, informer.HasSynced)
+}
+
 func (w *contextWatcher) helmAllSecrets(namespace string) ([]*corev1.Secret, error) {
+	w.ensureSecretSynced()
 	f := w.factoryFor("Secret")
 	if f == nil {
 		return nil, nil

@@ -194,6 +194,9 @@ func (w *contextWatcher) ensureKind(kind string) {
 	go func() {
 		if cache.WaitForCacheSync(w.stopCh, informer.HasSynced) {
 			w.touch(kind)
+			if b.onSynced != nil {
+				b.onSynced()
+			}
 		}
 	}()
 }
@@ -261,6 +264,12 @@ type kindBinding struct {
 	pick     func(informers.SharedInformerFactory) cache.SharedIndexInformer
 	sidecar  func(obj any)
 	indexers cache.Indexers
+
+	// onSynced fires once, after this kind's informer cache has synced. Used to
+	// announce a derived kind as synced too (Secret → HelmRelease), so a view
+	// backed by another kind's cache can trust an empty result and stop showing
+	// a skeleton instead of waiting for the grace timer.
+	onSynced func()
 
 	// project turns a cached object into its frontend Info struct plus a
 	// "namespace/name" key, for the delta-update protocol. nil ⇒ the kind has
@@ -489,8 +498,9 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 		pick: func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
 			return f.Core().V1().Secrets().Informer()
 		},
-		sidecar: func(obj any) { maybeTouchHelm(obj, w) },
-		project: projector(secretInfoFrom),
+		sidecar:  func(obj any) { maybeTouchHelm(obj, w) },
+		onSynced: func() { w.touch(HelmChangeKind) },
+		project:  projector(secretInfoFrom),
 	}
 	return out
 }
