@@ -193,6 +193,12 @@ func (m *ClientManager) SetOnChange(cb func(ContextChange)) {
 }
 
 func (m *ClientManager) Kubeconfig() (*Kubeconfig, error) {
+	// ListContexts (Welcome screen) hits this on mount, concurrent with the
+	// shell-env import goroutine that rewrites m.rules.Precedence. Wait for the
+	// import (bounded) so the read happens-after the write — no data race — and
+	// so contexts from a KUBECONFIG defined only in the login shell are present
+	// instead of silently missing with nothing to re-trigger the list.
+	m.waitEnvReady(context.Background())
 	return loadRawConfig(m.rules)
 }
 
