@@ -180,6 +180,16 @@ func (m *ClientManager) RollbackDeployment(ctx context.Context, contextName, nam
 	if err != nil {
 		return err
 	}
+	return rollbackDeploymentToRevision(ctx, cs, namespace, name, toRevision)
+}
+
+// rollbackDeploymentToRevision replaces the Deployment's pod template with the
+// target revision's template via a read-modify-write Update. A strategic-merge
+// patch would MERGE PodSpec lists (containers/initContainers/volumes and each
+// container's env/ports key on name), so containers and env a newer revision
+// added would survive the "rollback". Assigning Spec.Template replaces it
+// wholesale, matching what kubectl rollout undo does.
+func rollbackDeploymentToRevision(ctx context.Context, cs kubernetes.Interface, namespace, name string, toRevision int32) error {
 	rsList, err := cs.AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
@@ -201,21 +211,17 @@ func (m *ClientManager) RollbackDeployment(ctx context.Context, contextName, nam
 	}
 	template := *target.Spec.Template.DeepCopy()
 	delete(template.Labels, podTemplateHashLabel)
-	patch := map[string]any{
-		"spec": map[string]any{
-			"template": template,
-		},
-		"metadata": map[string]any{
-			"annotations": map[string]string{
-				changeCauseAnnotation: fmt.Sprintf("rolled back to revision %d via klustr", toRevision),
-			},
-		},
-	}
-	data, err := json.Marshal(patch)
+
+	d, err := cs.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	_, err = cs.AppsV1().Deployments(namespace).Patch(ctx, name, types.StrategicMergePatchType, data, metav1.PatchOptions{FieldManager: "klustr"})
+	d.Spec.Template = template
+	if d.Annotations == nil {
+		d.Annotations = map[string]string{}
+	}
+	d.Annotations[changeCauseAnnotation] = fmt.Sprintf("rolled back to revision %d via klustr", toRevision)
+	_, err = cs.AppsV1().Deployments(namespace).Update(ctx, d, metav1.UpdateOptions{FieldManager: "klustr"})
 	return err
 }
 

@@ -1,14 +1,77 @@
 package kube
 
 import (
+	"context"
 	"encoding/json"
 	"slices"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
 )
+
+// Rollback must REPLACE the pod template, not strategic-merge it: a merge keys
+// PodSpec lists on name, so a sidecar/env a newer revision added would survive
+// the rollback. Revert rev2 (app+env, sidecar) to rev1 (app only) and assert
+// the sidecar and env are gone.
+func TestRollbackDeploymentReplacesTemplate(t *testing.T) {
+	ownerRef := metav1.OwnerReference{Kind: "Deployment", Name: "demo"}
+	rs1 := &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:       "default",
+			Name:            "demo-rev1",
+			OwnerReferences: []metav1.OwnerReference{ownerRef},
+			Annotations:     map[string]string{deploymentRevisionAnnotation: "1"},
+		},
+		Spec: appsv1.ReplicaSetSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "demo", podTemplateHashLabel: "rev1hash"}},
+				Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "app", Image: "busybox:1"}}},
+			},
+		},
+	}
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "demo"},
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "demo"}},
+				Spec: corev1.PodSpec{Containers: []corev1.Container{
+					{Name: "app", Image: "busybox:2", Env: []corev1.EnvVar{{Name: "LOG_LEVEL", Value: "debug"}}},
+					{Name: "sidecar", Image: "busybox:2"},
+				}},
+			},
+		},
+	}
+
+	cs := fake.NewSimpleClientset(rs1, dep)
+	if err := rollbackDeploymentToRevision(context.Background(), cs, "default", "demo", 1); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := cs.AppsV1().Deployments("default").Get(context.Background(), "demo", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := make([]string, 0, len(got.Spec.Template.Spec.Containers))
+	for _, c := range got.Spec.Template.Spec.Containers {
+		names = append(names, c.Name)
+	}
+	if !slices.Equal(names, []string{"app"}) {
+		t.Errorf("containers = %v, want [app] (sidecar must be removed by a full replace)", names)
+	}
+	if len(got.Spec.Template.Spec.Containers[0].Env) != 0 {
+		t.Errorf("app env = %v, want none after rollback to rev1", got.Spec.Template.Spec.Containers[0].Env)
+	}
+	if _, ok := got.Spec.Template.Labels[podTemplateHashLabel]; ok {
+		t.Error("pod-template-hash label should be stripped from the rolled-back template")
+	}
+	if got.Annotations[changeCauseAnnotation] == "" {
+		t.Error("change-cause annotation not recorded")
+	}
+}
 
 func TestIsOwnedBy(t *testing.T) {
 	refs := []metav1.OwnerReference{
