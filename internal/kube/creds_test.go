@@ -66,17 +66,66 @@ func TestMappingWritesAreConcurrencySafe(t *testing.T) {
 	wg.Wait()
 }
 
+func TestScheduleRefreshSkippedWhilePaused(t *testing.T) {
+	c := testCredManager(t, &fakeProvider{name: "fake"})
+	c.pauseRefresh("ctx1")
+	c.scheduleRefresh("ctx1", time.Now().Add(time.Hour))
+	c.mu.Lock()
+	_, armed := c.timers["ctx1"]
+	c.mu.Unlock()
+	if armed {
+		t.Error("scheduleRefresh armed a timer for a paused (disconnected) context")
+	}
+}
+
+func TestRefreshBailsWhilePaused(t *testing.T) {
+	p := &fakeProvider{name: "fake"}
+	p.set(validCred(), nil)
+	c := testCredManager(t, p)
+	if err := c.setMapping("ctx1", CredentialMapping{Provider: "fake", Profile: "p1"}); err != nil {
+		t.Fatal(err)
+	}
+	called := false
+	c.onRefreshed = func(string) { called = true }
+	c.pauseRefresh("ctx1")
+	c.refresh("ctx1")
+	if called {
+		t.Error("refresh re-captured / notified for a paused context")
+	}
+}
+
+func TestEnsureFreshClearsPaused(t *testing.T) {
+	p := &fakeProvider{name: "fake"}
+	p.set(validCred(), nil)
+	c := testCredManager(t, p)
+	if err := c.setMapping("ctx1", CredentialMapping{Provider: "fake", Profile: "p1"}); err != nil {
+		t.Fatal(err)
+	}
+	c.pauseRefresh("ctx1")
+	if _, err := c.ensureFresh(context.Background(), "ctx1"); err != nil {
+		t.Fatal(err)
+	}
+	c.mu.Lock()
+	paused := c.paused["ctx1"]
+	c.mu.Unlock()
+	if paused {
+		t.Error("ensureFresh did not clear the paused flag on reconnect")
+	}
+}
+
 func testCredManager(t *testing.T, p CredentialProvider) *credentialManager {
 	t.Helper()
 	return &credentialManager{
-		providers: []CredentialProvider{p},
-		mappings:  map[string]CredentialMapping{},
-		captured:  map[string]CapturedCredentials{},
-		inflight:  map[string]chan struct{}{},
-		timers:    map[string]*time.Timer{},
-		lastErr:   map[string]string{},
-		storePath: filepath.Join(t.TempDir(), "mappings.json"),
-		now:       time.Now,
+		providers:      []CredentialProvider{p},
+		mappings:       map[string]CredentialMapping{},
+		captured:       map[string]CapturedCredentials{},
+		inflight:       map[string]chan struct{}{},
+		timers:         map[string]*time.Timer{},
+		refreshCancels: map[string]context.CancelFunc{},
+		paused:         map[string]bool{},
+		lastErr:        map[string]string{},
+		storePath:      filepath.Join(t.TempDir(), "mappings.json"),
+		now:            time.Now,
 	}
 }
 

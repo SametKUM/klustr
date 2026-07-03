@@ -498,16 +498,28 @@ func (m *ClientManager) onCredentialsRefreshed(contextName string) {
 	m.helm.invalidate(contextName)
 	m.mu.Lock()
 	delete(m.cache, contextName)
-	_, active := m.watchers[contextName]
 	appCtx := m.appCtx
 	m.mu.Unlock()
-	if !active || appCtx == nil {
+	if appCtx == nil {
+		return
+	}
+	// Take the per-context watch lock and re-check under it: a StopWatch racing
+	// this refresh removes the watcher, and rebuilding here would silently
+	// re-attach a context the user just disconnected. watchLocked is not
+	// reentrant, so call it directly under the lock we hold rather than via Watch.
+	l := m.watchLock(contextName)
+	l.Lock()
+	defer l.Unlock()
+	m.mu.Lock()
+	_, active := m.watchers[contextName]
+	m.mu.Unlock()
+	if !active {
 		return
 	}
 	// The rebuilt watcher re-runs access discovery with the new credentials;
 	// watchLocked announces the swap via "_access" so the frontend re-fetches
 	// AccessibleKinds and replays open views.
-	_ = m.Watch(appCtx, contextName)
+	_ = m.watchLocked(appCtx, contextName)
 }
 
 // ---- Credential helpers -------------------------------------------------

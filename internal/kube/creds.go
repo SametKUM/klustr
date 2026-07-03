@@ -28,6 +28,11 @@ type credentialManager struct {
 	// spawned helper subprocess promptly instead of letting it run out the
 	// 2-minute capture timeout on a detached context.
 	refreshCancels map[string]context.CancelFunc
+	// paused marks contexts disconnected via pauseRefresh, so a capture that was
+	// in flight during the disconnect can't re-arm the refresh timer afterward
+	// (which would keep re-capturing on a context the user left). Cleared by
+	// ensureFresh when the context is reconnected.
+	paused map[string]bool
 	// baseCtx is the app lifetime context refreshes derive from (set once the
 	// first Watch hands one in); context.Background() until then.
 	baseCtx     context.Context
@@ -46,6 +51,7 @@ func newCredentialManager() *credentialManager {
 		inflight:       map[string]chan struct{}{},
 		timers:         map[string]*time.Timer{},
 		refreshCancels: map[string]context.CancelFunc{},
+		paused:         map[string]bool{},
 		baseCtx:        context.Background(),
 		lastErr:        map[string]string{},
 		now:            time.Now,
@@ -179,6 +185,9 @@ func (c *credentialManager) envFor(contextName string) map[string]string {
 // the caller must then discard any clients built while it was pending.
 func (c *credentialManager) ensureFresh(ctx context.Context, contextName string) (bool, error) {
 	c.mu.Lock()
+	// A reconnect un-pauses background refresh (pauseRefresh set it on the
+	// previous disconnect).
+	delete(c.paused, contextName)
 	mapping, ok := c.mappings[contextName]
 	if !ok {
 		c.mu.Unlock()
@@ -259,6 +268,11 @@ func (c *credentialManager) scheduleRefresh(contextName string, expiry time.Time
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.stopTimerLocked(contextName)
+	// A capture that finished after the context was disconnected must not
+	// re-arm the timer — that would keep re-capturing on a paused context.
+	if c.paused[contextName] {
+		return
+	}
 	if expiry.IsZero() {
 		return
 	}
@@ -275,10 +289,13 @@ func (c *credentialManager) scheduleRefresh(contextName string, expiry time.Time
 func (c *credentialManager) refresh(contextName string) {
 	c.mu.Lock()
 	mapping, ok := c.mappings[contextName]
+	paused := c.paused[contextName]
 	cb := c.onRefreshed
 	base := c.baseCtx
 	c.mu.Unlock()
-	if !ok {
+	// A timer that fired just before pauseRefresh could otherwise re-capture on
+	// a disconnected context.
+	if !ok || paused {
 		return
 	}
 	ctx, cancel := context.WithCancel(base)
@@ -329,6 +346,7 @@ func (c *credentialManager) stopTimerLocked(contextName string) {
 // captured credentials stay in memory and the next Watch revalidates them.
 func (c *credentialManager) pauseRefresh(contextName string) {
 	c.mu.Lock()
+	c.paused[contextName] = true
 	c.stopTimerLocked(contextName)
 	cancel := c.refreshCancels[contextName]
 	delete(c.refreshCancels, contextName)
