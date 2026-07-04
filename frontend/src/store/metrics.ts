@@ -39,10 +39,10 @@ export const useMetrics = create<MetricsState>((set) => ({
         }
       }
       return {
-        // metrics-server availability is shared with pods; only flip it true
-        // here (a node poll returning empty shouldn't claim metrics are down
-        // while pods still report).
-        available: list.length > 0 ? { ...s.available, [ctx]: true } : s.available,
+        // Unavailability is signaled separately via setUnavailable (null
+        // result / request error), so any list — even an empty one — means
+        // the metrics API answered.
+        available: { ...s.available, [ctx]: true },
         byNodeByContext: changed ? { ...s.byNodeByContext, [ctx]: byNode } : s.byNodeByContext,
       }
     }),
@@ -82,6 +82,7 @@ export const useMetrics = create<MetricsState>((set) => ({
     set((s) => ({
       available: { ...s.available, [ctx]: false },
       byPodByContext: { ...s.byPodByContext, [ctx]: {} },
+      byNodeByContext: { ...s.byNodeByContext, [ctx]: {} },
     })),
   clearPodMetrics: (ctx) =>
     set((s) => {

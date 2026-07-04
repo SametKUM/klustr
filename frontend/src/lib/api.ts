@@ -917,7 +917,8 @@ export const api = {
   // answered with no rows for the selection (see ListPodMetrics in Go).
   listPodMetrics: (contextName: string, namespace: string): Promise<PodMetrics[] | null> =>
     ListPodMetrics(contextName, namespace) as Promise<PodMetrics[] | null>,
-  listNodeMetrics: (contextName: string): Promise<NodeMetrics[]> => ListNodeMetrics(contextName),
+  listNodeMetrics: (contextName: string): Promise<NodeMetrics[] | null> =>
+    ListNodeMetrics(contextName) as Promise<NodeMetrics[] | null>,
   getClusterOverview: (contextName: string): Promise<ClusterOverview> =>
     GetClusterOverview(contextName),
   listClusterWarningEvents: (contextName: string, limit: number): Promise<EventInfo[]> =>

@@ -142,7 +142,10 @@ func (m *ClientManager) ListNodeMetrics(ctx context.Context, contextName string)
 	list, err := c.MetricsV1beta1().NodeMetricses().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) || apierrors.IsServiceUnavailable(err) {
-			return []NodeMetrics{}, nil
+			// Deliberate nil (JSON null): "metrics API unavailable", same
+			// protocol as ListPodMetrics — useNodeMetricsPoll branches on null
+			// to flip the availability flag instead of painting every node 0%.
+			return nil, nil
 		}
 		return nil, err
 	}
