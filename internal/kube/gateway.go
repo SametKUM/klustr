@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/discovery"
@@ -240,6 +241,28 @@ func refGrantsVersion(d discovery.DiscoveryInterface) string {
 	return ""
 }
 
+// gatewayV1Served returns the resource names served at
+// gateway.networking.k8s.io/v1. The group existing does not mean every kind
+// is served there — GRPCRoute is commonly absent, and pre-1.0 CRDs serve
+// everything under v1beta1 only — and a v1 informer for an unserved kind
+// 404-loops forever and blocks the factory's WaitForCacheSync. Returns nil on
+// a transient discovery error so callers register optimistically instead of
+// blanking Gateway views for the watcher's lifetime over a blip.
+func gatewayV1Served(d discovery.DiscoveryInterface) map[string]bool {
+	list, err := d.ServerResourcesForGroupVersion("gateway.networking.k8s.io/v1")
+	if apierrors.IsNotFound(err) {
+		return map[string]bool{}
+	}
+	if err != nil {
+		return nil
+	}
+	served := make(map[string]bool, len(list.APIResources))
+	for _, r := range list.APIResources {
+		served[r.Name] = true
+	}
+	return served
+}
+
 func (w *contextWatcher) startGatewayInformers(ctx context.Context) error {
 	if w.gwFactory == nil {
 		return nil
@@ -254,37 +277,34 @@ func (w *contextWatcher) startGatewayInformers(ctx context.Context) error {
 		w.gwFactory = nil
 		return nil
 	}
-	gateways := w.gwFactory.Gateway().V1().Gateways().Informer()
-	if _, err := gateways.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("Gateway") },
-		UpdateFunc: func(any, any) { w.touch("Gateway") },
-		DeleteFunc: func(any) { w.touch("Gateway") },
-	}); err != nil {
-		return err
+	// Register only kinds discovery says are served at v1 (nil = discovery
+	// blip, register all as before): an informer for an unserved kind
+	// 404-loops forever and keeps WaitForCacheSync from ever finishing.
+	serves := func(resource string) bool {
+		return w.gwServed == nil || w.gwServed[resource]
 	}
-	httpRoutes := w.gwFactory.Gateway().V1().HTTPRoutes().Informer()
-	if _, err := httpRoutes.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("HTTPRoute") },
-		UpdateFunc: func(any, any) { w.touch("HTTPRoute") },
-		DeleteFunc: func(any) { w.touch("HTTPRoute") },
-	}); err != nil {
-		return err
+	type gwKind struct {
+		kind     string
+		resource string
+		informer func() cache.SharedIndexInformer
 	}
-	grpcRoutes := w.gwFactory.Gateway().V1().GRPCRoutes().Informer()
-	if _, err := grpcRoutes.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("GRPCRoute") },
-		UpdateFunc: func(any, any) { w.touch("GRPCRoute") },
-		DeleteFunc: func(any) { w.touch("GRPCRoute") },
-	}); err != nil {
-		return err
-	}
-	gwClasses := w.gwFactory.Gateway().V1().GatewayClasses().Informer()
-	if _, err := gwClasses.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.touch("GatewayClass") },
-		UpdateFunc: func(any, any) { w.touch("GatewayClass") },
-		DeleteFunc: func(any) { w.touch("GatewayClass") },
-	}); err != nil {
-		return err
+	for _, k := range []gwKind{
+		{"Gateway", "gateways", func() cache.SharedIndexInformer { return w.gwFactory.Gateway().V1().Gateways().Informer() }},
+		{"HTTPRoute", "httproutes", func() cache.SharedIndexInformer { return w.gwFactory.Gateway().V1().HTTPRoutes().Informer() }},
+		{"GRPCRoute", "grpcroutes", func() cache.SharedIndexInformer { return w.gwFactory.Gateway().V1().GRPCRoutes().Informer() }},
+		{"GatewayClass", "gatewayclasses", func() cache.SharedIndexInformer { return w.gwFactory.Gateway().V1().GatewayClasses().Informer() }},
+	} {
+		if !serves(k.resource) {
+			continue
+		}
+		kind := k.kind
+		if _, err := k.informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+			AddFunc:    func(any) { w.touch(kind) },
+			UpdateFunc: func(any, any) { w.touch(kind) },
+			DeleteFunc: func(any) { w.touch(kind) },
+		}); err != nil {
+			return err
+		}
 	}
 	var refGrants cache.SharedIndexInformer
 	switch w.refGrantVer {
