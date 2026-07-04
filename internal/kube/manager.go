@@ -30,6 +30,10 @@ const pingTimeout = 10 * time.Second
 // at watcher construction.
 const discoveryTimeout = 8 * time.Second
 
+// rewatchRetryDelay is the backoff before the single automatic retry of a
+// re-watch that failed right after a credential refresh (a transient blip).
+const rewatchRetryDelay = 3 * time.Second
+
 type ServerVersion struct {
 	GitVersion string `json:"gitVersion"`
 	Platform   string `json:"platform"`
@@ -493,6 +497,17 @@ func (m *ClientManager) restConfig(contextName string) (*rest.Config, error) {
 // the old env, so the cache entry is dropped and an active watch restarted
 // (Watch swaps the informer set without blanking the frontend caches).
 func (m *ClientManager) onCredentialsRefreshed(contextName string) {
+	m.rewatchAfterRefresh(contextName, true)
+}
+
+// rewatchAfterRefresh rebuilds a context's clients after new credentials were
+// captured. A single bounded retry covers a transient blip at refresh time (a
+// VPN/apiserver hiccup exactly when a ~12h timer fires); if it still fails the
+// error is surfaced through the credential channel so the user gets a Retry —
+// otherwise the old watcher lingers with a stale exec env, its informers 401
+// once the old session expires, and updates freeze while the status dot (which
+// pings with fresh clients) stays green.
+func (m *ClientManager) rewatchAfterRefresh(contextName string, allowRetry bool) {
 	// Helm builds its own rest.Config from a cached action.Configuration; drop
 	// it so the next Helm op rebuilds with the freshly captured credentials.
 	m.helm.invalidate(contextName)
@@ -503,10 +518,22 @@ func (m *ClientManager) onCredentialsRefreshed(contextName string) {
 	if appCtx == nil {
 		return
 	}
-	// Take the per-context watch lock and re-check under it: a StopWatch racing
-	// this refresh removes the watcher, and rebuilding here would silently
-	// re-attach a context the user just disconnected. watchLocked is not
-	// reentrant, so call it directly under the lock we hold rather than via Watch.
+	if err := m.rewatchIfActive(appCtx, contextName); err != nil {
+		if allowRetry {
+			time.AfterFunc(rewatchRetryDelay, func() { m.rewatchAfterRefresh(contextName, false) })
+			return
+		}
+		_ = m.creds.fail(contextName, fmt.Sprintf("reconnect after credential refresh failed: %v", err))
+	}
+}
+
+// rewatchIfActive rebuilds the watch under the per-context lock, re-checking
+// that the context is still attached — a StopWatch racing this refresh removes
+// the watcher, and rebuilding would silently re-attach a context the user just
+// disconnected. Returns nil (not an error) when the context is gone. watchLocked
+// is not reentrant, so it runs directly under the lock we hold rather than via
+// Watch; it announces the swap via "_access" so the frontend replays open views.
+func (m *ClientManager) rewatchIfActive(appCtx context.Context, contextName string) error {
 	l := m.watchLock(contextName)
 	l.Lock()
 	defer l.Unlock()
@@ -514,12 +541,9 @@ func (m *ClientManager) onCredentialsRefreshed(contextName string) {
 	_, active := m.watchers[contextName]
 	m.mu.Unlock()
 	if !active {
-		return
+		return nil
 	}
-	// The rebuilt watcher re-runs access discovery with the new credentials;
-	// watchLocked announces the swap via "_access" so the frontend re-fetches
-	// AccessibleKinds and replays open views.
-	_ = m.watchLocked(appCtx, contextName)
+	return m.watchLocked(appCtx, contextName)
 }
 
 // ---- Credential helpers -------------------------------------------------
