@@ -13,6 +13,74 @@ import (
 	clienttesting "k8s.io/client-go/testing"
 )
 
+// canListRetry must distinguish a transient probe error (retry) from an
+// authoritative denial (don't retry), so a blip doesn't blank the CRD sidebar
+// and every CRD-gated integration.
+func TestCanListRetry(t *testing.T) {
+	newCS := func(react func(n int) (bool, error)) *fake.Clientset {
+		cs := fake.NewClientset()
+		n := 0
+		cs.PrependReactor("create", "selfsubjectaccessreviews",
+			func(a clienttesting.Action) (bool, runtime.Object, error) {
+				n++
+				allowed, err := react(n)
+				if err != nil {
+					return true, nil, err
+				}
+				ssar := a.(clienttesting.CreateAction).GetObject().(*authv1.SelfSubjectAccessReview)
+				return true, &authv1.SelfSubjectAccessReview{
+					Spec:   ssar.Spec,
+					Status: authv1.SubjectAccessReviewStatus{Allowed: allowed},
+				}, nil
+			})
+		return cs
+	}
+	countProbes := func(cs *fake.Clientset) int {
+		c := 0
+		for _, a := range cs.Actions() {
+			if a.GetVerb() == "create" && a.GetResource().Resource == "selfsubjectaccessreviews" {
+				c++
+			}
+		}
+		return c
+	}
+
+	t.Run("retries a transient error then succeeds", func(t *testing.T) {
+		cs := newCS(func(n int) (bool, error) {
+			if n == 1 {
+				return false, errors.New("timeout")
+			}
+			return true, nil
+		})
+		if !canListRetry(context.Background(), cs, crdGVR) {
+			t.Error("expected allowed after retry")
+		}
+		if got := countProbes(cs); got != 2 {
+			t.Errorf("expected 2 probes, got %d", got)
+		}
+	})
+
+	t.Run("persistent error returns false, bounded to two probes", func(t *testing.T) {
+		cs := newCS(func(int) (bool, error) { return false, errors.New("wedged") })
+		if canListRetry(context.Background(), cs, crdGVR) {
+			t.Error("expected false on persistent error")
+		}
+		if got := countProbes(cs); got != 2 {
+			t.Errorf("expected 2 probes (bounded), got %d", got)
+		}
+	})
+
+	t.Run("authoritative deny does not retry", func(t *testing.T) {
+		cs := newCS(func(int) (bool, error) { return false, nil })
+		if canListRetry(context.Background(), cs, crdGVR) {
+			t.Error("expected false on authoritative deny")
+		}
+		if got := countProbes(cs); got != 1 {
+			t.Errorf("expected 1 probe (no retry on a clean answer), got %d", got)
+		}
+	})
+}
+
 // fakeSAR builds a fake clientset whose SelfSubjectAccessReview reactor
 // answers from a (verb, resource, namespace) → allowed map.
 func fakeSAR(t *testing.T, allow map[string]bool) *fake.Clientset {

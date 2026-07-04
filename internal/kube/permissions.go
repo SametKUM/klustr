@@ -300,3 +300,22 @@ func canList(ctx context.Context, cs kubernetes.Interface, gvr schema.GroupVersi
 	}
 	return result.Status.Allowed, nil
 }
+
+// canListRetry probes list access with a bounded per-attempt timeout, retrying
+// once on a transport error so a transient hiccup — or a still-cold exec token,
+// the same case discoverAccess retries for — is not mistaken for a denial. A
+// gate that skipped on a blip would blank the CRD sidebar (and every CRD-gated
+// integration) for the watcher's whole lifetime. Returns false only on an
+// authoritative allowed=false or a persistent error, never blocking longer than
+// two accessProbeTimeout windows on a wedged connection.
+func canListRetry(parent context.Context, cs kubernetes.Interface, gvr schema.GroupVersionResource) bool {
+	for attempt := 0; attempt < 2; attempt++ {
+		ctx, cancel := context.WithTimeout(parent, accessProbeTimeout)
+		allowed, err := canList(ctx, cs, gvr, "")
+		cancel()
+		if err == nil {
+			return allowed
+		}
+	}
+	return false
+}

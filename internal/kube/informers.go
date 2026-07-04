@@ -237,8 +237,9 @@ func (w *contextWatcher) start(parent context.Context) error {
 	w.crd = newCRDWatcher(w.dyn, ctx.Done(), w.touch)
 	// Skip the cluster-wide CRD watcher when the user can't list CRDs —
 	// otherwise client-go's reflector retries on a tight loop and floods
-	// the log with 403s.
-	if ok, _ := canList(ctx, w.cs, crdGVR, ""); ok {
+	// the log with 403s. Retry once on a probe error so a transient hiccup
+	// doesn't blank the CRD sidebar and every CRD-gated integration.
+	if canListRetry(ctx, w.cs, crdGVR) {
 		if err := w.crd.start(); err != nil {
 			cancel()
 			return err
