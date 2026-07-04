@@ -306,20 +306,24 @@ export const CERT_MANAGER_GROUP_NAV: ResourceGroup = {
   ],
 }
 
+// Every group any sidebar can render, conditional or not. Persisted-entry
+// pruning and the hidden-items restore lookup must both run over this complete
+// list — a group missing from one of them makes its hidden items unrestorable.
+export const ALL_SIDEBAR_GROUPS: readonly ResourceGroup[] = [
+  ...RESOURCE_GROUPS,
+  HELM_GROUP,
+  ARGO_GROUP,
+  GATEWAY_GROUP,
+  KARPENTER_GROUP,
+  FLUX_GROUP,
+  ISTIO_GROUP,
+  CERT_MANAGER_GROUP_NAV,
+]
+
 // Every view id any sidebar group can surface. Used to prune persisted
 // hidden-sidebar entries whose view was renamed or removed across releases.
 export const ALL_RESOURCE_VIEWS: ReadonlySet<ResourceView> = new Set(
-  [
-    ...RESOURCE_GROUPS,
-    HELM_GROUP,
-    ARGO_GROUP,
-    GATEWAY_GROUP,
-    KARPENTER_GROUP,
-    FLUX_GROUP,
-    ISTIO_GROUP,
-    CERT_MANAGER_GROUP_NAV,
-  ]
-    .flatMap((g) => g.items)
+  ALL_SIDEBAR_GROUPS.flatMap((g) => g.items)
     .map((i) => i.view)
     .filter((v): v is ResourceView => v !== undefined),
 )

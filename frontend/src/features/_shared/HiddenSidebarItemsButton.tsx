@@ -2,14 +2,7 @@ import { useMemo, useState } from 'react'
 import { EyeOff, Plus } from 'lucide-react'
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  ARGO_GROUP,
-  GATEWAY_GROUP,
-  HELM_GROUP,
-  KARPENTER_GROUP,
-  RESOURCE_GROUPS,
-  type NavItem,
-} from '@/features/_shared/resourceGroups'
+import { ALL_SIDEBAR_GROUPS, type NavItem } from '@/features/_shared/resourceGroups'
 import type { ResourceView, SidebarMode } from '@/store/ui'
 
 type Props = {
@@ -20,19 +13,13 @@ type Props = {
 }
 
 // Lookup runs over every group klustr ever renders. We don't try to honour
-// the conditional-group gates (Gateway/Argo/Karpenter) here — if the user
+// the conditional-group gates (Gateway/Argo/Karpenter/…) here — if the user
 // hid `gateways` in a cluster that had Gateway API and later switched to
 // one that doesn't, the entry should still surface so they can restore it.
-const ALL_NAV_ITEMS: NavItem[] = [
-  ...RESOURCE_GROUPS.flatMap((g) => g.items),
-  ...GATEWAY_GROUP.items,
-  ...ARGO_GROUP.items,
-  ...KARPENTER_GROUP.items,
-  ...HELM_GROUP.items,
-]
-
 const ITEMS_BY_VIEW = new Map<string, NavItem>(
-  ALL_NAV_ITEMS.filter((i) => i.view !== undefined).map((i) => [i.view as string, i]),
+  ALL_SIDEBAR_GROUPS.flatMap((g) => g.items)
+    .filter((i) => i.view !== undefined)
+    .map((i) => [i.view as string, i]),
 )
 
 export function HiddenSidebarItemsButton({ hiddenItems, mode, onShowItem, onClearAll }: Props) {
