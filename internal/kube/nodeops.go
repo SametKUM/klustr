@@ -88,6 +88,15 @@ func (m *ClientManager) DrainNode(ctx context.Context, contextName, nodeName str
 		onProgress(p)
 	}
 
+	// Cordon before listing targets: a pod the scheduler binds to the node
+	// between the list and the cordon would otherwise be absent from targets and
+	// never evicted, so the drain could report "done" with a workload pod still
+	// running on the cordoned node. kubectl drain cordons first for this reason.
+	report(NodeDrainProgress{Phase: "cordoning"})
+	if err := m.SetNodeCordon(ctx, contextName, nodeName, true); err != nil {
+		return fmt.Errorf("cordon: %w", err)
+	}
+
 	list, err := cs.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 		FieldSelector: "spec.nodeName=" + nodeName,
 	})
@@ -97,10 +106,13 @@ func (m *ClientManager) DrainNode(ctx context.Context, contextName, nodeName str
 	targets := drainTargets(list.Items)
 
 	// kubectl drain refuses to delete pods not managed by a controller without
-	// --force, since they cannot be rescheduled and are gone for good. Check
-	// before cordoning so a refused drain leaves the node untouched.
+	// --force, since they cannot be rescheduled and are gone for good. Undo the
+	// cordon on refusal so a rejected drain leaves the node as it was.
 	if !force {
 		if bare := barePods(targets); len(bare) > 0 {
+			if uerr := m.SetNodeCordon(ctx, contextName, nodeName, false); uerr != nil {
+				return fmt.Errorf("uncordon after refusing drain: %w", uerr)
+			}
 			return fmt.Errorf(
 				"%d pod(s) on this node are not managed by a controller and would be permanently deleted (enable force to override): %s",
 				len(bare), strings.Join(podKeys(bare), ", "),
@@ -108,11 +120,6 @@ func (m *ClientManager) DrainNode(ctx context.Context, contextName, nodeName str
 		}
 	}
 	total := len(targets)
-
-	report(NodeDrainProgress{Phase: "cordoning"})
-	if err := m.SetNodeCordon(ctx, contextName, nodeName, true); err != nil {
-		return fmt.Errorf("cordon: %w", err)
-	}
 
 	report(NodeDrainProgress{Phase: "evicting", Total: total, Pending: podKeys(targets)})
 
