@@ -331,7 +331,7 @@ function ConfigMapEnvValue({
 type SecretRevealState =
   | { status: 'hidden' }
   | { status: 'loading' }
-  | { status: 'shown'; value: string }
+  | { status: 'shown'; value: string; binary: boolean }
   | { status: 'error'; message: string }
 
 function SecretEnvValue({
@@ -362,7 +362,7 @@ function SecretEnvValue({
     setState({ status: 'loading' })
     try {
       const v = await api.revealSecretValue(contextName, namespace, secretName, secretKey)
-      setState({ status: 'shown', value: v })
+      setState({ status: 'shown', value: v.value, binary: v.binary })
     } catch (e) {
       setState({ status: 'error', message: String(e) })
     }
@@ -396,7 +396,14 @@ function SecretEnvValue({
           </span>
         )}
         {state.status === 'shown' && (
-          <span className="allow-select break-all font-mono">{state.value}</span>
+          <span className="allow-select break-all font-mono">
+            {state.binary && (
+              <span className="mr-1 rounded bg-amber-500/15 px-1 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                base64
+              </span>
+            )}
+            {state.value}
+          </span>
         )}
         {state.status === 'error' && (
           <span className="text-destructive">{state.message}</span>

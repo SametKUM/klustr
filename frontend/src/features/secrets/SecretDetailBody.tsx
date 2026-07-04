@@ -16,7 +16,7 @@ function shortenSecretType(t: string): string {
 type RevealState =
   | { status: 'hidden' }
   | { status: 'loading' }
-  | { status: 'shown'; value: string }
+  | { status: 'shown'; value: string; binary: boolean }
   | { status: 'error'; message: string }
 
 function SecretValueRow({
@@ -47,8 +47,8 @@ function SecretValueRow({
   const reveal = async () => {
     setState({ status: 'loading' })
     try {
-      const value = await api.revealSecretValue(contextName, namespace, name, secretKey)
-      setState({ status: 'shown', value })
+      const res = await api.revealSecretValue(contextName, namespace, name, secretKey)
+      setState({ status: 'shown', value: res.value, binary: res.binary })
     } catch (e) {
       setState({ status: 'error', message: String(e) })
     }
@@ -82,9 +82,16 @@ function SecretValueRow({
           </span>
         )}
         {state.status === 'shown' && (
-          <pre className="allow-select max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-muted/30 px-2 py-1 font-mono text-[11px]">
-            {state.value}
-          </pre>
+          <div className="space-y-1">
+            {state.binary && (
+              <span className="inline-block rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                binary — shown as base64
+              </span>
+            )}
+            <pre className="allow-select max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-muted/30 px-2 py-1 font-mono text-[11px]">
+              {state.value}
+            </pre>
+          </div>
         )}
         {state.status === 'error' && (
           <span className="text-destructive">{state.message}</span>

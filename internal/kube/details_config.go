@@ -1,10 +1,31 @@
 package kube
 
 import (
+	"encoding/base64"
 	"fmt"
 	"sort"
 	"time"
+	"unicode/utf8"
 )
+
+// SecretValueResult carries a revealed secret value across the bridge. Binary
+// (non-UTF-8) values are base64-encoded and flagged, because a raw string would
+// have every invalid byte replaced with U+FFFD during JSON marshaling —
+// silently corrupting a copied .p12/gzip/key blob.
+type SecretValueResult struct {
+	Value  string `json:"value"`
+	Binary bool   `json:"binary"`
+}
+
+// encodeSecretValue returns the value as text when it is valid UTF-8, otherwise
+// its base64 encoding with binary=true so the UI can label it and copy it
+// losslessly.
+func encodeSecretValue(v []byte) SecretValueResult {
+	if utf8.Valid(v) {
+		return SecretValueResult{Value: string(v), Binary: false}
+	}
+	return SecretValueResult{Value: base64.StdEncoding.EncodeToString(v), Binary: true}
+}
 
 type ConfigMapDetail struct {
 	Name        string            `json:"name"`
@@ -88,18 +109,18 @@ func (w *contextWatcher) Secret(namespace, name string) (*SecretDetail, error) {
 // SecretValue returns the decoded UTF-8 value for a single key of a
 // Secret. Values are only fetched when the user explicitly asks the UI
 // to reveal them — never as part of a list or detail load.
-func (w *contextWatcher) SecretValue(namespace, name, key string) (string, error) {
+func (w *contextWatcher) SecretValue(namespace, name, key string) (SecretValueResult, error) {
 	f := w.factoryFor("Secret")
 	if f == nil {
-		return "", errKindNoAccess("Secret")
+		return SecretValueResult{}, errKindNoAccess("Secret")
 	}
 	s, err := f.Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
 	if err != nil {
-		return "", err
+		return SecretValueResult{}, err
 	}
 	v, ok := s.Data[key]
 	if !ok {
-		return "", fmt.Errorf("secret %s/%s has no key %q", namespace, name, key)
+		return SecretValueResult{}, fmt.Errorf("secret %s/%s has no key %q", namespace, name, key)
 	}
-	return string(v), nil
+	return encodeSecretValue(v), nil
 }

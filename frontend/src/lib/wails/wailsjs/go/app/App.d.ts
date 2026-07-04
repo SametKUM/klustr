@@ -455,7 +455,7 @@ export function ResizePodResources(arg1:string,arg2:string,arg3:string,arg4:stri
 
 export function RestartWorkload(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
-export function RevealSecretValue(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+export function RevealSecretValue(arg1:string,arg2:string,arg3:string,arg4:string):Promise<kube.SecretValueResult>;
 
 export function RollbackArgoApplication(arg1:string,arg2:string,arg3:string,arg4:number,arg5:boolean):Promise<void>;
 

@@ -276,7 +276,7 @@ func (a *App) GetSecret(contextName, namespace, name string) (*kube.SecretDetail
 	return a.clients.Secret(contextName, namespace, name)
 }
 
-func (a *App) RevealSecretValue(contextName, namespace, name, key string) (string, error) {
+func (a *App) RevealSecretValue(contextName, namespace, name, key string) (kube.SecretValueResult, error) {
 	return a.clients.SecretValue(contextName, namespace, name, key)
 }
 

@@ -7028,6 +7028,20 @@ export namespace kube {
 	    }
 	}
 	
+	export class SecretValueResult {
+	    value: string;
+	    binary: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SecretValueResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.value = source["value"];
+	        this.binary = source["binary"];
+	    }
+	}
 	export class ServerVersion {
 	    gitVersion: string;
 	    platform: string;
