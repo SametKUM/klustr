@@ -22,6 +22,7 @@ type TerminalCloseFunc func(err error)
 
 type terminalSession struct {
 	id         string
+	context    string
 	cmd        *exec.Cmd
 	ptmx       *os.File
 	cancel     context.CancelFunc
@@ -104,6 +105,7 @@ func (mgr *terminalSessionManager) start(
 	id := fmt.Sprintf("term-%d", atomic.AddUint64(&mgr.counter, 1))
 	sess := &terminalSession{
 		id:         id,
+		context:    contextName,
 		cmd:        cmd,
 		ptmx:       ptmx,
 		cancel:     cancel,
@@ -173,6 +175,24 @@ func (mgr *terminalSessionManager) stop(id string) {
 	mgr.mu.Unlock()
 	if ok {
 		sess.close()
+	}
+}
+
+// stopForContext kills every local shell bound to a context, called from
+// StopWatch so a disconnect tears down its terminals (each holds a minified
+// kubeconfig for that context) instead of leaving them live.
+func (mgr *terminalSessionManager) stopForContext(contextName string) {
+	mgr.mu.Lock()
+	var stopped []*terminalSession
+	for id, s := range mgr.sessions {
+		if s.context == contextName {
+			stopped = append(stopped, s)
+			delete(mgr.sessions, id)
+		}
+	}
+	mgr.mu.Unlock()
+	for _, s := range stopped {
+		s.close()
 	}
 }
 

@@ -466,6 +466,12 @@ func (m *ClientManager) StopWatch(contextName string) {
 	m.helm.invalidate(contextName)
 	m.creds.pauseRefresh(contextName)
 	m.pf.stopForContext(contextName)
+	// Log streams / exec sessions / node shells / local terminals captured the
+	// pre-disconnect client at start(), so they keep their apiserver watch or
+	// SPDY channel open unless torn down explicitly here.
+	m.logs.stopForContext(contextName)
+	m.execs.stopForContext(contextName)
+	m.terms.stopForContext(contextName)
 	if ok {
 		w.stop()
 	}
@@ -636,7 +642,7 @@ func (m *ClientManager) StartLogs(
 	if err != nil {
 		return "", err
 	}
-	return m.logs.start(parent, cs, namespace, podName, container, follow, previous, tailLines, onBatch, onClose)
+	return m.logs.start(parent, cs, contextName, namespace, podName, container, follow, previous, tailLines, onBatch, onClose)
 }
 
 func (m *ClientManager) StopLogs(id string) {
@@ -658,7 +664,7 @@ func (m *ClientManager) StartExec(
 	if err != nil {
 		return "", err
 	}
-	return m.execs.start(parent, cfg, cs, namespace, podName, container, command, onData, onClose)
+	return m.execs.start(parent, cfg, cs, contextName, namespace, podName, container, command, onData, onClose)
 }
 
 func (m *ClientManager) SendExecInput(sessionID, data string) {

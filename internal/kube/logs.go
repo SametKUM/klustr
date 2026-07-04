@@ -27,8 +27,9 @@ type LogBatchFunc func(lines []string)
 type LogCloseFunc func(err error)
 
 type logSession struct {
-	id     string
-	cancel context.CancelFunc
+	id      string
+	context string
+	cancel  context.CancelFunc
 }
 
 type logSessionManager struct {
@@ -44,6 +45,7 @@ func newLogSessionManager() *logSessionManager {
 func (mgr *logSessionManager) start(
 	parent context.Context,
 	cs *kubernetes.Clientset,
+	contextName string,
 	namespace, podName, container string,
 	follow, previous bool,
 	tailLines int64,
@@ -67,7 +69,7 @@ func (mgr *logSessionManager) start(
 	}
 
 	id := fmt.Sprintf("log-%d", atomic.AddUint64(&mgr.counter, 1))
-	sess := &logSession{id: id, cancel: cancel}
+	sess := &logSession{id: id, context: contextName, cancel: cancel}
 
 	mgr.mu.Lock()
 	mgr.sessions[id] = sess
@@ -156,6 +158,24 @@ func (mgr *logSessionManager) stop(id string) {
 	mgr.mu.Unlock()
 	if ok {
 		sess.cancel()
+	}
+}
+
+// stopForContext cancels every live log stream for a context, called from
+// StopWatch on disconnect so the apiserver-side watch goroutines unwind
+// instead of leaking (the running stream holds the pre-disconnect client).
+func (mgr *logSessionManager) stopForContext(contextName string) {
+	mgr.mu.Lock()
+	var stopped []*logSession
+	for id, s := range mgr.sessions {
+		if s.context == contextName {
+			stopped = append(stopped, s)
+			delete(mgr.sessions, id)
+		}
+	}
+	mgr.mu.Unlock()
+	for _, s := range stopped {
+		s.cancel()
 	}
 }
 

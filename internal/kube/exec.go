@@ -18,11 +18,12 @@ type ExecDataFunc func(data string)
 type ExecCloseFunc func(err error)
 
 type execSession struct {
-	id     string
-	cancel context.CancelFunc
-	stdin  *io.PipeWriter
-	resize chan remotecommand.TerminalSize
-	once   sync.Once
+	id      string
+	context string
+	cancel  context.CancelFunc
+	stdin   *io.PipeWriter
+	resize  chan remotecommand.TerminalSize
+	once    sync.Once
 }
 
 func (s *execSession) close() {
@@ -47,6 +48,7 @@ func (mgr *execSessionManager) start(
 	parent context.Context,
 	restCfg *rest.Config,
 	cs *kubernetes.Clientset,
+	contextName string,
 	namespace, podName, container string,
 	command []string,
 	onData ExecDataFunc,
@@ -80,7 +82,7 @@ func (mgr *execSessionManager) start(
 	resizeCh := make(chan remotecommand.TerminalSize, 4)
 
 	id := fmt.Sprintf("exec-%d", atomic.AddUint64(&mgr.counter, 1))
-	sess := &execSession{id: id, cancel: cancel, stdin: pw, resize: resizeCh}
+	sess := &execSession{id: id, context: contextName, cancel: cancel, stdin: pw, resize: resizeCh}
 
 	mgr.mu.Lock()
 	mgr.sessions[id] = sess
@@ -154,6 +156,24 @@ func (mgr *execSessionManager) stop(id string) {
 	mgr.mu.Unlock()
 	if ok {
 		sess.close()
+	}
+}
+
+// stopForContext closes every live exec/node-shell session for a context,
+// called from StopWatch on disconnect so the SPDY channel unwinds instead of
+// staying open on the pre-disconnect client.
+func (mgr *execSessionManager) stopForContext(contextName string) {
+	mgr.mu.Lock()
+	var stopped []*execSession
+	for id, s := range mgr.sessions {
+		if s.context == contextName {
+			stopped = append(stopped, s)
+			delete(mgr.sessions, id)
+		}
+	}
+	mgr.mu.Unlock()
+	for _, s := range stopped {
+		s.close()
 	}
 }
 

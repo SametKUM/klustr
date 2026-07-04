@@ -99,7 +99,7 @@ func (m *ClientManager) StartNodeShell(
 	}
 
 	id, err := m.execs.start(
-		parent, cfg, cs, nodeShellNamespace, created.Name, nodeShellContainerName, nodeShellCommand(osImage),
+		parent, cfg, cs, contextName, nodeShellNamespace, created.Name, nodeShellContainerName, nodeShellCommand(osImage),
 		onData,
 		func(err error) {
 			deleteNodeShellPod(cs, created.Name)
