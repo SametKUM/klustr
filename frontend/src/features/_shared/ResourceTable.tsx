@@ -416,9 +416,11 @@ export function ResourceTable<T>({
       const list = data[ctx]
       if (!list || list.length === 0) continue
       for (const item of list) {
-        if (scope === 'namespaced' && selectedNamespaces.length > 1) {
-          const ns = (item as RowIdentity).namespace ?? ''
-          if (!query.matches(ns)) continue
+        // Always filter client-side: data[ctx] can still hold the previous
+        // scope's rows during the refetch after a namespace switch, and
+        // rendering them verbatim flashes wrong-namespace rows.
+        if (scope === 'namespaced' && !query.matches((item as RowIdentity).namespace ?? '')) {
+          continue
         }
         out.push(tagItem(item, ctx))
       }
@@ -429,7 +431,7 @@ export function ResourceTable<T>({
     }
     mergedRef.current = out
     return out
-  }, [activeContexts, data, scope, selectedNamespaces, query])
+  }, [activeContexts, data, scope, query])
 
   useEffect(() => {
     if (selectedResource) return
