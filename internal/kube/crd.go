@@ -108,9 +108,15 @@ type crdWatcher struct {
 	crFactory dynamicinformer.DynamicSharedInformerFactory
 	crWatches map[schema.GroupVersionResource]bool
 	crSynced  map[schema.GroupVersionResource]chan struct{}
+
+	// canWatch gates EnsureCRWatch on list access to the CR instances. A user
+	// can often list CRDs but not a CRD's instances; starting an informer
+	// anyway leaves client-go retrying the forbidden LIST for the life of the
+	// connection (a shared-factory informer can't be stopped individually).
+	canWatch func(gvr schema.GroupVersionResource) bool
 }
 
-func newCRDWatcher(dyn dynamic.Interface, stopCh <-chan struct{}, onTouch func(kind string)) *crdWatcher {
+func newCRDWatcher(dyn dynamic.Interface, stopCh <-chan struct{}, onTouch func(kind string), canWatch func(gvr schema.GroupVersionResource) bool) *crdWatcher {
 	return &crdWatcher{
 		dyn:       dyn,
 		factory:   dynamicinformer.NewDynamicSharedInformerFactory(dyn, 0),
@@ -119,6 +125,7 @@ func newCRDWatcher(dyn dynamic.Interface, stopCh <-chan struct{}, onTouch func(k
 		crFactory: dynamicinformer.NewDynamicSharedInformerFactory(dyn, 0),
 		crWatches: make(map[schema.GroupVersionResource]bool),
 		crSynced:  make(map[schema.GroupVersionResource]chan struct{}),
+		canWatch:  canWatch,
 	}
 }
 
@@ -376,52 +383,63 @@ func (w *crdWatcher) EnsureCRWatch(gvr schema.GroupVersionResource) error {
 	defer timeout.Stop()
 
 	w.crMu.Lock()
-	if w.crWatches[gvr] {
-		ch := w.crSynced[gvr]
-		w.crMu.Unlock()
-		select {
-		case <-ch:
-		case <-timeout.C:
-			return fmt.Errorf("timed out waiting for %s cache sync", gvr.Resource)
-		case <-w.stopCh:
-			return fmt.Errorf("context watch stopped")
-		}
-		return nil
-	}
-
-	informer := w.crFactory.ForResource(gvr).Informer()
-	if err := informer.SetTransform(stripManagedFields); err != nil {
-		w.crMu.Unlock()
-		return err
-	}
-	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(any) { w.onTouch(crChangeKind(gvr)) },
-		UpdateFunc: func(any, any) { w.onTouch(crChangeKind(gvr)) },
-		DeleteFunc: func(any) { w.onTouch(crChangeKind(gvr)) },
-	}); err != nil {
-		w.crMu.Unlock()
-		return err
-	}
-	synced := make(chan struct{})
-	w.crWatches[gvr] = true
-	w.crSynced[gvr] = synced
+	synced, started := w.crSynced[gvr]
 	w.crMu.Unlock()
 
-	w.crFactory.Start(w.stopCh)
-	go func() {
-		if cache.WaitForCacheSync(w.stopCh, informer.HasSynced) {
-			w.onTouch(crChangeKind(gvr))
+	if !started {
+		// Probe before starting: an informer denied list/watch on the CR
+		// instances would retry the forbidden LIST until disconnect. Probing
+		// outside the lock keeps the SSAR round-trip off the fast path;
+		// nothing is registered on denial, so a later RBAC grant works on
+		// the next navigation.
+		if w.canWatch != nil && !w.canWatch(gvr) {
+			return fmt.Errorf("no permission to list %s", gvr.Resource)
 		}
-		close(synced)
-	}()
+
+		w.crMu.Lock()
+		if ch, ok := w.crSynced[gvr]; ok {
+			synced = ch
+			w.crMu.Unlock()
+		} else {
+			informer := w.crFactory.ForResource(gvr).Informer()
+			if err := informer.SetTransform(stripManagedFields); err != nil {
+				w.crMu.Unlock()
+				return err
+			}
+			if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				AddFunc:    func(any) { w.onTouch(crChangeKind(gvr)) },
+				UpdateFunc: func(any, any) { w.onTouch(crChangeKind(gvr)) },
+				DeleteFunc: func(any) { w.onTouch(crChangeKind(gvr)) },
+			}); err != nil {
+				w.crMu.Unlock()
+				return err
+			}
+			synced = make(chan struct{})
+			w.crWatches[gvr] = true
+			w.crSynced[gvr] = synced
+			w.crMu.Unlock()
+
+			w.crFactory.Start(w.stopCh)
+			ch := synced
+			go func() {
+				// WaitForCacheSync fails only when stopCh closes; leaving ch
+				// open then keeps waiters from mistaking teardown for a sync.
+				if cache.WaitForCacheSync(w.stopCh, informer.HasSynced) {
+					w.onTouch(crChangeKind(gvr))
+					close(ch)
+				}
+			}()
+		}
+	}
+
 	select {
 	case <-synced:
+		return nil
 	case <-timeout.C:
 		return fmt.Errorf("timed out waiting for %s cache sync", gvr.Resource)
 	case <-w.stopCh:
 		return fmt.Errorf("context watch stopped")
 	}
-	return nil
 }
 
 // listCachedCRs reads the cached objects for a CRD GVR from the dynamic

@@ -10,6 +10,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -234,7 +235,9 @@ func (w *contextWatcher) start(parent context.Context) error {
 		)
 	}
 
-	w.crd = newCRDWatcher(w.dyn, ctx.Done(), w.touch)
+	w.crd = newCRDWatcher(w.dyn, ctx.Done(), w.touch, func(gvr schema.GroupVersionResource) bool {
+		return canListRetry(ctx, w.cs, gvr)
+	})
 	// Skip the cluster-wide CRD watcher when the user can't list CRDs —
 	// otherwise client-go's reflector retries on a tight loop and floods
 	// the log with 403s. Retry once on a probe error so a transient hiccup
