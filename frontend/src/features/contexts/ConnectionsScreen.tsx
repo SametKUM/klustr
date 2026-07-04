@@ -35,6 +35,7 @@ import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ReadOnlyToggle } from '@/features/_shared/ReadOnlyToggle'
 import { ProviderIcon, ProviderIconStack, providerMeta } from '@/features/_shared/providerIcons'
 import { api, type ContextInfo } from '@/lib/api'
+import { onKubeChange } from '@/lib/events'
 import {
   useUIStore,
   type ContextGroup,
@@ -108,6 +109,25 @@ export function ConnectionsScreen() {
       cancelled = true
     }
   }, [reloadKey])
+
+  // The shell-env import can finish after the first list and add a KUBECONFIG
+  // defined only in the login shell. Refresh silently (no loading flash) so
+  // those contexts fold in without the initial list having to block on it.
+  useEffect(() => {
+    let cancelled = false
+    const unsub = onKubeChange('_contexts', () => {
+      api
+        .listContexts()
+        .then((cfg) => {
+          if (!cancelled) setState({ kind: 'ready', contexts: cfg.contexts })
+        })
+        .catch(() => {})
+    })
+    return () => {
+      cancelled = true
+      unsub()
+    }
+  }, [])
 
   const contexts = state.kind === 'ready' ? state.contexts : []
 

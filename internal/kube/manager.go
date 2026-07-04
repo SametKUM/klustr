@@ -133,7 +133,24 @@ func (m *ClientManager) ImportShellEnv() {
 		importShellEnv(shellEnvTimeout)
 		m.refreshLoadingRules()
 		close(m.envReady)
+		// The search precedence may now include a KUBECONFIG that existed only
+		// in the login shell; tell the Welcome screen to re-list contexts.
+		m.emitContextsChanged()
 	})
+}
+
+// contextsChangedKind is a synthetic kube:change kind (no associated context)
+// emitted when the kubeconfig loading rules change — today, after the shell-env
+// import updates the search precedence. The Welcome screen re-lists on it.
+const contextsChangedKind = "_contexts"
+
+func (m *ClientManager) emitContextsChanged() {
+	m.mu.Lock()
+	cb := m.onChange
+	m.mu.Unlock()
+	if cb != nil {
+		cb(ContextChange{Kind: contextsChangedKind})
+	}
 }
 
 // refreshLoadingRules re-derives the kubeconfig search precedence after the
@@ -197,13 +214,15 @@ func (m *ClientManager) SetOnChange(cb func(ContextChange)) {
 }
 
 func (m *ClientManager) Kubeconfig() (*Kubeconfig, error) {
-	// ListContexts (Welcome screen) hits this on mount, concurrent with the
-	// shell-env import goroutine that rewrites m.rules.Precedence. Wait for the
-	// import (bounded) so the read happens-after the write — no data race — and
-	// so contexts from a KUBECONFIG defined only in the login shell are present
-	// instead of silently missing with nothing to re-trigger the list.
-	m.waitEnvReady(context.Background())
-	return loadRawConfig(m.rules)
+	// Read a lock-guarded snapshot of the loading rules: this stays fast (a local
+	// file read, no waiting on the shell-env import) yet does not race
+	// refreshLoadingRules, which rewrites m.rules.Precedence under m.mu. When the
+	// import finishes it emits _contexts so the Welcome screen re-lists and picks
+	// up a KUBECONFIG defined only in the login shell.
+	m.mu.Lock()
+	rules := *m.rules
+	m.mu.Unlock()
+	return loadRawConfig(&rules)
 }
 
 func (m *ClientManager) Clientset(contextName string) (*kubernetes.Clientset, error) {
