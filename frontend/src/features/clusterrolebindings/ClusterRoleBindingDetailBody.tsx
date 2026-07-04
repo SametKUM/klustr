@@ -12,11 +12,7 @@ export function ClusterRoleBindingDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getClusterRoleBinding(ctx, name), [name])
-  const { detail, error } = useResourceDetail<ClusterRoleBindingDetail>(
-    contextName,
-    'ClusterRoleBinding',
-    load,
-  )
+  const { detail, error } = useResourceDetail<ClusterRoleBindingDetail>(contextName, 'ClusterRoleBinding', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

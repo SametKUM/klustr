@@ -15,7 +15,7 @@ export function EndpointSliceDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getEndpointSlice(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<EndpointSliceDetail>(contextName, 'EndpointSlice', load)
+  const { detail, error } = useResourceDetail<EndpointSliceDetail>(contextName, 'EndpointSlice', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

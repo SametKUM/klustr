@@ -21,7 +21,7 @@ export function ResourceSliceDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getResourceSlice(ctx, name), [name])
-  const { detail, error } = useResourceDetail<ResourceSliceDetail>(contextName, 'ResourceSlice', load)
+  const { detail, error } = useResourceDetail<ResourceSliceDetail>(contextName, 'ResourceSlice', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

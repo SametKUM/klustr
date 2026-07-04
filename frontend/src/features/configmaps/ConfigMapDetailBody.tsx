@@ -16,7 +16,7 @@ export function ConfigMapDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getConfigMap(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<ConfigMapDetail>(contextName, 'ConfigMap', load)
+  const { detail, error } = useResourceDetail<ConfigMapDetail>(contextName, 'ConfigMap', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   const dataEntries = Object.entries(detail.data ?? {})

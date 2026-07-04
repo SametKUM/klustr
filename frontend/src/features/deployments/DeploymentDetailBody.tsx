@@ -17,7 +17,7 @@ export function DeploymentDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getDeployment(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<DeploymentDetail>(contextName, 'Deployment', load)
+  const { detail, error } = useResourceDetail<DeploymentDetail>(contextName, 'Deployment', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

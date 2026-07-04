@@ -14,7 +14,7 @@ export function ResourceQuotaDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getResourceQuota(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<ResourceQuotaDetail>(contextName, 'ResourceQuota', load)
+  const { detail, error } = useResourceDetail<ResourceQuotaDetail>(contextName, 'ResourceQuota', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

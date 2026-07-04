@@ -15,7 +15,7 @@ export function ReplicationControllerDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getReplicationController(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<ReplicationControllerDetail>(contextName, 'ReplicationController', load)
+  const { detail, error } = useResourceDetail<ReplicationControllerDetail>(contextName, 'ReplicationController', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

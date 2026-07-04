@@ -18,11 +18,7 @@ export function FluxReceiverDetailBody({ contextName, namespace, name }: Props) 
     (ctx: string) => api.getFluxReceiver(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<FluxReceiverDetail>(
-    contextName,
-    'FluxReceiver',
-    load,
-  )
+  const { detail, error } = useResourceDetail<FluxReceiverDetail>(contextName, 'FluxReceiver', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

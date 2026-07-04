@@ -25,6 +25,8 @@ export function IssuerDetailBody({ contextName, namespace, name, cluster }: Prop
   const { detail, error } = useResourceDetail<CertManagerIssuerDetail>(
     contextName,
     cluster ? 'ClusterIssuer' : 'Issuer',
+    cluster ? '' : namespace,
+    name,
     load,
   )
   if (error) return <ErrorBox>{error}</ErrorBox>

@@ -22,7 +22,7 @@ export function GatewayClassDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getGatewayClass(ctx, name), [name])
-  const { detail, error } = useResourceDetail<GatewayClassDetail>(contextName, 'GatewayClass', load)
+  const { detail, error } = useResourceDetail<GatewayClassDetail>(contextName, 'GatewayClass', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

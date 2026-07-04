@@ -9,13 +9,15 @@ type Loader = (ctx: string) => Promise<WebhookConfigurationDetail>
 export function WebhookConfigurationDetailBody({
   contextName,
   kind,
+  name,
   loader,
 }: {
   contextName: string | null
   kind: string
+  name: string
   loader: Loader
 }) {
-  const { detail, error } = useResourceDetail<WebhookConfigurationDetail>(contextName, kind, loader)
+  const { detail, error } = useResourceDetail<WebhookConfigurationDetail>(contextName, kind, '', name, loader)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

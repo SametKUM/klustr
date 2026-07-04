@@ -18,7 +18,7 @@ export function DeviceClassDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getDeviceClass(ctx, name), [name])
-  const { detail, error } = useResourceDetail<DeviceClassDetail>(contextName, 'DeviceClass', load)
+  const { detail, error } = useResourceDetail<DeviceClassDetail>(contextName, 'DeviceClass', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

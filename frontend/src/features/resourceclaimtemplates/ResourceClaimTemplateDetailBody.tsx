@@ -24,11 +24,7 @@ export function ResourceClaimTemplateDetailBody({
     (ctx: string) => api.getResourceClaimTemplate(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<ResourceClaimTemplateDetail>(
-    contextName,
-    'ResourceClaimTemplate',
-    load,
-  )
+  const { detail, error } = useResourceDetail<ResourceClaimTemplateDetail>(contextName, 'ResourceClaimTemplate', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

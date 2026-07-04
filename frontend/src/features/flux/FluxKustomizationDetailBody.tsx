@@ -18,11 +18,7 @@ export function FluxKustomizationDetailBody({ contextName, namespace, name }: Pr
     (ctx: string) => api.getFluxKustomization(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<FluxKustomizationDetail>(
-    contextName,
-    'FluxKustomization',
-    load,
-  )
+  const { detail, error } = useResourceDetail<FluxKustomizationDetail>(contextName, 'FluxKustomization', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

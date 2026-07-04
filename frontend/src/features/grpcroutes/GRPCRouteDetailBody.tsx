@@ -52,7 +52,7 @@ export function GRPCRouteDetailBody({
     (ctx: string) => api.getGRPCRoute(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<GRPCRouteDetail>(contextName, 'GRPCRoute', load)
+  const { detail, error } = useResourceDetail<GRPCRouteDetail>(contextName, 'GRPCRoute', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

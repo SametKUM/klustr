@@ -18,11 +18,7 @@ export function FluxGitRepositoryDetailBody({ contextName, namespace, name }: Pr
     (ctx: string) => api.getFluxGitRepository(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<FluxGitRepositoryDetail>(
-    contextName,
-    'FluxGitRepository',
-    load,
-  )
+  const { detail, error } = useResourceDetail<FluxGitRepositoryDetail>(contextName, 'FluxGitRepository', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

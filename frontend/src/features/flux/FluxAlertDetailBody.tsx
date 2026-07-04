@@ -22,11 +22,7 @@ export function FluxAlertDetailBody({ contextName, namespace, name }: Props) {
     (ctx: string) => api.getFluxAlert(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<FluxAlertDetail>(
-    contextName,
-    'FluxAlert',
-    load,
-  )
+  const { detail, error } = useResourceDetail<FluxAlertDetail>(contextName, 'FluxAlert', namespace, name, load)
   // openResource pushes the current resource onto Klustr's detail nav stack
   // before replacing it, so the dialog's back-arrow returns to the Alert.
   // setSelectedResource would clear the stack and trap the user.

@@ -24,7 +24,7 @@ export function GatewayDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getGateway(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<GatewayDetail>(contextName, 'Gateway', load)
+  const { detail, error } = useResourceDetail<GatewayDetail>(contextName, 'Gateway', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

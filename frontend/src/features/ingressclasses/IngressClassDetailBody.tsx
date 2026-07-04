@@ -13,7 +13,7 @@ export function IngressClassDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getIngressClass(ctx, name), [name])
-  const { detail, error } = useResourceDetail<IngressClassDetail>(contextName, 'IngressClass', load)
+  const { detail, error } = useResourceDetail<IngressClassDetail>(contextName, 'IngressClass', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

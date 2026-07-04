@@ -15,7 +15,7 @@ export function JobDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getJob(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<JobDetail>(contextName, 'Job', load)
+  const { detail, error } = useResourceDetail<JobDetail>(contextName, 'Job', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

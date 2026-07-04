@@ -13,7 +13,7 @@ export function ClusterRoleDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getClusterRole(ctx, name), [name])
-  const { detail, error } = useResourceDetail<ClusterRoleDetail>(contextName, 'ClusterRole', load)
+  const { detail, error } = useResourceDetail<ClusterRoleDetail>(contextName, 'ClusterRole', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

@@ -16,13 +16,15 @@ type Loader = (ctx: string) => Promise<AdmissionPolicyDetail>
 export function AdmissionPolicyDetailBody({
   contextName,
   kind,
+  name,
   loader,
 }: {
   contextName: string | null
   kind: string
+  name: string
   loader: Loader
 }) {
-  const { detail, error } = useResourceDetail<AdmissionPolicyDetail>(contextName, kind, loader)
+  const { detail, error } = useResourceDetail<AdmissionPolicyDetail>(contextName, kind, '', name, loader)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

@@ -15,7 +15,7 @@ export function LeaseDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getLease(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<LeaseDetail>(contextName, 'Lease', load)
+  const { detail, error } = useResourceDetail<LeaseDetail>(contextName, 'Lease', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

@@ -25,7 +25,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Td, Th } from '@/features/_shared/DetailPrimitives'
 import { api, type WorkloadRevision } from '@/lib/api'
 import { formatAge } from '@/lib/time'
-import { onKubeChange } from '@/lib/events'
+import { deltaTouches, onKubeChange } from '@/lib/events'
 import { useThemeMode } from '@/features/_shared/useThemeMode'
 
 const DiffEditor = lazy(() =>
@@ -96,13 +96,7 @@ export function RolloutHistoryTab({ contextName, kind, namespace, name }: Props)
       // Only a change to this exact workload affects its rollout history, so
       // skip bursts from other objects of the same kind. Absent/reset deltas
       // are unfiltered and fall through.
-      if (delta && !delta.reset) {
-        const touches =
-          (delta.upserts as Array<{ namespace?: string; name?: string }>).some(
-            (u) => u?.namespace === namespace && u?.name === name,
-          ) || delta.removed.includes(`${namespace}/${name}`)
-        if (!touches) return
-      }
+      if (delta && !delta.reset && !deltaTouches(delta, namespace, name)) return
       reload()
     })
   }, [reload, kind, contextName, namespace, name])

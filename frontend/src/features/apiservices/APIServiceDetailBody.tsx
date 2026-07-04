@@ -22,7 +22,7 @@ export function APIServiceDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getAPIService(ctx, name), [name])
-  const { detail, error } = useResourceDetail<APIServiceDetail>(contextName, 'APIService', load)
+  const { detail, error } = useResourceDetail<APIServiceDetail>(contextName, 'APIService', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

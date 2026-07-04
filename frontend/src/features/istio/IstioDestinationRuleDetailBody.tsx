@@ -16,11 +16,7 @@ export function IstioDestinationRuleDetailBody({ contextName, namespace, name }:
     (ctx: string) => api.getIstioDestinationRule(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<IstioDestinationRuleDetail>(
-    contextName,
-    'IstioDestinationRule',
-    load,
-  )
+  const { detail, error } = useResourceDetail<IstioDestinationRuleDetail>(contextName, 'IstioDestinationRule', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

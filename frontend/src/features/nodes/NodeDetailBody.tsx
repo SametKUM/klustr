@@ -14,7 +14,7 @@ export function NodeDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getNode(ctx, name), [name])
-  const { detail, error } = useResourceDetail<NodeDetail>(contextName, 'Node', load)
+  const { detail, error } = useResourceDetail<NodeDetail>(contextName, 'Node', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

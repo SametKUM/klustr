@@ -12,7 +12,7 @@ export function PriorityClassDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getPriorityClass(ctx, name), [name])
-  const { detail, error } = useResourceDetail<PriorityClassDetail>(contextName, 'PriorityClass', load)
+  const { detail, error } = useResourceDetail<PriorityClassDetail>(contextName, 'PriorityClass', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

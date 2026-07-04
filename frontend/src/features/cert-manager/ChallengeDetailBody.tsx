@@ -17,11 +17,7 @@ export function ChallengeDetailBody({ contextName, namespace, name }: Props) {
     (ctx: string) => api.getCertManagerChallenge(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<CertManagerChallengeDetail>(
-    contextName,
-    'Challenge',
-    load,
-  )
+  const { detail, error } = useResourceDetail<CertManagerChallengeDetail>(contextName, 'Challenge', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

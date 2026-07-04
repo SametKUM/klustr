@@ -17,7 +17,7 @@ export function ReplicaSetDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getReplicaSet(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<ReplicaSetDetail>(contextName, 'ReplicaSet', load)
+  const { detail, error } = useResourceDetail<ReplicaSetDetail>(contextName, 'ReplicaSet', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

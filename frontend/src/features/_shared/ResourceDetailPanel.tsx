@@ -963,7 +963,7 @@ function PodTabs({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getPod(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<PodDetail>(contextName, 'Pod', load)
+  const { detail, error } = useResourceDetail<PodDetail>(contextName, 'Pod', namespace, name, load)
   const requestedTab = useUIStore((s) => s.requestedTab)
   const requestedContainer = useUIStore((s) => s.selectedResource?.logContainer)
   const [tab, setTab] = useState<DetailTab>(requestedTab ?? 'overview')
@@ -1065,6 +1065,7 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
         <WebhookConfigurationDetailBody
           contextName={contextName}
           kind="MutatingWebhookConfiguration"
+          name={resource.name}
           loader={(ctx) => api.getMutatingWebhookConfiguration(ctx, resource.name)}
         />
       )
@@ -1073,6 +1074,7 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
         <WebhookConfigurationDetailBody
           contextName={contextName}
           kind="ValidatingWebhookConfiguration"
+          name={resource.name}
           loader={(ctx) => api.getValidatingWebhookConfiguration(ctx, resource.name)}
         />
       )
@@ -1081,6 +1083,7 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
         <AdmissionPolicyDetailBody
           contextName={contextName}
           kind="ValidatingAdmissionPolicy"
+          name={resource.name}
           loader={(ctx) => api.getValidatingAdmissionPolicy(ctx, resource.name)}
         />
       )
@@ -1089,6 +1092,7 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
         <AdmissionPolicyBindingDetailBody
           contextName={contextName}
           kind="ValidatingAdmissionPolicyBinding"
+          name={resource.name}
           loader={(ctx) => api.getValidatingAdmissionPolicyBinding(ctx, resource.name)}
         />
       )
@@ -1097,6 +1101,7 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
         <AdmissionPolicyDetailBody
           contextName={contextName}
           kind="MutatingAdmissionPolicy"
+          name={resource.name}
           loader={(ctx) => api.getMutatingAdmissionPolicy(ctx, resource.name)}
         />
       )
@@ -1105,6 +1110,7 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
         <AdmissionPolicyBindingDetailBody
           contextName={contextName}
           kind="MutatingAdmissionPolicyBinding"
+          name={resource.name}
           loader={(ctx) => api.getMutatingAdmissionPolicyBinding(ctx, resource.name)}
         />
       )

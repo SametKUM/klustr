@@ -15,7 +15,7 @@ export function PodDisruptionBudgetDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getPodDisruptionBudget(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<PodDisruptionBudgetDetail>(contextName, 'PodDisruptionBudget', load)
+  const { detail, error } = useResourceDetail<PodDisruptionBudgetDetail>(contextName, 'PodDisruptionBudget', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

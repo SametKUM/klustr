@@ -21,11 +21,7 @@ export function ApplicationSetDetailBody({
     (ctx: string) => api.getArgoApplicationSet(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<ArgoApplicationSetDetail>(
-    contextName,
-    'ApplicationSet',
-    load,
-  )
+  const { detail, error } = useResourceDetail<ArgoApplicationSetDetail>(contextName, 'ApplicationSet', namespace, name, load)
   const openResource = useUIStore((s) => s.openResource)
   const argoAppCRD = useCRDStore(
     (s) => s.crds.find((c) => c.group === 'argoproj.io' && c.resource === 'applications') ?? null,

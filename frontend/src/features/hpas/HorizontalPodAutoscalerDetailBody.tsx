@@ -31,7 +31,7 @@ export function HorizontalPodAutoscalerDetailBody({
     (ctx: string) => api.getHorizontalPodAutoscaler(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<HorizontalPodAutoscalerDetail>(contextName, 'HorizontalPodAutoscaler', load)
+  const { detail, error } = useResourceDetail<HorizontalPodAutoscalerDetail>(contextName, 'HorizontalPodAutoscaler', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   const metrics = [...detail.metrics].sort(

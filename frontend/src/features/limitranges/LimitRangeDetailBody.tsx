@@ -14,7 +14,7 @@ export function LimitRangeDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getLimitRange(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<LimitRangeDetail>(contextName, 'LimitRange', load)
+  const { detail, error } = useResourceDetail<LimitRangeDetail>(contextName, 'LimitRange', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

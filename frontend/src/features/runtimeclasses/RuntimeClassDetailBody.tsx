@@ -12,7 +12,7 @@ export function RuntimeClassDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getRuntimeClass(ctx, name), [name])
-  const { detail, error } = useResourceDetail<RuntimeClassDetail>(contextName, 'RuntimeClass', load)
+  const { detail, error } = useResourceDetail<RuntimeClassDetail>(contextName, 'RuntimeClass', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

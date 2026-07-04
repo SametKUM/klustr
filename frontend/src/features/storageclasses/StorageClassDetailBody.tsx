@@ -13,7 +13,7 @@ export function StorageClassDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getStorageClass(ctx, name), [name])
-  const { detail, error } = useResourceDetail<StorageClassDetail>(contextName, 'StorageClass', load)
+  const { detail, error } = useResourceDetail<StorageClassDetail>(contextName, 'StorageClass', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

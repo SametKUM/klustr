@@ -18,11 +18,7 @@ export function FluxBucketDetailBody({ contextName, namespace, name }: Props) {
     (ctx: string) => api.getFluxBucket(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<FluxBucketDetail>(
-    contextName,
-    'FluxBucket',
-    load,
-  )
+  const { detail, error } = useResourceDetail<FluxBucketDetail>(contextName, 'FluxBucket', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

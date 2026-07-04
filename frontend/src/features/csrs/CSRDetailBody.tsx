@@ -41,11 +41,7 @@ export function CSRDetailBody({
     (ctx: string) => api.getCertificateSigningRequest(ctx, name),
     [name],
   )
-  const { detail, error } = useResourceDetail<CertificateSigningRequestDetail>(
-    contextName,
-    'CertificateSigningRequest',
-    load,
-  )
+  const { detail, error } = useResourceDetail<CertificateSigningRequestDetail>(contextName, 'CertificateSigningRequest', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   const decided = detail.condition !== 'Pending'

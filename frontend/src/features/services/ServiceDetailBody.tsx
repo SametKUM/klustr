@@ -15,7 +15,7 @@ export function ServiceDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getService(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<ServiceDetail>(contextName, 'Service', load)
+  const { detail, error } = useResourceDetail<ServiceDetail>(contextName, 'Service', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

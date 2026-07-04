@@ -14,7 +14,7 @@ export function NetworkPolicyDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getNetworkPolicy(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<NetworkPolicyDetail>(contextName, 'NetworkPolicy', load)
+  const { detail, error } = useResourceDetail<NetworkPolicyDetail>(contextName, 'NetworkPolicy', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

@@ -13,7 +13,7 @@ export function NamespaceDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getNamespace(ctx, name), [name])
-  const { detail, error } = useResourceDetail<NamespaceDetail>(contextName, 'Namespace', load)
+  const { detail, error } = useResourceDetail<NamespaceDetail>(contextName, 'Namespace', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

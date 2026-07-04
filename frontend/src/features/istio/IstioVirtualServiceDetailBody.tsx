@@ -16,11 +16,7 @@ export function IstioVirtualServiceDetailBody({ contextName, namespace, name }: 
     (ctx: string) => api.getIstioVirtualService(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<IstioVirtualServiceDetail>(
-    contextName,
-    'IstioVirtualService',
-    load,
-  )
+  const { detail, error } = useResourceDetail<IstioVirtualServiceDetail>(contextName, 'IstioVirtualService', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

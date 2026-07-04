@@ -13,11 +13,7 @@ export function VolumeAttachmentDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getVolumeAttachment(ctx, name), [name])
-  const { detail, error } = useResourceDetail<VolumeAttachmentDetail>(
-    contextName,
-    'VolumeAttachment',
-    load,
-  )
+  const { detail, error } = useResourceDetail<VolumeAttachmentDetail>(contextName, 'VolumeAttachment', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

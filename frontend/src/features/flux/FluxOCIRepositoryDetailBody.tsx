@@ -18,11 +18,7 @@ export function FluxOCIRepositoryDetailBody({ contextName, namespace, name }: Pr
     (ctx: string) => api.getFluxOCIRepository(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<FluxOCIRepositoryDetail>(
-    contextName,
-    'FluxOCIRepository',
-    load,
-  )
+  const { detail, error } = useResourceDetail<FluxOCIRepositoryDetail>(contextName, 'FluxOCIRepository', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

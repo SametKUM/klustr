@@ -18,11 +18,7 @@ export function FluxHelmReleaseDetailBody({ contextName, namespace, name }: Prop
     (ctx: string) => api.getFluxHelmRelease(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<FluxHelmReleaseDetail>(
-    contextName,
-    'FluxHelmRelease',
-    load,
-  )
+  const { detail, error } = useResourceDetail<FluxHelmReleaseDetail>(contextName, 'FluxHelmRelease', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

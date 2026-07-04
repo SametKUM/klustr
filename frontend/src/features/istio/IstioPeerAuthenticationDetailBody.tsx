@@ -15,11 +15,7 @@ export function IstioPeerAuthenticationDetailBody({ contextName, namespace, name
     (ctx: string) => api.getIstioPeerAuthentication(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<IstioPeerAuthenticationDetail>(
-    contextName,
-    'IstioPeerAuthentication',
-    load,
-  )
+  const { detail, error } = useResourceDetail<IstioPeerAuthenticationDetail>(contextName, 'IstioPeerAuthentication', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

@@ -17,7 +17,7 @@ export function OrderDetailBody({ contextName, namespace, name }: Props) {
     (ctx: string) => api.getCertManagerOrder(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<CertManagerOrderDetail>(contextName, 'Order', load)
+  const { detail, error } = useResourceDetail<CertManagerOrderDetail>(contextName, 'Order', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

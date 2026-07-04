@@ -14,7 +14,7 @@ export function RoleDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getRole(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<RoleDetail>(contextName, 'Role', load)
+  const { detail, error } = useResourceDetail<RoleDetail>(contextName, 'Role', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

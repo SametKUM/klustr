@@ -19,7 +19,7 @@ export function StatefulSetDetailBody({
     (ctx: string) => api.getStatefulSet(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<StatefulSetDetail>(contextName, 'StatefulSet', load)
+  const { detail, error } = useResourceDetail<StatefulSetDetail>(contextName, 'StatefulSet', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

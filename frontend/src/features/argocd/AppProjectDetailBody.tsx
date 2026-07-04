@@ -18,7 +18,7 @@ export function AppProjectDetailBody({
     (ctx: string) => api.getArgoAppProject(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<ArgoAppProjectDetail>(contextName, 'AppProject', load)
+  const { detail, error } = useResourceDetail<ArgoAppProjectDetail>(contextName, 'AppProject', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

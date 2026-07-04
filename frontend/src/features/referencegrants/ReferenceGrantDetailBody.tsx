@@ -25,11 +25,7 @@ export function ReferenceGrantDetailBody({
     (ctx: string) => api.getReferenceGrant(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<ReferenceGrantDetail>(
-    contextName,
-    'ReferenceGrant',
-    load,
-  )
+  const { detail, error } = useResourceDetail<ReferenceGrantDetail>(contextName, 'ReferenceGrant', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

@@ -12,7 +12,7 @@ export function CSIDriverDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getCSIDriver(ctx, name), [name])
-  const { detail, error } = useResourceDetail<CSIDriverDetail>(contextName, 'CSIDriver', load)
+  const { detail, error } = useResourceDetail<CSIDriverDetail>(contextName, 'CSIDriver', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

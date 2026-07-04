@@ -18,11 +18,7 @@ export function ServiceAccountDetailBody({
     (ctx: string) => api.getServiceAccount(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<ServiceAccountDetail>(
-    contextName,
-    'ServiceAccount',
-    load,
-  )
+  const { detail, error } = useResourceDetail<ServiceAccountDetail>(contextName, 'ServiceAccount', namespace, name, load)
   const openResource = useUIStore((s) => s.openResource)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null

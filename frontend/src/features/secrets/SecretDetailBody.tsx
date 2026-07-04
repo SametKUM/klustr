@@ -143,7 +143,7 @@ export function SecretDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getSecret(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<SecretDetail>(contextName, 'Secret', load)
+  const { detail, error } = useResourceDetail<SecretDetail>(contextName, 'Secret', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

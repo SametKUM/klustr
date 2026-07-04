@@ -15,7 +15,7 @@ export function EndpointsDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getEndpoints(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<EndpointsDetail>(contextName, 'Endpoints', load)
+  const { detail, error } = useResourceDetail<EndpointsDetail>(contextName, 'Endpoints', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

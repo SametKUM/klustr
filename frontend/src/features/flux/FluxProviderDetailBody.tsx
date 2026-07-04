@@ -19,11 +19,7 @@ export function FluxProviderDetailBody({ contextName, namespace, name }: Props) 
     (ctx: string) => api.getFluxProvider(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<FluxProviderDetail>(
-    contextName,
-    'FluxProvider',
-    load,
-  )
+  const { detail, error } = useResourceDetail<FluxProviderDetail>(contextName, 'FluxProvider', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

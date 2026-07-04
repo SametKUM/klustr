@@ -21,11 +21,7 @@ export function PriorityLevelDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getPriorityLevelConfiguration(ctx, name), [name])
-  const { detail, error } = useResourceDetail<PriorityLevelConfigurationDetail>(
-    contextName,
-    'PriorityLevelConfiguration',
-    load,
-  )
+  const { detail, error } = useResourceDetail<PriorityLevelConfigurationDetail>(contextName, 'PriorityLevelConfiguration', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

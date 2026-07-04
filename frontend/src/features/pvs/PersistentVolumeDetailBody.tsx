@@ -14,7 +14,7 @@ export function PersistentVolumeDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getPersistentVolume(ctx, name), [name])
-  const { detail, error } = useResourceDetail<PersistentVolumeDetail>(contextName, 'PersistentVolume', load)
+  const { detail, error } = useResourceDetail<PersistentVolumeDetail>(contextName, 'PersistentVolume', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

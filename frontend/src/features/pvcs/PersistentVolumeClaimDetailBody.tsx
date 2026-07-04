@@ -20,7 +20,7 @@ export function PersistentVolumeClaimDetailBody({
     (ctx: string) => api.getPersistentVolumeClaim(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<PersistentVolumeClaimDetail>(contextName, 'PersistentVolumeClaim', load)
+  const { detail, error } = useResourceDetail<PersistentVolumeClaimDetail>(contextName, 'PersistentVolumeClaim', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

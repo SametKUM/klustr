@@ -13,6 +13,17 @@ export type KubeDelta = {
 
 type Handler = (contextName: string, delta?: KubeDelta) => void
 
+// A change batch touches (namespace, name) when an upsert carries that identity
+// or the removed keys include it. Cluster-scoped kinds use namespace '' — the
+// backend keys them as "/name".
+export function deltaTouches(delta: KubeDelta, namespace: string, name: string): boolean {
+  return (
+    (delta.upserts as Array<{ namespace?: string; name?: string }>).some(
+      (u) => (u?.namespace ?? '') === namespace && u?.name === name,
+    ) || delta.removed.includes(`${namespace}/${name}`)
+  )
+}
+
 const handlers = new Map<string, Set<Handler>>()
 let installed = false
 let kubeUnsub: (() => void) | null = null

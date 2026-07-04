@@ -17,11 +17,7 @@ export function CertificateRequestDetailBody({ contextName, namespace, name }: P
     (ctx: string) => api.getCertManagerCertificateRequest(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<CertManagerCertificateRequestDetail>(
-    contextName,
-    'CertificateRequest',
-    load,
-  )
+  const { detail, error } = useResourceDetail<CertManagerCertificateRequestDetail>(contextName, 'CertificateRequest', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

@@ -22,7 +22,7 @@ export function FlowSchemaDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getFlowSchema(ctx, name), [name])
-  const { detail, error } = useResourceDetail<FlowSchemaDetail>(contextName, 'FlowSchema', load)
+  const { detail, error } = useResourceDetail<FlowSchemaDetail>(contextName, 'FlowSchema', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

@@ -18,7 +18,7 @@ export function IPAddressDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getIPAddress(ctx, name), [name])
-  const { detail, error } = useResourceDetail<IPAddressDetail>(contextName, 'IPAddress', load)
+  const { detail, error } = useResourceDetail<IPAddressDetail>(contextName, 'IPAddress', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

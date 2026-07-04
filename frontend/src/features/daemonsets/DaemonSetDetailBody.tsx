@@ -19,7 +19,7 @@ export function DaemonSetDetailBody({
     (ctx: string) => api.getDaemonSet(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<DaemonSetDetail>(contextName, 'DaemonSet', load)
+  const { detail, error } = useResourceDetail<DaemonSetDetail>(contextName, 'DaemonSet', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

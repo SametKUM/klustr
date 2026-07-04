@@ -18,11 +18,7 @@ export function FluxHelmRepositoryDetailBody({ contextName, namespace, name }: P
     (ctx: string) => api.getFluxHelmRepository(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<FluxHelmRepositoryDetail>(
-    contextName,
-    'FluxHelmRepository',
-    load,
-  )
+  const { detail, error } = useResourceDetail<FluxHelmRepositoryDetail>(contextName, 'FluxHelmRepository', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

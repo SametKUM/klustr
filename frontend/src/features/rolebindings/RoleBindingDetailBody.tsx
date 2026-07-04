@@ -19,7 +19,7 @@ export function RoleBindingDetailBody({
     (ctx: string) => api.getRoleBinding(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<RoleBindingDetail>(contextName, 'RoleBinding', load)
+  const { detail, error } = useResourceDetail<RoleBindingDetail>(contextName, 'RoleBinding', namespace, name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (

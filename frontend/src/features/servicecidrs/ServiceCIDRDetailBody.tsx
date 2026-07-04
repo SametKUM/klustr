@@ -22,7 +22,7 @@ export function ServiceCIDRDetailBody({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getServiceCIDR(ctx, name), [name])
-  const { detail, error } = useResourceDetail<ServiceCIDRDetail>(contextName, 'ServiceCIDR', load)
+  const { detail, error } = useResourceDetail<ServiceCIDRDetail>(contextName, 'ServiceCIDR', '', name, load)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
   return (
