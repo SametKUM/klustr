@@ -238,6 +238,15 @@ func (w *contextWatcher) Endpoints(namespace, name string) (*EndpointsDetail, er
 	}, nil
 }
 
+// endpointReady applies the discovery/v1 contract: a nil Ready condition means
+// ready (kube-proxy routes to such endpoints), not not-ready.
+func endpointReady(ready *bool) bool {
+	if ready == nil {
+		return true
+	}
+	return *ready
+}
+
 func (w *contextWatcher) EndpointSlice(namespace, name string) (*EndpointSliceDetail, error) {
 	f := w.factoryFor("EndpointSlice")
 	if f == nil {
@@ -249,10 +258,7 @@ func (w *contextWatcher) EndpointSlice(namespace, name string) (*EndpointSliceDe
 	}
 	endpoints := make([]EndpointSliceEndpoint, 0, len(s.Endpoints))
 	for _, e := range s.Endpoints {
-		ready := false
-		if e.Conditions.Ready != nil {
-			ready = *e.Conditions.Ready
-		}
+		ready := endpointReady(e.Conditions.Ready)
 		node := ""
 		if e.NodeName != nil {
 			node = *e.NodeName
