@@ -69,6 +69,35 @@ func TestPageRecentEventsRetainsNewestAcrossPages(t *testing.T) {
 	}
 }
 
+// events.k8s.io/v1 events surface with Count=0, no LastTimestamp, and repeats
+// in Series. eventInfoFrom must report the series count and last-observed time.
+func TestEventInfoFromUsesSeries(t *testing.T) {
+	firstOccurrence := metav1.NewMicroTime(time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC))
+	lastObserved := metav1.NewMicroTime(time.Date(2026, 5, 22, 12, 30, 0, 0, time.UTC))
+	e := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "evt"},
+		Type:       "Warning",
+		Reason:     "BackOff",
+		Count:      0,
+		EventTime:  firstOccurrence,
+		Series: &corev1.EventSeries{
+			Count:            500,
+			LastObservedTime: lastObserved,
+		},
+		InvolvedObject: corev1.ObjectReference{Kind: "Pod", Name: "demo"},
+	}
+	got := eventInfoFrom(e)
+	if got.Count != 500 {
+		t.Errorf("Count: got %d, want 500 (series count)", got.Count)
+	}
+	if !got.LastSeen.Equal(lastObserved.Time) {
+		t.Errorf("LastSeen: got %v, want %v (series last-observed)", got.LastSeen, lastObserved.Time)
+	}
+	if !got.FirstSeen.Equal(firstOccurrence.Time) {
+		t.Errorf("FirstSeen: got %v, want %v (EventTime)", got.FirstSeen, firstOccurrence.Time)
+	}
+}
+
 func TestEventInfoFromUsesLastTimestamp(t *testing.T) {
 	first := metav1.NewTime(time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC))
 	last := metav1.NewTime(time.Date(2026, 5, 22, 12, 30, 0, 0, time.UTC))

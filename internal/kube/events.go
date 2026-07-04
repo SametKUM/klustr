@@ -33,6 +33,12 @@ func (h *eventMinHeap) Pop() any {
 // the full struct, so the warning-event scan can compare recency before
 // deciding whether an event makes the top-N cut.
 func eventLastSeen(e *corev1.Event) time.Time {
+	// For events.k8s.io/v1 events the freshest timestamp is the series' last
+	// observation, not LastTimestamp (which is zero) — without this a currently
+	// firing series reports its first-occurrence time and loses recency ordering.
+	if e.Series != nil && !e.Series.LastObservedTime.IsZero() {
+		return e.Series.LastObservedTime.Time
+	}
 	last := e.LastTimestamp.Time
 	if last.IsZero() {
 		last = e.EventTime.Time
@@ -195,10 +201,13 @@ func pageRecentEvents(ctx context.Context, cs kubernetes.Interface, ns string, n
 }
 
 func eventInfoFrom(e *corev1.Event) EventInfo {
+	// FirstTimestamp is core/v1; events.k8s.io/v1 records the first occurrence in
+	// EventTime instead. Fall back to last only so FirstSeen is never the year-1
+	// zero value (which renders as an absurd age and poisons the recency sort).
 	first := e.FirstTimestamp.Time
-	// last falls back EventTime → CreationTimestamp (some controllers set only
-	// one); otherwise LastSeen would be the year-1 zero value, which renders as
-	// an absurd age and poisons the recency sort.
+	if first.IsZero() {
+		first = e.EventTime.Time
+	}
 	last := eventLastSeen(e)
 	if first.IsZero() {
 		first = last
@@ -209,7 +218,13 @@ func eventInfoFrom(e *corev1.Event) EventInfo {
 	} else if src == "" {
 		src = e.ReportingController
 	}
+	// events.k8s.io/v1 events surface in core/v1 with Count=0 and repeats
+	// tracked in Series; use the series count (as kubectl does) so a
+	// fired-500-times warning doesn't render as 1.
 	count := e.Count
+	if e.Series != nil && e.Series.Count > 0 {
+		count = e.Series.Count
+	}
 	if count == 0 {
 		count = 1
 	}
