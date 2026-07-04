@@ -35,15 +35,21 @@ func (m *ClientManager) IsMetricsServerKlustrManaged(ctx context.Context, contex
 	if err != nil {
 		return false, err
 	}
-	if dep.Labels[MetricsServerManagedByLabel] == MetricsServerManagedByValue {
-		return true, nil
-	}
-	for _, mf := range dep.ManagedFields {
-		if mf.Manager == "klustr" {
-			return true, nil
-		}
-	}
-	return false, nil
+	// Only the klustr/managed-by label (stamped on every document by the
+	// installer) proves Klustr installed metrics-server. A managedFields
+	// "klustr" manager only means Klustr wrote some field once — every
+	// scale/restart/apply does that — so a Helm/cloud-managed metrics-server the
+	// user merely scaled through Klustr must not be reported as ours, or the
+	// overview would offer to uninstall (and then delete) an install we didn't
+	// create.
+	return metricsServerKlustrManaged(dep.Labels), nil
+}
+
+// metricsServerKlustrManaged reports whether the klustr/managed-by installer
+// label is present. It deliberately ignores managedFields: the "klustr"
+// FieldManager is written by any Klustr mutation, not just the install.
+func metricsServerKlustrManaged(labels map[string]string) bool {
+	return labels[MetricsServerManagedByLabel] == MetricsServerManagedByValue
 }
 
 // kubeletInsecureProviders lists node providerID prefixes that ship a
