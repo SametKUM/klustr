@@ -5,7 +5,37 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
+
+// syncStub is a SharedIndexInformer whose HasSynced is controllable; every
+// other method panics (unused by handleInformerEvent).
+type syncStub struct {
+	cache.SharedIndexInformer
+	synced bool
+}
+
+func (s syncStub) HasSynced() bool { return s.synced }
+
+// handleInformerEvent must drop the initial-LIST replay (Adds delivered before
+// HasSynced) and record real events once the cache has synced.
+func TestHandleInformerEventGatedOnSync(t *testing.T) {
+	w, captured := newDeltaTestWatcher()
+	pod := podWithIP("ns", "p1", "1.2.3.4")
+
+	w.handleInformerEvent(syncStub{synced: false}, "Pod", podBinding, DeltaUpsert, pod)
+	drain(w)
+	if got := captured(); len(got) != 0 {
+		t.Fatalf("no delta should be emitted before the informer syncs, got %+v", got)
+	}
+
+	w.handleInformerEvent(syncStub{synced: true}, "Pod", podBinding, DeltaUpsert, pod)
+	drain(w)
+	got := captured()
+	if len(got) != 1 || got[0].delta == nil || len(got[0].delta.Upserts) != 1 {
+		t.Fatalf("expected one upsert delta after sync, got %+v", got)
+	}
+}
 
 type capturedDelta struct {
 	kind  string

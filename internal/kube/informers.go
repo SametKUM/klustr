@@ -181,9 +181,9 @@ func (w *contextWatcher) ensureKind(kind string) {
 		_ = informer.AddIndexers(b.indexers)
 	}
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj any) { w.record(kind, b, DeltaUpsert, obj); callIf(b.sidecar, obj) },
-		UpdateFunc: func(_, obj any) { w.record(kind, b, DeltaUpsert, obj); callIf(b.sidecar, obj) },
-		DeleteFunc: func(obj any) { w.record(kind, b, DeltaRemove, obj); callIf(b.sidecar, obj) },
+		AddFunc:    func(obj any) { w.handleInformerEvent(informer, kind, b, DeltaUpsert, obj) },
+		UpdateFunc: func(_, obj any) { w.handleInformerEvent(informer, kind, b, DeltaUpsert, obj) },
+		DeleteFunc: func(obj any) { w.handleInformerEvent(informer, kind, b, DeltaRemove, obj) },
 	})
 	if err != nil {
 		return
@@ -199,6 +199,20 @@ func (w *contextWatcher) ensureKind(kind string) {
 			}
 		}
 	}()
+}
+
+// handleInformerEvent is the delta/sidecar chokepoint for every informer event.
+// It drops events while the informer is still doing its initial LIST: client-go
+// replays the whole cache as Adds before HasSynced, and shipping those as delta
+// upserts only to Reset and full-refetch on the post-sync touch doubles the
+// attach payload on a large cluster. The post-sync touch (and onSynced) is the
+// authoritative first load; genuine post-sync events flow through normally.
+func (w *contextWatcher) handleInformerEvent(informer cache.SharedIndexInformer, kind string, b kindBinding, op DeltaOp, obj any) {
+	if !informer.HasSynced() {
+		return
+	}
+	w.record(kind, b, op, obj)
+	callIf(b.sidecar, obj)
 }
 
 func (w *contextWatcher) start(parent context.Context) error {
