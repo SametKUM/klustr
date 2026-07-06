@@ -218,6 +218,21 @@ export function ConnectionsScreen() {
     [contexts, defaultContext],
   )
 
+  const shortcutOrder = useMemo(() => {
+    const names = orderedVisible.map((c) => c.name)
+    if (!heroContext) return names
+    return [heroContext.name, ...names.filter((n) => n !== heroContext.name)]
+  }, [orderedVisible, heroContext])
+
+  const shortcutLabels = useMemo(() => {
+    const labels: Record<string, string> = {}
+    shortcutOrder.forEach((name, i) => {
+      const label = shortcutHint(i)
+      if (label) labels[name] = label
+    })
+    return labels
+  }, [shortcutOrder])
+
   const resolvedLastSession = useMemo(() => {
     if (!lastSession) return null
     const present = lastSession.contexts.filter((n) => contexts.some((c) => c.name === n))
@@ -237,14 +252,14 @@ export function ConnectionsScreen() {
     const onKey = (e: KeyboardEvent) => {
       if (!e.metaKey && !e.ctrlKey) return
       if (e.key < '1' || e.key > '9') return
-      const ctx = orderedVisible[Number.parseInt(e.key, 10) - 1]
-      if (!ctx) return
+      const name = shortcutOrder[Number.parseInt(e.key, 10) - 1]
+      if (!name) return
       e.preventDefault()
-      setSelectedContext(ctx.name)
+      setSelectedContext(name)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [orderedVisible, setSelectedContext])
+  }, [shortcutOrder, setSelectedContext])
 
   const togglePick = (name: string) => {
     setPicked((prev) => {
@@ -333,6 +348,7 @@ export function ConnectionsScreen() {
               tagMetas={(contextTags[heroContext.name] ?? [])
                 .map((id) => resolveTagMeta(id, customTags))
                 .filter((m): m is ContextTagMeta => m !== null)}
+              shortcut={shortcutLabels[heroContext.name] ?? null}
               onConnect={() => connectSingle(heroContext.name)}
               onClearDefault={() => setDefaultContext(null)}
             />
@@ -427,15 +443,12 @@ export function ConnectionsScreen() {
 
             {state.kind === 'ready' && sections.length > 0 && (
               <div className="flex flex-col gap-5">
-                {sections.map((section, sectionIdx) => {
-                  const baseIdx = sections
-                    .slice(0, sectionIdx)
-                    .reduce((acc, s) => acc + s.items.length, 0)
+                {sections.map((section) => {
                   return (
                     <ContextSection
                       key={section.id}
                       section={section}
-                      baseIndex={baseIdx}
+                      shortcutLabels={shortcutLabels}
                       defaultContext={defaultContext}
                       picked={picked}
                       contextTags={contextTags}
@@ -527,18 +540,18 @@ function shortcutHint(index: number): string | null {
 function HeroCard({
   context,
   tagMetas,
+  shortcut,
   onConnect,
   onClearDefault,
 }: {
   context: ContextInfo
   tagMetas: ContextTagMeta[]
+  shortcut: string | null
   onConnect: () => void
   onClearDefault: () => void
 }) {
   const meta = providerMeta(context)
   const primary = tagMetas[0] ?? null
-  const isMac =
-    typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform)
   return (
     <div
       role="button"
@@ -592,9 +605,11 @@ function HeroCard({
         </button>
         <span className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground">
           Connect
-          <kbd className="rounded border border-primary-foreground/30 bg-primary-foreground/10 px-1 font-mono text-[10px]">
-            {isMac ? '⌘1' : 'Ctrl 1'}
-          </kbd>
+          {shortcut && (
+            <kbd className="rounded border border-primary-foreground/30 bg-primary-foreground/10 px-1 font-mono text-[10px]">
+              {shortcut}
+            </kbd>
+          )}
         </span>
       </div>
     </div>
@@ -941,7 +956,7 @@ function ProviderIconBadge({ members }: { members: ContextInfo[] }) {
 
 function ContextSection({
   section,
-  baseIndex,
+  shortcutLabels,
   defaultContext,
   picked,
   contextTags,
@@ -952,7 +967,7 @@ function ContextSection({
   onMapCredentials,
 }: {
   section: GroupedSection
-  baseIndex: number
+  shortcutLabels: Record<string, string>
   defaultContext: string | null
   picked: Set<string>
   contextTags: Record<string, string[]>
@@ -994,14 +1009,14 @@ function ContextSection({
         <div className="ml-auto h-px flex-1 bg-border/60" />
       </div>
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {section.items.map((c, idx) => (
+        {section.items.map((c) => (
           <ContextCard
             key={c.name}
             context={c}
             isDefault={c.name === defaultContext}
             isPicked={picked.has(c.name)}
             tagIds={contextTags[c.name] ?? []}
-            shortcut={shortcutHint(baseIndex + idx)}
+            shortcut={shortcutLabels[c.name] ?? null}
             highlight={isProd}
             version={versions[c.name]}
             onConnect={() => onConnect(c.name)}
