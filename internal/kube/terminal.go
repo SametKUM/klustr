@@ -135,7 +135,13 @@ func (mgr *terminalSessionManager) start(
 		mgr.mu.Unlock()
 		sess.close()
 		if onClose != nil {
-			if waitErr == nil || errors.Is(waitErr, io.EOF) || ctx.Err() == context.Canceled {
+			// A shell that ran and exited — even with a non-zero status
+			// (exit 1, or Ctrl-D after a failed command) — is a clean close,
+			// not a session error. Only surface a real spawn/IO failure.
+			var exitErr *exec.ExitError
+			clean := waitErr == nil || errors.Is(waitErr, io.EOF) ||
+				ctx.Err() == context.Canceled || errors.As(waitErr, &exitErr)
+			if clean {
 				onClose(nil)
 			} else {
 				onClose(waitErr)
