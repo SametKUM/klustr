@@ -295,7 +295,7 @@ func (w *contextWatcher) containerDetails(pod *corev1.Pod, specs []corev1.Contai
 				if s.State.Terminated.Reason == "" {
 					d.StateReason = fmt.Sprintf("ExitCode:%d", s.State.Terminated.ExitCode)
 				}
-				if !s.State.Terminated.FinishedAt.IsZero() {
+				if !s.State.Terminated.StartedAt.IsZero() {
 					d.StartedAt = s.State.Terminated.StartedAt.UTC().Format(time.RFC3339)
 				}
 			}
