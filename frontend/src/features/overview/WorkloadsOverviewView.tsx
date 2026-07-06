@@ -240,20 +240,23 @@ export function WorkloadsOverviewView() {
     },
     {
       kind: 'Deployments',
+      // Scaled-to-0 workloads are intentionally idle, not unhealthy — exclude
+      // them from the total so they stay out of the red bar, mirroring the
+      // ReplicaSet/ReplicationController handling below.
       view: 'deployments',
-      total: deployments.length,
+      total: deployments.filter((d) => !isScaledToZero(d.ready)).length,
       healthy: deployments.filter((d) => isReadyString(d.ready)).length,
     },
     {
       kind: 'StatefulSets',
       view: 'statefulsets',
-      total: statefulSets.length,
+      total: statefulSets.filter((s) => !isScaledToZero(s.ready)).length,
       healthy: statefulSets.filter((s) => isReadyString(s.ready)).length,
     },
     {
       kind: 'DaemonSets',
       view: 'daemonsets',
-      total: daemonSets.length,
+      total: daemonSets.filter((d) => d.desired > 0).length,
       healthy: daemonSets.filter((d) => d.desired > 0 && d.ready === d.desired).length,
     },
     {
@@ -378,6 +381,12 @@ function isReadyString(s: string): boolean {
   const t = parseInt(parts[1], 10)
   if (Number.isNaN(r) || Number.isNaN(t)) return false
   return t > 0 && r === t
+}
+
+function isScaledToZero(s: string): boolean {
+  const parts = s.split('/')
+  if (parts.length !== 2) return false
+  return parseInt(parts[1], 10) === 0
 }
 
 type WorkloadCardProps = {
