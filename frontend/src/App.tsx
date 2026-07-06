@@ -461,6 +461,9 @@ function App() {
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
       if (isEditableTarget(e.target)) return
+      // Don't move the sidebar selection behind an open dialog — Radix doesn't
+      // stop arrow keys bubbling to this window listener.
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return
       if (navEntries.length === 0) return
       e.preventDefault()
       const current = selectedCRDKey
