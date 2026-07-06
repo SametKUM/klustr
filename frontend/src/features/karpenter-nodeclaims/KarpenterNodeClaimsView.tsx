@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type KarpenterNodeClaimInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
-import { formatMemoryQuantity } from '@/lib/quantity'
+import { formatMemoryQuantity, parseQuantity } from '@/lib/quantity'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
@@ -104,6 +104,8 @@ export function KarpenterNodeClaimsView() {
         header: 'CPU',
         size: COL_SM,
         cell: (i) => i.getValue() || <span className="text-muted-foreground">—</span>,
+        sortingFn: (a, b) =>
+          (parseQuantity(a.original.cpu) ?? 0) - (parseQuantity(b.original.cpu) ?? 0),
       }),
       columnHelper.accessor('memory', {
         header: 'Memory',
@@ -113,6 +115,8 @@ export function KarpenterNodeClaimsView() {
           if (!v) return <span className="text-muted-foreground">—</span>
           return <span title={v}>{formatMemoryQuantity(v)}</span>
         },
+        sortingFn: (a, b) =>
+          (parseQuantity(a.original.memory) ?? 0) - (parseQuantity(b.original.memory) ?? 0),
       }),
       columnHelper.accessor('launched', {
         header: 'Launched',

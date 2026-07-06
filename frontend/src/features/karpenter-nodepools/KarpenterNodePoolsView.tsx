@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type KarpenterNodePoolInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
-import { formatMemoryQuantity } from '@/lib/quantity'
+import { formatMemoryQuantity, parseQuantity } from '@/lib/quantity'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
@@ -91,11 +91,14 @@ export function KarpenterNodePoolsView() {
         header: 'Nodes',
         size: COL_SM,
         cell: (i) => i.getValue() || <span className="text-muted-foreground">0</span>,
+        sortingFn: (a, b) => (Number(a.original.nodeCount) || 0) - (Number(b.original.nodeCount) || 0),
       }),
       columnHelper.accessor('cpuUsage', {
         header: 'CPU',
         size: COL_SM,
         cell: (i) => formatUsageOverLimit(i.getValue(), i.row.original.cpuLimit),
+        sortingFn: (a, b) =>
+          (parseQuantity(a.original.cpuUsage) ?? 0) - (parseQuantity(b.original.cpuUsage) ?? 0),
       }),
       columnHelper.accessor('memoryUsage', {
         header: 'Memory',
@@ -106,6 +109,8 @@ export function KarpenterNodePoolsView() {
             i.row.original.memoryLimit,
             formatMemoryQuantity,
           ),
+        sortingFn: (a, b) =>
+          (parseQuantity(a.original.memoryUsage) ?? 0) - (parseQuantity(b.original.memoryUsage) ?? 0),
       }),
       columnHelper.accessor('ready', {
         header: 'Ready',
