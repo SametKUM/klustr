@@ -25,7 +25,7 @@ export function LeaseDetailBody({
           {detail.holderIdentity ? <Copyable value={detail.holderIdentity} /> : '—'}
         </Field>
         <Field label="Lease Duration">{detail.leaseDurationSeconds}s</Field>
-        <Field label="Acquire Time">{detail.acquireTime || '—'}</Field>
+        <Field label="Acquire Time">{detail.acquireTime ? formatAge(detail.acquireTime) + ' ago' : '—'}</Field>
         <Field label="Renew Time">{detail.renewTime ? formatAge(detail.renewTime) + ' ago' : '—'}</Field>
         <Field label="Transitions">{detail.leaseTransitions}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
