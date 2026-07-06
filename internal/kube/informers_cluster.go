@@ -302,7 +302,12 @@ func (w *contextWatcher) PriorityClasses() []PriorityClassInfo {
 			CreatedAt:     p.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Value > out[j].Value })
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Value != out[j].Value {
+			return out[i].Value > out[j].Value
+		}
+		return out[i].Name < out[j].Name
+	})
 	return out
 }
 
@@ -351,7 +356,12 @@ func (w *contextWatcher) FlowSchemas() []FlowSchemaInfo {
 			CreatedAt:          fs.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].MatchingPrecedence < out[j].MatchingPrecedence })
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].MatchingPrecedence != out[j].MatchingPrecedence {
+			return out[i].MatchingPrecedence < out[j].MatchingPrecedence
+		}
+		return out[i].Name < out[j].Name
+	})
 	return out
 }
 
