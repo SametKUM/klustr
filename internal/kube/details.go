@@ -2,6 +2,7 @@ package kube
 
 import (
 	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -80,7 +81,25 @@ func matchLabels(sel *metav1.LabelSelector) map[string]string {
 	if sel == nil {
 		return nil
 	}
-	return sel.MatchLabels
+	if len(sel.MatchExpressions) == 0 {
+		return sel.MatchLabels
+	}
+	// Fold matchExpressions in as readable chips (value empty so Chips renders
+	// the whole expression) — a selector using only expressions would otherwise
+	// show as empty, claiming the workload selects nothing.
+	out := make(map[string]string, len(sel.MatchLabels)+len(sel.MatchExpressions))
+	for k, v := range sel.MatchLabels {
+		out[k] = v
+	}
+	for _, m := range sel.MatchExpressions {
+		op := strings.ToLower(string(m.Operator))
+		if len(m.Values) > 0 {
+			out[fmt.Sprintf("%s %s (%s)", m.Key, op, strings.Join(m.Values, ", "))] = ""
+		} else {
+			out[fmt.Sprintf("%s %s", m.Key, op)] = ""
+		}
+	}
+	return out
 }
 
 func deploymentConditions(conds []appsv1.DeploymentCondition) []ConditionDetail {
