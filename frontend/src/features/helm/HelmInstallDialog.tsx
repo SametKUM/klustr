@@ -63,9 +63,13 @@ export function HelmInstallDialog({
     setChartRef(initialChartRef)
     setChartVersion(initialVersion)
     setValues(initialValues)
+    setCreateNS(mode === 'install')
+    setWait(false)
+    setAtomic(false)
+    setResetValues(false)
     setDryRunResult(null)
     setAmbiguous(null)
-  }, [open, initialName, initialNamespace, initialChartRef, initialVersion, initialValues])
+  }, [open, mode, initialName, initialNamespace, initialChartRef, initialVersion, initialValues])
 
   const opts: HelmInstallOptions = useMemo(
     () => ({
