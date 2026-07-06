@@ -241,18 +241,30 @@ func launchExternalTerminal(scriptPath, appID string) error {
 	}
 }
 
+// startDetached starts a launcher process and reaps it in the background. The
+// external terminal apps fork their own window and the launcher exits within a
+// second; without a Wait() that exited process lingers as a zombie in klustr's
+// process table until the app quits.
+func startDetached(cmd *exec.Cmd) error {
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go func() { _ = cmd.Wait() }()
+	return nil
+}
+
 func launchDarwinTerminal(scriptPath, appID string) error {
 	if appID == "" {
 		// macOS picks whichever app is registered as the .command
 		// handler — usually Terminal.app, or whatever the user set in
 		// Finder > Get Info > Open With.
-		return exec.Command("open", scriptPath).Start()
+		return startDetached(exec.Command("open", scriptPath))
 	}
 	for _, t := range darwinKnownTerminals {
 		if t.id != appID {
 			continue
 		}
-		return exec.Command("open", "-a", t.appName, scriptPath).Start()
+		return startDetached(exec.Command("open", "-a", t.appName, scriptPath))
 	}
 	return fmt.Errorf("unknown terminal app %q", appID)
 }
@@ -378,7 +390,7 @@ func launchLinuxTerminal(scriptPath, appID string) error {
 		if err != nil {
 			return fmt.Errorf("xdg-terminal-exec is no longer on PATH")
 		}
-		return exec.Command(bin, scriptPath).Start()
+		return startDetached(exec.Command(bin, scriptPath))
 	}
 	if id, ok := strings.CutPrefix(appID, flatpakPrefix); ok {
 		for _, c := range linuxKnownTerminals {
@@ -389,7 +401,7 @@ func launchLinuxTerminal(scriptPath, appID string) error {
 			// sandbox receives the args verbatim, so each terminal's
 			// per-binary flag form (e.g. `--`, `-e`) still applies.
 			args := append([]string{"run", c.flatpakID}, c.args(scriptPath)...)
-			return exec.Command("flatpak", args...).Start()
+			return startDetached(exec.Command("flatpak", args...))
 		}
 		return fmt.Errorf("unknown flatpak terminal app %q", appID)
 	}
@@ -402,7 +414,7 @@ func launchLinuxTerminal(scriptPath, appID string) error {
 			if err != nil {
 				return fmt.Errorf("%s is not on PATH", c.bin)
 			}
-			return exec.Command(bin, c.args(scriptPath)...).Start()
+			return startDetached(exec.Command(bin, c.args(scriptPath)...))
 		}
 		return fmt.Errorf("unknown terminal app %q", appID)
 	}
@@ -414,14 +426,14 @@ func launchLinuxTerminal(scriptPath, appID string) error {
 	for _, bin := range []string{"xdg-terminal-exec", "x-terminal-emulator", "i3-sensible-terminal"} {
 		if path, err := exec.LookPath(bin); err == nil {
 			if bin == "xdg-terminal-exec" {
-				return exec.Command(path, scriptPath).Start()
+				return startDetached(exec.Command(path, scriptPath))
 			}
-			return exec.Command(path, "-e", scriptPath).Start()
+			return startDetached(exec.Command(path, "-e", scriptPath))
 		}
 	}
 	if pref := os.Getenv("KLUSTR_TERMINAL"); pref != "" {
 		if bin, err := exec.LookPath(pref); err == nil {
-			return exec.Command(bin, scriptPath).Start()
+			return startDetached(exec.Command(bin, scriptPath))
 		}
 	}
 	for _, c := range linuxKnownTerminals {
@@ -429,7 +441,7 @@ func launchLinuxTerminal(scriptPath, appID string) error {
 		if err != nil {
 			continue
 		}
-		return exec.Command(bin, c.args(scriptPath)...).Start()
+		return startDetached(exec.Command(bin, c.args(scriptPath)...))
 	}
 	return fmt.Errorf("no supported terminal emulator found on PATH (set $KLUSTR_TERMINAL or install gnome-terminal/konsole/kitty/alacritty/wezterm)")
 }
