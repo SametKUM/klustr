@@ -4,41 +4,19 @@ import {
   type ArgoApplicationHealth,
   type ArgoApplicationResource,
 } from '@/lib/api'
+import { RESOURCE_GROUPS } from '@/features/_shared/resourceGroups'
 import { useCRDStore } from '@/store/crds'
 import { useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
 
-const BUILTIN_KINDS = new Set<ResourceKind>([
-  'Pod',
-  'Deployment',
-  'StatefulSet',
-  'DaemonSet',
-  'ReplicaSet',
-  'PersistentVolumeClaim',
-  'PersistentVolume',
-  'StorageClass',
-  'NetworkPolicy',
-  'HorizontalPodAutoscaler',
-  'PodDisruptionBudget',
-  'EndpointSlice',
-  'ResourceQuota',
-  'LimitRange',
-  'IngressClass',
-  'PriorityClass',
-  'RuntimeClass',
-  'Lease',
-  'MutatingWebhookConfiguration',
-  'ValidatingWebhookConfiguration',
-  'Endpoints',
-  'ReplicationController',
-  'Job',
-  'CronJob',
-  'Service',
-  'ConfigMap',
-  'Secret',
-  'Ingress',
-  'Node',
-  'Namespace',
-])
+// Derive the clickable built-in kinds from the same static sidebar groups that
+// drive ResourceDetailPanel dispatch, so a kind with a detail view can never
+// drift out of this allow-list (CR-backed groups are handled via the crds
+// store below, not here).
+const BUILTIN_KINDS: ReadonlySet<ResourceKind> = new Set(
+  RESOURCE_GROUPS.flatMap((g) => g.items)
+    .map((i) => i.kind)
+    .filter((k): k is ResourceKind => k !== undefined),
+)
 
 type Props = {
   contextName: string | null
