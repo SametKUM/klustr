@@ -265,6 +265,16 @@ export function CredentialMappingDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  // The contexts prop is a live list (the suggestion prompt reprobes every 20s
+  // and can shrink it from 2→1 while open). Keep contextName selectable: if the
+  // current pick is gone or the list collapses to one, re-seed it — but leave a
+  // still-valid pick untouched.
+  useEffect(() => {
+    if (!open) return
+    if (contextName && contexts.some((c) => c.name === contextName)) return
+    setContextName(contexts.length === 1 ? contexts[0].name : null)
+  }, [open, contexts, contextName])
+
   useEffect(() => {
     if (!selectedContext) return
     if (profile) return
