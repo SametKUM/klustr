@@ -889,7 +889,13 @@ func derivePodStatus(p *corev1.Pod) string {
 		if p.Status.Reason == "NodeLost" {
 			return "Unknown"
 		}
-		return "Terminating"
+		// kubectl only overrides with "Terminating" while the phase is
+		// non-terminal. A Failed/Succeeded pod stuck deleting behind a finalizer
+		// keeps showing its real reason (Error/OOMKilled/Completed) instead of
+		// hiding it as "Terminating" — the state someone is investigating.
+		if p.Status.Phase != corev1.PodSucceeded && p.Status.Phase != corev1.PodFailed {
+			return "Terminating"
+		}
 	}
 
 	for i, init := range p.Status.InitContainerStatuses {

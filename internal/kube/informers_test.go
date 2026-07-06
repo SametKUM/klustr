@@ -318,6 +318,21 @@ func TestDerivePodStatus(t *testing.T) {
 		t.Errorf("node lost: got %q, want Unknown", got)
 	}
 
+	// A Failed pod stuck deleting behind a finalizer keeps its real reason
+	// instead of hiding it as Terminating, matching kubectl.
+	failedDeleting := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &now},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodFailed,
+			ContainerStatuses: []corev1.ContainerStatus{
+				{State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "OOMKilled", ExitCode: 137}}},
+			},
+		},
+	}
+	if got := derivePodStatus(failedDeleting); got != "OOMKilled" {
+		t.Errorf("failed deleting: got %q, want OOMKilled", got)
+	}
+
 	crash := &corev1.Pod{Status: corev1.PodStatus{
 		Phase: corev1.PodRunning,
 		ContainerStatuses: []corev1.ContainerStatus{
