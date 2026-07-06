@@ -121,10 +121,14 @@ export function CSRDetailBody({
 }
 
 function formatExpiration(seconds: number): string {
-  const days = Math.round(seconds / 86400)
+  // Truncate (kubectl-style) so a sub-day cert isn't overstated — 12h must not
+  // round up to "1d".
+  const days = Math.floor(seconds / 86400)
   if (days >= 1) return `${days}d`
-  const hours = Math.round(seconds / 3600)
+  const hours = Math.floor(seconds / 3600)
   if (hours >= 1) return `${hours}h`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes >= 1) return `${minutes}m`
   return `${seconds}s`
 }
 
