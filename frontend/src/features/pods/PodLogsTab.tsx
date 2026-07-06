@@ -62,6 +62,10 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
   const rerender = useCallback(() => {
     const term = termRef.current
     if (!term) return
+    // While paused the view is frozen — repainting here would dump post-pause
+    // lines onto it and zero the buffered-line counter. Leave both intact; the
+    // new predicate applies on resume, which repaints the full buffer.
+    if (pausedRef.current) return
     term.reset()
     const styled: string[] = []
     for (const line of rawLinesRef.current) {
@@ -72,13 +76,21 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
     setBufferLength(0)
   }, [])
 
+  // Debounce the applied filter so a full-buffer rescan runs once per typing
+  // pause, not per keystroke (mirrors ResourceTable's appliedFilter).
+  const [appliedFilter, setAppliedFilter] = useState('')
   useEffect(() => {
-    if (!filterValue) {
+    const id = window.setTimeout(() => setAppliedFilter(filterValue), 150)
+    return () => window.clearTimeout(id)
+  }, [filterValue])
+
+  useEffect(() => {
+    if (!appliedFilter) {
       predicateRef.current = () => true
       setFilterError(null)
     } else if (useRegex) {
       try {
-        const re = new RegExp(filterValue, 'i')
+        const re = new RegExp(appliedFilter, 'i')
         predicateRef.current = (line) => re.test(line)
         setFilterError(null)
       } catch (e: unknown) {
@@ -86,24 +98,20 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
         setFilterError(String(e))
       }
     } else {
-      const needle = filterValue.toLowerCase()
+      const needle = appliedFilter.toLowerCase()
       predicateRef.current = (line) => line.toLowerCase().includes(needle)
       setFilterError(null)
     }
     rerender()
-  }, [filterValue, useRegex, rerender])
+  }, [appliedFilter, useRegex, rerender])
 
   useEffect(() => {
     pausedRef.current = paused
-    if (!paused && termRef.current && bufferRef.current.length > 0) {
-      const term = termRef.current
-      // One coalesced write instead of up to 5k synchronous writeln calls, which
-      // would block the main thread when unpausing after a busy period.
-      term.write(bufferRef.current.join('\r\n') + '\r\n')
-      bufferRef.current = []
-      setBufferLength(0)
-    }
-  }, [paused])
+    // On resume, repaint the full buffer through the current predicate — this
+    // flushes lines that arrived during pause and applies any filter change
+    // made while paused, in one coalesced write.
+    if (!paused) rerender()
+  }, [paused, rerender])
 
   useEffect(() => {
     if (!termHostRef.current) return
