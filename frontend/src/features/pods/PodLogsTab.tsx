@@ -186,15 +186,18 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
             // Retain every raw line (regardless of filter or pause) so the
             // filter can repaint over the full buffer and Save reflects it.
             rawLinesRef.current.push(line)
-            if (rawLinesRef.current.length > 50_000) rawLinesRef.current.shift()
             if (!predicateRef.current(line)) continue
             styledOut.push(highlightLogContent(line))
           }
+          // Amortized trim: one splice per batch, not an O(n) shift per line.
+          if (rawLinesRef.current.length > 50_000) {
+            rawLinesRef.current.splice(0, rawLinesRef.current.length - 50_000)
+          }
           if (styledOut.length === 0) return
           if (pausedRef.current) {
-            for (const s of styledOut) {
-              bufferRef.current.push(s)
-              if (bufferRef.current.length > 5_000) bufferRef.current.shift()
+            for (const s of styledOut) bufferRef.current.push(s)
+            if (bufferRef.current.length > 5_000) {
+              bufferRef.current.splice(0, bufferRef.current.length - 5_000)
             }
             setBufferLength(bufferRef.current.length)
             return
@@ -212,7 +215,9 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
           // lines that preceded it.
           if (pausedRef.current) {
             bufferRef.current.push(styled)
-            if (bufferRef.current.length > 5_000) bufferRef.current.shift()
+            if (bufferRef.current.length > 5_000) {
+              bufferRef.current.splice(0, bufferRef.current.length - 5_000)
+            }
             setBufferLength(bufferRef.current.length)
             return
           }
