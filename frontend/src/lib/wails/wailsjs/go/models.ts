@@ -5126,6 +5126,7 @@ export namespace kube {
 	    namespace: string;
 	    completions: string;
 	    duration: string;
+	    startTime: string;
 	    status: string;
 	    createdAt: string;
 	
@@ -5139,6 +5140,7 @@ export namespace kube {
 	        this.namespace = source["namespace"];
 	        this.completions = source["completions"];
 	        this.duration = source["duration"];
+	        this.startTime = source["startTime"];
 	        this.status = source["status"];
 	        this.createdAt = source["createdAt"];
 	    }

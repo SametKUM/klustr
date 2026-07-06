@@ -70,6 +70,7 @@ type JobInfo struct {
 	Namespace   string `json:"namespace"`
 	Completions string `json:"completions"`
 	Duration    string `json:"duration"`
+	StartTime   string `json:"startTime"`
 	Status      string `json:"status"`
 	CreatedAt   string `json:"createdAt"`
 }
@@ -193,11 +194,16 @@ func jobInfoFrom(j *batchv1.Job) JobInfo {
 	if j.Spec.Completions != nil {
 		desired = *j.Spec.Completions
 	}
+	startTime := ""
+	if j.Status.StartTime != nil {
+		startTime = j.Status.StartTime.UTC().Format(time.RFC3339)
+	}
 	return JobInfo{
 		Name:        j.Name,
 		Namespace:   j.Namespace,
 		Completions: fmt.Sprintf("%d/%d", j.Status.Succeeded, desired),
 		Duration:    jobDuration(j),
+		StartTime:   startTime,
 		Status:      jobStatus(j),
 		CreatedAt:   j.CreationTimestamp.UTC().Format(time.RFC3339),
 	}
@@ -406,14 +412,13 @@ func (w *contextWatcher) CronJobs(namespace string) []CronJobInfo {
 }
 
 func jobDuration(j *batchv1.Job) string {
-	if j.Status.StartTime == nil {
+	// Only a completed job has a stable duration. A running job's elapsed time
+	// is computed live in the frontend from StartTime so it keeps ticking
+	// instead of freezing at the last informer event.
+	if j.Status.StartTime == nil || j.Status.CompletionTime == nil {
 		return ""
 	}
-	end := time.Now()
-	if j.Status.CompletionTime != nil {
-		end = j.Status.CompletionTime.Time
-	}
-	d := end.Sub(j.Status.StartTime.Time).Round(time.Second)
+	d := j.Status.CompletionTime.Sub(j.Status.StartTime.Time).Round(time.Second)
 	return d.String()
 }
 

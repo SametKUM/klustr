@@ -221,6 +221,13 @@ func TestJobDuration(t *testing.T) {
 	if got := jobDuration(j); got != "10s" {
 		t.Errorf("got %q, want 10s", got)
 	}
+
+	// A running job (started, not completed) has no stable duration — the
+	// frontend computes elapsed live from StartTime.
+	running := &batchv1.Job{Status: batchv1.JobStatus{StartTime: &start}}
+	if got := jobDuration(running); got != "" {
+		t.Errorf("running: got %q, want empty", got)
+	}
 }
 
 func TestPodResourceTotals(t *testing.T) {

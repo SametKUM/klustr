@@ -35,7 +35,18 @@ export function JobsView() {
       columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('completions', { header: 'Completions', size: COL_XS }),
-      columnHelper.accessor('duration', { header: 'Duration', size: COL_SM }),
+      columnHelper.accessor('duration', {
+        header: 'Duration',
+        size: COL_SM,
+        // Completed jobs carry a stable backend duration; a running job has none,
+        // so compute elapsed live from startTime (the row re-renders on tick).
+        cell: (i) => {
+          const d = i.getValue()
+          if (d) return d
+          const start = i.row.original.startTime
+          return start ? formatAge(start) : '—'
+        },
+      }),
       columnHelper.accessor('status', {
         header: 'Status',
         size: COL_SM,
