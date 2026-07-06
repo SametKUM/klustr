@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/creack/pty v1.1.24
-	github.com/wailsapp/wails/v2 v2.12.0
+	github.com/wailsapp/wails/v2 v2.13.0
 	helm.sh/helm/v3 v3.21.2
 	k8s.io/api v0.36.2
 	k8s.io/apimachinery v0.36.2
