@@ -117,18 +117,21 @@ func (mgr *terminalSessionManager) start(
 	mgr.mu.Unlock()
 
 	go func() {
+		// Coalesce PTY output before the bridge: emitting per 4KB read floods
+		// the main thread with EventsEmit dispatches on a firehose (cat, yes,
+		// tail), the same jank exec.go avoids. close() flushes the tail.
+		out := newByteCoalescer(onData)
 		buf := make([]byte, 4096)
 		for {
 			n, err := ptmx.Read(buf)
 			if n > 0 {
-				// string copies out of the reused read buffer in one pass — the
-				// consumer wants a string anyway, so no separate []byte copy.
-				onData(string(buf[:n]))
+				_, _ = out.Write(buf[:n])
 			}
 			if err != nil {
 				break
 			}
 		}
+		out.close()
 		waitErr := cmd.Wait()
 		mgr.mu.Lock()
 		delete(mgr.sessions, id)
