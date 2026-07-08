@@ -222,7 +222,12 @@ func (w *contextWatcher) start(parent context.Context) error {
 	ctx, cancel := context.WithCancel(parent)
 	w.cancel = cancel
 
-	w.access = discoverAccess(ctx, w.cs, w.disco, w.defaultNS)
+	// A credential-refresh rewatch pre-seeds w.access from the prior watcher:
+	// token rotation keeps the same identity, so the RBAC surface is unchanged
+	// and re-running ~50 SSAR probes (~8s) would only reconfirm it.
+	if w.access == nil {
+		w.access = discoverAccess(ctx, w.cs, w.disco, w.defaultNS)
+	}
 	if w.access.HasAnyClusterWide() {
 		w.factory = informers.NewSharedInformerFactoryWithOptions(
 			w.cs.(*kubernetes.Clientset), 0,

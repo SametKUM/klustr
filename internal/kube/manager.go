@@ -313,10 +313,15 @@ func (m *ClientManager) Watch(ctx context.Context, contextName string) error {
 	l := m.watchLock(contextName)
 	l.Lock()
 	defer l.Unlock()
-	return m.watchLocked(ctx, contextName)
+	return m.watchLocked(ctx, contextName, false)
 }
 
-func (m *ClientManager) watchLocked(ctx context.Context, contextName string) error {
+// watchLocked (re)builds a context's watcher under its watch lock. reuseAccess
+// carries the prior watcher's RBAC map into the new one — set only on a pure
+// credential refresh, where the identity (and thus access) is unchanged, to
+// skip the ~50-probe discoverAccess storm. A user attach or a cold-token retry
+// passes false so access is rediscovered against the (possibly warm) token.
+func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reuseAccess bool) error {
 	m.mu.Lock()
 	if m.appCtx == nil {
 		m.appCtx = ctx
@@ -371,6 +376,13 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string) err
 			cb(ContextChange{Context: contextName, Kind: kind, Delta: delta})
 		}
 	})
+	// The prior watcher's access map is immutable after its start(), so reusing
+	// it here lets start() skip discoverAccess. ponytail: the new watcher still
+	// starts cold informers and the frontend re-LISTs open views on _access —
+	// avoiding that needs client-go informer-cache reuse, a bigger change.
+	if reuseAccess && existing != nil {
+		w.access = existing.access
+	}
 	// The old watcher keeps serving (and stays registered) until the new one
 	// has synced: start() runs up to ~8s of SSAR probes, and during a re-watch
 	// the forwarders would otherwise read a stopped watcher's frozen caches.
@@ -409,8 +421,9 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string) err
 		m.metrics.invalidate(contextName)
 		m.helm.invalidate(contextName)
 		// Direct watchLocked call: the caller already holds this context's
-		// watch lock and it is not reentrant.
-		return m.watchLocked(ctx, contextName)
+		// watch lock and it is not reentrant. Rediscover access — the retry
+		// exists precisely because the cold-token probe under-reported it.
+		return m.watchLocked(ctx, contextName, false)
 	}
 	// Announce the attach now that the watcher is registered: a frontend list
 	// call that raced the watch hit no watcher, got an empty answer and
@@ -568,7 +581,7 @@ func (m *ClientManager) rewatchIfActive(appCtx context.Context, contextName stri
 	if !active {
 		return nil
 	}
-	return m.watchLocked(appCtx, contextName)
+	return m.watchLocked(appCtx, contextName, true)
 }
 
 // ---- Credential helpers -------------------------------------------------
