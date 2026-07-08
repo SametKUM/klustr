@@ -149,6 +149,15 @@ func (m *ClientManager) resolveGVK(contextName string, gvk schema.GroupVersionKi
 }
 
 func (m *ClientManager) dynamicClient(contextName string) (dynamic.Interface, error) {
+	// Reuse the active watch's dynamic client: it shares one HTTP/TLS transport
+	// and connection pool, and the watcher lifecycle already keeps it current
+	// across credential refreshes. Building fresh per call (as before) spun up a
+	// new transport and re-parsed the kubeconfig from disk on every mutation —
+	// N times over for a bulk-delete fan-out, none reusing a connection. A
+	// mutation without an active watch (rare) still builds a one-off client.
+	if w, ok := m.watcher(contextName); ok {
+		return w.dyn, nil
+	}
 	cfg, err := m.restConfig(contextName)
 	if err != nil {
 		return nil, err

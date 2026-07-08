@@ -5,7 +5,24 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
 )
+
+// A mutation on an attached context must reuse that watcher's dynamic client
+// (one shared transport) instead of building a fresh one per call.
+func TestDynamicClientReusesActiveWatcher(t *testing.T) {
+	want := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+	m := &ClientManager{watchers: map[string]*contextWatcher{"ctx": {dyn: want}}}
+
+	got, err := m.dynamicClient("ctx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatal("dynamicClient should return the active watcher's dyn, not a fresh client")
+	}
+}
 
 func TestBuildResizePatch(t *testing.T) {
 	if _, err := buildResizePatch("", "100m", "", "", ""); err == nil {
