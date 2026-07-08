@@ -88,7 +88,7 @@ func (mgr *execSessionManager) start(
 	mgr.sessions[id] = sess
 	mgr.mu.Unlock()
 
-	out := &execWriter{onData: onData}
+	out := newByteCoalescer(onData)
 	queue := &chanSizeQueue{ch: resizeCh}
 
 	go func() {
@@ -110,6 +110,7 @@ func (mgr *execSessionManager) start(
 			Tty:               true,
 			TerminalSizeQueue: queue,
 		})
+		out.close() // flush the tail before the close marker
 		if onClose != nil {
 			onClose(err)
 		}
@@ -191,17 +192,6 @@ func (mgr *execSessionManager) stopAll() {
 	for _, s := range sessions {
 		s.close()
 	}
-}
-
-type execWriter struct {
-	onData ExecDataFunc
-}
-
-func (w *execWriter) Write(p []byte) (int, error) {
-	// string(p) copies into an immutable string the consumer needs anyway, so
-	// the buffer is safe to reuse after Write returns without a second copy.
-	w.onData(string(p))
-	return len(p), nil
 }
 
 type chanSizeQueue struct {
