@@ -109,6 +109,27 @@ func TestDeltaAddThenDeleteNetsRemove(t *testing.T) {
 	}
 }
 
+// A remove keeps only the key, so record() must derive it without running the
+// (expensive) projector — the whole point of the delete-hot-path optimization.
+func TestDeltaRemoveSkipsProjection(t *testing.T) {
+	w, captured := newDeltaTestWatcher()
+	projected := false
+	spy := kindBinding{project: func(obj any) (string, any, bool) {
+		projected = true
+		return projectPod(obj)
+	}}
+	w.record("Pod", spy, DeltaRemove, podWithIP("ns", "a", "1.1.1.1"))
+	drain(w)
+
+	if projected {
+		t.Fatal("record() ran the projector on a remove; it should derive the key cheaply")
+	}
+	d := soleDelta(t, captured())
+	if len(d.Removed) != 1 || d.Removed[0] != "ns/a" {
+		t.Fatalf("expected removal of ns/a, got %v", d.Removed)
+	}
+}
+
 func TestDeltaAddThenUpdateNetsLatestUpsert(t *testing.T) {
 	w, captured := newDeltaTestWatcher()
 	w.record("Pod", podBinding, DeltaUpsert, podWithIP("ns", "a", "1.1.1.1"))

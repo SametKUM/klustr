@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -603,6 +604,27 @@ func (w *contextWatcher) record(kind string, b kindBinding, op DeltaOp, obj any)
 		if tomb, isTomb := obj.(cache.DeletedFinalStateUnknown); isTomb {
 			obj = tomb.Obj
 		}
+		// A remove keeps only the key, so derive it cheaply — every projector's
+		// key is "namespace/name". Running the full project() here would build
+		// (and immediately discard) the whole Info struct on the delete hot path,
+		// which for high-churn kinds (Jobs, ReplicaSets, evicted Pods) is pure
+		// wasted CPU/allocation on the informer goroutine.
+		acc, err := meta.Accessor(obj)
+		if err != nil {
+			w.touch(kind)
+			return
+		}
+		key := acc.GetNamespace() + "/" + acc.GetName()
+		w.mu.Lock()
+		defer w.mu.Unlock()
+		if w.stopped {
+			return
+		}
+		// A remove supersedes a prior upsert (a born-and-died key flushes as a
+		// remove, which the frontend no-ops when the key is absent).
+		w.pendingKindLocked(kind).items[key] = pendingItem{op: DeltaRemove}
+		w.armTimerLocked()
+		return
 	}
 	key, info, ok := b.project(obj)
 	if !ok {
@@ -614,15 +636,9 @@ func (w *contextWatcher) record(kind string, b kindBinding, op DeltaOp, obj any)
 	if w.stopped {
 		return
 	}
-	pk := w.pendingKindLocked(kind)
 	// Latest op wins: an upsert carries the freshest projection and supersedes a
-	// prior remove; a remove supersedes a prior upsert (a born-and-died key flushes
-	// as a remove, which the frontend no-ops when the key is absent).
-	if op == DeltaUpsert {
-		pk.items[key] = pendingItem{op: DeltaUpsert, info: info}
-	} else {
-		pk.items[key] = pendingItem{op: DeltaRemove}
-	}
+	// prior remove buffered for the same key.
+	w.pendingKindLocked(kind).items[key] = pendingItem{op: DeltaUpsert, info: info}
 	w.armTimerLocked()
 }
 
