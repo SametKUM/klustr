@@ -79,6 +79,16 @@ func (m *ClientManager) ListClusterWarningEvents(ctx context.Context, contextNam
 	if limit <= 0 {
 		limit = 50
 	}
+	return m.clusterWarningEvents(ctx, contextName, cs, limit)
+}
+
+func (m *ClientManager) clusterWarningEvents(ctx context.Context, contextName string, cs kubernetes.Interface, limit int) ([]EventInfo, error) {
+	m.metrics.mu.Lock()
+	if e, ok := m.metrics.warnEvents[contextName]; ok && e.limit == limit && time.Since(e.at) < warningEventsTTL {
+		m.metrics.mu.Unlock()
+		return e.list, nil
+	}
+	m.metrics.mu.Unlock()
 
 	// Page through the full warning set before sorting: a server-side Limit
 	// truncates in etcd key order (alphabetical by namespace/name), which on a
@@ -113,6 +123,10 @@ func (m *ClientManager) ListClusterWarningEvents(ctx context.Context, contextNam
 	}
 	out := []EventInfo(*h)
 	sort.Slice(out, func(i, j int) bool { return out[i].LastSeen.After(out[j].LastSeen) })
+
+	m.metrics.mu.Lock()
+	m.metrics.warnEvents[contextName] = cachedWarnEvents{at: time.Now(), limit: limit, list: out}
+	m.metrics.mu.Unlock()
 	return out, nil
 }
 

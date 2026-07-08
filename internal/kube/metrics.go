@@ -22,6 +22,11 @@ const podMetricsTTL = 10 * time.Second
 // so a metrics-server-less cluster isn't probed (and timed out) every poll.
 const metricsUnavailableCooldown = time.Minute
 
+// warningEventsTTL caches the cluster-wide warning-event scan briefly so the
+// Overview's 15s poll and its change-triggered 300ms debounce bursts share one
+// multi-page Event LIST instead of each re-scanning the whole warning set.
+const warningEventsTTL = 10 * time.Second
+
 type PodMetrics struct {
 	Namespace string `json:"namespace"`
 	Name      string `json:"name"`
@@ -40,11 +45,23 @@ type cachedPodList struct {
 	list *metricsv1beta1.PodMetricsList
 }
 
+// cachedWarnEvents is the last warning-event scan for a context. limit is kept
+// so a differently-sized request misses instead of serving a truncated list.
+type cachedWarnEvents struct {
+	at    time.Time
+	limit int
+	list  []EventInfo
+}
+
+// metricsCache is the Overview's short-TTL read cache: metrics clients + pod
+// metrics live here, and warning events ride along so they share the same
+// per-context invalidation on StopWatch / credential refresh.
 type metricsCache struct {
 	mu               sync.Mutex
 	client           map[string]metricsclient.Interface
 	unavailableUntil map[string]time.Time
 	podList          map[string]cachedPodList
+	warnEvents       map[string]cachedWarnEvents
 }
 
 func newMetricsCache() *metricsCache {
@@ -52,6 +69,7 @@ func newMetricsCache() *metricsCache {
 		client:           make(map[string]metricsclient.Interface),
 		unavailableUntil: make(map[string]time.Time),
 		podList:          make(map[string]cachedPodList),
+		warnEvents:       make(map[string]cachedWarnEvents),
 	}
 }
 
@@ -171,6 +189,7 @@ func (mc *metricsCache) invalidate(contextName string) {
 	delete(mc.client, contextName)
 	delete(mc.unavailableUntil, contextName)
 	delete(mc.podList, contextName)
+	delete(mc.warnEvents, contextName)
 }
 
 // clusterPodMetrics returns the cluster-wide pod-metrics list, served from a

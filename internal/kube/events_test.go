@@ -69,6 +69,36 @@ func TestPageRecentEventsRetainsNewestAcrossPages(t *testing.T) {
 	}
 }
 
+// A second warning-event scan within the TTL must be served from cache (no
+// extra apiserver LIST), and a different limit must miss.
+func TestClusterWarningEventsCached(t *testing.T) {
+	cs := fake.NewSimpleClientset()
+	calls := 0
+	cs.PrependReactor("list", "events", func(clienttesting.Action) (bool, runtime.Object, error) {
+		calls++
+		return true, &corev1.EventList{Items: []corev1.Event{
+			{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "e1"}, Type: "Warning"},
+		}}, nil
+	})
+
+	m := &ClientManager{metrics: newMetricsCache()}
+	if _, err := m.clusterWarningEvents(context.Background(), "ctx", cs, 50); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.clusterWarningEvents(context.Background(), "ctx", cs, 50); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Errorf("expected the second same-limit call to hit cache (1 LIST), got %d", calls)
+	}
+	if _, err := m.clusterWarningEvents(context.Background(), "ctx", cs, 25); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 {
+		t.Errorf("expected a different limit to miss cache (2 LISTs), got %d", calls)
+	}
+}
+
 // events.k8s.io/v1 events surface with Count=0, no LastTimestamp, and repeats
 // in Series. eventInfoFrom must report the series count and last-observed time.
 func TestEventInfoFromUsesSeries(t *testing.T) {
