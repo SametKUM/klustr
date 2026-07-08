@@ -9,9 +9,12 @@ import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { api, type PodLogTarget } from '@/lib/api'
 import { xtermThemeFor } from '@/features/_shared/xtermTheme'
 import { highlightLogContent } from '@/features/_shared/logHighlight'
+import { pushCapped } from '@/features/_shared/pushCapped'
 import { useUIStore } from '@/store/ui'
 
 const TAIL_LINES = 50
+const RETAIN_CAP = 100_000
+const PAUSE_BUFFER_CAP = 10_000
 const COLORS = [
   '\x1b[36m', // cyan
   '\x1b[32m', // green
@@ -226,16 +229,14 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
                 const styledLine = prefix + highlightLogContent(line)
                 // Retain every line (regardless of filter or pause) so the filter
                 // can repaint over the full buffer and Save reflects it.
-                rawLinesRef.current.push({ raw: rawLine, styled: styledLine })
-                if (rawLinesRef.current.length > 100_000) rawLinesRef.current.shift()
+                pushCapped(rawLinesRef.current, { raw: rawLine, styled: styledLine }, RETAIN_CAP)
                 if (!predicateRef.current(rawLine)) continue
                 styledOut.push(styledLine)
               }
               if (styledOut.length === 0) return
               if (pausedRef.current) {
                 for (const s of styledOut) {
-                  bufferRef.current.push(s)
-                  if (bufferRef.current.length > 10_000) bufferRef.current.shift()
+                  pushCapped(bufferRef.current, s, PAUSE_BUFFER_CAP)
                 }
                 setBufferLength(bufferRef.current.length)
                 return
@@ -250,8 +251,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
               // stays in chronological order instead of jumping ahead of
               // buffered lines that preceded it.
               if (pausedRef.current) {
-                bufferRef.current.push(styled)
-                if (bufferRef.current.length > 10_000) bufferRef.current.shift()
+                pushCapped(bufferRef.current, styled, PAUSE_BUFFER_CAP)
                 setBufferLength(bufferRef.current.length)
                 return
               }
