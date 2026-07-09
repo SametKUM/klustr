@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -150,4 +151,49 @@ func TestDecodeHelmReleaseSecret(t *testing.T) {
 			t.Fatal("expected json error")
 		}
 	})
+}
+
+// decodeHelmReleaseMeta must extract the list-row fields but skip the heavy
+// manifest and chart template/values bytes.
+func TestDecodeHelmReleaseMeta(t *testing.T) {
+	rel := &release.Release{
+		Name:      "demo",
+		Namespace: "default",
+		Version:   3,
+		Info:      &release.Info{Status: release.StatusDeployed, Description: "Install complete"},
+		Manifest:  "apiVersion: v1\nkind: ConfigMap\n# ...huge rendered manifest...",
+		Chart: &chart.Chart{
+			Metadata:  &chart.Metadata{Name: "nginx", Version: "1.2.3", AppVersion: "1.25"},
+			Templates: []*chart.File{{Name: "templates/deploy.yaml", Data: []byte("big template body")}},
+			Values:    map[string]any{"replicas": 3},
+		},
+	}
+	payload := encodeHelmReleasePayload(t, rel, true)
+	s := &corev1.Secret{Data: map[string][]byte{"release": []byte(payload)}}
+
+	got, err := decodeHelmReleaseMeta(s)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.Name != "demo" || got.Namespace != "default" || got.Version != 3 {
+		t.Fatalf("identity fields wrong: %+v", got)
+	}
+	if got.Info == nil || got.Info.Status != release.StatusDeployed || got.Info.Description != "Install complete" {
+		t.Fatalf("info fields wrong: %+v", got.Info)
+	}
+	if got.Chart == nil || got.Chart.Metadata == nil || got.Chart.Metadata.Name != "nginx" || got.Chart.Metadata.Version != "1.2.3" {
+		t.Fatalf("chart metadata wrong: %+v", got.Chart)
+	}
+	// The whole point: manifest and template/values bytes are never decoded.
+	if got.Manifest != "" {
+		t.Errorf("manifest should be skipped, got %q", got.Manifest)
+	}
+	if len(got.Chart.Templates) != 0 || got.Chart.Values != nil {
+		t.Errorf("chart templates/values should be skipped, got templates=%d values=%v", len(got.Chart.Templates), got.Chart.Values)
+	}
+
+	// The row builder reads only the decoded fields, so it matches a full decode.
+	if decodeHelmReleaseMetaInfo := releaseInfoFromRelease(got); decodeHelmReleaseMetaInfo != releaseInfoFromRelease(rel) {
+		t.Errorf("row info diverged from full decode: %+v vs %+v", decodeHelmReleaseMetaInfo, releaseInfoFromRelease(rel))
+	}
 }

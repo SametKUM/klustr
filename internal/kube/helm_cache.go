@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -46,7 +47,9 @@ func isHelmReleaseSecret(s *corev1.Secret) bool {
 	return true
 }
 
-func decodeHelmReleaseSecret(s *corev1.Secret) (*release.Release, error) {
+// helmReleasePayload returns the decoded (base64, then gunzipped) release JSON
+// bytes from a helm storage Secret.
+func helmReleasePayload(s *corev1.Secret) ([]byte, error) {
 	raw, ok := s.Data[helmReleaseSecretDataKey]
 	if !ok || len(raw) == 0 {
 		return nil, fmt.Errorf("secret %s/%s has no release data", s.Namespace, s.Name)
@@ -66,11 +69,49 @@ func decodeHelmReleaseSecret(s *corev1.Secret) (*release.Release, error) {
 			return nil, fmt.Errorf("gunzip %s/%s: %w", s.Namespace, s.Name, err)
 		}
 	}
+	return b, nil
+}
+
+func decodeHelmReleaseSecret(s *corev1.Secret) (*release.Release, error) {
+	b, err := helmReleasePayload(s)
+	if err != nil {
+		return nil, err
+	}
 	var rls release.Release
 	if err := json.Unmarshal(b, &rls); err != nil {
 		return nil, fmt.Errorf("json %s/%s: %w", s.Namespace, s.Name, err)
 	}
 	return &rls, nil
+}
+
+// decodeHelmReleaseMeta decodes only the fields the list/history rows need
+// (name/namespace/version, Info, Chart.Metadata). Unmarshalling into a struct
+// that omits manifest and chart templates/files/values lets encoding/json skip
+// those fields entirely, avoiding the large string/[]byte allocations a full
+// decodeHelmReleaseSecret pays — which for a release set re-decoded on every
+// list refresh (and on any helm-secret change) dominated the cost.
+func decodeHelmReleaseMeta(s *corev1.Secret) (*release.Release, error) {
+	b, err := helmReleasePayload(s)
+	if err != nil {
+		return nil, err
+	}
+	var m struct {
+		Name      string        `json:"name"`
+		Namespace string        `json:"namespace"`
+		Version   int           `json:"version"`
+		Info      *release.Info `json:"info"`
+		Chart     *struct {
+			Metadata *chart.Metadata `json:"metadata"`
+		} `json:"chart"`
+	}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, fmt.Errorf("json %s/%s: %w", s.Namespace, s.Name, err)
+	}
+	rls := &release.Release{Name: m.Name, Namespace: m.Namespace, Version: m.Version, Info: m.Info}
+	if m.Chart != nil {
+		rls.Chart = &chart.Chart{Metadata: m.Chart.Metadata}
+	}
+	return rls, nil
 }
 
 // helmSecretVersion is parsed from the Secret's "version" label without
@@ -95,7 +136,7 @@ func (w *contextWatcher) HelmReleases(namespace string) ([]HelmReleaseInfo, erro
 	}
 	out := make([]HelmReleaseInfo, 0, len(latest))
 	for _, s := range latest {
-		rel, err := decodeHelmReleaseSecret(s)
+		rel, err := decodeHelmReleaseMeta(s)
 		if err != nil {
 			continue
 		}
@@ -134,7 +175,7 @@ func (w *contextWatcher) HelmRelease(namespace, name string) (*HelmReleaseDetail
 
 	revisions := make([]HelmRevisionInfo, 0, len(secrets))
 	for _, s := range secrets {
-		rev, err := decodeHelmReleaseSecret(s)
+		rev, err := decodeHelmReleaseMeta(s)
 		if err != nil {
 			continue
 		}
@@ -184,7 +225,7 @@ func (w *contextWatcher) HelmReleaseRevisions(namespace, name string) ([]HelmRev
 	})
 	out := make([]HelmRevisionInfo, 0, len(secrets))
 	for _, s := range secrets {
-		rel, err := decodeHelmReleaseSecret(s)
+		rel, err := decodeHelmReleaseMeta(s)
 		if err != nil {
 			continue
 		}
