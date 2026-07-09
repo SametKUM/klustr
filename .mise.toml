@@ -1,4 +1,4 @@
 [tools]
 go = "1.26"
 node = "24"
-"go:github.com/wailsapp/wails/v2/cmd/wails" = "v2.12.0"
+"go:github.com/wailsapp/wails/v2/cmd/wails" = "v2.13.0"
