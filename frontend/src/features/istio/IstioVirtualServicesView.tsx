@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useEffect } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type IstioVirtualServiceInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore } from '@/store/crds'
@@ -34,29 +34,7 @@ export function IstioVirtualServicesView() {
   )
 
   const [rows, setRows] = useState<IstioVirtualServiceInfo[]>(EMPTY)
-  const [ready, setReady] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!selectedContext || !crd) {
-      setReady(false)
-      return
-    }
-    let cancelled = false
-    setReady(false)
-    setError(null)
-    api
-      .ensureCustomResourceWatch(selectedContext, crd.group, crd.version, crd.resource)
-      .then(() => {
-        if (!cancelled) setReady(true)
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [selectedContext, crd])
+  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
 
   const columns = useMemo(
     () => [

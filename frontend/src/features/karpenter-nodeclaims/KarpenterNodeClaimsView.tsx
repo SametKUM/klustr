@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type KarpenterNodeClaimInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { formatMemoryQuantity, parseQuantity } from '@/lib/quantity'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
 import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { type ByContext } from '@/store/resources'
@@ -27,29 +28,7 @@ export function KarpenterNodeClaimsView() {
   )
 
   const [rows, setRows] = useState<KarpenterNodeClaimInfo[]>(EMPTY)
-  const [ready, setReady] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!selectedContext || !crd) {
-      setReady(false)
-      return
-    }
-    let cancelled = false
-    setReady(false)
-    setError(null)
-    api
-      .ensureCustomResourceWatch(selectedContext, crd.group, crd.version, crd.resource)
-      .then(() => {
-        if (!cancelled) setReady(true)
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [selectedContext, crd])
+  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
 
   const columns = useMemo(
     () => [

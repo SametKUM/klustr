@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type CRDInfo, type CustomResourceInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
+import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { type ByContext } from '@/store/resources'
 import { useCRDStore, crdKey } from '@/store/crds'
@@ -23,28 +24,7 @@ export function CustomResourceView({ crd }: Props) {
   const customResources = useCRDStore((s) => s.customResources[key] ?? EMPTY_CRS)
   const setCustomResources = useCRDStore((s) => s.setCustomResources)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-  const [ready, setReady] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!selectedContext) return
-    let cancelled = false
-    setReady(false)
-    setError(null)
-    api
-      .ensureCustomResourceWatch(selectedContext, crd.group, crd.version, crd.resource)
-      .then(() => {
-        if (cancelled) return
-        setReady(true)
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : String(err))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [selectedContext, crd.group, crd.version, crd.resource])
+  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
 
   const columns = useMemo(() => {
     const cols = []
