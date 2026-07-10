@@ -22,6 +22,7 @@ export default defineConfig({
             if (id.includes('@tanstack')) return 'tanstack'
             if (id.includes('lucide-react')) return 'lucide'
             if (id.includes('cmdk')) return 'cmdk'
+            return 'vendor'
           }
         },
       },
