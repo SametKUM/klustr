@@ -45,7 +45,6 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
   const [atBottom, setAtBottom] = useState(true)
   const [filterValue, setFilterValue] = useState('')
   const [useRegex, setUseRegex] = useState(false)
-  const [filterError, setFilterError] = useState<string | null>(null)
   const [bufferLength, setBufferLength] = useState(0)
   const termHostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -84,26 +83,26 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
     return () => window.clearTimeout(id)
   }, [filterValue])
 
-  useEffect(() => {
+  const appliedPredicate = useMemo(() => {
     if (!appliedFilter) {
-      predicateRef.current = () => true
-      setFilterError(null)
+      return { predicate: () => true, error: null }
     } else if (useRegex) {
       try {
         const re = new RegExp(appliedFilter, 'i')
-        predicateRef.current = (line) => re.test(line)
-        setFilterError(null)
+        return { predicate: (line: string) => re.test(line), error: null }
       } catch (e: unknown) {
-        predicateRef.current = () => false
-        setFilterError(String(e))
+        return { predicate: () => false, error: String(e) }
       }
-    } else {
-      const needle = appliedFilter.toLowerCase()
-      predicateRef.current = (line) => line.toLowerCase().includes(needle)
-      setFilterError(null)
     }
+    const needle = appliedFilter.toLowerCase()
+    return { predicate: (line: string) => line.toLowerCase().includes(needle), error: null }
+  }, [appliedFilter, useRegex])
+  const filterError = appliedPredicate.error
+
+  useEffect(() => {
+    predicateRef.current = appliedPredicate.predicate
     rerender()
-  }, [appliedFilter, useRegex, rerender])
+  }, [appliedPredicate, rerender])
 
   useEffect(() => {
     pausedRef.current = paused

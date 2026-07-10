@@ -175,6 +175,7 @@ export function WorkloadsOverviewView() {
 
   useEffect(() => {
     if (activeContexts.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Workload snapshots are scoped to active contexts.
       setPods([])
       setDeployments([])
       setStatefulSets([])
@@ -216,9 +217,10 @@ export function WorkloadsOverviewView() {
         if (activeContexts.includes(ctx)) scheduleSoon()
       }),
     )
+    const epochAtSetup = epochRef.current
 
     return () => {
-      epochRef.current++
+      epochRef.current = epochAtSetup + 1
       window.clearInterval(id)
       if (debounceRef.current !== null) {
         window.clearTimeout(debounceRef.current)

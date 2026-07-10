@@ -65,7 +65,6 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
   const [atBottom, setAtBottom] = useState(true)
   const [filterValue, setFilterValue] = useState('')
   const [useRegex, setUseRegex] = useState(false)
-  const [filterError, setFilterError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [bufferLength, setBufferLength] = useState(0)
 
@@ -106,26 +105,26 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
     }
   }, [paused])
 
-  useEffect(() => {
+  const appliedPredicate = useMemo(() => {
     if (!filterValue) {
-      predicateRef.current = () => true
-      setFilterError(null)
+      return { predicate: () => true, error: null }
     } else if (useRegex) {
       try {
         const re = new RegExp(filterValue, 'i')
-        predicateRef.current = (line) => re.test(line)
-        setFilterError(null)
+        return { predicate: (line: string) => re.test(line), error: null }
       } catch (e) {
-        predicateRef.current = () => false
-        setFilterError(String(e))
+        return { predicate: () => false, error: String(e) }
       }
-    } else {
-      const needle = filterValue.toLowerCase()
-      predicateRef.current = (line) => line.toLowerCase().includes(needle)
-      setFilterError(null)
     }
+    const needle = filterValue.toLowerCase()
+    return { predicate: (line: string) => line.toLowerCase().includes(needle), error: null }
+  }, [filterValue, useRegex])
+  const filterError = appliedPredicate.error
+
+  useEffect(() => {
+    predicateRef.current = appliedPredicate.predicate
     rerender()
-  }, [filterValue, useRegex, rerender])
+  }, [appliedPredicate, rerender])
 
   useEffect(() => {
     if (!termHostRef.current) return
@@ -174,6 +173,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
 
   useEffect(() => {
     if (!contextName || !selectorKey) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Invalidating the selector also invalidates its targets.
       setTargets([])
       return
     }
@@ -193,6 +193,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
 
   useEffect(() => {
     if (!contextName || targets.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Stream state follows the external target set.
       setStreaming(false)
       return
     }

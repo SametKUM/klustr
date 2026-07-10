@@ -77,15 +77,8 @@ function reportOutcome(
 
 export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: DialogProps) {
   const [typed, setTyped] = useState('')
-  // onSuccess clears the selection, emptying `items` while the dialog is still
-  // mounted for its ~100ms close animation, which would flash "Delete 0" and an
-  // empty list. Render from the last non-empty snapshot so the closing view
-  // stays stable; the mutation still operates on the live `items`.
-  const displayRef = useRef(items)
-  if (items.length > 0) displayRef.current = items
-  const display = items.length > 0 ? items : displayRef.current
-  const label = kindLabel(display)
-  const { shown, rest } = preview(display)
+  const label = kindLabel(items)
+  const { shown, rest } = preview(items)
   const confirmed = typed === 'DELETE'
 
   const del = useMutation({
@@ -115,7 +108,7 @@ export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: Dialo
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Delete {display.length} {label}?
+            Delete {items.length} {label}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             This issues DELETE against each item via the Kubernetes API. This cannot be undone.
@@ -164,7 +157,7 @@ export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: Dialo
             }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {del.isPending ? 'Deleting…' : `Delete ${display.length}`}
+            {del.isPending ? 'Deleting…' : `Delete ${items.length}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -173,13 +166,8 @@ export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: Dialo
 }
 
 export function BulkRestartDialog({ items, open, onOpenChange, onSuccess }: DialogProps) {
-  // See BulkDeleteDialog: render from the last non-empty snapshot so the
-  // close animation doesn't flash "Restart 0" after the selection clears.
-  const displayRef = useRef(items)
-  if (items.length > 0) displayRef.current = items
-  const display = items.length > 0 ? items : displayRef.current
-  const label = kindLabel(display)
-  const { shown, rest } = preview(display)
+  const label = kindLabel(items)
+  const { shown, rest } = preview(items)
 
   const restart = useMutation({
     mutationFn: async () => {
@@ -205,7 +193,7 @@ export function BulkRestartDialog({ items, open, onOpenChange, onSuccess }: Dial
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Restart {display.length} {label}?
+            Restart {items.length} {label}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             Triggers a rolling restart on each workload by patching
@@ -239,7 +227,7 @@ export function BulkRestartDialog({ items, open, onOpenChange, onSuccess }: Dial
               restart.mutate()
             }}
           >
-            {restart.isPending ? 'Restarting…' : `Restart ${display.length}`}
+            {restart.isPending ? 'Restarting…' : `Restart ${items.length}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -254,12 +242,7 @@ export function BulkCordonDialog({
   onSuccess,
   cordon,
 }: DialogProps & { cordon: boolean }) {
-  // See BulkDeleteDialog: render from the last non-empty snapshot so the
-  // close animation doesn't flash an empty list after the selection clears.
-  const displayRef = useRef(items)
-  if (items.length > 0) displayRef.current = items
-  const display = items.length > 0 ? items : displayRef.current
-  const { shown, rest } = preview(display)
+  const { shown, rest } = preview(items)
   const verb = cordon ? 'Cordon' : 'Uncordon'
 
   const mut = useMutation({
@@ -267,7 +250,7 @@ export function BulkCordonDialog({
       return runAll(items, (it) => api.cordonNode(it.contextName, it.name, cordon))
     },
     onSuccess: (res) => {
-      reportOutcome(cordon ? 'Cordoned' : 'Uncordoned', res.ok, res.failed.length, kindLabel(display))
+      reportOutcome(cordon ? 'Cordoned' : 'Uncordoned', res.ok, res.failed.length, kindLabel(items))
       onOpenChange(false)
       onSuccess?.()
     },
@@ -284,7 +267,7 @@ export function BulkCordonDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {verb} {display.length} {kindLabel(display)}?
+            {verb} {items.length} {kindLabel(items)}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             {cordon
@@ -316,7 +299,7 @@ export function BulkCordonDialog({
               mut.mutate()
             }}
           >
-            {mut.isPending ? `${verb}ing…` : `${verb} ${display.length}`}
+            {mut.isPending ? `${verb}ing…` : `${verb} ${items.length}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -333,12 +316,7 @@ function isTerminal(p: NodeDrainProgress): boolean {
 }
 
 export function BulkDrainDialog({ items, open, onOpenChange, onSuccess }: DialogProps) {
-  // See BulkDeleteDialog: render from the last non-empty snapshot so the
-  // close animation doesn't flash an empty list after the selection clears.
-  const displayRef = useRef(items)
-  if (items.length > 0) displayRef.current = items
-  const display = items.length > 0 ? items : displayRef.current
-  const { shown, rest } = preview(display)
+  const { shown, rest } = preview(items)
 
   const [progress, setProgress] = useState<Record<string, NodeDrainProgress> | null>(null)
   const unsubsRef = useRef<(() => void)[]>([])
@@ -351,7 +329,7 @@ export function BulkDrainDialog({ items, open, onOpenChange, onSuccess }: Dialog
 
   const started = progress !== null
   const allDone =
-    started && display.every((it) => {
+    started && items.every((it) => {
       const p = progress[drainKey(it)]
       return p !== undefined && isTerminal(p)
     })
@@ -361,10 +339,10 @@ export function BulkDrainDialog({ items, open, onOpenChange, onSuccess }: Dialog
     if (!allDone || reportedRef.current || progress === null) return
     reportedRef.current = true
     unsubAll()
-    const failed = display.filter((it) => progress[drainKey(it)]?.phase === 'error').length
-    reportOutcome('Drained', display.length - failed, failed, kindLabel(display))
+    const failed = items.filter((it) => progress[drainKey(it)]?.phase === 'error').length
+    reportOutcome('Drained', items.length - failed, failed, kindLabel(items))
     onSuccess?.()
-  }, [allDone, progress, display, onSuccess])
+  }, [allDone, progress, items, onSuccess])
 
   const start = () => {
     reportedRef.current = false
@@ -406,7 +384,7 @@ export function BulkDrainDialog({ items, open, onOpenChange, onSuccess }: Dialog
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Drain {display.length} {kindLabel(display)}?
+            Drain {items.length} {kindLabel(items)}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             Cordons each node, then evicts all pods through the Eviction API, so
@@ -470,7 +448,7 @@ export function BulkDrainDialog({ items, open, onOpenChange, onSuccess }: Dialog
                 start()
               }}
             >
-              {draining ? 'Draining…' : `Drain ${display.length}`}
+              {draining ? 'Draining…' : `Drain ${items.length}`}
             </AlertDialogAction>
           )}
         </AlertDialogFooter>

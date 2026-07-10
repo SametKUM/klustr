@@ -62,7 +62,7 @@ import {
   BulkRestartDialog,
   type BulkItem,
 } from './BulkActionDialogs'
-import { isRestartable } from './RestartWorkloadButton'
+import { isRestartable } from './workloadCapabilities'
 import { parseSearch, rowMatchesSearch } from './rowSearch'
 
 type RowIdentity = { namespace?: string; name?: string }
@@ -101,7 +101,7 @@ export type ResourceTableProps<T> = {
   data: ByContext<T>
   setData: (ctx: string, list: T[]) => void
   fetch: (contextName: string, namespace: string) => Promise<T[]>
-  columns: ColumnDef<T, any>[]
+  columns: ColumnDef<T, unknown>[]
   defaultSort?: SortingState
   onRowClick?: (row: T, contextName: string) => void
   // CR views must supply this: their table `kind` is a prefs key
@@ -120,7 +120,7 @@ function identityKey(ctx: string, r: RowIdentity): string {
   return `${ctx}/${r.namespace ?? ''}/${r.name ?? ''}`
 }
 
-function columnId<T>(c: ColumnDef<T, any>): string {
+function columnId<T>(c: ColumnDef<T, unknown>): string {
   if (c.id) return c.id
   const ak = (c as { accessorKey?: string }).accessorKey
   if (ak) return ak
@@ -167,7 +167,7 @@ type ResourceRowProps<T> = {
   row: Row<Tagged<T>>
   rowIndex: number
   kind: string
-  columns: ColumnDef<Tagged<T>, any>[]
+  columns: ColumnDef<Tagged<T>, unknown>[]
   columnOrder: string[]
   columnVisibility: VisibilityState
   isSelected: boolean
@@ -388,6 +388,7 @@ export function ResourceTable<T>({
   const [bulkRestartOpen, setBulkRestartOpen] = useState(false)
   const [bulkCordon, setBulkCordon] = useState<'cordon' | 'uncordon' | null>(null)
   const [bulkDrainOpen, setBulkDrainOpen] = useState(false)
+  const [bulkItems, setBulkItems] = useState<BulkItem[]>([])
   useEffect(() => {
     setSelectedKeys(new Set())
   }, [activeContexts, selectedNamespaces, kind])
@@ -580,10 +581,10 @@ export function ResourceTable<T>({
     }
   }, [activeContexts, query, kind])
 
-  const tableColumns = useMemo<ColumnDef<Tagged<T>, any>[]>(() => {
-    const baseCols = columns as unknown as ColumnDef<Tagged<T>, any>[]
+  const tableColumns = useMemo<ColumnDef<Tagged<T>, unknown>[]>(() => {
+    const baseCols = columns as unknown as ColumnDef<Tagged<T>, unknown>[]
     if (!isAggregated) return baseCols
-    const ctxCol: ColumnDef<Tagged<T>, any> = {
+    const ctxCol: ColumnDef<Tagged<T>, unknown> = {
       id: 'klustrContext',
       header: 'Context',
       accessorFn: (row) => row[KLUSTR_CTX],
@@ -817,7 +818,10 @@ export function ResourceTable<T>({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setBulkRestartOpen(true)}
+              onClick={() => {
+                setBulkItems(selectedItems)
+                setBulkRestartOpen(true)
+              }}
               className="h-7 gap-1.5"
             >
               <RotateCcw className="size-3.5" />
@@ -829,7 +833,10 @@ export function ResourceTable<T>({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setBulkCordon('cordon')}
+                onClick={() => {
+                  setBulkItems(selectedItems)
+                  setBulkCordon('cordon')
+                }}
                 className="h-7 gap-1.5"
               >
                 <Ban className="size-3.5" />
@@ -838,7 +845,10 @@ export function ResourceTable<T>({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setBulkCordon('uncordon')}
+                onClick={() => {
+                  setBulkItems(selectedItems)
+                  setBulkCordon('uncordon')
+                }}
                 className="h-7 gap-1.5"
               >
                 <CircleCheck className="size-3.5" />
@@ -847,7 +857,10 @@ export function ResourceTable<T>({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setBulkDrainOpen(true)}
+                onClick={() => {
+                  setBulkItems(selectedItems)
+                  setBulkDrainOpen(true)
+                }}
                 className="h-7 gap-1.5"
               >
                 <MoveDownLeft className="size-3.5" />
@@ -859,7 +872,10 @@ export function ResourceTable<T>({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setBulkDeleteOpen(true)}
+              onClick={() => {
+                setBulkItems(selectedItems)
+                setBulkDeleteOpen(true)
+              }}
               className="h-7 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <Trash2 className="size-3.5" />
@@ -1178,13 +1194,13 @@ export function ResourceTable<T>({
         </div>
       )}
       <BulkDeleteDialog
-        items={selectedItems}
+        items={bulkItems}
         open={bulkDeleteOpen}
         onOpenChange={setBulkDeleteOpen}
         onSuccess={clearSelection}
       />
       <BulkRestartDialog
-        items={selectedItems}
+        items={bulkItems}
         open={bulkRestartOpen}
         onOpenChange={setBulkRestartOpen}
         onSuccess={clearSelection}
@@ -1192,14 +1208,14 @@ export function ResourceTable<T>({
       {isNodeKind && (
         <>
           <BulkCordonDialog
-            items={selectedItems}
+            items={bulkItems}
             open={bulkCordon !== null}
             onOpenChange={(next) => setBulkCordon(next ? bulkCordon : null)}
             onSuccess={clearSelection}
             cordon={bulkCordon !== 'uncordon'}
           />
           <BulkDrainDialog
-            items={selectedItems}
+            items={bulkItems}
             open={bulkDrainOpen}
             onOpenChange={setBulkDrainOpen}
             onSuccess={clearSelection}
