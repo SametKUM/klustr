@@ -78,15 +78,6 @@ export function DeleteArgoApplicationButton({ contextName, resource }: Props) {
   )
 }
 
-// isArgoApplication recognises both shapes Klustr uses for an Argo CD
-// Application: the detail panel sets `kind: 'Application'` with `gvr.group`
-// pointing at argoproj.io, while the row context menu (ApplicationsView →
-// ResourceTable) passes the CR-table kind `cr:argoproj.io/applications`.
-export function isArgoApplication(resource: SelectedResource): boolean {
-  if (resource.kind === 'cr:argoproj.io/applications') return true
-  return resource.kind === 'Application' && resource.gvr?.group === 'argoproj.io'
-}
-
 type DialogProps = Props & {
   open: boolean
   onOpenChange: (open: boolean) => void

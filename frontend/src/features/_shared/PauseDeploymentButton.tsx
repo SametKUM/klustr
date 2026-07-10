@@ -9,10 +9,6 @@ import { api, type DeploymentDetail } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
 import type { SelectedResource } from '@/store/ui'
 
-export function isPausable(kind: string): boolean {
-  return kind === 'Deployment'
-}
-
 type Props = {
   contextName: string | null
   resource: SelectedResource

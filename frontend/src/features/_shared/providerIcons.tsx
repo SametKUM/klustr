@@ -1,6 +1,7 @@
 import { FaAws, FaDigitalOcean, FaLinode, FaMicrosoft, SiDocker, SiGooglecloud, SiKubernetes } from './brandIcons'
 import { Box } from 'lucide-react'
 import type { ContextInfo } from '@/lib/api'
+import { providerMeta, type Provider } from './providerInfo'
 import kindLogoUrl from './kind.png'
 import minikubeLogoUrl from './minikube.png'
 import k3sLogoUrl from './k3s.png'
@@ -57,90 +58,26 @@ function OrbstackIcon({ className }: { className?: string }) {
 }
 
 
-export type Provider =
-  | 'aws'
-  | 'gcp'
-  | 'azure'
-  | 'digitalocean'
-  | 'linode'
-  | 'orbstack'
-  | 'docker'
-  | 'kind'
-  | 'k3d'
-  | 'k3s'
-  | 'minikube'
-  | 'microk8s'
-  | 'local'
-  | 'k8s'
-
-type ProviderMeta = {
-  id: Provider
-  label: string
-  className: string
-  Icon: React.ComponentType<{ className?: string; role?: string; 'aria-label'?: string }>
-}
-
-const META: Record<Provider, ProviderMeta> = {
-  aws: { id: 'aws', label: 'AWS EKS', className: 'text-[#FF9900]', Icon: FaAws },
-  gcp: { id: 'gcp', label: 'GKE', className: 'text-[#4285F4]', Icon: SiGooglecloud },
-  azure: { id: 'azure', label: 'AKS', className: 'text-[#0078D4]', Icon: FaMicrosoft },
-  digitalocean: { id: 'digitalocean', label: 'DOKS', className: 'text-[#0080FF]', Icon: FaDigitalOcean },
-  linode: { id: 'linode', label: 'LKE', className: 'text-[#00A95C]', Icon: FaLinode },
-  orbstack: { id: 'orbstack', label: 'OrbStack', className: 'text-pink-500', Icon: OrbstackIcon },
-  docker: { id: 'docker', label: 'Docker Desktop', className: 'text-[#2496ED]', Icon: SiDocker },
-  kind: { id: 'kind', label: 'kind', className: '', Icon: KindIcon },
-  k3d: { id: 'k3d', label: 'k3d', className: 'text-foreground', Icon: K3dIcon },
-  k3s: { id: 'k3s', label: 'k3s', className: '', Icon: K3sIcon },
-  minikube: { id: 'minikube', label: 'minikube', className: '', Icon: MinikubeIcon },
-  microk8s: { id: 'microk8s', label: 'microk8s', className: 'text-[#E95420]', Icon: SiKubernetes },
-  local: { id: 'local', label: 'Local', className: 'text-muted-foreground', Icon: Box },
-  k8s: { id: 'k8s', label: 'Kubernetes', className: 'text-[#326CE5]', Icon: SiKubernetes },
-}
-
-function hostname(url: string): string {
-  try {
-    return new URL(url).hostname
-  } catch {
-    return ''
-  }
-}
-
-export function detectProvider(c: { name: string; server: string; cluster?: string }): Provider {
-  const name = (c.name ?? '').toLowerCase()
-  const server = c.server ?? ''
-  const cluster = (c.cluster ?? '').toLowerCase()
-
-  // Name/cluster fallbacks match the provider token only at a segment boundary
-  // ([-_.] or string edge), so 'geeks-dev' doesn't read as EKS or 'speaks' as
-  // AKS. The precise server-host regexes stay the primary signal.
-  if (/\.eks\.amazonaws\.com(?:[:/]|$)/i.test(server) || name.startsWith('arn:aws:eks:') || /(^|[-_.])eks([-_.]|$)/.test(name) || /(^|[-_.])eks([-_.]|$)/.test(cluster)) return 'aws'
-  if (/\.gke\./i.test(server) || /container\.googleapis/i.test(server) || name.startsWith('gke_') || /(^|[-_.])gke([-_.]|$)/.test(name)) return 'gcp'
-  if (/\.azmk8s\.io(?:[:/]|$)/i.test(server) || name.startsWith('aks-') || /(^|[-_.])aks([-_.]|$)/.test(name)) return 'azure'
-  if (/\.k8s\.ondigitalocean\.com(?:[:/]|$)/i.test(server) || /(^|[-_.])doks([-_.]|$)/.test(name)) return 'digitalocean'
-  if (/\.linodelke\.net(?:[:/]|$)/i.test(server) || /(^|[-_.])lke([-_.]|$)/.test(name)) return 'linode'
-
-  if (/orbstack/.test(name) || /orbstack/i.test(server)) return 'orbstack'
-  if (/docker-desktop/.test(name) || /docker\.internal/i.test(server)) return 'docker'
-  if (/kind-/.test(name)) return 'kind'
-  if (/k3d-/.test(name)) return 'k3d'
-  if (/microk8s/.test(name)) return 'microk8s'
-  if (/minikube/.test(name)) return 'minikube'
-  if (/k3s/.test(name) || /k3s/.test(cluster)) return 'k3s'
-
-  const host = hostname(server)
-  if (host && /^(127\.0\.0\.1|localhost|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) {
-    return 'local'
-  }
-  return 'k8s'
-}
-
-export function providerMeta(c: ContextInfo): ProviderMeta {
-  return META[detectProvider(c)]
+const PROVIDER_ICONS: Record<Provider, React.ComponentType<{ className?: string; role?: string; 'aria-label'?: string }>> = {
+  aws: FaAws,
+  gcp: SiGooglecloud,
+  azure: FaMicrosoft,
+  digitalocean: FaDigitalOcean,
+  linode: FaLinode,
+  orbstack: OrbstackIcon,
+  docker: SiDocker,
+  kind: KindIcon,
+  k3d: K3dIcon,
+  k3s: K3sIcon,
+  minikube: MinikubeIcon,
+  microk8s: SiKubernetes,
+  local: Box,
+  k8s: SiKubernetes,
 }
 
 export function ProviderIcon({ context, className }: { context: ContextInfo; className?: string }) {
   const meta = providerMeta(context)
-  const Icon = meta.Icon
+  const Icon = PROVIDER_ICONS[meta.id]
   return (
     <Icon
       className={[meta.className, className ?? 'size-3.5'].filter(Boolean).join(' ')}

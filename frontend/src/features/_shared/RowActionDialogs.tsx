@@ -1,9 +1,7 @@
 import { DeleteResourceDialog } from './DeleteResourceButton'
 import { RestartWorkloadDialog } from './RestartWorkloadButton'
-import {
-  DeleteArgoApplicationDialog,
-  isArgoApplication,
-} from '@/features/argocd/DeleteArgoApplicationButton'
+import { DeleteArgoApplicationDialog } from '@/features/argocd/DeleteArgoApplicationButton'
+import { isArgoApplication } from '@/features/argocd/argoApplication'
 import { PortForwardDialog } from '@/features/portforward/PortForwardButton'
 import { useUIStore } from '@/store/ui'
 

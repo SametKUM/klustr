@@ -15,17 +15,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
-import type { ResourceKind, SelectedResource } from '@/store/ui'
-
-const RESTARTABLE_KINDS: ReadonlySet<ResourceKind> = new Set<ResourceKind>([
-  'Deployment',
-  'StatefulSet',
-  'DaemonSet',
-])
-
-export function isRestartable(kind: string): boolean {
-  return RESTARTABLE_KINDS.has(kind as ResourceKind)
-}
+import type { SelectedResource } from '@/store/ui'
 
 type DialogProps = {
   contextName: string | null

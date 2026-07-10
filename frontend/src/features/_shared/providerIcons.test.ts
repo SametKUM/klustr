@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectProvider } from './providerIcons'
+import { detectProvider } from './providerInfo'
 
 describe('detectProvider', () => {
   it('detects providers from the server host', () => {

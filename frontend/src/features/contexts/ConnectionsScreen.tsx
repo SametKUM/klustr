@@ -33,7 +33,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ReadOnlyToggle } from '@/features/_shared/ReadOnlyToggle'
-import { ProviderIcon, ProviderIconStack, providerMeta } from '@/features/_shared/providerIcons'
+import { ProviderIcon, ProviderIconStack } from '@/features/_shared/providerIcons'
+import { providerMeta } from '@/features/_shared/providerInfo'
 import { api, type ContextInfo } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
 import {

@@ -15,15 +15,10 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
-import type { ResourceKind, SelectedResource } from '@/store/ui'
+import type { SelectedResource } from '@/store/ui'
 
-const SCALABLE_KINDS: ResourceKind[] = ['Deployment', 'StatefulSet']
 const MIN_REPLICAS = 0
 const MAX_REPLICAS = 1000
-
-export function isScalable(kind: string): boolean {
-  return (SCALABLE_KINDS as readonly string[]).includes(kind)
-}
 
 type Props = {
   contextName: string | null
