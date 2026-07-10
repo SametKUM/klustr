@@ -34,6 +34,7 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
   useEffect(() => {
     if (!contextName) return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Application identity invalidates the previous remote snapshot.
     setRows(null)
     setHealth(null)
     setError(null)

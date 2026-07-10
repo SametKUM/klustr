@@ -43,6 +43,7 @@ export function KarpenterNodesTab({ contextName, name, load, title, emptyMessage
   }, [contextName, name, load])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial load belongs to this node subscription.
     refresh()
     if (!contextName) return
     return onKubeChange('Node', (ctx) => {

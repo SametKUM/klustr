@@ -19,6 +19,7 @@ export function PauseDeploymentButton({ contextName, resource }: Props) {
 
   useEffect(() => {
     if (!contextName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Connection loss invalidates the remote pause snapshot.
       setPaused(null)
       return
     }

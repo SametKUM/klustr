@@ -92,6 +92,7 @@ export function DeleteArgoApplicationDialog({ contextName, resource, open, onOpe
 
   useEffect(() => {
     if (!open || !contextName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Closing discards the managed-resource preview.
       setManaged(null)
       setManagedError(null)
       return

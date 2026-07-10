@@ -65,6 +65,7 @@ export function StatusBar() {
 
   useEffect(() => {
     if (activeContexts.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Health is a snapshot of the active external connections.
       setHealthByCtx({})
       return
     }

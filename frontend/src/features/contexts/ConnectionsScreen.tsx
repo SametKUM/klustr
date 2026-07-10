@@ -95,6 +95,7 @@ export function ConnectionsScreen() {
 
   useEffect(() => {
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reload explicitly starts a new context-list lifecycle.
     setState({ kind: 'loading' })
     api
       .listContexts()
@@ -130,13 +131,14 @@ export function ConnectionsScreen() {
     }
   }, [])
 
-  const contexts = state.kind === 'ready' ? state.contexts : []
+  const contexts = useMemo(() => (state.kind === 'ready' ? state.contexts : []), [state])
 
   const [versions, setVersions] = useState<Record<string, string | null>>({})
 
   useEffect(() => {
     if (state.kind !== 'ready') return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Version badges are scoped to the current context list.
     setVersions({})
     // Skip exec-auth contexts: pinging them here, before any credential helper
     // is mapped, invokes `aws eks get-token` / aws-vault and fails or hangs —

@@ -67,6 +67,7 @@ export function MetricsServerInstaller({ open, onOpenChange, contextName }: Prop
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Closing the dialog resets its transient session.
       setManifest('')
       setLoadError(null)
       setProgress(null)

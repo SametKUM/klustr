@@ -69,6 +69,7 @@ export function RelatedPods({ contextName, kind, namespace, name, title }: Props
   }, [contextName, kind, namespace, name])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Resource identity invalidates the previous remote snapshot.
     setLoaded(false)
     setPods([])
     refresh()

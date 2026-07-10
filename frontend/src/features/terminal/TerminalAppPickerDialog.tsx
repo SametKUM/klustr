@@ -39,6 +39,7 @@ export function TerminalAppPickerDialog({ open, description, onClose, onLaunch }
       .listSystemTerminals()
       .then((list) => setApps(list ?? []))
       .catch(() => setApps([]))
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Opening initializes a new picker session.
     setChosen(preferredAppId)
     setMakeDefault(false)
   }, [open, preferredAppId])

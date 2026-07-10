@@ -343,6 +343,7 @@ function HelmReleaseTabs({
   useEffect(() => {
     if (!contextName) return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Release identity invalidates the previous remote detail.
     setDetail(null)
     setDetailError(null)
     api
@@ -488,6 +489,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
   // Re-opening the same CR with a different requested tab doesn't remount this
   // component (the panel key excludes the tab), so sync like PodTabs does.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Requested navigation synchronizes the controlled tab.
     setTab(resolveTab(requestedTab))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- allowedTabs/initialTab derive from the identity deps below
   }, [resource.kind, resource.namespace, resource.name, resource.gvr?.group, requestedTab])
@@ -824,6 +826,7 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
   // Re-opening the same resource with a different requested tab doesn't remount
   // this component (the panel key excludes the tab), so sync like PodTabs does.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Requested navigation synchronizes the controlled tab.
     setTab(requestedTab && allowed.includes(requestedTab) ? requestedTab : 'overview')
     // eslint-disable-next-line react-hooks/exhaustive-deps -- allowed is derived from the identity deps below
   }, [resource.kind, resource.namespace, resource.name, requestedTab])
@@ -895,6 +898,7 @@ function WorkloadLogs({ contextName, resource }: { contextName: string | null; r
   useEffect(() => {
     if (!contextName) return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reload starts a new remote detail lifecycle.
     setState({ status: 'loading' })
     const fetcher =
       resource.kind === 'Deployment'
@@ -968,6 +972,7 @@ function PodTabs({
   const [tab, setTab] = useState<DetailTab>(requestedTab ?? 'overview')
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Requested navigation synchronizes the controlled tab.
     setTab(requestedTab ?? 'overview')
   }, [namespace, name, requestedTab])
 

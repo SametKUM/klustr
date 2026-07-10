@@ -53,6 +53,7 @@ export function OverviewView() {
 
   useEffect(() => {
     if (activeContexts.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Overview data is scoped to active external contexts.
       setByContext({})
       return
     }

@@ -88,6 +88,7 @@ export function AccessReviewView() {
 
   useEffect(() => {
     if (!subject || activeContexts.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- The result is scoped to the selected remote subject.
       setAccess({})
       return
     }

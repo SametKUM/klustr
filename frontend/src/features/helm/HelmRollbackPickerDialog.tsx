@@ -42,6 +42,7 @@ export function HelmRollbackPickerDialog({
 
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Opening initializes a new rollback selection.
     setPicked(selectable[0]?.revision ?? null)
     setWait(false)
     // We intentionally only re-initialise when the dialog opens, not when the

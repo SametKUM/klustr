@@ -33,6 +33,7 @@ export function ScaleResourceButton({ contextName, resource }: Props) {
 
   useEffect(() => {
     if (!open || !contextName) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Opening starts a fresh remote-value load.
     setLoading(true)
     setLoadError(null)
     const fetcher =

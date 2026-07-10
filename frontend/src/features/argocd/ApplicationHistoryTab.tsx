@@ -48,6 +48,7 @@ export function ApplicationHistoryTab({ contextName, namespace, name }: Props) {
       })
   }, [contextName, namespace, name])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial load belongs to this resource lifecycle.
   useEffect(reload, [reload])
 
   if (error) {

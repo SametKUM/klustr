@@ -16,6 +16,7 @@ export function ConnectionStatus() {
 
   useEffect(() => {
     if (!selected) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Status mirrors the selected external connection.
       setStatus({ kind: 'idle' })
       return
     }

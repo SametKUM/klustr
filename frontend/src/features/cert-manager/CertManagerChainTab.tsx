@@ -63,6 +63,7 @@ export function CertManagerChainTab<T extends ChainRow>({
   }, [contextName, crd, load, parentNamespace, parentName])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial load belongs to this resource lifecycle.
     refresh()
   }, [refresh])
 

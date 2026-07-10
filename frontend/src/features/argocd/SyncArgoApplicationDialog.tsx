@@ -84,6 +84,7 @@ export function SyncArgoApplicationDialog({
   // when it reopens (state can change between sessions).
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Closing resets the dialog session.
       setForm(defaultForm())
       setPhase({ kind: 'form' })
       setLoadError(null)

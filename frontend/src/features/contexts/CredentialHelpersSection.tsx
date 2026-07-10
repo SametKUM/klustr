@@ -253,6 +253,7 @@ export function CredentialMappingDialog({
 
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Opening initializes a new mapping session.
     setContextName(contexts.length === 1 ? contexts[0].name : null)
     setProfile(null)
     setFilter('')
@@ -272,6 +273,7 @@ export function CredentialMappingDialog({
   useEffect(() => {
     if (!open) return
     if (contextName && contexts.some((c) => c.name === contextName)) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- The selected context must remain a member of the live list.
     setContextName(contexts.length === 1 ? contexts[0].name : null)
   }, [open, contexts, contextName])
 
@@ -279,6 +281,7 @@ export function CredentialMappingDialog({
     if (!selectedContext) return
     if (profile) return
     if (selectedContext.awsProfileHint && profiles.includes(selectedContext.awsProfileHint)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- A discovered hint seeds only an empty profile selection.
       setProfile(selectedContext.awsProfileHint)
     }
   }, [selectedContext, profiles, profile])

@@ -78,6 +78,7 @@ export function PortForwardDialog({ contextName, resource, open, onOpenChange }:
 
   useEffect(() => {
     if (suggestions.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Suggestions seed the editable port field.
       setRemotePort(suggestions[0].containerPort)
     }
   }, [suggestions])
@@ -85,6 +86,7 @@ export function PortForwardDialog({ contextName, resource, open, onOpenChange }:
   useEffect(() => {
     if (localPortTouched) return
     const used = new Set(activeForwards.map((f) => f.localPort))
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Untouched local ports track the remote-port suggestion.
     setLocalPort(suggestLocalPort(remotePort, used))
   }, [remotePort, activeForwards, localPortTouched])
 

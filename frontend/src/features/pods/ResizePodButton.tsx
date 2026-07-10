@@ -54,6 +54,7 @@ export function ResizePodButton({ contextName, namespace, podName }: Props) {
   useEffect(() => {
     if (!open || !contextName) return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Opening starts a fresh remote-value load.
     setLoading(true)
     setLoadError(null)
     api

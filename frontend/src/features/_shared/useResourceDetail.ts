@@ -21,6 +21,7 @@ export function useResourceDetail<T>(
 
   useEffect(() => {
     if (!contextName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Connection loss invalidates the remote detail snapshot.
       setDetail(null)
       setError(null)
       return

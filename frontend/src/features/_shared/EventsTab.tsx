@@ -32,6 +32,7 @@ export function EventsTab({ contextName, namespace, kind, name }: Props) {
   }, [contextName, namespace, kind, name])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial load belongs to this subscription lifecycle.
     refresh()
   }, [refresh])
 

@@ -55,6 +55,7 @@ export function CredentialSuggestionPrompt() {
 
   useEffect(() => {
     if (candidates.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Probe results are scoped to the current candidates.
       setFailing({})
       return
     }
@@ -91,6 +92,7 @@ export function CredentialSuggestionPrompt() {
   const stuckKey = stuck.map((c) => c.name).join(',')
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- A newly stuck credential flow opens its prompt.
     if (stuckKey !== '') setDialogOpen(true)
   }, [stuckKey])
 

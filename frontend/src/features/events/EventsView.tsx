@@ -103,6 +103,7 @@ export function EventsView() {
   )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial load and polling share one refresh path.
     refresh()
     const id = setInterval(() => refresh(true), 15_000)
     return () => clearInterval(id)
@@ -258,7 +259,7 @@ export function EventsView() {
                         clickable
                           ? () =>
                               setSelectedResource({
-                                kind: e.objectKind as any,
+                                kind: e.objectKind,
                                 namespace: e.namespace,
                                 name: e.objectName,
                                 context: e.contextName,
