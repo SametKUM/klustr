@@ -1,35 +1,18 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type KarpenterNodePoolInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { formatMemoryQuantity, parseQuantity } from '@/lib/quantity'
-import { ResourceTable } from '@/features/_shared/ResourceTable'
-import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
+import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
-import { type ByContext } from '@/store/resources'
-import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 
 const KARPENTER_GROUP = 'karpenter.sh'
 const NODEPOOL_RESOURCE = 'nodepools'
 
 const columnHelper = createColumnHelper<KarpenterNodePoolInfo>()
-const EMPTY: KarpenterNodePoolInfo[] = []
 
 export function KarpenterNodePoolsView() {
-  const selectedContext = useUIStore((s) => s.selectedContext)
-  const isAggregated = useIsAggregated()
-  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-
-  const crd = useCRDStore(
-    (s) =>
-      s.crds.find((c) => c.group === KARPENTER_GROUP && c.resource === NODEPOOL_RESOURCE) ?? null,
-  )
-
-  const [rows, setRows] = useState<KarpenterNodePoolInfo[]>(EMPTY)
-  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
-
   const columns = useMemo(
     () => [
       columnHelper.accessor('name', { header: 'Name' }),
@@ -59,18 +42,15 @@ export function KarpenterNodePoolsView() {
           const v = i.getValue()
           if (!v) return <span className="text-muted-foreground">—</span>
           const after = i.row.original.consolidateAfter
-          return (
-            <span title={after ? `consolidateAfter: ${after}` : undefined}>
-              {v}
-            </span>
-          )
+          return <span title={after ? `consolidateAfter: ${after}` : undefined}>{v}</span>
         },
       }),
       columnHelper.accessor('nodeCount', {
         header: 'Nodes',
         size: COL_SM,
         cell: (i) => i.getValue() || <span className="text-muted-foreground">0</span>,
-        sortingFn: (a, b) => (Number(a.original.nodeCount) || 0) - (Number(b.original.nodeCount) || 0),
+        sortingFn: (a, b) =>
+          (Number(a.original.nodeCount) || 0) - (Number(b.original.nodeCount) || 0),
       }),
       columnHelper.accessor('cpuUsage', {
         header: 'CPU',
@@ -83,13 +63,10 @@ export function KarpenterNodePoolsView() {
         header: 'Memory',
         size: COL_SM,
         cell: (i) =>
-          formatUsageOverLimit(
-            i.getValue(),
-            i.row.original.memoryLimit,
-            formatMemoryQuantity,
-          ),
+          formatUsageOverLimit(i.getValue(), i.row.original.memoryLimit, formatMemoryQuantity),
         sortingFn: (a, b) =>
-          (parseQuantity(a.original.memoryUsage) ?? 0) - (parseQuantity(b.original.memoryUsage) ?? 0),
+          (parseQuantity(a.original.memoryUsage) ?? 0) -
+          (parseQuantity(b.original.memoryUsage) ?? 0),
       }),
       columnHelper.accessor('ready', {
         header: 'Ready',
@@ -106,80 +83,17 @@ export function KarpenterNodePoolsView() {
     [],
   )
 
-  const data = useMemo<ByContext<KarpenterNodePoolInfo>>(
-    () => (selectedContext ? { [selectedContext]: rows } : {}),
-    [selectedContext, rows],
-  )
-  const setData = useCallback(
-    (_ctx: string, list: KarpenterNodePoolInfo[]) => setRows(list),
-    [],
-  )
-  const fetch = useCallback((ctx: string) => api.listKarpenterNodePools(ctx), [])
-  const rowResource = useCallback(
-    (row: KarpenterNodePoolInfo, ctx: string): SelectedResource => ({
-      kind: 'NodePool',
-      namespace: '',
-      name: row.name,
-      context: ctx,
-      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
-    }),
-    [crd],
-  )
-  const onRowClick = useCallback(
-    (row: KarpenterNodePoolInfo, ctx: string) => {
-      if (!crd) return
-      setSelectedResource(rowResource(row, ctx))
-    },
-    [crd, rowResource, setSelectedResource],
-  )
-
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        Karpenter NodePools are only available in single-context mode.
-      </div>
-    )
-  }
-
-  if (!crd) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <div className="text-sm">Karpenter is not installed in this cluster.</div>
-        <div className="max-w-md text-xs text-muted-foreground">
-          The <code className="rounded bg-muted px-1">nodepools.karpenter.sh</code> CRD is not
-          present.
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-xs text-destructive">
-        Failed to start watch for NodePool: {error}
-      </div>
-    )
-  }
-
-  if (!ready) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
-        Starting watch for NodePool…
-      </div>
-    )
-  }
-
   return (
-    <ResourceTable
-      kind={`cr:${KARPENTER_GROUP}/${NODEPOOL_RESOURCE}`}
+    <CustomResourceTable
+      group={KARPENTER_GROUP}
+      resource={NODEPOOL_RESOURCE}
+      kind="NodePool"
       noun={{ singular: 'node pool', plural: 'node pools' }}
       scope="cluster"
-      data={data}
-      setData={setData}
-      fetch={fetch}
+      fetch={api.listKarpenterNodePools}
       columns={columns}
-      onRowClick={onRowClick}
-      rowResource={rowResource}
+      identity={(row) => ({ namespace: '', name: row.name })}
+      unavailableMessage="NodePool is not installed in the active contexts."
     />
   )
 }

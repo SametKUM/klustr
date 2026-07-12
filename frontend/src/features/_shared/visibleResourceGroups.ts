@@ -15,39 +15,104 @@ import {
 
 type VisibleResourceGroupsInput = {
   activeContexts: string[]
-  crds: CRDInfo[]
+  crdsByContext: Record<string, CRDInfo[]>
   accessByContext: Record<string, Set<string>>
   hiddenItems: ResourceView[]
 }
 
+const CRD_REQUIREMENTS: Partial<Record<ResourceView, { group: string; resource: string }>> = {
+  argocdapplications: { group: 'argoproj.io', resource: 'applications' },
+  argocdappprojects: { group: 'argoproj.io', resource: 'appprojects' },
+  argocdapplicationsets: { group: 'argoproj.io', resource: 'applicationsets' },
+  gateways: { group: 'gateway.networking.k8s.io', resource: 'gateways' },
+  httproutes: { group: 'gateway.networking.k8s.io', resource: 'httproutes' },
+  grpcroutes: { group: 'gateway.networking.k8s.io', resource: 'grpcroutes' },
+  gatewayclasses: {
+    group: 'gateway.networking.k8s.io',
+    resource: 'gatewayclasses',
+  },
+  referencegrants: {
+    group: 'gateway.networking.k8s.io',
+    resource: 'referencegrants',
+  },
+  karpenternodepools: { group: 'karpenter.sh', resource: 'nodepools' },
+  karpenternodeclaims: { group: 'karpenter.sh', resource: 'nodeclaims' },
+  fluxkustomizations: {
+    group: 'kustomize.toolkit.fluxcd.io',
+    resource: 'kustomizations',
+  },
+  fluxhelmreleases: {
+    group: 'helm.toolkit.fluxcd.io',
+    resource: 'helmreleases',
+  },
+  fluxgitrepositories: {
+    group: 'source.toolkit.fluxcd.io',
+    resource: 'gitrepositories',
+  },
+  fluxhelmrepositories: {
+    group: 'source.toolkit.fluxcd.io',
+    resource: 'helmrepositories',
+  },
+  fluxocirepositories: {
+    group: 'source.toolkit.fluxcd.io',
+    resource: 'ocirepositories',
+  },
+  fluxbuckets: { group: 'source.toolkit.fluxcd.io', resource: 'buckets' },
+  fluxproviders: {
+    group: 'notification.toolkit.fluxcd.io',
+    resource: 'providers',
+  },
+  fluxalerts: { group: 'notification.toolkit.fluxcd.io', resource: 'alerts' },
+  fluxreceivers: {
+    group: 'notification.toolkit.fluxcd.io',
+    resource: 'receivers',
+  },
+  istiovirtualservices: {
+    group: 'networking.istio.io',
+    resource: 'virtualservices',
+  },
+  istiodestinationrules: {
+    group: 'networking.istio.io',
+    resource: 'destinationrules',
+  },
+  istiopeerauthentications: {
+    group: 'security.istio.io',
+    resource: 'peerauthentications',
+  },
+  certmanagercertificates: {
+    group: 'cert-manager.io',
+    resource: 'certificates',
+  },
+  certmanagercertificaterequests: {
+    group: 'cert-manager.io',
+    resource: 'certificaterequests',
+  },
+  certmanagerorders: { group: 'acme.cert-manager.io', resource: 'orders' },
+  certmanagerchallenges: {
+    group: 'acme.cert-manager.io',
+    resource: 'challenges',
+  },
+  certmanagerissuers: { group: 'cert-manager.io', resource: 'issuers' },
+  certmanagerclusterissuers: {
+    group: 'cert-manager.io',
+    resource: 'clusterissuers',
+  },
+}
+
 export function buildVisibleResourceGroups({
   activeContexts,
-  crds,
+  crdsByContext,
   accessByContext,
   hiddenItems,
 }: VisibleResourceGroupsInput): ResourceGroup[] {
-  const isAggregated = activeContexts.length >= 2
-  const hasGatewayAPI = !isAggregated && crds.some((c) => c.group === 'gateway.networking.k8s.io')
-  const hasArgoApplications =
-    !isAggregated &&
-    crds.some((c) => c.group === 'argoproj.io' && c.resource === 'applications')
-  const hasKarpenter = !isAggregated && crds.some((c) => c.group === 'karpenter.sh')
-  const hasFluxCD =
-    !isAggregated &&
-    crds.some((c) => c.group === 'kustomize.toolkit.fluxcd.io' && c.resource === 'kustomizations')
-  const hasIstio = !isAggregated && crds.some((c) => c.group === 'networking.istio.io')
-  const hasCertManager =
-    !isAggregated &&
-    crds.some((c) => c.group === 'cert-manager.io' && c.resource === 'certificates')
-
   const groups: ResourceGroup[] = [
     ...RESOURCE_GROUPS,
-    ...(hasGatewayAPI ? [GATEWAY_GROUP] : []),
-    ...(hasIstio ? [ISTIO_GROUP] : []),
-    ...(hasCertManager ? [CERT_MANAGER_GROUP_NAV] : []),
-    ...(hasArgoApplications ? [ARGO_GROUP] : []),
-    ...(hasKarpenter ? [KARPENTER_GROUP] : []),
-    ...(hasFluxCD ? [FLUX_GROUP] : []),
+    GATEWAY_GROUP,
+    ISTIO_GROUP,
+    CERT_MANAGER_GROUP_NAV,
+    ARGO_GROUP,
+    KARPENTER_GROUP,
+    FLUX_GROUP,
     HELM_GROUP,
   ]
   const hidden = new Set<string>(hiddenItems)
@@ -55,11 +120,21 @@ export function buildVisibleResourceGroups({
   return groups
     .map((group) => ({
       ...group,
-      items: group.items.filter(
-        (item) =>
+      items: group.items.filter((item) => {
+        const requirement = item.view ? CRD_REQUIREMENTS[item.view] : undefined
+        const capabilityVisible =
+          !requirement ||
+          activeContexts.some((contextName) =>
+            crdsByContext[contextName]?.some(
+              (crd) => crd.group === requirement.group && crd.resource === requirement.resource,
+            ),
+          )
+        return (
+          capabilityVisible &&
           (!item.kind || kindAccessibleInAny(accessByContext, activeContexts, item.kind)) &&
-          (!item.view || !hidden.has(item.view)),
-      ),
+          (!item.view || !hidden.has(item.view))
+        )
+      }),
     }))
     .filter((group) => group.items.length > 0)
 }

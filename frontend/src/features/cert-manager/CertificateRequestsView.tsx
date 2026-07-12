@@ -1,39 +1,15 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type CertManagerCertificateRequestInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
-import { ResourceTable } from '@/features/_shared/ResourceTable'
-import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
+import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
-import { type ByContext } from '@/store/resources'
-import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
-import {
-  CERT_MANAGER_CERTIFICATEREQUEST_RESOURCE,
-  CERT_MANAGER_GROUP,
-} from './certManagerKinds'
+import { CERT_MANAGER_CERTIFICATEREQUEST_RESOURCE, CERT_MANAGER_GROUP } from './certManagerKinds'
 
 const columnHelper = createColumnHelper<CertManagerCertificateRequestInfo>()
-const EMPTY: CertManagerCertificateRequestInfo[] = []
 
 export function CertificateRequestsView() {
-  const selectedContext = useUIStore((s) => s.selectedContext)
-  const isAggregated = useIsAggregated()
-  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-
-  const crd = useCRDStore(
-    (s) =>
-      s.crds.find(
-        (c) =>
-          c.group === CERT_MANAGER_GROUP &&
-          c.resource === CERT_MANAGER_CERTIFICATEREQUEST_RESOURCE,
-      ) ?? null,
-  )
-
-  const [rows, setRows] = useState<CertManagerCertificateRequestInfo[]>(EMPTY)
-  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
-
   const columns = useMemo(
     () => [
       columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
@@ -72,84 +48,17 @@ export function CertificateRequestsView() {
     [],
   )
 
-  const data = useMemo<ByContext<CertManagerCertificateRequestInfo>>(
-    () => (selectedContext ? { [selectedContext]: rows } : {}),
-    [selectedContext, rows],
-  )
-  const setData = useCallback(
-    (_ctx: string, list: CertManagerCertificateRequestInfo[]) => setRows(list),
-    [],
-  )
-  const fetch = useCallback(
-    (ctx: string, ns: string) => api.listCertManagerCertificateRequests(ctx, ns),
-    [],
-  )
-  const rowResource = useCallback(
-    (row: CertManagerCertificateRequestInfo, ctx: string): SelectedResource => ({
-      kind: 'CertificateRequest',
-      namespace: row.namespace,
-      name: row.name,
-      context: ctx,
-      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
-    }),
-    [crd],
-  )
-  const onRowClick = useCallback(
-    (row: CertManagerCertificateRequestInfo, ctx: string) => {
-      if (!crd) return
-      setSelectedResource(rowResource(row, ctx))
-    },
-    [crd, rowResource, setSelectedResource],
-  )
-
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        cert-manager CertificateRequests are only available in single-context mode.
-      </div>
-    )
-  }
-
-  if (!crd) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <div className="text-sm">cert-manager is not installed in this cluster.</div>
-        <div className="max-w-md text-xs text-muted-foreground">
-          The{' '}
-          <code className="rounded bg-muted px-1">certificaterequests.cert-manager.io</code> CRD is
-          not present.
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-xs text-destructive">
-        Failed to start watch for CertificateRequest: {error}
-      </div>
-    )
-  }
-
-  if (!ready) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
-        Starting watch for CertificateRequest…
-      </div>
-    )
-  }
-
   return (
-    <ResourceTable
-      kind={`cr:${CERT_MANAGER_GROUP}/${CERT_MANAGER_CERTIFICATEREQUEST_RESOURCE}`}
+    <CustomResourceTable
+      group={CERT_MANAGER_GROUP}
+      resource={CERT_MANAGER_CERTIFICATEREQUEST_RESOURCE}
+      kind="CertificateRequest"
       noun={{ singular: 'certificate request', plural: 'certificate requests' }}
       scope="namespaced"
-      data={data}
-      setData={setData}
-      fetch={fetch}
+      fetch={api.listCertManagerCertificateRequests}
       columns={columns}
-      onRowClick={onRowClick}
-      rowResource={rowResource}
+      identity={(row) => ({ namespace: row.namespace, name: row.name })}
+      unavailableMessage="CertificateRequest is not installed in the active contexts."
     />
   )
 }

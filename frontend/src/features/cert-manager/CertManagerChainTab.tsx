@@ -3,7 +3,7 @@ import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { ErrorBox, Th, Td } from '@/features/_shared/DetailPrimitives'
-import { useCRDStore } from '@/store/crds'
+import { findCRD, useCRDStore } from '@/store/crds'
 import { useUIStore } from '@/store/ui'
 
 type ChainRow = { name: string; namespace: string }
@@ -39,8 +39,8 @@ export function CertManagerChainTab<T extends ChainRow>({
   emptyLabel,
 }: Props<T>) {
   const openResource = useUIStore((s) => s.openResource)
-  const crd = useCRDStore(
-    (s) => s.crds.find((c) => c.group === childGroup && c.resource === childResource) ?? null,
+  const crd = useCRDStore((s) =>
+    contextName ? findCRD(s.byContext, contextName, childGroup, childResource) : null,
   )
 
   const [rows, setRows] = useState<T[] | null>(null)
@@ -75,7 +75,9 @@ export function CertManagerChainTab<T extends ChainRow>({
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between border-b border-border px-6 py-2">
         <div className="text-xs text-muted-foreground">
-          {loading ? 'Loading…' : `${rows?.length ?? 0} ${childKind}${rows?.length === 1 ? '' : 's'}`}
+          {loading
+            ? 'Loading…'
+            : `${rows?.length ?? 0} ${childKind}${rows?.length === 1 ? '' : 's'}`}
         </div>
         <Button
           size="sm"

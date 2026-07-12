@@ -1,38 +1,26 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type FluxKustomizationInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
-import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
+import { resourceContext } from '@/features/_shared/resourceContext'
+import { useContextResourceData } from '@/features/_shared/useContextResourceData'
+import { useCustomResourceCapability } from '@/features/_shared/useCustomResourceCapability'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
-import { type ByContext } from '@/store/resources'
-import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
-import {
-  FLUX_KUSTOMIZATION_GROUP,
-  FLUX_KUSTOMIZATION_RESOURCE,
-} from './fluxKinds'
+import { useUIStore, type SelectedResource } from '@/store/ui'
+import { FLUX_KUSTOMIZATION_GROUP, FLUX_KUSTOMIZATION_RESOURCE } from './fluxKinds'
 import { FluxReadyPill } from './FluxReadyPill'
 import { ReconcileFluxResourceButton } from './ReconcileFluxResourceButton'
 import { SuspendResumeFluxResourceButton } from './SuspendResumeFluxResourceButton'
 
 const columnHelper = createColumnHelper<FluxKustomizationInfo>()
-const EMPTY: FluxKustomizationInfo[] = []
-
 export function FluxKustomizationsView() {
-  const selectedContext = useUIStore((s) => s.selectedContext)
-  const isAggregated = useIsAggregated()
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-
-  const crd = useCRDStore(
-    (s) =>
-      s.crds.find(
-        (c) => c.group === FLUX_KUSTOMIZATION_GROUP && c.resource === FLUX_KUSTOMIZATION_RESOURCE,
-      ) ?? null,
+  const capability = useCustomResourceCapability(
+    FLUX_KUSTOMIZATION_GROUP,
+    FLUX_KUSTOMIZATION_RESOURCE,
   )
-
-  const [rows, setRows] = useState<FluxKustomizationInfo[]>(EMPTY)
-  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
+  const { data, setData } = useContextResourceData<FluxKustomizationInfo>(capability.activeContexts)
 
   const columns = useMemo(
     () => [
@@ -41,9 +29,7 @@ export function FluxKustomizationsView() {
       columnHelper.accessor('ready', {
         header: 'Ready',
         size: COL_SM,
-        cell: (i) => (
-          <FluxReadyPill value={i.getValue()} suspended={i.row.original.suspended} />
-        ),
+        cell: (i) => <FluxReadyPill value={i.getValue()} suspended={i.row.original.suspended} />,
       }),
       columnHelper.accessor('sourceRef', { header: 'Source', size: COL_MD }),
       columnHelper.accessor('path', { header: 'Path', size: COL_MD }),
@@ -66,18 +52,19 @@ export function FluxKustomizationsView() {
         size: 220,
         cell: (i) => {
           const row = i.row.original
-          if (!selectedContext) return null
+          const contextName = resourceContext(row)
+          if (!contextName) return null
           return (
             <div className="flex items-center gap-1">
               <ReconcileFluxResourceButton
-                contextName={selectedContext}
+                contextName={contextName}
                 kind="FluxKustomization"
                 namespace={row.namespace}
                 name={row.name}
                 variant="row"
               />
               <SuspendResumeFluxResourceButton
-                contextName={selectedContext}
+                contextName={contextName}
                 kind="FluxKustomization"
                 namespace={row.namespace}
                 name={row.name}
@@ -95,20 +82,13 @@ export function FluxKustomizationsView() {
         sortingFn: 'datetime',
       }),
     ],
-    [selectedContext],
+    [],
   )
 
-  const data = useMemo<ByContext<FluxKustomizationInfo>>(
-    () => (selectedContext ? { [selectedContext]: rows } : {}),
-    [selectedContext, rows],
-  )
-  const setData = useCallback(
-    (_ctx: string, list: FluxKustomizationInfo[]) => setRows(list),
-    [],
-  )
   const fetch = useCallback(
-    (ctx: string, ns: string) => api.listFluxKustomizations(ctx, ns),
-    [],
+    (ctx: string, ns: string) =>
+      capability.crdsByContext[ctx] ? api.listFluxKustomizations(ctx, ns) : Promise.resolve([]),
+    [capability.crdsByContext],
   )
   const rowResource = useCallback(
     (row: FluxKustomizationInfo, ctx: string): SelectedResource => ({
@@ -116,28 +96,26 @@ export function FluxKustomizationsView() {
       namespace: row.namespace,
       name: row.name,
       context: ctx,
-      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+      gvr: capability.crdsByContext[ctx]
+        ? {
+            group: capability.crdsByContext[ctx].group,
+            version: capability.crdsByContext[ctx].version,
+            resource: capability.crdsByContext[ctx].resource,
+          }
+        : undefined,
       suspended: row.suspended,
     }),
-    [crd],
+    [capability.crdsByContext],
   )
   const onRowClick = useCallback(
     (row: FluxKustomizationInfo, ctx: string) => {
-      if (!crd) return
+      if (!capability.crdsByContext[ctx]) return
       setSelectedResource(rowResource(row, ctx))
     },
-    [crd, rowResource, setSelectedResource],
+    [capability.crdsByContext, rowResource, setSelectedResource],
   )
 
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        Flux Kustomizations are only available in single-context mode.
-      </div>
-    )
-  }
-
-  if (!crd) {
+  if (capability.supportedContexts.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
         <div className="text-sm">Flux CD is not installed in this cluster.</div>
@@ -153,15 +131,15 @@ export function FluxKustomizationsView() {
     )
   }
 
-  if (error) {
+  if (!capability.pending && capability.readyContexts.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center px-6 text-xs text-destructive">
-        Failed to start watch for Kustomization: {error}
+        Failed to start watch for Kustomization: {Object.values(capability.errors).join('; ')}
       </div>
     )
   }
 
-  if (!ready) {
+  if (capability.pending) {
     return (
       <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
         Starting watch for Kustomization…

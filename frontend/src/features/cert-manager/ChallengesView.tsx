@@ -1,35 +1,15 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type CertManagerChallengeInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
-import { ResourceTable } from '@/features/_shared/ResourceTable'
-import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
+import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
-import { type ByContext } from '@/store/resources'
-import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 import { CERT_MANAGER_ACME_GROUP, CERT_MANAGER_CHALLENGE_RESOURCE } from './certManagerKinds'
 import { CertManagerStatePill } from './CertManagerStatePill'
 
 const columnHelper = createColumnHelper<CertManagerChallengeInfo>()
-const EMPTY: CertManagerChallengeInfo[] = []
 
 export function ChallengesView() {
-  const selectedContext = useUIStore((s) => s.selectedContext)
-  const isAggregated = useIsAggregated()
-  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-
-  const crd = useCRDStore(
-    (s) =>
-      s.crds.find(
-        (c) =>
-          c.group === CERT_MANAGER_ACME_GROUP && c.resource === CERT_MANAGER_CHALLENGE_RESOURCE,
-      ) ?? null,
-  )
-
-  const [rows, setRows] = useState<CertManagerChallengeInfo[]>(EMPTY)
-  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
-
   const columns = useMemo(
     () => [
       columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
@@ -78,83 +58,17 @@ export function ChallengesView() {
     [],
   )
 
-  const data = useMemo<ByContext<CertManagerChallengeInfo>>(
-    () => (selectedContext ? { [selectedContext]: rows } : {}),
-    [selectedContext, rows],
-  )
-  const setData = useCallback(
-    (_ctx: string, list: CertManagerChallengeInfo[]) => setRows(list),
-    [],
-  )
-  const fetch = useCallback(
-    (ctx: string, ns: string) => api.listCertManagerChallenges(ctx, ns),
-    [],
-  )
-  const rowResource = useCallback(
-    (row: CertManagerChallengeInfo, ctx: string): SelectedResource => ({
-      kind: 'Challenge',
-      namespace: row.namespace,
-      name: row.name,
-      context: ctx,
-      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
-    }),
-    [crd],
-  )
-  const onRowClick = useCallback(
-    (row: CertManagerChallengeInfo, ctx: string) => {
-      if (!crd) return
-      setSelectedResource(rowResource(row, ctx))
-    },
-    [crd, rowResource, setSelectedResource],
-  )
-
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        ACME Challenges are only available in single-context mode.
-      </div>
-    )
-  }
-
-  if (!crd) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <div className="text-sm">No ACME issuer in this cluster.</div>
-        <div className="max-w-md text-xs text-muted-foreground">
-          The <code className="rounded bg-muted px-1">challenges.acme.cert-manager.io</code> CRD is
-          not present — Challenges only exist during ACME issuance.
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-xs text-destructive">
-        Failed to start watch for Challenge: {error}
-      </div>
-    )
-  }
-
-  if (!ready) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
-        Starting watch for Challenge…
-      </div>
-    )
-  }
-
   return (
-    <ResourceTable
-      kind={`cr:${CERT_MANAGER_ACME_GROUP}/${CERT_MANAGER_CHALLENGE_RESOURCE}`}
+    <CustomResourceTable
+      group={CERT_MANAGER_ACME_GROUP}
+      resource={CERT_MANAGER_CHALLENGE_RESOURCE}
+      kind="Challenge"
       noun={{ singular: 'challenge', plural: 'challenges' }}
       scope="namespaced"
-      data={data}
-      setData={setData}
-      fetch={fetch}
+      fetch={api.listCertManagerChallenges}
       columns={columns}
-      onRowClick={onRowClick}
-      rowResource={rowResource}
+      identity={(row) => ({ namespace: row.namespace, name: row.name })}
+      unavailableMessage="Challenge is not installed in the active contexts."
     />
   )
 }

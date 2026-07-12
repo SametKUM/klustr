@@ -1,9 +1,5 @@
 import { useEffect, useState } from 'react'
-import {
-  api,
-  type ArgoApplicationHealth,
-  type ArgoApplicationResource,
-} from '@/lib/api'
+import { api, type ArgoApplicationHealth, type ArgoApplicationResource } from '@/lib/api'
 import { RESOURCE_GROUPS } from '@/features/_shared/resourceGroups'
 import { useCRDStore } from '@/store/crds'
 import { useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
@@ -29,7 +25,7 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
   const [health, setHealth] = useState<ArgoApplicationHealth | null>(null)
   const [error, setError] = useState<string | null>(null)
   const openResource = useUIStore((s) => s.openResource)
-  const crds = useCRDStore((s) => s.crds)
+  const crds = useCRDStore((s) => (contextName ? (s.byContext[contextName] ?? []) : []))
 
   useEffect(() => {
     if (!contextName) return
@@ -73,9 +69,7 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
     )
   }
   if (rows === null) {
-    return (
-      <div className="px-6 py-4 text-xs text-muted-foreground">Loading managed resources…</div>
-    )
+    return <div className="px-6 py-4 text-xs text-muted-foreground">Loading managed resources…</div>
   }
   if (rows.length === 0) {
     return (
@@ -185,7 +179,11 @@ function HealthBanner({
   // carries no app-level message/condition, there is genuinely no reason for
   // Klustr to show from the K8s API — say so instead of looking like a bug.
   const reasonAbsent =
-    degraded && !message && conditions.length === 0 && !health.resourceHealthPersisted && !resourceHasHealth
+    degraded &&
+    !message &&
+    conditions.length === 0 &&
+    !health.resourceHealthPersisted &&
+    !resourceHasHealth
 
   const tone = degraded
     ? 'border-rose-500/40 bg-rose-500/10'

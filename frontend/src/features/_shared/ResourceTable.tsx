@@ -37,11 +37,7 @@ import {
   type ResourceKind,
   type SelectedResource,
 } from '@/store/ui'
-import {
-  useTablePrefs,
-  DEFAULT_PAGE_SIZE,
-  PAGE_SIZE_OPTIONS,
-} from '@/store/tablePrefs'
+import { useTablePrefs, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/store/tablePrefs'
 import { type ByContext } from '@/store/resources'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -64,6 +60,8 @@ import {
 } from './BulkActionDialogs'
 import { isRestartable } from './workloadCapabilities'
 import { parseSearch, rowMatchesSearch } from './rowSearch'
+import { KLUSTR_CTX, type Tagged } from './resourceContext'
+import { resourcePageCount } from './pagination'
 
 type RowIdentity = { namespace?: string; name?: string }
 
@@ -71,14 +69,10 @@ type Scope = 'namespaced' | 'cluster'
 
 type Noun = { singular: string; plural: string }
 
-export const KLUSTR_CTX = '__klustrCtx' as const
-
 // Skeleton grace fallback: re-check every step while the kind is still syncing,
 // giving up (showing the possibly-empty result) only at the hard cap.
 const GRACE_STEP_MS = 5_000
 const GRACE_HARD_CAP_MS = 30_000
-
-export type Tagged<T> = T & { [KLUSTR_CTX]: string }
 
 // Each source item gets exactly one tagged twin so the merged rows keep
 // referential equality across re-merges; stableList already guarantees a
@@ -345,17 +339,14 @@ export function ResourceTable<T>({
       const handleEl = (e.currentTarget as HTMLElement) ?? null
       const thEl = handleEl?.closest('th') as HTMLElement | null
       const measured = thEl?.getBoundingClientRect().width ?? 0
-      const startWidth =
-        measured > 0 ? measured : (liveSizingRef.current[colId] ?? 160)
+      const startWidth = measured > 0 ? measured : (liveSizingRef.current[colId] ?? 160)
       let last = startWidth
       isResizingRef.current = true
       if (handleEl) handleEl.dataset.resizing = 'true'
 
       const onMove = (ev: MouseEvent | TouchEvent) => {
         const x =
-          'touches' in ev
-            ? (ev as TouchEvent).touches[0].clientX
-            : (ev as MouseEvent).clientX
+          'touches' in ev ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX
         const w = Math.max(60, Math.round(startWidth + (x - startX)))
         last = w
         if (el) el.style.width = `${w}px`
@@ -369,7 +360,10 @@ export function ResourceTable<T>({
         isResizingRef.current = false
         if (handleEl) delete handleEl.dataset.resizing
         if (last === startWidth) return
-        const nextSizing: ColumnSizingState = { ...liveSizingRef.current, [colId]: last }
+        const nextSizing: ColumnSizingState = {
+          ...liveSizingRef.current,
+          [colId]: last,
+        }
         setLiveSizing(nextSizing)
         setSizing(kind, nextSizing)
       }
@@ -487,40 +481,44 @@ export function ResourceTable<T>({
       }
       inflight.set(ctx, { dirty: false })
       const t0 = import.meta.env.DEV ? performance.now() : 0
-      return fetchRef.current(ctx, query.apiNamespace).then((list) => {
-        if (cancelled) return
-        const tFetched = import.meta.env.DEV ? performance.now() : 0
-        const items = stableList(dataRef.current[ctx], list ?? [])
-        setDataRef.current(ctx, items)
-        // A full fetch is the source of truth: clear the delta baseline so the
-        // next delta is accepted and reseeds it.
-        genRef.current.delete(ctx)
-        if (import.meta.env.DEV) {
-          const n = (list ?? []).length
-          // roundtrip = bridge + Go build + JSON parse; apply = stableList diff + setState.
-          console.debug(
-            `[perf] ${kind} ctx=${ctx} n=${n} ` +
-              `roundtrip=${(tFetched - t0).toFixed(1)}ms apply=${(performance.now() - tFetched).toFixed(1)}ms`,
-          )
-        }
-        // An empty list is only trustworthy once the informer cache has synced;
-        // before that, treat it as still loading so the skeleton stays up instead
-        // of flashing "No X" and then popping in the real rows a moment later.
-        if (items.length > 0 || isKindSynced(ctx, kind)) markLoaded(ctx)
-      }).catch(() => {
-        if (cancelled) return
-        setDataRef.current(ctx, [])
-        genRef.current.delete(ctx)
-        markLoaded(ctx)
-      }).finally(() => {
-        const st = inflight.get(ctx)
-        inflight.delete(ctx)
-        if (!cancelled && st?.dirty) {
-          window.setTimeout(() => {
-            if (!cancelled) reload(ctx)
-          }, 150)
-        }
-      })
+      return fetchRef
+        .current(ctx, query.apiNamespace)
+        .then((list) => {
+          if (cancelled) return
+          const tFetched = import.meta.env.DEV ? performance.now() : 0
+          const items = stableList(dataRef.current[ctx], list ?? [])
+          setDataRef.current(ctx, items)
+          // A full fetch is the source of truth: clear the delta baseline so the
+          // next delta is accepted and reseeds it.
+          genRef.current.delete(ctx)
+          if (import.meta.env.DEV) {
+            const n = (list ?? []).length
+            // roundtrip = bridge + Go build + JSON parse; apply = stableList diff + setState.
+            console.debug(
+              `[perf] ${kind} ctx=${ctx} n=${n} ` +
+                `roundtrip=${(tFetched - t0).toFixed(1)}ms apply=${(performance.now() - tFetched).toFixed(1)}ms`,
+            )
+          }
+          // An empty list is only trustworthy once the informer cache has synced;
+          // before that, treat it as still loading so the skeleton stays up instead
+          // of flashing "No X" and then popping in the real rows a moment later.
+          if (items.length > 0 || isKindSynced(ctx, kind)) markLoaded(ctx)
+        })
+        .catch(() => {
+          if (cancelled) return
+          setDataRef.current(ctx, [])
+          genRef.current.delete(ctx)
+          markLoaded(ctx)
+        })
+        .finally(() => {
+          const st = inflight.get(ctx)
+          inflight.delete(ctx)
+          if (!cancelled && st?.dirty) {
+            window.setTimeout(() => {
+              if (!cancelled) reload(ctx)
+            }, 150)
+          }
+        })
     }
     // Bound the initial fan-out so a large aggregated group doesn't fire N
     // simultaneous bridge round-trips on a context-set/namespace change; the
@@ -566,8 +564,7 @@ export function ResourceTable<T>({
       if (cancelled) return
       graceWaited += GRACE_STEP_MS
       const stillSyncing =
-        graceWaited < GRACE_HARD_CAP_MS &&
-        activeContexts.some((ctx) => !isKindSynced(ctx, kind))
+        graceWaited < GRACE_HARD_CAP_MS && activeContexts.some((ctx) => !isKindSynced(ctx, kind))
       if (stillSyncing) {
         graceTimer = window.setTimeout(giveUp, GRACE_STEP_MS)
         return
@@ -641,6 +638,7 @@ export function ResourceTable<T>({
   // pageSize 0 is the "All" sentinel — fall back to the full row count so the
   // single page holds everything.
   const effectivePageSize = pageSize === 0 ? Math.max(1, searchedData.length) : pageSize
+  const pageCount = resourcePageCount(searchedData.length, effectivePageSize)
   const table = useReactTable({
     data: searchedData,
     columns: tableColumns,
@@ -655,6 +653,7 @@ export function ResourceTable<T>({
     // bounce the user back to page 1 on every delta. We reset deliberately
     // (scope/filter/pageSize change) and clamp out-of-range pages ourselves.
     autoResetPageIndex: false,
+    pageCount,
     onPaginationChange: (updater) => {
       const next =
         typeof updater === 'function'
@@ -694,7 +693,6 @@ export function ResourceTable<T>({
     getPaginationRowModel: getPaginationRowModel(),
   })
 
-  const pageCount = table.getPageCount()
   useEffect(() => {
     if (pageIndex > 0 && pageIndex >= pageCount) {
       setPageIndex(Math.max(0, pageCount - 1))
@@ -703,6 +701,9 @@ export function ResourceTable<T>({
 
   const visibleRows = table.getRowModel().rows
   const scrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 })
+  }, [pageIndex])
   const virtualizer = useVirtualizer({
     count: visibleRows.length,
     getScrollElement: () => scrollRef.current,
@@ -746,8 +747,7 @@ export function ResourceTable<T>({
     }
     return items
   }, [selectableRows, selectedKeys, kind])
-  const allVisibleSelected =
-    visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k))
+  const allVisibleSelected = visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k))
   const toggleRow = useCallback((key: string) => {
     setSelectedKeys((prev) => {
       const next = new Set(prev)
@@ -810,7 +810,7 @@ export function ResourceTable<T>({
   const isNodeKind = kind === 'Node'
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
       {selectedItems.length > 0 && (
         <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs">
           <span className="font-medium text-foreground">{selectedItems.length} selected</span>
@@ -933,7 +933,11 @@ export function ResourceTable<T>({
       <div ref={scrollRef} className="flex-1 overflow-auto">
         <table
           className="border-collapse text-sm"
-          style={{ width: '100%', minWidth: table.getTotalSize(), tableLayout: 'fixed' }}
+          style={{
+            width: '100%',
+            minWidth: table.getTotalSize(),
+            tableLayout: 'fixed',
+          }}
         >
           <colgroup>
             <col style={{ width: 36 }} />
@@ -1064,7 +1068,9 @@ export function ResourceTable<T>({
                     <td key={col.id} className="px-3 py-1.5 align-middle">
                       <Skeleton
                         className="h-3.5"
-                        style={{ width: SKELETON_WIDTHS[ci % SKELETON_WIDTHS.length] }}
+                        style={{
+                          width: SKELETON_WIDTHS[ci % SKELETON_WIDTHS.length],
+                        }}
                       />
                     </td>
                   ))}
@@ -1136,7 +1142,7 @@ export function ResourceTable<T>({
         </table>
       </div>
       {allLoaded && filteredCount > 0 && (
-        <div className="flex items-center gap-3 border-t border-border px-4 py-1.5 text-xs text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-3 border-t border-border px-4 py-1.5 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <span>Rows per page</span>
             <DropdownMenu>
@@ -1161,7 +1167,7 @@ export function ResourceTable<T>({
             </DropdownMenu>
           </div>
           {pageCount > 1 && (
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <span className="tabular-nums">
                 {pageIndex * effectivePageSize + 1}–
                 {Math.min((pageIndex + 1) * effectivePageSize, filteredCount)} of {filteredCount}
@@ -1170,8 +1176,8 @@ export function ResourceTable<T>({
                 variant="ghost"
                 size="sm"
                 className="size-7 p-0"
-                disabled={!table.getCanPreviousPage()}
-                onClick={() => table.previousPage()}
+                disabled={pageIndex === 0}
+                onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
                 aria-label="Previous page"
               >
                 <ChevronLeft className="size-4" />
@@ -1183,8 +1189,8 @@ export function ResourceTable<T>({
                 variant="ghost"
                 size="sm"
                 className="size-7 p-0"
-                disabled={!table.getCanNextPage()}
-                onClick={() => table.nextPage()}
+                disabled={pageIndex >= pageCount - 1}
+                onClick={() => setPageIndex((current) => Math.min(pageCount - 1, current + 1))}
                 aria-label="Next page"
               >
                 <ChevronRight className="size-4" />

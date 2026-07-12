@@ -1,40 +1,19 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Lock } from 'lucide-react'
 import { api, type FluxProviderInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
-import { ResourceTable } from '@/features/_shared/ResourceTable'
-import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
+import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
+import { resourceContext } from '@/features/_shared/resourceContext'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
-import { type ByContext } from '@/store/resources'
-import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
-import {
-  FLUX_NOTIFICATION_GROUP,
-  FLUX_PROVIDER_RESOURCE,
-} from './fluxKinds'
+import { FLUX_NOTIFICATION_GROUP, FLUX_PROVIDER_RESOURCE } from './fluxKinds'
 import { FluxReadyPill } from './FluxReadyPill'
 import { ReconcileFluxResourceButton } from './ReconcileFluxResourceButton'
 import { SuspendResumeFluxResourceButton } from './SuspendResumeFluxResourceButton'
 
 const columnHelper = createColumnHelper<FluxProviderInfo>()
-const EMPTY: FluxProviderInfo[] = []
 
 export function FluxProvidersView() {
-  const selectedContext = useUIStore((s) => s.selectedContext)
-  const isAggregated = useIsAggregated()
-  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-
-  const crd = useCRDStore(
-    (s) =>
-      s.crds.find(
-        (c) => c.group === FLUX_NOTIFICATION_GROUP && c.resource === FLUX_PROVIDER_RESOURCE,
-      ) ?? null,
-  )
-
-  const [rows, setRows] = useState<FluxProviderInfo[]>(EMPTY)
-  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
-
   const columns = useMemo(
     () => [
       columnHelper.accessor('namespace', { header: 'Namespace', size: COL_MD }),
@@ -42,9 +21,7 @@ export function FluxProvidersView() {
       columnHelper.accessor('ready', {
         header: 'Ready',
         size: COL_SM,
-        cell: (i) => (
-          <FluxReadyPill value={i.getValue()} suspended={i.row.original.suspended} />
-        ),
+        cell: (i) => <FluxReadyPill value={i.getValue()} suspended={i.row.original.suspended} />,
       }),
       columnHelper.accessor('type', {
         header: 'Type',
@@ -62,18 +39,19 @@ export function FluxProvidersView() {
         size: 220,
         cell: (i) => {
           const row = i.row.original
-          if (!selectedContext) return null
+          const contextName = resourceContext(row)
+          if (!contextName) return null
           return (
             <div className="flex items-center gap-1">
               <ReconcileFluxResourceButton
-                contextName={selectedContext}
+                contextName={contextName}
                 kind="FluxProvider"
                 namespace={row.namespace}
                 name={row.name}
                 variant="row"
               />
               <SuspendResumeFluxResourceButton
-                contextName={selectedContext}
+                contextName={contextName}
                 kind="FluxProvider"
                 namespace={row.namespace}
                 name={row.name}
@@ -91,80 +69,21 @@ export function FluxProvidersView() {
         sortingFn: 'datetime',
       }),
     ],
-    [selectedContext],
-  )
-
-  const data = useMemo<ByContext<FluxProviderInfo>>(
-    () => (selectedContext ? { [selectedContext]: rows } : {}),
-    [selectedContext, rows],
-  )
-  const setData = useCallback(
-    (_ctx: string, list: FluxProviderInfo[]) => setRows(list),
     [],
   )
-  const fetch = useCallback(
-    (ctx: string, ns: string) => api.listFluxProviders(ctx, ns),
-    [],
-  )
-  const rowResource = useCallback(
-    (row: FluxProviderInfo, ctx: string): SelectedResource => ({
-      kind: 'FluxProvider',
-      namespace: row.namespace,
-      name: row.name,
-      context: ctx,
-      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
-      suspended: row.suspended,
-    }),
-    [crd],
-  )
-  const onRowClick = useCallback(
-    (row: FluxProviderInfo, ctx: string) => {
-      if (!crd) return
-      setSelectedResource(rowResource(row, ctx))
-    },
-    [crd, rowResource, setSelectedResource],
-  )
-
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        Flux Providers are only available in single-context mode.
-      </div>
-    )
-  }
-  if (!crd) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <div className="text-sm">Flux notification-controller CRD is not present.</div>
-      </div>
-    )
-  }
-  if (error) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-xs text-destructive">
-        Failed to start watch for Provider: {error}
-      </div>
-    )
-  }
-  if (!ready) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
-        Starting watch for Provider…
-      </div>
-    )
-  }
 
   return (
-    <ResourceTable
-      kind={`cr:${FLUX_NOTIFICATION_GROUP}/${FLUX_PROVIDER_RESOURCE}`}
+    <CustomResourceTable
+      group={FLUX_NOTIFICATION_GROUP}
+      resource={FLUX_PROVIDER_RESOURCE}
+      kind="FluxProvider"
       noun={{ singular: 'provider', plural: 'providers' }}
       scope="namespaced"
-      data={data}
-      setData={setData}
-      fetch={fetch}
+      fetch={api.listFluxProviders}
       columns={columns}
-      onRowClick={onRowClick}
-      rowResource={rowResource}
+      identity={(row) => ({ namespace: row.namespace, name: row.name })}
+      extras={(row) => ({ suspended: row.suspended })}
+      unavailableMessage="FluxProvider is not installed in the active contexts."
     />
   )
 }

@@ -115,7 +115,7 @@ import { TerminalButton } from '@/features/terminal/TerminalButton'
 import { TerminalDrawer } from '@/features/terminal/TerminalDrawer'
 import { Toaster } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { api, type CRDInfo } from '@/lib/api'
+import { api } from '@/lib/api'
 import { onCredsUpdate, onKubeChange, onPFUpdate, resetSyncState } from '@/lib/events'
 import { toast } from 'sonner'
 import { useCredentialsStore } from '@/store/credentials'
@@ -126,18 +126,26 @@ import {
   type ResourceView,
 } from '@/store/ui'
 import { useResources } from '@/store/resources'
-import { crdKey, useCRDStore } from '@/store/crds'
+import { findCRD, useCRDStore } from '@/store/crds'
 import { useHelmStore } from '@/store/helm'
 import { useMetrics } from '@/store/metrics'
 import { usePortForwards } from '@/store/portForwards'
 import { useTerminalStore } from '@/store/terminals'
 import { useAccessStore } from '@/store/access'
 
-
 function MainView() {
   const view = useUIStore((s) => s.selectedView)
   const selectedCRDKey = useUIStore((s) => s.selectedCRDKey)
-  const crd = useCRDStore((s) => (selectedCRDKey ? s.byKey[selectedCRDKey] : null))
+  const activeContexts = useActiveContexts()
+  const crdByContext = useCRDStore((s) => s.byContext)
+  const crd = selectedCRDKey
+    ? (activeContexts
+        .map((contextName) => {
+          const [group, resource] = selectedCRDKey.split('/', 2)
+          return findCRD(crdByContext, contextName, group, resource)
+        })
+        .find((value) => value !== null) ?? null)
+    : null
   if (selectedCRDKey) {
     if (!crd) {
       return (
@@ -366,13 +374,16 @@ function App() {
   const activeGroupId = useUIStore((s) => s.activeGroupId)
   const contextGroups = useUIStore((s) => s.contextGroups)
   const activeGroup = activeGroupId ? contextGroups.find((g) => g.id === activeGroupId) : null
-  const activeGroupBarClass = activeGroup ? COLOR_PALETTE[activeGroup.color]?.barClass ?? null : null
+  const activeGroupBarClass = activeGroup
+    ? (COLOR_PALETTE[activeGroup.color]?.barClass ?? null)
+    : null
   const topBarClass = currentTagMeta?.barClass ?? activeGroupBarClass ?? null
   const resetResources = useResources((s) => s.reset)
   const clearResourceContext = useResources((s) => s.clearContext)
   const setPortForwards = usePortForwards((s) => s.setList)
   const crds = useCRDStore((s) => s.crds)
   const setCRDs = useCRDStore((s) => s.setCRDs)
+  const clearCRDContext = useCRDStore((s) => s.clearContext)
   const resetCRDs = useCRDStore((s) => s.reset)
   const resetHelm = useHelmStore((s) => s.reset)
   const resetMetrics = useMetrics((s) => s.reset)
@@ -387,9 +398,7 @@ function App() {
   const activeNavItemRef = useRef<HTMLLIElement | null>(null)
 
   const visibleGroups = useVisibleResourceGroups()
-  const navViews = useMemo<ResourceView[]>(() => visibleGroups.flatMap(groupViews), [
-    visibleGroups,
-  ])
+  const navViews = useMemo<ResourceView[]>(() => visibleGroups.flatMap(groupViews), [visibleGroups])
   // Builtin views followed by the currently-visible CRD entries, in sidebar
   // order, so arrow navigation is continuous across both and stays anchored to
   // the active CRD instead of a stale builtin view.
@@ -397,7 +406,10 @@ function App() {
     const views: NavEntry[] = navViews.map((view) => ({ kind: 'view', view }))
     const crdKeys: NavEntry[] =
       sidebarMode === 'expanded'
-        ? orderedCRDKeys(crds, expandedCRDGroups).map((key) => ({ kind: 'crd', key }))
+        ? orderedCRDKeys(crds, expandedCRDGroups).map((key) => ({
+            kind: 'crd',
+            key,
+          }))
         : []
     return [...views, ...crdKeys]
   }, [navViews, crds, expandedCRDGroups, sidebarMode])
@@ -493,6 +505,7 @@ function App() {
     watchedContextsRef.current = activeContexts
     for (const ctx of removed) {
       api.stopWatch(ctx).catch(console.error)
+      clearCRDContext(ctx)
     }
     // Only drop the resource data of contexts actually leaving the set; a full
     // wipe would flash retained contexts' tables to skeleton until their
@@ -537,35 +550,45 @@ function App() {
     return () => {
       unsubAccess()
     }
-  }, [activeContexts, resetResources, clearResourceContext, resetCRDs, resetHelm, resetAccess, resetMetrics, setAccess])
+  }, [
+    activeContexts,
+    resetResources,
+    clearResourceContext,
+    clearCRDContext,
+    resetCRDs,
+    resetHelm,
+    resetAccess,
+    resetMetrics,
+    setAccess,
+  ])
 
   useEffect(() => {
     if (activeContexts.length === 0) {
-      setCRDs([])
+      resetCRDs()
       return
     }
     let cancelled = false
-    const reload = () => {
-      Promise.all(
-        activeContexts.map((ctx) => api.listCRDs(ctx).catch(() => [] as CRDInfo[])),
-      ).then((lists) => {
-        if (cancelled) return
-        const seen = new Map<string, CRDInfo>()
-        for (const list of lists) {
-          for (const c of list ?? []) seen.set(crdKey(c), c)
-        }
-        setCRDs(Array.from(seen.values()))
-      })
+    const reload = (contexts = activeContexts) => {
+      for (const contextName of contexts) {
+        api
+          .listCRDs(contextName)
+          .then((list) => {
+            if (!cancelled) setCRDs(contextName, list ?? [])
+          })
+          .catch(() => {
+            if (!cancelled) setCRDs(contextName, [])
+          })
+      }
     }
     reload()
     const unsub = onKubeChange('_crds', (ctx) => {
-      if (activeContexts.includes(ctx)) reload()
+      if (activeContexts.includes(ctx)) reload([ctx])
     })
     return () => {
       cancelled = true
       unsub()
     }
-  }, [activeContexts, setCRDs])
+  }, [activeContexts, resetCRDs, setCRDs])
 
   if (activeContexts.length === 0) {
     return (
@@ -578,147 +601,142 @@ function App() {
 
   return (
     <TooltipProvider delayDuration={250}>
-    <div className="flex h-screen flex-col bg-background text-foreground">
-      {topBarClass && (
-        <div
-          className={`h-[3px] w-full shrink-0 ${topBarClass}`}
-          aria-hidden
-        />
-      )}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold tracking-tight">Klustr</span>
-          <ContextSwitcher />
-          <NamespaceSelector />
-          <ContextTagPicker />
-        </div>
-        <div className="flex items-center gap-1">
-          {/* Cluster session tools */}
-          <TerminalButton />
-          <PortForwardIndicator />
-          <ReadOnlyToggle />
-          <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />
-          {/* App preferences & leaving the cluster */}
-          <ThemePicker />
-          <DisconnectButton />
-        </div>
-      </header>
+      <div className="flex h-screen flex-col bg-background text-foreground">
+        {topBarClass && <div className={`h-[3px] w-full shrink-0 ${topBarClass}`} aria-hidden />}
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold tracking-tight">Klustr</span>
+            <ContextSwitcher />
+            <NamespaceSelector />
+            <ContextTagPicker />
+          </div>
+          <div className="flex items-center gap-1">
+            {/* Cluster session tools */}
+            <TerminalButton />
+            <PortForwardIndicator />
+            <ReadOnlyToggle />
+            <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />
+            {/* App preferences & leaving the cluster */}
+            <ThemePicker />
+            <DisconnectButton />
+          </div>
+        </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <aside
-          style={sidebarMode === 'expanded' ? { width: sidebarWidth } : undefined}
-          className={`${
-            sidebarMode === 'icons' ? 'w-12' : ''
-          } relative flex shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground`}
-        >
-          {sidebarMode === 'icons' && (
-            <div className="flex shrink-0 justify-center p-1">
+        <div className="flex flex-1 overflow-hidden">
+          <aside
+            style={sidebarMode === 'expanded' ? { width: sidebarWidth } : undefined}
+            className={`${
+              sidebarMode === 'icons' ? 'w-12' : ''
+            } relative flex shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground`}
+          >
+            {sidebarMode === 'icons' && (
+              <div className="flex shrink-0 justify-center p-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={toggleSidebarMode}
+                      aria-label="Expand sidebar"
+                      className="flex size-8 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    >
+                      <PanelLeftOpen className="size-4" aria-hidden />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={6}>
+                    Expand sidebar
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+            {sidebarMode === 'expanded' && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     onClick={toggleSidebarMode}
-                    aria-label="Expand sidebar"
-                    className="flex size-8 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    aria-label="Collapse sidebar"
+                    className="absolute right-1 top-1 z-10 flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   >
-                    <PanelLeftOpen className="size-4" aria-hidden />
+                    <PanelLeftClose className="size-4" aria-hidden />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={6}>
-                  Expand sidebar
+                  Collapse sidebar
                 </TooltipContent>
               </Tooltip>
-            </div>
-          )}
-          {sidebarMode === 'expanded' && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={toggleSidebarMode}
-                  aria-label="Collapse sidebar"
-                  className="absolute right-1 top-1 z-10 flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                >
-                  <PanelLeftClose className="size-4" aria-hidden />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={6}>
-                Collapse sidebar
-              </TooltipContent>
-            </Tooltip>
-          )}
-          <nav
-            className={`flex flex-1 flex-col overflow-y-auto ${
-              sidebarMode === 'icons' ? 'items-center gap-1 p-1' : 'gap-3 p-3'
-            }`}
-          >
-            {visibleGroups.map((group) => (
-              <SidebarGroup
-                key={group.label}
-                group={group}
-                mode={sidebarMode}
-                collapsed={collapsedNavGroups.includes(group.label)}
-                onToggleCollapse={() => toggleNavGroup(group.label)}
-                selectedView={selectedView}
-                selectedCRDKey={selectedCRDKey}
-                onSelectView={setSelectedView}
-                onHideItem={hideSidebarItem}
-                activeItemRef={activeNavItemRef}
-              />
-            ))}
-            {sidebarMode === 'expanded' && (
-              <CRDGroups
-                crds={crds}
-                expandedGroups={expandedCRDGroups}
-                toggleGroup={toggleCRDGroup}
-                selectedCRDKey={selectedCRDKey}
-                onSelect={setSelectedCRD}
-              />
             )}
-          </nav>
-          {hiddenSidebarItems.length > 0 && (
-            <div
-              className={
-                sidebarMode === 'icons'
-                  ? 'flex justify-center border-t border-sidebar-border/60 p-1'
-                  : 'border-t border-sidebar-border/60 px-2 py-1.5'
-              }
+            <nav
+              className={`flex flex-1 flex-col overflow-y-auto ${
+                sidebarMode === 'icons' ? 'items-center gap-1 p-1' : 'gap-3 p-3'
+              }`}
             >
-              <HiddenSidebarItemsButton
-                hiddenItems={hiddenSidebarItems}
-                mode={sidebarMode}
-                onShowItem={showSidebarItem}
-                onClearAll={clearHiddenSidebarItems}
-              />
-            </div>
-          )}
-          {sidebarMode === 'expanded' && (
-            <SidebarResizeHandle width={sidebarWidth} onResize={setSidebarWidth} />
-          )}
-        </aside>
+              {visibleGroups.map((group) => (
+                <SidebarGroup
+                  key={group.label}
+                  group={group}
+                  mode={sidebarMode}
+                  collapsed={collapsedNavGroups.includes(group.label)}
+                  onToggleCollapse={() => toggleNavGroup(group.label)}
+                  selectedView={selectedView}
+                  selectedCRDKey={selectedCRDKey}
+                  onSelectView={setSelectedView}
+                  onHideItem={hideSidebarItem}
+                  activeItemRef={activeNavItemRef}
+                />
+              ))}
+              {sidebarMode === 'expanded' && (
+                <CRDGroups
+                  crds={crds}
+                  expandedGroups={expandedCRDGroups}
+                  toggleGroup={toggleCRDGroup}
+                  selectedCRDKey={selectedCRDKey}
+                  onSelect={setSelectedCRD}
+                />
+              )}
+            </nav>
+            {hiddenSidebarItems.length > 0 && (
+              <div
+                className={
+                  sidebarMode === 'icons'
+                    ? 'flex justify-center border-t border-sidebar-border/60 p-1'
+                    : 'border-t border-sidebar-border/60 px-2 py-1.5'
+                }
+              >
+                <HiddenSidebarItemsButton
+                  hiddenItems={hiddenSidebarItems}
+                  mode={sidebarMode}
+                  onShowItem={showSidebarItem}
+                  onClearAll={clearHiddenSidebarItems}
+                />
+              </div>
+            )}
+            {sidebarMode === 'expanded' && (
+              <SidebarResizeHandle width={sidebarWidth} onResize={setSidebarWidth} />
+            )}
+          </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <main className="flex min-h-0 flex-1 overflow-hidden">
-            <MainView />
-          </main>
-          <TerminalDrawer />
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <main className="flex min-h-0 flex-1 overflow-hidden">
+              <MainView />
+            </main>
+            <TerminalDrawer />
+          </div>
         </div>
+
+        <StatusBar />
+
+        <ResourceDetailPanel
+          contextName={selectedResource?.context ?? selectedContext}
+          resource={selectedResource}
+        />
+        <RowActionDialogs />
+        <KeyboardShortcutsDialog />
+        <CredentialSuggestionPrompt />
+        <CommandPalette />
+        <NamespaceSearchPalette />
+        <PodSearchPalette />
+        <Toaster position="bottom-right" />
       </div>
-
-      <StatusBar />
-
-      <ResourceDetailPanel
-        contextName={selectedResource?.context ?? selectedContext}
-        resource={selectedResource}
-      />
-      <RowActionDialogs />
-      <KeyboardShortcutsDialog />
-      <CredentialSuggestionPrompt />
-      <CommandPalette />
-      <NamespaceSearchPalette />
-      <PodSearchPalette />
-      <Toaster position="bottom-right" />
-    </div>
     </TooltipProvider>
   )
 }

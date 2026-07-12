@@ -6,7 +6,7 @@ import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { useUIStore } from '@/store/ui'
-import { useCRDStore } from '@/store/crds'
+import { findCRD, useCRDStore } from '@/store/crds'
 
 export function ApplicationSetDetailBody({
   contextName,
@@ -21,10 +21,16 @@ export function ApplicationSetDetailBody({
     (ctx: string) => api.getArgoApplicationSet(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<ArgoApplicationSetDetail>(contextName, 'ApplicationSet', namespace, name, load)
+  const { detail, error } = useResourceDetail<ArgoApplicationSetDetail>(
+    contextName,
+    'ApplicationSet',
+    namespace,
+    name,
+    load,
+  )
   const openResource = useUIStore((s) => s.openResource)
-  const argoAppCRD = useCRDStore(
-    (s) => s.crds.find((c) => c.group === 'argoproj.io' && c.resource === 'applications') ?? null,
+  const argoAppCRD = useCRDStore((s) =>
+    contextName ? findCRD(s.byContext, contextName, 'argoproj.io', 'applications') : null,
   )
 
   if (error) return <ErrorBox>{error}</ErrorBox>

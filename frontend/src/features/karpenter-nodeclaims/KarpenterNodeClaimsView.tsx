@@ -1,35 +1,18 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type KarpenterNodeClaimInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { formatMemoryQuantity, parseQuantity } from '@/lib/quantity'
-import { ResourceTable } from '@/features/_shared/ResourceTable'
-import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
+import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
-import { type ByContext } from '@/store/resources'
-import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
 
 const KARPENTER_GROUP = 'karpenter.sh'
 const NODECLAIM_RESOURCE = 'nodeclaims'
 
 const columnHelper = createColumnHelper<KarpenterNodeClaimInfo>()
-const EMPTY: KarpenterNodeClaimInfo[] = []
 
 export function KarpenterNodeClaimsView() {
-  const selectedContext = useUIStore((s) => s.selectedContext)
-  const isAggregated = useIsAggregated()
-  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-
-  const crd = useCRDStore(
-    (s) =>
-      s.crds.find((c) => c.group === KARPENTER_GROUP && c.resource === NODECLAIM_RESOURCE) ?? null,
-  )
-
-  const [rows, setRows] = useState<KarpenterNodeClaimInfo[]>(EMPTY)
-  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
-
   const columns = useMemo(
     () => [
       columnHelper.accessor('name', { header: 'Name' }),
@@ -127,80 +110,17 @@ export function KarpenterNodeClaimsView() {
     [],
   )
 
-  const data = useMemo<ByContext<KarpenterNodeClaimInfo>>(
-    () => (selectedContext ? { [selectedContext]: rows } : {}),
-    [selectedContext, rows],
-  )
-  const setData = useCallback(
-    (_ctx: string, list: KarpenterNodeClaimInfo[]) => setRows(list),
-    [],
-  )
-  const fetch = useCallback((ctx: string) => api.listKarpenterNodeClaims(ctx), [])
-  const rowResource = useCallback(
-    (row: KarpenterNodeClaimInfo, ctx: string): SelectedResource => ({
-      kind: 'NodeClaim',
-      namespace: '',
-      name: row.name,
-      context: ctx,
-      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
-    }),
-    [crd],
-  )
-  const onRowClick = useCallback(
-    (row: KarpenterNodeClaimInfo, ctx: string) => {
-      if (!crd) return
-      setSelectedResource(rowResource(row, ctx))
-    },
-    [crd, rowResource, setSelectedResource],
-  )
-
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        Karpenter NodeClaims are only available in single-context mode.
-      </div>
-    )
-  }
-
-  if (!crd) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <div className="text-sm">Karpenter is not installed in this cluster.</div>
-        <div className="max-w-md text-xs text-muted-foreground">
-          The <code className="rounded bg-muted px-1">nodeclaims.karpenter.sh</code> CRD is not
-          present.
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-xs text-destructive">
-        Failed to start watch for NodeClaim: {error}
-      </div>
-    )
-  }
-
-  if (!ready) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
-        Starting watch for NodeClaim…
-      </div>
-    )
-  }
-
   return (
-    <ResourceTable
-      kind={`cr:${KARPENTER_GROUP}/${NODECLAIM_RESOURCE}`}
+    <CustomResourceTable
+      group={KARPENTER_GROUP}
+      resource={NODECLAIM_RESOURCE}
+      kind="NodeClaim"
       noun={{ singular: 'node claim', plural: 'node claims' }}
       scope="cluster"
-      data={data}
-      setData={setData}
-      fetch={fetch}
+      fetch={api.listKarpenterNodeClaims}
       columns={columns}
-      onRowClick={onRowClick}
-      rowResource={rowResource}
+      identity={(row) => ({ namespace: '', name: row.name })}
+      unavailableMessage="NodeClaim is not installed in the active contexts."
     />
   )
 }

@@ -1,31 +1,24 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type ArgoApplicationSetInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
-import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
+import { useContextResourceData } from '@/features/_shared/useContextResourceData'
+import { useCustomResourceCapability } from '@/features/_shared/useCustomResourceCapability'
+import { CustomResourcePartialWarning } from '@/features/_shared/CustomResourcePartialWarning'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
-import { type ByContext } from '@/store/resources'
-import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
+import { useUIStore, type SelectedResource } from '@/store/ui'
 
 const ARGO_GROUP = 'argoproj.io'
 const ARGO_RESOURCE = 'applicationsets'
 
 const columnHelper = createColumnHelper<ArgoApplicationSetInfo>()
-const EMPTY: ArgoApplicationSetInfo[] = []
-
 export function ApplicationSetsView() {
-  const selectedContext = useUIStore((s) => s.selectedContext)
-  const isAggregated = useIsAggregated()
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-
-  const crd = useCRDStore(
-    (s) => s.crds.find((c) => c.group === ARGO_GROUP && c.resource === ARGO_RESOURCE) ?? null,
+  const capability = useCustomResourceCapability(ARGO_GROUP, ARGO_RESOURCE)
+  const { data, setData } = useContextResourceData<ArgoApplicationSetInfo>(
+    capability.activeContexts,
   )
-
-  const [rows, setRows] = useState<ArgoApplicationSetInfo[]>(EMPTY)
-  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
 
   const columns = useMemo(
     () => [
@@ -62,17 +55,10 @@ export function ApplicationSetsView() {
     [],
   )
 
-  const data = useMemo<ByContext<ArgoApplicationSetInfo>>(
-    () => (selectedContext ? { [selectedContext]: rows } : {}),
-    [selectedContext, rows],
-  )
-  const setData = useCallback(
-    (_ctx: string, list: ArgoApplicationSetInfo[]) => setRows(list),
-    [],
-  )
   const fetch = useCallback(
-    (ctx: string, ns: string) => api.listArgoApplicationSets(ctx, ns),
-    [],
+    (ctx: string, ns: string) =>
+      capability.crdsByContext[ctx] ? api.listArgoApplicationSets(ctx, ns) : Promise.resolve([]),
+    [capability.crdsByContext],
   )
   const rowResource = useCallback(
     (row: ArgoApplicationSetInfo, ctx: string): SelectedResource => ({
@@ -80,47 +66,45 @@ export function ApplicationSetsView() {
       namespace: row.namespace,
       name: row.name,
       context: ctx,
-      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+      gvr: capability.crdsByContext[ctx]
+        ? {
+            group: capability.crdsByContext[ctx].group,
+            version: capability.crdsByContext[ctx].version,
+            resource: capability.crdsByContext[ctx].resource,
+          }
+        : undefined,
     }),
-    [crd],
+    [capability.crdsByContext],
   )
   const onRowClick = useCallback(
     (row: ArgoApplicationSetInfo, ctx: string) => {
-      if (!crd) return
+      if (!capability.crdsByContext[ctx]) return
       setSelectedResource(rowResource(row, ctx))
     },
-    [crd, rowResource, setSelectedResource],
+    [capability.crdsByContext, rowResource, setSelectedResource],
   )
 
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        Argo CD ApplicationSets are only available in single-context mode.
-      </div>
-    )
-  }
-
-  if (!crd) {
+  if (capability.supportedContexts.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
         <div className="text-sm">The ApplicationSet controller is not installed.</div>
         <div className="max-w-md text-xs text-muted-foreground">
-          Install the Argo CD ApplicationSet controller (bundled with the Argo CD Helm chart
-          by default) and reconnect.
+          Install the Argo CD ApplicationSet controller (bundled with the Argo CD Helm chart by
+          default) and reconnect.
         </div>
       </div>
     )
   }
 
-  if (error) {
+  if (!capability.pending && capability.readyContexts.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center px-6 text-xs text-destructive">
-        Failed to start watch for ApplicationSet: {error}
+        Failed to start watch for ApplicationSet: {Object.values(capability.errors).join('; ')}
       </div>
     )
   }
 
-  if (!ready) {
+  if (capability.pending) {
     return (
       <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
         Starting watch for ApplicationSet…
@@ -129,17 +113,20 @@ export function ApplicationSetsView() {
   }
 
   return (
-    <ResourceTable
-      kind={`cr:${ARGO_GROUP}/${ARGO_RESOURCE}`}
-      noun={{ singular: 'applicationset', plural: 'applicationsets' }}
-      scope="namespaced"
-      data={data}
-      setData={setData}
-      fetch={fetch}
-      columns={columns}
-      onRowClick={onRowClick}
-      rowResource={rowResource}
-    />
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <CustomResourcePartialWarning errors={capability.errors} />
+      <ResourceTable
+        kind={`cr:${ARGO_GROUP}/${ARGO_RESOURCE}`}
+        noun={{ singular: 'applicationset', plural: 'applicationsets' }}
+        scope="namespaced"
+        data={data}
+        setData={setData}
+        fetch={fetch}
+        columns={columns}
+        onRowClick={onRowClick}
+        rowResource={rowResource}
+      />
+    </div>
   )
 }
 

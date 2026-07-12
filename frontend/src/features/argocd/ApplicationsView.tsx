@@ -7,11 +7,12 @@ import { api, type ArgoApplicationInfo } from '@/lib/api'
 import { BrowserOpenURL } from '@/lib/wails/wailsjs/runtime/runtime'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
-import { useCustomResourceWatch } from '@/features/_shared/useCustomResourceWatch'
+import { resourceContext } from '@/features/_shared/resourceContext'
+import { useContextResourceData } from '@/features/_shared/useContextResourceData'
+import { useCustomResourceCapability } from '@/features/_shared/useCustomResourceCapability'
+import { CustomResourcePartialWarning } from '@/features/_shared/CustomResourcePartialWarning'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
-import { type ByContext } from '@/store/resources'
-import { useCRDStore } from '@/store/crds'
-import { useIsAggregated, useUIStore, type SelectedResource } from '@/store/ui'
+import { useUIStore, type SelectedResource } from '@/store/ui'
 import { HealthPill, SyncPill } from './ApplicationResourcesTab'
 import { SuspendResumeArgoApplicationButton } from './SuspendResumeArgoApplicationButton'
 import { SyncArgoApplicationDialog } from './SyncArgoApplicationDialog'
@@ -20,35 +21,28 @@ const ARGO_GROUP = 'argoproj.io'
 const ARGO_RESOURCE = 'applications'
 
 const columnHelper = createColumnHelper<ArgoApplicationInfo>()
-const EMPTY: ArgoApplicationInfo[] = []
+type SyncTarget = { contextName: string; row: ArgoApplicationInfo }
 
 export function ApplicationsView() {
-  const selectedContext = useUIStore((s) => s.selectedContext)
-  const isAggregated = useIsAggregated()
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
+  const capability = useCustomResourceCapability(ARGO_GROUP, ARGO_RESOURCE)
+  const { data, setData } = useContextResourceData<ArgoApplicationInfo>(capability.activeContexts)
+  const [syncTarget, setSyncTarget] = useState<SyncTarget | null>(null)
 
-  const crd = useCRDStore(
-    (s) => s.crds.find((c) => c.group === ARGO_GROUP && c.resource === ARGO_RESOURCE) ?? null,
+  const onSync = useCallback(
+    (row: ArgoApplicationInfo, contextName: string) => setSyncTarget({ row, contextName }),
+    [],
   )
 
-  const [rows, setRows] = useState<ArgoApplicationInfo[]>(EMPTY)
-  const { ready, error } = useCustomResourceWatch(selectedContext, crd)
-  const [syncTarget, setSyncTarget] = useState<ArgoApplicationInfo | null>(null)
-
-  const onSync = useCallback((row: ArgoApplicationInfo) => setSyncTarget(row), [])
-
-  const onRefresh = useCallback(
-    async (row: ArgoApplicationInfo) => {
-      if (!selectedContext) return
-      try {
-        await api.refreshArgoApplication(selectedContext, row.namespace, row.name, 'normal')
-        toast.success(`Refreshing ${row.namespace}/${row.name}`)
-      } catch (e) {
-        toast.error(`Refresh failed: ${e instanceof Error ? e.message : String(e)}`)
-      }
-    },
-    [selectedContext],
-  )
+  const onRefresh = useCallback(async (row: ArgoApplicationInfo, contextName: string) => {
+    if (!contextName) return
+    try {
+      await api.refreshArgoApplication(contextName, row.namespace, row.name, 'normal')
+      toast.success(`Refreshing ${row.namespace}/${row.name}`)
+    } catch (e) {
+      toast.error(`Refresh failed: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }, [])
 
   const columns = useMemo(
     () => [
@@ -75,7 +69,11 @@ export function ApplicationsView() {
         size: COL_SM,
         cell: (i) => {
           const v = i.getValue()
-          return v ? <span className="font-mono text-xs">{v.slice(0, 8)}</span> : <span className="text-muted-foreground">—</span>
+          return v ? (
+            <span className="font-mono text-xs">{v.slice(0, 8)}</span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )
         },
       }),
       columnHelper.accessor('repoURL', {
@@ -96,6 +94,7 @@ export function ApplicationsView() {
         size: 260,
         cell: (i) => {
           const row = i.row.original
+          const contextName = resourceContext(row)
           return (
             <div className="flex items-center gap-1">
               <Button
@@ -104,16 +103,16 @@ export function ApplicationsView() {
                 className="h-7 px-2 text-xs"
                 onClick={(e) => {
                   e.stopPropagation()
-                  onRefresh(row)
+                  onRefresh(row, contextName)
                 }}
                 title="Force Argo to re-evaluate this Application"
               >
                 <RefreshCcw className="size-3" />
                 Refresh
               </Button>
-              {selectedContext && (
+              {contextName && (
                 <SuspendResumeArgoApplicationButton
-                  contextName={selectedContext}
+                  contextName={contextName}
                   namespace={row.namespace}
                   name={row.name}
                   autoSync={row.autoSync}
@@ -125,7 +124,7 @@ export function ApplicationsView() {
                 className="h-7 px-2 text-xs"
                 onClick={(e) => {
                   e.stopPropagation()
-                  onSync(row)
+                  onSync(row, contextName)
                 }}
                 title="Trigger a sync to the target revision"
               >
@@ -143,20 +142,13 @@ export function ApplicationsView() {
         sortingFn: 'datetime',
       }),
     ],
-    [onSync, onRefresh, selectedContext],
+    [onSync, onRefresh],
   )
 
-  const data = useMemo<ByContext<ArgoApplicationInfo>>(
-    () => (selectedContext ? { [selectedContext]: rows } : {}),
-    [selectedContext, rows],
-  )
-  const setData = useCallback(
-    (_ctx: string, list: ArgoApplicationInfo[]) => setRows(list),
-    [],
-  )
   const fetch = useCallback(
-    (ctx: string, ns: string) => api.listArgoApplications(ctx, ns),
-    [],
+    (ctx: string, ns: string) =>
+      capability.crdsByContext[ctx] ? api.listArgoApplications(ctx, ns) : Promise.resolve([]),
+    [capability.crdsByContext],
   )
   const rowResource = useCallback(
     (row: ArgoApplicationInfo, ctx: string): SelectedResource => ({
@@ -164,48 +156,49 @@ export function ApplicationsView() {
       namespace: row.namespace,
       name: row.name,
       context: ctx,
-      gvr: crd ? { group: crd.group, version: crd.version, resource: crd.resource } : undefined,
+      gvr: capability.crdsByContext[ctx]
+        ? {
+            group: capability.crdsByContext[ctx].group,
+            version: capability.crdsByContext[ctx].version,
+            resource: capability.crdsByContext[ctx].resource,
+          }
+        : undefined,
     }),
-    [crd],
+    [capability.crdsByContext],
   )
   const onRowClick = useCallback(
     (row: ArgoApplicationInfo, ctx: string) => {
-      if (!crd) return
+      if (!capability.crdsByContext[ctx]) return
       setSelectedResource(rowResource(row, ctx))
     },
-    [crd, rowResource, setSelectedResource],
+    [capability.crdsByContext, rowResource, setSelectedResource],
   )
 
-  if (isAggregated) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        Argo CD Applications are only available in single-context mode.
-      </div>
-    )
-  }
-
-  if (!crd) {
+  if (capability.supportedContexts.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
         <div className="text-sm">Argo CD is not installed in this cluster.</div>
         <div className="max-w-md text-xs text-muted-foreground">
           The <code className="rounded bg-muted px-1">applications.argoproj.io</code> CRD is not
-          present. Install Argo CD (e.g. <code className="rounded bg-muted px-1">helm install
-          argo-cd argo/argo-cd -n argocd --create-namespace</code>) and reconnect.
+          present. Install Argo CD (e.g.{' '}
+          <code className="rounded bg-muted px-1">
+            helm install argo-cd argo/argo-cd -n argocd --create-namespace
+          </code>
+          ) and reconnect.
         </div>
       </div>
     )
   }
 
-  if (error) {
+  if (!capability.pending && capability.readyContexts.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center px-6 text-xs text-destructive">
-        Failed to start watch for Application: {error}
+        Failed to start watch for Application: {Object.values(capability.errors).join('; ')}
       </div>
     )
   }
 
-  if (!ready) {
+  if (capability.pending) {
     return (
       <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
         Starting watch for Application…
@@ -214,7 +207,8 @@ export function ApplicationsView() {
   }
 
   return (
-    <>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <CustomResourcePartialWarning errors={capability.errors} />
       <ResourceTable
         kind={`cr:${ARGO_GROUP}/${ARGO_RESOURCE}`}
         noun={{ singular: 'application', plural: 'applications' }}
@@ -227,15 +221,15 @@ export function ApplicationsView() {
         rowResource={rowResource}
       />
       <SyncArgoApplicationDialog
-        contextName={selectedContext}
-        namespace={syncTarget?.namespace ?? ''}
-        name={syncTarget?.name ?? ''}
+        contextName={syncTarget?.contextName ?? null}
+        namespace={syncTarget?.row.namespace ?? ''}
+        name={syncTarget?.row.name ?? ''}
         open={syncTarget !== null}
         onOpenChange={(o) => {
           if (!o) setSyncTarget(null)
         }}
       />
-    </>
+    </div>
   )
 }
 
