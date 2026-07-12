@@ -9,6 +9,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // Let jsdom provide Web Storage instead of Node's file-backed experimental global.
+    execArgv: ['--no-experimental-webstorage'],
     globals: false,
     include: ['src/**/*.test.{ts,tsx}'],
     css: false,
