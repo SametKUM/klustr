@@ -88,6 +88,7 @@ export function CustomResourceTable<T>({
         data={data}
         setData={setData}
         fetch={fetch}
+        contexts={capability.supportedContexts}
         columns={columns}
         rowResource={rowResource}
         onRowClick={(row, contextName) => setSelectedResource(rowResource(row, contextName))}

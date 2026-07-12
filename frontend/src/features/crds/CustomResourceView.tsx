@@ -131,6 +131,7 @@ export function CustomResourceView({ crd }: Props) {
         data={data}
         setData={setData}
         fetch={fetch}
+        contexts={capability.supportedContexts}
         columns={columns}
         onRowClick={onRowClick}
         rowResource={rowResource}

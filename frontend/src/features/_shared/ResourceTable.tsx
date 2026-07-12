@@ -60,7 +60,7 @@ import {
 } from './BulkActionDialogs'
 import { isRestartable } from './workloadCapabilities'
 import { parseSearch, rowMatchesSearch } from './rowSearch'
-import { KLUSTR_CTX, type Tagged } from './resourceContext'
+import { KLUSTR_CTX, resolveResourceContexts, type Tagged } from './resourceContext'
 import { resourcePageCount } from './pagination'
 
 type RowIdentity = { namespace?: string; name?: string }
@@ -95,6 +95,7 @@ export type ResourceTableProps<T> = {
   data: ByContext<T>
   setData: (ctx: string, list: T[]) => void
   fetch: (contextName: string, namespace: string) => Promise<T[]>
+  contexts?: string[]
   columns: ColumnDef<T, unknown>[]
   defaultSort?: SortingState
   onRowClick?: (row: T, contextName: string) => void
@@ -266,6 +267,7 @@ export function ResourceTable<T>({
   data,
   setData,
   fetch,
+  contexts,
   columns,
   defaultSort,
   onRowClick,
@@ -273,6 +275,7 @@ export function ResourceTable<T>({
   applyDelta,
 }: ResourceTableProps<T>) {
   const activeContexts = useActiveContexts()
+  const resourceContexts = resolveResourceContexts(activeContexts, contexts)
   const isAggregated = useIsAggregated()
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const readOnly = useUIStore((s) => s.globalReadOnly)
@@ -385,10 +388,10 @@ export function ResourceTable<T>({
   const [bulkItems, setBulkItems] = useState<BulkItem[]>([])
   useEffect(() => {
     setSelectedKeys(new Set())
-  }, [activeContexts, selectedNamespaces, kind])
+  }, [resourceContexts, selectedNamespaces, kind])
   useEffect(() => {
     setPageIndex(0)
-  }, [activeContexts, selectedNamespaces, kind, appliedFilter, pageSize])
+  }, [resourceContexts, selectedNamespaces, kind, appliedFilter, pageSize])
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
   const [loadedSet, setLoadedSet] = useState<Set<string>>(() => new Set())
@@ -407,7 +410,7 @@ export function ResourceTable<T>({
   const mergedRef = useRef<Tagged<T>[]>([])
   const mergedData = useMemo<Tagged<T>[]>(() => {
     const out: Tagged<T>[] = []
-    for (const ctx of activeContexts) {
+    for (const ctx of resourceContexts) {
       const list = data[ctx]
       if (!list || list.length === 0) continue
       for (const item of list) {
@@ -426,17 +429,17 @@ export function ResourceTable<T>({
     }
     mergedRef.current = out
     return out
-  }, [activeContexts, data, scope, query])
+  }, [resourceContexts, data, scope, query])
 
   useEffect(() => {
     if (selectedResource) return
     if (!lastSelectedResource) return
-    const ctx = lastSelectedResource.context ?? activeContexts[0] ?? ''
+    const ctx = lastSelectedResource.context ?? resourceContexts[0] ?? ''
     const key = identityKey(ctx, lastSelectedResource)
     setFlashKey(key)
     const id = window.setTimeout(() => setFlashKey(null), 1_200)
     return () => window.clearTimeout(id)
-  }, [selectedResource, lastSelectedResource, activeContexts])
+  }, [selectedResource, lastSelectedResource, resourceContexts])
 
   useEffect(() => {
     if (mergedData.length === 0) setFilter('')
@@ -455,7 +458,7 @@ export function ResourceTable<T>({
   }, [])
 
   useEffect(() => {
-    if (activeContexts.length === 0) {
+    if (resourceContexts.length === 0) {
       setLoadedSet(new Set())
       return
     }
@@ -526,13 +529,13 @@ export function ResourceTable<T>({
     let nextCtx = 0
     const runNext = (): Promise<void> => {
       const i = nextCtx++
-      if (cancelled || i >= activeContexts.length) return Promise.resolve()
-      return reload(activeContexts[i]).then(runNext)
+      if (cancelled || i >= resourceContexts.length) return Promise.resolve()
+      return reload(resourceContexts[i]).then(runNext)
     }
-    const initialConcurrency = Math.min(4, activeContexts.length)
+    const initialConcurrency = Math.min(4, resourceContexts.length)
     for (let w = 0; w < initialConcurrency; w++) void runNext()
     const unsub = onKubeChange(kind, (ctx, delta) => {
-      if (!activeContexts.includes(ctx)) return
+      if (!resourceContexts.includes(ctx)) return
       const apply = applyDeltaRef.current
       // No delta support for this kind, no payload (e.g. _access fan-out), or an
       // explicit reset ⇒ full refetch (today's behavior).
@@ -564,19 +567,19 @@ export function ResourceTable<T>({
       if (cancelled) return
       graceWaited += GRACE_STEP_MS
       const stillSyncing =
-        graceWaited < GRACE_HARD_CAP_MS && activeContexts.some((ctx) => !isKindSynced(ctx, kind))
+        graceWaited < GRACE_HARD_CAP_MS && resourceContexts.some((ctx) => !isKindSynced(ctx, kind))
       if (stillSyncing) {
         graceTimer = window.setTimeout(giveUp, GRACE_STEP_MS)
         return
       }
-      setLoadedSet(new Set(activeContexts))
+      setLoadedSet(new Set(resourceContexts))
     }, GRACE_STEP_MS)
     return () => {
       cancelled = true
       unsub()
       window.clearTimeout(graceTimer)
     }
-  }, [activeContexts, query, kind])
+  }, [resourceContexts, query, kind])
 
   const tableColumns = useMemo<ColumnDef<Tagged<T>, unknown>[]>(() => {
     const baseCols = columns as unknown as ColumnDef<Tagged<T>, unknown>[]
@@ -788,7 +791,7 @@ export function ResourceTable<T>({
     )
   }
 
-  const allLoaded = activeContexts.every((c) => loadedSet.has(c))
+  const allLoaded = resourceContexts.every((c) => loadedSet.has(c))
   const filteredCount = selectableRows.length
   const total = mergedData.length
   const countLabel = !allLoaded
@@ -804,7 +807,7 @@ export function ResourceTable<T>({
           ? ` in ${selectedNamespaces[0]}`
           : ` in ${selectedNamespaces.length} namespaces`
       : ''
-  const contextLabel = isAggregated ? ` across ${activeContexts.length} contexts` : ''
+  const contextLabel = isAggregated ? ` across ${resourceContexts.length} contexts` : ''
 
   const canRestart = isRestartable(kind)
   const isNodeKind = kind === 'Node'

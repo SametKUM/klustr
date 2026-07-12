@@ -129,6 +129,7 @@ export function AppProjectsView() {
         data={data}
         setData={setData}
         fetch={fetch}
+        contexts={capability.supportedContexts}
         columns={columns}
         onRowClick={onRowClick}
         rowResource={rowResource}
