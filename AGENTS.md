@@ -1,0 +1,426 @@
+# Klustr
+
+Cross-platform Kubernetes desktop client. Multi-context cluster management with live resource updates, log streaming, exec, port-forwarding, full RBAC, **Custom Resource Definitions**, **Helm**, **Argo CD** and **Gateway API** support. **Nothing is installed in the cluster** — Klustr is a pure client that drives the standard Kubernetes API using the user's `~/.kube/config`.
+
+## Tech Stack
+
+| Layer | Choice |
+|---|---|
+| Desktop framework | Wails v2 (Go backend + native webview) |
+| Backend | Go 1.26 + `client-go` (typed + dynamic + discovery) |
+| Custom resources | `client-go/dynamic` + the apiextensions CRD list, watched live |
+| Gateway API | `sigs.k8s.io/gateway-api` typed informer factory (not the dynamic client) |
+| Helm | upstream `helm.sh/helm/v3` library, no shelling out |
+| Frontend | React 19 + TypeScript + Vite |
+| UI | Tailwind CSS + shadcn/ui + lucide-react + sonner (toasts) |
+| Real-time state | Zustand |
+| Mutations | TanStack Query (mutations only — no query cache) |
+| Tables | TanStack Table |
+| Terminal (logs + exec) | xterm.js |
+| Code editor (YAML) | Monaco |
+| Toolchain | mise (pins Go, Node, Wails CLI versions) |
+| Lint / format | golangci-lint (Go) + ESLint (frontend) |
+| Tests | `go test` (backend) + Vitest + jsdom (frontend) |
+| CI release builds | GitHub Actions matrix on hosted runners (macOS, Windows, Linux) |
+| Release publishing | `softprops/action-gh-release` (macOS .tar.gz + Linux .tar.gz + .deb assets today), Homebrew cask auto-bump for macOS + AUR `klustr-bin` auto-bump for Arch |
+
+## Project Structure
+
+```
+klustr/
+├── .mise.toml                    tool versions (Go, Node, Wails CLI)
+├── .golangci.yml                 golangci-lint v2 config
+├── wails.json                    Wails project config
+├── main.go                       application entry point
+├── internal/                     pure Go business logic (no Wails imports)
+│   └── kube/
+│       ├── config.go                kubeconfig parsing, context discovery + exec auth hints
+│       ├── path.go                  GUI-launch PATH augmentation for exec credential helpers
+│       ├── shellenv.go              GUI-launch login-shell env import (PATH + allowlist)
+│       ├── creds_provider.go        CredentialProvider interface + status/mapping types
+│       ├── creds_awsvault.go        aws-vault provider (detect / profiles / export capture)
+│       ├── creds_store.go           context→profile mapping JSON under the user config dir
+│       ├── creds.go                 credentialManager: single-flight capture, in-memory
+│       │                            secrets, ahead-of-expiry refresh + client rebuild
+│       ├── manager.go               ClientManager lifecycle (Clientset / Ping / Watch /
+│       │                            StopWatch) + Logs / Exec / PortForward / CRD forwarders
+│       │                            + watcher() helper
+│       ├── manager_<group>.go       per-sidebar-group Wails-facing forwarders
+│       │                            (workloads / networking / config / storage / cluster /
+│       │                             autoscaling / admission / rbac / helm / gateway / pods)
+│       ├── mutate.go                generic apply / delete / scale via dynamic client +
+│       │                            kindToGVR map
+│       ├── informers.go             contextWatcher lifecycle + start() bootstrap + the
+│       │                            kindBindings routing table + ensureKind lazy per-kind
+│       │                            start + shared helpers
+│       │                            (sortByNamespaceName, formatLabelSelector, OwnerRef, …)
+│       ├── informers_<group>.go     per-sidebar-group XxxInfo types and lister methods
+│       ├── details.go               shared types (ContainerSummary) + helpers
+│       │                            (matchLabels, deploymentConditions, quantitiesToStrings,
+│       │                             policyRules, rbacSubjects, …)
+│       ├── details_<group>.go       per-sidebar-group XxxDetail structs and Get() builders
+│       ├── crd.go                   apiextensions CRD discovery + per-CR dynamic informers
+│       ├── helm.go                  helm v3 list / install / upgrade / rollback / uninstall +
+│       │                            repo / chart search
+│       ├── helm_cache.go            chart cache helpers for repo browsing
+│       ├── argocd.go                Application list + Sync / Refresh through the K8s API
+│       │                            (no argocd CLI, no argocd-server dependency)
+│       ├── gateway.go               typed Gateway API informers + status / route helpers
+│       ├── karpenter.go             Karpenter NodePool / NodeClaim views (CRD-gated)
+│       ├── flux.go                  Flux Kustomization / source views (CRD-gated)
+│       ├── istio.go                 Istio networking views (CRD-gated)
+│       ├── certmanager.go           cert-manager Certificate / Issuer views (CRD-gated)
+│       ├── keda.go                  KEDA ScaledObject views (CRD-gated)
+│       ├── apiservice.go            aggregated APIService list + availability status
+│       ├── rbac_review.go           Access Review (SelfSubjectAccessReview helpers)
+│       ├── namespaces.go            Namespace lister/detail helpers
+│       ├── mutate_csr.go            CertificateSigningRequest approve / deny
+│       ├── terminal.go / sysshell.go  local system + node terminal sessions
+│       ├── *_devices.go             DRA: DeviceClass / ResourceClaim(Template) / ResourceSlice
+│       │                            (details_/informers_/manager_devices.go)
+│       ├── transform.go             informer-store managedFields/noise trim (perf)
+│       ├── pprof.go / timing.go     opt-in profiling + timing instrumentation (perf)
+│       ├── doc.go                   package overview (the internal/kube ↔ app split)
+│       ├── rollout.go               Deployment / StatefulSet / DaemonSet rollout history
+│       │                            and one-click revert (kubectl rollout undo path)
+│       ├── install.go               one-click metrics-server install / uninstall from
+│       │                            upstream components.yaml
+│       ├── events.go                core/v1 Events list filtered by involvedObject
+│       ├── metrics.go               metrics.k8s.io pod CPU/memory usage (polled, not watched)
+│       ├── overview.go              cluster-wide CPU / memory / pod aggregation
+│       ├── logs.go                  streaming log sessions
+│       ├── exec.go                  SPDY exec sessions
+│       ├── nodeshell.go             root node shell via a temporary privileged
+│       │                            nsenter pod, attached through exec.go
+│       ├── nodeops.go               node cordon/uncordon + PDB-aware drain
+│       │                            (eviction API, streamed progress)
+│       └── portforward.go           port-forward registry & lifecycle
+├── app/                          Wails binding adapter (thin layer over ClientManager)
+├── frontend/
+│   ├── eslint.config.js          ESLint flat config
+│   ├── vitest.config.ts          Vitest setup (jsdom environment)
+│   └── src/
+│       ├── App.tsx               layout shell, sidebar (RESOURCE_GROUPS) + MainView dispatch
+│       ├── features/             one folder per resource kind + _shared/ helpers
+│       │   ├── _shared/            ResourceDetailPanel, ResourceTable, StatusBar,
+│       │   │                       CommandPalette, RowActionDialogs, themes, resourceGroups
+│       │   ├── contexts/           ContextSwitcher, ConnectionsScreen, ContextTagPicker,
+│       │   │                       NamespaceSelector, ConnectionStatus
+│       │   ├── pods/, deployments/, services/, …  one folder per built-in kind
+│       │   ├── crds/, helm/, argocd/, gateways/, httproutes/, grpcroutes/, …
+│       │   ├── overview/           cluster + workloads overview cards
+│       │   └── portforward/        header indicator + dialog
+│       ├── components/           shadcn/ui primitives
+│       ├── store/                Zustand stores
+│       │   ├── resources.ts        live caches keyed by (context, kind, namespace, name)
+│       │   ├── metrics.ts          metrics-server data + availability flag
+│       │   ├── portForwards.ts     active port-forwards list
+│       │   ├── crds.ts             discovered CRDs per context (by api group)
+│       │   ├── credentials.ts      credential-helper providers + per-context statuses
+│       │   │                       (fed by creds:update; mappings persist backend-side)
+│       │   ├── helm.ts             helm release index per (context, namespace, name)
+│       │   ├── namespaceFavorites.ts  per-context starred namespaces
+│       │   ├── access.ts           RBAC Access Review (SelfSubjectAccessReview) results
+│       │   ├── terminals.ts        active system / node terminal sessions
+│       │   ├── tablePrefs.ts       per-kind column order / size / visibility (persisted)
+│       │   ├── ui.ts               Zustand store + useActiveContexts / useIsAggregated selectors
+│       │   ├── ui.types.ts         pure type declarations (ResourceView, ResourceKind, …)
+│       │   └── ui.persistence.ts   localStorage read*/persist* helpers + applyThemeClasses
+│       ├── lib/wails/            auto-generated Go bindings — DO NOT EDIT
+│       ├── lib/api.ts            ergonomic wrappers over wails bindings
+│       └── lib/events.ts         onKubeChange / onPFUpdate / onCredsUpdate Wails event
+│                                 subscriptions
+├── build/                        Wails build artifacts (icons, Info.plist) +
+│                                 linux/ (nfpm.yaml + klustr.desktop for the .deb) +
+│                                 aur/PKGBUILD.tmpl (rendered each release by CI)
+├── docs/
+│   ├── hero.mp4 / hero.gif         README hero — MP4 embedded inline via
+│   │                               github.com/user-attachments/assets URL
+│   │                               (only domain that github's README HTML
+│   │                               sanitizer allows in <video src>)
+│   ├── hero-poster.png             video poster + source-of-truth backup
+│   └── screenshots/                numbered themed pack `01-*.png` …
+│                                   `10-*.png` for README grid + press / blog
+├── hack/                         user's local fixtures (NEVER commit anything under hack/)
+└── .github/workflows/            release matrix (release.yml → builds 3 OSes, ships macOS)
+```
+
+The `internal/` ↔ `app/` split is intentional:
+- `internal/kube` is Wails-agnostic and stays testable with plain `go test`.
+- `app/` is the thin Wails binding adapter — if we ever ship a CLI or web mode, only `app/` is rewritten.
+
+## Architecture Patterns
+
+### Live data flow — Informer pattern
+
+We never poll the Kubernetes API. Resource lists are kept live by `client-go` Informers running in the Go backend:
+
+```
+K8s API ──watch──> Informer ──cache+events──> Wails event ──> Zustand store ──> React UI
+```
+
+- **Per-kind factory routing.** On `Watch()` the manager probes `SelfSubjectAccessReview` for every built-in kind (`internal/kube/permissions.go`). Each kind ends up in one of three buckets — cluster-wide, scoped to the kubeconfig context's `namespace:` field, or denied — and that decision drives which factory owns its informer:
+  - **`factory`** is the all-namespaces `SharedInformerFactory`, created when the user has cluster-wide list/watch for at least one kind. Admin users land here for every kind.
+  - **`scoped`** is a namespaced factory built with `informers.WithNamespace(ns)`, created when at least one kind only resolves through the kubeconfig namespace.
+  - Denied kinds get no informer at all; lister methods return the empty result and `Get` paths return `errKindNoAccess`. The UI shows an empty list rather than 403-looping in the background.
+- **Informers start lazily.** The `kindBindings` table (`internal/kube/informers.go`) enumerates every covered kind in one place so the routing decisions stay auditable, but only `Namespace` and `Pod` informers start on attach. Every other kind's informer is registered and started on first use — `factoryFor(kind)` (the chokepoint every lister and Get path goes through) calls `ensureKind`, which starts the informer and touches the kind once its cache syncs. Attaching to a large cluster therefore costs two LISTs up front, not ~50; a kind the user never opens never pays its cluster-wide LIST. Covered kinds: workloads (`Pod`, `Deployment`, `ReplicaSet`, `ReplicationController`, `StatefulSet`, `DaemonSet`, `Job`, `CronJob`), networking (`Service`, `Endpoints`, `EndpointSlice`, `Ingress`, `NetworkPolicy`), config (`ConfigMap`, `Secret`), storage (`PersistentVolumeClaim`, `PersistentVolume`, `StorageClass`), cluster (`Namespace`, `Node`, `Lease`, `ResourceQuota`, `LimitRange`, `IngressClass`, `PriorityClass`, `RuntimeClass`), autoscaling (`HorizontalPodAutoscaler`, `PodDisruptionBudget`), admission (`MutatingWebhookConfiguration`, `ValidatingWebhookConfiguration`) and the full RBAC set (`ServiceAccount`, `Role`, `RoleBinding`, `ClusterRole`, `ClusterRoleBinding`).
+- Per-kind listers (`Pods`, `Services`, `Secrets`, …) call `(*contextWatcher).factoryFor(kind)` instead of touching `w.factory` directly. That helper consults the access map and returns the routed factory or nil — every lister/Get site is identical in shape (`f := w.factoryFor("X"); if f == nil { return EMPTY }`).
+- Namespace selection in the UI is applied at lister-query time. Switching namespaces does **not** tear down or restart informers.
+- Informer lifecycle is owned by `ClientManager`; cancellation propagates via `context.Context`.
+- The backend debounces event bursts (~100 ms window) before emitting to the frontend to avoid flooding React.
+- Pod metrics are not informers — `metrics.k8s.io` only supports List. The frontend polls every 15 s and hides usage columns if the API is unavailable.
+
+### Custom Resources — auto-discovery via crdWatcher
+
+`internal/kube/crd.go` owns a `crdWatcher` that runs alongside the typed informer factory:
+
+1. On context attach, it lists `apiextensions.k8s.io/v1 CustomResourceDefinition` and emits a `_crds` change so the frontend (`useCRDStore`) can render the sidebar.
+2. When the user navigates into a CR list view, `EnsureCRWatch(group, version, resource)` lazily starts a **dynamic** informer for that GVR. Subsequent list/get calls hit the local cache — no on-demand list calls to the apiserver.
+3. CR list/detail go through the dynamic client only — there is no typed clientset for CRs. The detail dialog shows YAML by default.
+
+Several CRD families upgrade the sidebar from "browse" to "first-class integration", each with its own typed-ish view (`<name>.go` in `internal/kube`, feature folder in `frontend/src/features`):
+- `gateway.networking.k8s.io` → **Gateway API** group (`gateway.go`; see Gateway API section below).
+- `applications.argoproj.io` → **Argo CD** group (`argocd.go` + `argocd_projects.go`; see Argo CD section).
+- `karpenter.sh` → **Karpenter** group (`karpenter.go`; NodePools + NodeClaims).
+- `kustomize.toolkit.fluxcd.io` (kustomizations) → **Flux** group (`flux.go`).
+- `networking.istio.io` → **Istio** group (`istio.go`).
+- `cert-manager.io` (certificates) → **cert-manager** group (`certmanager.go`).
+- KEDA (`keda.go`) follows the same pattern.
+
+All detections live in `App.tsx` (`hasGatewayAPI`, `hasArgoApplications`, `hasKarpenter`, `hasFluxCD`, `hasIstio`, `hasCertManager`, …) by group/resource so reacting to a brand-new CRD install requires no rebuild. They are gated on single-context mode (`!isAggregated`). Adding another integration means: a `<name>.go` builder, an `App.tsx` detection flag, and a feature folder — no change to the generic CRD watcher.
+
+### Helm — release Secrets via the informer cache
+
+`internal/kube/helm.go` implements Helm v3 read+mutation against the cluster directly using the upstream `helm.sh/helm/v3` library — **no `helm` binary on PATH, no embedded chart packaging**.
+
+- **List path is informer-backed**: helm releases are stored as `Secret`s with a `helm.sh/release.v1` type. The contextWatcher's Secret event handler calls `maybeTouchHelm()` so a release change re-triggers Helm UI updates without an extra list. See `helm_cache.go` for the per-(context, namespace, name) cache.
+- **Mutations** (Install / Upgrade / Rollback / Uninstall) call helm v3 actions directly with a `kubeClient` constructed from our existing `restConfig`. Every Install/Upgrade returns a **dry-run** diff first; the UI shows it before the second call applies for real.
+- **Repos** are a JSON file under `~/Library/Application Support/klustr/helm-repos.json` (or platform equivalent). `SearchCharts` and `ChartVersions` use the existing repo index files Helm wrote.
+
+### Argo CD — auto-detected, K8s-API-driven
+
+`internal/kube/argocd.go` lists `argoproj.io/v1alpha1 Application` via the dynamic client and runs a CR informer for them.
+
+- **Sync** and **Refresh** are implemented as direct annotations on the Application:
+  - Sync: PATCH `operation.initiatedBy` + `operation.sync` block (the same payload `argocd app sync` PUTs).
+  - Refresh: PATCH the `argocd.argoproj.io/refresh` annotation.
+- This means Klustr works against any Argo CD install **without** an `argocd-server` ingress, an Argo CD login, or the `argocd` CLI on the user's PATH. The only requirement is that the kubeconfig user has permission to update Applications.
+- The Application detail dialog reads `.status.resources` to render a **Resources** tab listing every managed object. Each row deep-links into the regular Klustr detail panel for that object — so you can drill `App → Deployment → Pod → Logs` without leaving the dialog.
+
+### Gateway API — typed informers
+
+`internal/kube/gateway.go` uses `sigs.k8s.io/gateway-api/pkg/client/informers/externalversions` (a typed factory) rather than the dynamic client, so list updates are live without polling and `.status.conditions` arrive with strong types.
+
+- Sidebar group shown only when the `gateway.networking.k8s.io` CRDs are present.
+- Detail dialogs render the listener table, per-rule `match → backend → weight` matrix and `RouteParentStatus` block by reading the typed status — a `ResolvedRefs=False` / `RefNotPermitted` backend is one click away.
+- Vendor-neutral: works with Envoy Gateway, Cilium, Istio, Contour, NGINX Gateway Fabric or any conformant implementation.
+
+### Credential helpers — GUI launch without a terminal wrapper
+
+GUI-launched apps (Finder/Dock/.desktop) skip the shell rc, so kubeconfig exec
+plugins that rely on shell-provided PATH or ambient cloud credentials
+(`aws-vault exec <profile> -- <tool>`) fail. Two layers fix this:
+
+- **Shell-env import** (`shellenv.go`): on startup (GUI launch only, never on
+  Windows or terminal launches) klustr spawns `$SHELL -ilc`, dumps the env
+  between sentinels and merges PATH plus a fixed allowlist
+  (AWS_VAULT_BACKEND, AWS_CONFIG_FILE, proxies, KUBECONFIG, …) into the
+  process. `Watch`/`Ping` wait on the `envReady` gate so the first exec
+  credential helper run already sees the merged env. The hardcoded dirs in
+  `path.go` stay as fallback.
+- **Credential providers** (`creds*.go`): the user maps a context to an
+  aws-vault profile (Connections screen → Credential helpers section, hints
+  preselected from the kubeconfig exec block's `--profile`/`AWS_PROFILE`).
+  On connect, `Watch` runs `aws-vault export --format=json <profile>`
+  (single-flight; the macOS Keychain dialog may appear) and `restConfig()`
+  injects the captured keys into `rest.Config.ExecProvider.Env`, so
+  `aws eks get-token` behaves exactly as under `aws-vault exec`. Credentials
+  live in memory only — the JSON store under the user config dir holds
+  provider/profile names, never secrets, and no credential value is ever
+  logged or sent over a Wails binding. A timer re-captures ~5 min before
+  expiry and rebuilds the context's clients (client-go's exec authenticator
+  snapshots its env, so refresh requires fresh rest.Configs + a watch swap);
+  failures surface on `creds:update` as an error toast with a Retry action.
+  The provider interface is generic — granted/saml2aws/etc. are future
+  implementations beside `creds_awsvault.go`.
+
+### Multi-context aggregated mode
+
+Klustr can drive 2+ contexts at once as a single virtual cluster:
+
+- `useActiveContexts()` returns `aggregatedContexts` when length ≥ 2, else `[selectedContext]`. Every list/detail call fans out per context client-side and tags rows with a `Context` column.
+- The connection picker (`ConnectionsScreen`) lets the user **save a named group** of contexts. `contextGroups` lives in the UI store; selecting a saved group is one click. The same saved groups also appear in a **Groups section at the top of the in-session `ContextSwitcher` dropdown**, so a group can be activated mid-session without dropping back to the Welcome screen.
+- The status bar pings every active context every ~25 s (`/version` against a copy of the rest.Config with a 5 s timeout — see `manager.go` `Ping`). The dot turns amber on slow pings, red on failure with the real error in the tooltip.
+- Switching contexts (or the namespace selection across them) does not restart informers for already-attached contexts — `Watch` is idempotent per context and `StopWatch` is what tears one down.
+
+### Context tags & groups
+
+`ui.persistence.ts` persists three related concepts:
+
+- **Tags** (`contextTags`): up to `MAX_TAGS_PER_CONTEXT` (3) string ids per context. Colored, picked from a fixed palette. Custom tag definitions live in `customTags`.
+- **Groups** (`contextGroups`): named multi-context selections with their own color. Activating a group sets `aggregatedContexts` and `activeGroupId` in one transaction.
+- **Namespace selection** (`namespacesByContext` → effective `selectedNamespaces`): the multi-namespace filter is remembered **per active-context set** and survives reloads. The key is the sorted active contexts joined (a single context's name in single-context mode; the whole set in aggregated/group mode), so each cluster — and each distinct multi-cluster set — keeps its own filter. `normalizeContexts` re-applies the saved selection for the newly active set (an unseen set defaults to all namespaces); `selectedNamespaces` stays the effective list every consumer reads, and namespaces that don't exist in the active context(s) are silently ignored at lister-query time. An empty selection ("all namespaces") is the default and is not persisted.
+
+The top bar paints a thin colored stripe matching the primary tag (or active group) so the user has a constant visual reminder which environment they're touching. This is the only "guardrail" today against running a destructive action on the wrong cluster — a richer destructive-context guard is on the roadmap.
+
+### Frontend state — three layers, never mixed
+
+| Layer | Tool | Use |
+|---|---|---|
+| Real-time resource state | Zustand (`resources`, `metrics`, `portForwards`, `crds`, `helm`) | Live caches fed by Wails events |
+| Server actions | TanStack Query (mutations only) | Delete, apply, scale, restart, start/stop port-forward, helm install/upgrade |
+| UI state | Zustand (`ui` + `ui.types` + `ui.persistence`, plus `tablePrefs` and `namespaceFavorites`) | Selected context(s)/namespace(s), theme, detail navigation stack, table column prefs, namespace stars |
+
+Do not put Informer data into TanStack Query's cache, and do not put mutation state into Zustand. Crossing these layers causes subtle bugs around invalidation and re-renders.
+
+### UI layout
+
+Four-region layout:
+
+- **Top color stripe** (optional): reflects active context tag / group color.
+- **Header**: app name, context switcher, namespace selector, context-tag picker, port-forward indicator, disconnect button, theme picker.
+- **Sidebar**: collapsible resource-type navigation. Static groups in order: **Cluster** (Overview, Nodes, Namespaces, API Services, Flow Schemas, Priority Levels, Events) / **Workloads** (Overview, Pods, Deployments, StatefulSets, DaemonSets, ReplicaSets, ReplicationControllers, Jobs, CronJobs) / **Config** (ConfigMaps, Secrets, ResourceQuotas, LimitRanges, PriorityClasses, RuntimeClasses, Leases) / **Autoscaling** (HorizontalPodAutoscalers, PodDisruptionBudgets) / **Admission** (MutatingWebhooks, ValidatingWebhooks) / **Network** (Services, Ingresses, NetworkPolicies, EndpointSlices, Endpoints, IngressClasses) / **Storage** (PVCs, PVs, StorageClasses, CSI Drivers, CSI Nodes, Volume Attachments) / **Access Control** (Access Review, Service Accounts, Cluster Roles, Roles, Cluster Role Bindings, Role Bindings, CSRs) / **Helm** (always shown). Conditional groups (each shown only when its CRDs are detected in single-context mode): **Gateway API** (`gateway.networking.k8s.io`), **Argo CD** (`applications.argoproj.io`), **Karpenter** (`karpenter.sh`), **Flux** (`kustomize.toolkit.fluxcd.io`), **Istio** (`networking.istio.io`), **cert-manager** (`cert-manager.io`) and **KEDA**. A static **Devices** group covers Dynamic Resource Allocation (DeviceClasses, ResourceSlices, ResourceClaims, ResourceClaimTemplates) — like every static group it just renders empty if the `resource.k8s.io` API isn't served. Discovered CRDs (anything outside the above) are listed by API group below the static groups.
+- **Main**: resource list (`ResourceTable` generic over `<T>`) → detail Dialog with `Overview / Logs / Exec / Events / History / YAML` tabs as relevant.
+- **Status bar** (bottom): per-active-context ping dots, port-forward count, GitHub repo link, version label.
+
+The detail panel keeps a small navigation stack (`resourceNavStack` in `ui.ts`): drilling from a workload into a related pod, or from a pod into its owner/node, pushes the previous resource so the back arrow in the header can pop back to it.
+
+## Adding a new built-in resource
+
+Each kind is a thin, repeatable slice. Pick the `<group>` your kind belongs to from the sidebar (`workloads` / `networking` / `config` / `storage` / `cluster` / `autoscaling` / `admission` / `rbac`) and add to the matching per-group files. To add one:
+
+1. **Backend types**: `XxxInfo` (list shape) in `internal/kube/informers_<group>.go`, `XxxDetail` (detail shape) in `internal/kube/details_<group>.go`.
+2. **Informer registration**: add an entry to the `kindBindings` table in `informers.go` mapping `"Xxx"` to its informer constructor. Registration, start and the post-sync touch happen lazily in `ensureKind` — no per-kind handler block or initial-touch list to maintain.
+3. **Listers**: `(*contextWatcher).Xxxs(namespace)` and `(*contextWatcher).Xxx(namespace, name)` in `informers_<group>.go`. Detail builder is in `details_<group>.go`.
+4. **Manager**: list and detail forwarder methods on `*ClientManager` in `manager_<group>.go`. Bodies are 5 lines; mirror neighbors. Namespaced list forwarders must route through `listAcrossNamespaces(namespace, w.Xxxs)` — the frontend encodes a multi-namespace selection as a comma-separated set, and a forwarder that passes the raw string straight to a lister renders an empty table whenever 2+ namespaces are selected.
+5. **App bindings**: `ListXxxs` and `GetXxx` on `*App` (in `app/`). Wails autogenerates the TS binding on the next `wails dev`.
+6. **GVR**: entry in `kindToGVR` (`internal/kube/mutate.go`) so YAML edit / delete / scale work via the dynamic client.
+7. **Frontend**: types in `frontend/src/lib/api.ts`, slot in `frontend/src/store/resources.ts`, add the kind/view to the `ResourceKind` / `ResourceView` unions in `frontend/src/store/ui.types.ts`, create `XxxView.tsx` + `XxxDetailBody.tsx` under `frontend/src/features/<plural>/`, dispatch case in `ResourceDetailPanel.tsx`, sidebar entry in `_shared/resourceGroups.ts` (`RESOURCE_GROUPS`) + `MainView` case in `App.tsx`.
+
+Always init Go slices through `append([]string{}, src...)` so nil never serializes as JSON `null` — the React detail bodies treat these as arrays unconditionally.
+
+## Adding a Custom Resource (CRD) view
+
+For CRs Klustr **already lists generically** via the CRD watcher with a YAML-only detail. Only carve a dedicated typed view if the CR has meaningful status / spec UI beyond `kubectl edit` — see how `argocd.go` and `gateway.go` are done:
+
+- Either reuse a typed client (Gateway API has one) or unmarshal `*unstructured.Unstructured` into a typed Go struct before populating the Detail.
+- Hide the CR behind the generic CRD sidebar entry by default; promote it to its own sidebar group only when a CRD detection in `App.tsx` confirms the API is present.
+- Mutations should go through the K8s API (PATCH / annotation flip), not by shelling out to a vendor CLI.
+
+## Coding Conventions
+
+### Comments
+
+- Default to **no comments**. Well-named identifiers are the documentation.
+- Add a comment only when the **why** is non-obvious: a hidden constraint, a workaround for a specific bug, a non-trivial invariant, a deliberate deviation from convention.
+- Never write "WHAT" comments — the code already says what it does.
+- Never reference issues, PRs, callers, or "added for feature X" — that belongs in the commit message and rots in the code.
+
+### General code style
+
+- Don't add error handling for impossible cases. Validate at system boundaries (user input, Kubernetes API responses, file I/O); trust internal callers and framework guarantees.
+- Don't introduce abstractions for hypothetical future needs. Three similar lines is better than a premature helper.
+- Don't add backwards-compatibility shims, feature flags, or `_unused` placeholder renames unless the project actually needs them.
+- Delete dead code immediately. Don't leave `// removed` comments.
+
+### Go
+
+- Idiomatic Go: small interfaces, value semantics where appropriate, errors as values.
+- `context.Context` is the first parameter for any function that may block, spawn goroutines, or talk to the network.
+- Return errors; don't panic in library code.
+- Long-running goroutines (informers, log streams, exec sessions, port-forwards) **must** accept a `context.Context` and stop cleanly on cancel.
+- Never log or expose user credentials, tokens, or kubeconfig contents, even at debug level.
+
+### TypeScript / React
+
+- `strict: true`. No `any` unless at a true boundary, and only with a comment explaining why.
+- Prefer narrow types over broad ones. Discriminated unions over optional flags.
+- Wails bindings under `frontend/src/lib/wails/` are auto-generated. Never edit by hand. Wrap them in `frontend/src/lib/api.ts` for ergonomic helpers.
+- Real-time data is read from Zustand selectors only — never call Go directly in a render path.
+- Wrap heavy components (Monaco, xterm.js) in Suspense so they don't block initial render.
+- Use shadcn/ui primitives as the base; do not pull in a second component library.
+
+### Kubernetes interactions
+
+- Use the typed `client-go` clientset for built-in resources.
+- Use the typed `sigs.k8s.io/gateway-api` clientset for Gateway API kinds.
+- Use the dynamic client + discovery client for unknown CRDs.
+- Never use `kubectl`, `helm` or `argocd` as a subprocess from inside the app. Talk to the API directly.
+
+### Conventional Commits
+
+- Use Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`, `test:`, `docs:`).
+- Prefer many small, logically scoped commits over a single monolithic one — target ~10–20 small commits per feature batch when work splits cleanly.
+- Append **`[skip ci]`** to docs-only / asset-only commits (`docs:`, `chore(docs):`, README-only `chore:`, screenshot or video updates) so the release workflow doesn't run on content-only changes. Never use it on `feat:`, `fix:`, `refactor:`, `perf:`, `test:`, or anything that changes runnable code — those should keep running CI.
+
+## Testing
+
+The test surface is **headless unit tests only** — Vitest+jsdom for frontend, `go test` for backend. No Playwright, no in-app integration tests.
+
+- **What to test**: store reducers and selectors (`store/*.test.ts`), pure helpers (`internal/kube/*_test.go`), parsers (`releaseInfoFromRelease`, `crdInfoFromUnstructured`), and decision logic that does not require a running Kubernetes API.
+- **What to skip**: anything that needs the Wails runtime, a real kubeconfig, or a real cluster. Tests in `internal/kube` that need a client construct a fake clientset directly — they never call `manager.Watch`.
+- Tests live next to the code (`foo.go` ↔ `foo_test.go`, `foo.ts` ↔ `foo.test.ts`).
+- Manual verification is `wails dev` and a real kubeconfig — see **Verification Before Reporting Done** below.
+
+## Things to Avoid
+
+- Polling the Kubernetes API instead of using Informers (metrics.k8s.io is the only exception — it has no watch).
+- Installing anything inside the cluster — Klustr is a pure client. The only exception is the explicit "install metrics-server" action, which the user opts into and which Klustr can later uninstall by the label it stamps.
+- Importing Wails-specific packages into `internal/kube/...`.
+- Returning nil slices from Go: the JSON encoder emits `null` and React `.length` access blows up. Use `append([]string{}, src...)`.
+- Passing a fresh object literal into TanStack `state.columnSizing` (or similar controlled props) every render — TanStack fires the change handler and the controlled store ping-pongs into an infinite loop.
+- Adding global stores beyond the documented layers — current legal set is `resources`, `metrics`, `portForwards`, `crds`, `helm`, `credentials`, `namespaceFavorites`, `access` (RBAC Access Review state), `terminals` (system/node terminal sessions), `ui`, `tablePrefs`. Anything new needs a reason in the PR.
+- Generating boilerplate docs (CHANGELOG, CODE_OF_CONDUCT, SECURITY, PR templates) before they're needed. The contributor-facing surface today is `CONTRIBUTING.md` and a single `.github/ISSUE_TEMPLATE/bug_report.yml`.
+- Marketing-style copy or emoji in UI strings unless explicitly requested.
+- Editing auto-generated Wails bindings.
+- Staging anything under `hack/`. That directory is the user's local fixtures and is curated by hand.
+- Triggering the release workflow on docs-only / asset-only changes. Append **`[skip ci]`** to those commit subjects so the build doesn't run for a README tweak.
+
+## Development Workflow
+
+```bash
+mise install                  # one-time: installs Go, Node, Wails CLI per .mise.toml
+wails dev                     # hot-reload dev session; opens native window
+
+# Backend
+go test klustr/internal/...   # unit tests
+go vet ./...                  # vet
+golangci-lint run             # full lint (optional, slower)
+
+# Frontend (inside frontend/)
+npm test                      # Vitest
+npm run lint                  # ESLint
+npm run typecheck             # tsc --noEmit
+npm run build                 # production bundle
+```
+
+Docker is **not** required — local dev uses native toolchains; CI builds use GitHub-hosted runners directly.
+
+## Release Process
+
+Klustr is pre-1.0 and ships from `main`. The flow per release:
+
+1. **Land all changes on `main`** via small Conventional Commits.
+2. **Decide the bump**:
+   - `feat:` commits in the range → minor bump (`v0.X.0`).
+   - Only `fix:` / `refactor:` / `test:` / `docs:` / `chore:` → patch bump (`v0.X.Y`).
+3. **Smoke-test in `wails dev`**: run it, exercise the changed feature, wait for explicit OK before pushing.
+4. **Tag and push**: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`. This triggers `.github/workflows/release.yml`.
+5. **Wait for the workflow** (~7 min). It builds darwin-arm64 + linux-amd64 (.tar.gz + .deb), attaches all three as assets, and creates a **draft** GitHub release with auto-generated notes appended to the install block.
+6. **Rewrite the draft notes**: write the notes to a `.md` file and pass `--notes-file`:
+   ```bash
+   gh release edit vX.Y.Z --notes-file release-notes.md
+   ```
+   `--notes-file` is required — inline heredocs (`--notes "$(cat <<EOF…EOF)"`) silently break triple-backtick code fences inside the body. Keep the **Install** block at the bottom of the file verbatim (Homebrew + Manual `curl` snippet, with the tag pinned in the URL).
+7. **Publish**: `gh release edit vX.Y.Z --draft=false`. The same workflow run automatically bumps the Homebrew cask in the tap repo (`HOMEBREW_TAP_TOKEN`) and the AUR `klustr-bin` package (`AUR_SSH_PRIVATE_KEY`). Both bumps are skipped for prerelease tags (those containing a `-`).
+
+Notes on the workflow:
+- `prerelease: true` is set automatically when the tag contains a `-` (e.g. `v0.15.0-rc1`).
+- Linux (amd64) is published as a release asset. Windows is still built-but-unpublished — that ships as part of the v1 path.
+- Auto-update is **not** wired in — also a v1 prerequisite.
+
+## Verification Before Reporting Done
+
+- Go: `go test klustr/internal/...` and `go vet ./...` pass.
+- Frontend (inside `frontend/`): `npm test`, `npm run lint`, `npm run typecheck` pass.
+- Manual: `wails dev` runs and the changed feature actually works in the native window. Type checks alone are not sufficient for UI work.
