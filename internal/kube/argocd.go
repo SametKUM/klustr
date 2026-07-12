@@ -144,27 +144,11 @@ type ArgoSyncOptions struct {
 	Resources       []ArgoSyncResourceSelector `json:"resources"`
 }
 
-// SyncArgoApplication writes the operation.sync block, exactly the same
-// payload `argocd app sync` PUTs through argocd-server. Argo's
-// application-controller picks `operation` up, runs the sync, then clears
-// the field once the operation finishes.
-//
-// Revision="" defaults to "HEAD" (use spec.source.targetRevision).
-// Strategy="" defaults to "hook" — respects sync waves + pre/post-sync
-// hooks, which is what `argocd app sync` does by default.
-func (m *ClientManager) SyncArgoApplication(ctx context.Context, contextName, namespace, name string, opts ArgoSyncOptions) error {
-	if err := m.assertWritable(contextName); err != nil {
-		return err
-	}
+func buildArgoSyncPatch(opts ArgoSyncOptions) map[string]any {
 	revision := opts.Revision
 	if revision == "" {
 		revision = "HEAD"
 	}
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return err
-	}
-
 	sync := map[string]any{
 		"revision": revision,
 		"prune":    opts.Prune,
@@ -179,10 +163,9 @@ func (m *ClientManager) SyncArgoApplication(ctx context.Context, contextName, na
 	if opts.Force {
 		strategyBody["force"] = true
 	}
-	switch strategy {
-	case "apply":
+	if strategy == "apply" {
 		sync["syncStrategy"] = map[string]any{"apply": strategyBody}
-	default:
+	} else {
 		sync["syncStrategy"] = map[string]any{"hook": strategyBody}
 	}
 
@@ -199,18 +182,18 @@ func (m *ClientManager) SyncArgoApplication(ctx context.Context, contextName, na
 
 	if len(opts.Resources) > 0 {
 		resources := make([]map[string]any, 0, len(opts.Resources))
-		for _, r := range opts.Resources {
+		for _, resource := range opts.Resources {
 			resources = append(resources, map[string]any{
-				"group":     r.Group,
-				"kind":      r.Kind,
-				"name":      r.Name,
-				"namespace": r.Namespace,
+				"group":     resource.Group,
+				"kind":      resource.Kind,
+				"name":      resource.Name,
+				"namespace": resource.Namespace,
 			})
 		}
 		sync["resources"] = resources
 	}
 
-	patch := map[string]any{
+	return map[string]any{
 		"operation": map[string]any{
 			"initiatedBy": map[string]any{
 				"username":  "klustr",
@@ -219,7 +202,41 @@ func (m *ClientManager) SyncArgoApplication(ctx context.Context, contextName, na
 			"sync": sync,
 		},
 	}
-	body, err := json.Marshal(patch)
+}
+
+func buildArgoRollbackPatch(id int64, prune bool) map[string]any {
+	return map[string]any{
+		"operation": map[string]any{
+			"initiatedBy": map[string]any{
+				"username":  "klustr",
+				"automated": false,
+			},
+			"rollback": map[string]any{
+				"id":    id,
+				"prune": prune,
+			},
+		},
+	}
+}
+
+// SyncArgoApplication writes the operation.sync block, exactly the same
+// payload `argocd app sync` PUTs through argocd-server. Argo's
+// application-controller picks `operation` up, runs the sync, then clears
+// the field once the operation finishes.
+//
+// Revision="" defaults to "HEAD" (use spec.source.targetRevision).
+// Strategy="" defaults to "hook" — respects sync waves + pre/post-sync
+// hooks, which is what `argocd app sync` does by default.
+func (m *ClientManager) SyncArgoApplication(ctx context.Context, contextName, namespace, name string, opts ArgoSyncOptions) error {
+	if err := m.assertWritable(contextName); err != nil {
+		return err
+	}
+	dyn, err := m.dynamicClient(contextName)
+	if err != nil {
+		return err
+	}
+
+	body, err := json.Marshal(buildArgoSyncPatch(opts))
 	if err != nil {
 		return err
 	}
@@ -537,19 +554,7 @@ func (m *ClientManager) RollbackArgoApplication(ctx context.Context, contextName
 	if err != nil {
 		return err
 	}
-	patch := map[string]any{
-		"operation": map[string]any{
-			"initiatedBy": map[string]any{
-				"username":  "klustr",
-				"automated": false,
-			},
-			"rollback": map[string]any{
-				"id":    id,
-				"prune": prune,
-			},
-		},
-	}
-	body, err := json.Marshal(patch)
+	body, err := json.Marshal(buildArgoRollbackPatch(id, prune))
 	if err != nil {
 		return err
 	}

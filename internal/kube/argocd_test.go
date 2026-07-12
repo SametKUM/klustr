@@ -1,10 +1,90 @@
 package kube
 
 import (
+	"encoding/json"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+func TestBuildArgoSyncPatch(t *testing.T) {
+	tests := []struct {
+		name string
+		opts ArgoSyncOptions
+		want string
+	}{
+		{
+			name: "defaults to HEAD and hook strategy",
+			want: `{"operation":{"initiatedBy":{"automated":false,"username":"klustr"},"sync":{"dryRun":false,"prune":false,"revision":"HEAD","syncStrategy":{"hook":{}}}}}`,
+		},
+		{
+			name: "apply strategy with force and sync options",
+			opts: ArgoSyncOptions{
+				Revision:        "v1.2.3",
+				DryRun:          true,
+				Prune:           true,
+				Force:           true,
+				Replace:         true,
+				ServerSideApply: true,
+				Strategy:        "apply",
+			},
+			want: `{"operation":{"initiatedBy":{"automated":false,"username":"klustr"},"sync":{"dryRun":true,"prune":true,"revision":"v1.2.3","syncOptions":["Replace=true","ServerSideApply=true"],"syncStrategy":{"apply":{"force":true}}}}}`,
+		},
+		{
+			name: "selective sync preserves cluster-scoped namespace",
+			opts: ArgoSyncOptions{
+				Resources: []ArgoSyncResourceSelector{
+					{Group: "apps", Kind: "Deployment", Name: "api", Namespace: "prod"},
+					{Group: "", Kind: "Namespace", Name: "prod", Namespace: ""},
+				},
+			},
+			want: `{"operation":{"initiatedBy":{"automated":false,"username":"klustr"},"sync":{"dryRun":false,"prune":false,"resources":[{"group":"apps","kind":"Deployment","name":"api","namespace":"prod"},{"group":"","kind":"Namespace","name":"prod","namespace":""}],"revision":"HEAD","syncStrategy":{"hook":{}}}}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := json.Marshal(buildArgoSyncPatch(tt.opts))
+			if err != nil {
+				t.Fatalf("marshal patch: %v", err)
+			}
+			if string(got) != tt.want {
+				t.Fatalf("patch mismatch\ngot:  %s\nwant: %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildArgoRollbackPatch(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		id    int64
+		prune bool
+		want  string
+	}{
+		{
+			name: "without prune",
+			id:   42,
+			want: `{"operation":{"initiatedBy":{"automated":false,"username":"klustr"},"rollback":{"id":42,"prune":false}}}`,
+		},
+		{
+			name:  "with prune",
+			id:    99,
+			prune: true,
+			want:  `{"operation":{"initiatedBy":{"automated":false,"username":"klustr"},"rollback":{"id":99,"prune":true}}}`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := json.Marshal(buildArgoRollbackPatch(tt.id, tt.prune))
+			if err != nil {
+				t.Fatalf("marshal patch: %v", err)
+			}
+			if string(got) != tt.want {
+				t.Fatalf("patch mismatch\ngot:  %s\nwant: %s", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestExtractArgoApplication(t *testing.T) {
 	obj := &unstructured.Unstructured{Object: map[string]any{
