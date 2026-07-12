@@ -99,7 +99,8 @@ import { CertificateRequestsView } from '@/features/cert-manager/CertificateRequ
 import { OrdersView } from '@/features/cert-manager/OrdersView'
 import { ChallengesView } from '@/features/cert-manager/ChallengesView'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
-import { ARGO_GROUP, CERT_MANAGER_GROUP_NAV, FLUX_GROUP, GATEWAY_GROUP, HELM_GROUP, ISTIO_GROUP, KARPENTER_GROUP, RESOURCE_GROUPS, type ResourceGroup } from '@/features/_shared/resourceGroups'
+import type { ResourceGroup } from '@/features/_shared/resourceGroups'
+import { useVisibleResourceGroups } from '@/features/_shared/useVisibleResourceGroups'
 import { HiddenSidebarItemsButton } from '@/features/_shared/HiddenSidebarItemsButton'
 import { SidebarGroup } from '@/features/_shared/SidebarGroup'
 import { SidebarResizeHandle } from '@/features/_shared/SidebarResizeHandle'
@@ -130,7 +131,7 @@ import { useHelmStore } from '@/store/helm'
 import { useMetrics } from '@/store/metrics'
 import { usePortForwards } from '@/store/portForwards'
 import { useTerminalStore } from '@/store/terminals'
-import { kindAccessibleInAny, useAccessStore } from '@/store/access'
+import { useAccessStore } from '@/store/access'
 
 
 function MainView() {
@@ -379,64 +380,13 @@ function App() {
   const setSelectedCRD = useUIStore((s) => s.setSelectedCRD)
   const setAccess = useAccessStore((s) => s.set)
   const resetAccess = useAccessStore((s) => s.reset)
-  const accessByContext = useAccessStore((s) => s.byContext)
   const hiddenSidebarItems = useEffectiveHiddenSidebarItems()
   const hideSidebarItem = useUIStore((s) => s.hideSidebarItem)
   const showSidebarItem = useUIStore((s) => s.showSidebarItem)
   const clearHiddenSidebarItems = useUIStore((s) => s.clearHiddenSidebarItems)
   const activeNavItemRef = useRef<HTMLLIElement | null>(null)
 
-  const isAggregated = activeContexts.length >= 2
-  const hasGatewayAPI = !isAggregated && crds.some((c) => c.group === 'gateway.networking.k8s.io')
-  const hasArgoApplications =
-    !isAggregated &&
-    crds.some((c) => c.group === 'argoproj.io' && c.resource === 'applications')
-  const hasKarpenter = !isAggregated && crds.some((c) => c.group === 'karpenter.sh')
-  const hasFluxCD =
-    !isAggregated &&
-    crds.some((c) => c.group === 'kustomize.toolkit.fluxcd.io' && c.resource === 'kustomizations')
-  const hasIstio = !isAggregated && crds.some((c) => c.group === 'networking.istio.io')
-  const hasCertManager =
-    !isAggregated &&
-    crds.some((c) => c.group === 'cert-manager.io' && c.resource === 'certificates')
-  const visibleGroups = useMemo<ResourceGroup[]>(() => {
-    const allGroups: ResourceGroup[] = [
-      ...RESOURCE_GROUPS,
-      ...(hasGatewayAPI ? [GATEWAY_GROUP] : []),
-      ...(hasIstio ? [ISTIO_GROUP] : []),
-      ...(hasCertManager ? [CERT_MANAGER_GROUP_NAV] : []),
-      ...(hasArgoApplications ? [ARGO_GROUP] : []),
-      ...(hasKarpenter ? [KARPENTER_GROUP] : []),
-      ...(hasFluxCD ? [FLUX_GROUP] : []),
-      HELM_GROUP,
-    ]
-    // Filter each group's items by per-context RBAC reach. Items without a
-    // `kind` (Overview, Events, Access Review, Helm Repos) always survive
-    // because they aren't gated on a single kind. Drop groups that empty out.
-    // The user-hide filter runs after RBAC so the "Show hidden" popover
-    // never offers an item the current contexts can't see anyway.
-    const hidden = new Set<string>(hiddenSidebarItems)
-    return allGroups
-      .map((g) => ({
-        ...g,
-        items: g.items.filter(
-          (i) =>
-            (!i.kind || kindAccessibleInAny(accessByContext, activeContexts, i.kind)) &&
-            (!i.view || !hidden.has(i.view)),
-        ),
-      }))
-      .filter((g) => g.items.length > 0)
-  }, [
-    hasGatewayAPI,
-    hasArgoApplications,
-    hasKarpenter,
-    hasFluxCD,
-    hasIstio,
-    hasCertManager,
-    accessByContext,
-    activeContexts,
-    hiddenSidebarItems,
-  ])
+  const visibleGroups = useVisibleResourceGroups()
   const navViews = useMemo<ResourceView[]>(() => visibleGroups.flatMap(groupViews), [
     visibleGroups,
   ])
