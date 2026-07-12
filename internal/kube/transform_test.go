@@ -61,3 +61,26 @@ func TestStripManagedFieldsNoManagedFieldsIsNoop(t *testing.T) {
 		t.Fatal("expected nil managedFields to stay nil")
 	}
 }
+
+func TestStripManagedFieldsZerosCachedSecretValues(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "credentials", Namespace: "prod"},
+		Data: map[string][]byte{
+			"token": []byte("super-secret"),
+		},
+	}
+
+	out, err := stripManagedFields(secret)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	value := out.(*corev1.Secret).Data["token"]
+	if len(value) != len("super-secret") {
+		t.Fatalf("value length must survive for key-size metadata, got %d", len(value))
+	}
+	for _, b := range value {
+		if b != 0 {
+			t.Fatal("cached secret value must be zeroed")
+		}
+	}
+}

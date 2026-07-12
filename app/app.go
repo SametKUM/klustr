@@ -277,7 +277,7 @@ func (a *App) GetSecret(contextName, namespace, name string) (*kube.SecretDetail
 }
 
 func (a *App) RevealSecretValue(contextName, namespace, name, key string) (kube.SecretValueResult, error) {
-	return a.clients.SecretValue(contextName, namespace, name, key)
+	return a.clients.SecretValue(a.ctx, contextName, namespace, name, key)
 }
 
 func (a *App) GetIngress(contextName, namespace, name string) (*kube.IngressDetail, error) {

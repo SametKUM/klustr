@@ -1,11 +1,14 @@
 package kube
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"sort"
 	"time"
 	"unicode/utf8"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // SecretValueResult carries a revealed secret value across the bridge. Binary
@@ -109,12 +112,12 @@ func (w *contextWatcher) Secret(namespace, name string) (*SecretDetail, error) {
 // SecretValue returns the decoded UTF-8 value for a single key of a
 // Secret. Values are only fetched when the user explicitly asks the UI
 // to reveal them — never as part of a list or detail load.
-func (w *contextWatcher) SecretValue(namespace, name, key string) (SecretValueResult, error) {
+func (w *contextWatcher) SecretValue(ctx context.Context, namespace, name, key string) (SecretValueResult, error) {
 	f := w.factoryFor("Secret")
 	if f == nil {
 		return SecretValueResult{}, errKindNoAccess("Secret")
 	}
-	s, err := f.Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
+	s, err := w.cs.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return SecretValueResult{}, err
 	}
