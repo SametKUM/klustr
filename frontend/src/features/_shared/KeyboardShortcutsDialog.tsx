@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { isEditableTarget } from '@/lib/dom'
 
 const IS_MAC =
   typeof navigator !== 'undefined' &&
@@ -47,13 +48,6 @@ const GROUPS: Group[] = [
     shortcuts: [{ keys: ['?'], label: 'Show this cheatsheet' }],
   },
 ]
-
-function isEditableTarget(t: EventTarget | null): boolean {
-  if (!(t instanceof HTMLElement)) return false
-  if (t.isContentEditable) return true
-  const tag = t.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
-}
 
 export function KeyboardShortcutsDialog() {
   const [open, setOpen] = useState(false)

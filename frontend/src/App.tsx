@@ -116,6 +116,7 @@ import { TerminalDrawer } from '@/features/terminal/TerminalDrawer'
 import { Toaster } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
+import { isEditableTarget } from '@/lib/dom'
 import { onCredsUpdate, onKubeChange, onPFUpdate, resetSyncState } from '@/lib/events'
 import { toast } from 'sonner'
 import { useCredentialsStore } from '@/store/credentials'
@@ -343,13 +344,6 @@ function groupViews(group: ResourceGroup): ResourceView[] {
 }
 
 type NavEntry = { kind: 'view'; view: ResourceView } | { kind: 'crd'; key: string }
-
-function isEditableTarget(t: EventTarget | null): boolean {
-  if (!(t instanceof HTMLElement)) return false
-  if (t.isContentEditable) return true
-  const tag = t.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
-}
 
 function App() {
   const activeContexts = useActiveContexts()

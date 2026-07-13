@@ -27,6 +27,7 @@ import {
   X,
 } from 'lucide-react'
 import { isKindSynced, onKubeChange } from '@/lib/events'
+import { isEditableTarget } from '@/lib/dom'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { stableList } from '@/lib/stableList'
 import { useNowTick } from '@/lib/nowTick'
@@ -149,13 +150,6 @@ function mergeOrder(all: string[], saved: string[]): string[] {
     if (!seen.has(id)) result.push(id)
   }
   return result
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  if (target.isContentEditable) return true
-  const tag = target.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
 }
 
 type ResourceRowProps<T> = {
