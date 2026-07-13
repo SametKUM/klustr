@@ -60,8 +60,18 @@ async function runAll<T extends BulkItem>(
   return { ok, failed }
 }
 
+type OutcomeAction = 'Deleted' | 'Restarted' | 'Cordoned' | 'Uncordoned' | 'Drained'
+
+const IMPERATIVE_BY_ACTION: Record<OutcomeAction, string> = {
+  Deleted: 'delete',
+  Restarted: 'restart',
+  Cordoned: 'cordon',
+  Uncordoned: 'uncordon',
+  Drained: 'drain',
+}
+
 function reportOutcome(
-  action: 'Deleted' | 'Restarted' | 'Cordoned' | 'Uncordoned' | 'Drained',
+  action: OutcomeAction,
   ok: number,
   failed: number,
   label: string,
@@ -69,7 +79,7 @@ function reportOutcome(
   if (failed === 0) {
     toast.success(`${action} ${ok} ${label}`)
   } else if (ok === 0) {
-    toast.error(`Failed to ${action.toLowerCase().replace(/ed$/, '')} ${failed} ${label}`)
+    toast.error(`Failed to ${IMPERATIVE_BY_ACTION[action]} ${failed} ${label}`)
   } else {
     toast.warning(`${action} ${ok} ${label} — ${failed} failed`)
   }
