@@ -7,6 +7,23 @@ import { OwnerLink } from '@/features/_shared/OwnerLink'
 import { RelatedPods } from '@/features/_shared/RelatedPods'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
+function ReplicaSetConditionPill({ status }: { status: string }) {
+  if (!status) return <span className="text-muted-foreground/70">—</span>
+  const className =
+    status === 'True'
+      ? 'bg-destructive/15 text-destructive'
+      : status === 'False'
+        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+        : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+  return (
+    <span
+      className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${className}`}
+    >
+      {status}
+    </span>
+  )
+}
+
 export function ReplicaSetDetailBody({
   contextName,
   namespace,
@@ -57,7 +74,9 @@ export function ReplicaSetDetailBody({
                 {detail.conditions.map((c, i) => (
                   <tr key={i} className="border-t border-border">
                     <Td>{c.type}</Td>
-                    <Td>{c.status}</Td>
+                    <Td>
+                      <ReplicaSetConditionPill status={c.status} />
+                    </Td>
                     <Td>{c.reason || '—'}</Td>
                   </tr>
                 ))}
