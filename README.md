@@ -73,7 +73,7 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 - 🔄 **Port-forwarding.** Suggested local ports, persistent header indicator, click-to-open in browser.
 - 🗺️ **Cluster overviews.** CPU / memory / pod donuts, workloads health, recent warnings — single-cluster or aggregated.
 - 🧭 **Cross-resource navigation.** Drill from workload to pod to node and back.
-- 🎨 **Themes & shortcuts.** Command palette (`⌘P`), namespace search (`⌘N`), keyboard cheatsheet (`?`).
+- 🎨 **Themes & shortcuts.** Command palette (`⌘K`), pod search (`⌘P`), namespace search (`⌘N`), keyboard cheatsheet (`?`).
 
 ## Screenshots
 
@@ -164,7 +164,7 @@ Windows builds will be attached to releases once they've been validated. Until t
 
 1. Klustr reads `~/.kube/config` at launch.
 2. On first run, pick a context — or check **two or more** to view them aggregated as one cluster. Save a recurring selection as a named **group** for one-click reconnect, and toggle **Auto-connect** on a card to pin it as the default.
-3. Browse via the sidebar, click any row for a detail dialog, or `⌘P` to fuzzy-search resources by name. The header's **Disconnect** button drops you back to the picker at any time.
+3. Browse via the sidebar, click any row for a detail dialog, use `⌘K` to open the command palette, or `⌘P` to search pods by name. The header's **Disconnect** button drops you back to the picker at any time.
 
 ## Documentation
 
