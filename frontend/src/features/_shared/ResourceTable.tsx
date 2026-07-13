@@ -1198,12 +1198,14 @@ export function ResourceTable<T>({
       )}
       <BulkDeleteDialog
         items={bulkItems}
+        noun={noun}
         open={bulkDeleteOpen}
         onOpenChange={setBulkDeleteOpen}
         onSuccess={clearSelection}
       />
       <BulkRestartDialog
         items={bulkItems}
+        noun={noun}
         open={bulkRestartOpen}
         onOpenChange={setBulkRestartOpen}
         onSuccess={clearSelection}
@@ -1212,6 +1214,7 @@ export function ResourceTable<T>({
         <>
           <BulkCordonDialog
             items={bulkItems}
+            noun={noun}
             open={bulkCordon !== null}
             onOpenChange={(next) => setBulkCordon(next ? bulkCordon : null)}
             onSuccess={clearSelection}
@@ -1219,6 +1222,7 @@ export function ResourceTable<T>({
           />
           <BulkDrainDialog
             items={bulkItems}
+            noun={noun}
             open={bulkDrainOpen}
             onOpenChange={setBulkDrainOpen}
             onSuccess={clearSelection}

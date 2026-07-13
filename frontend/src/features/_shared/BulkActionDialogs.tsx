@@ -24,6 +24,7 @@ export type BulkItem = {
 
 type DialogProps = {
   items: BulkItem[]
+  noun: { singular: string; plural: string }
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
@@ -36,14 +37,8 @@ function preview(items: BulkItem[]): { shown: BulkItem[]; rest: number } {
   return { shown: items.slice(0, PREVIEW_LIMIT), rest: items.length - PREVIEW_LIMIT }
 }
 
-function kindLabel(items: BulkItem[]): string {
-  if (items.length === 0) return 'resource'
-  const kinds = new Set(items.map((i) => i.kind))
-  if (kinds.size === 1) {
-    const kind = items[0].kind.toLowerCase()
-    return items.length === 1 ? kind : `${kind}s`
-  }
-  return 'resources'
+function nounLabel(noun: DialogProps['noun'], count: number): string {
+  return count === 1 ? noun.singular : noun.plural
 }
 
 async function runAll<T extends BulkItem>(
@@ -85,9 +80,9 @@ function reportOutcome(
   }
 }
 
-export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: DialogProps) {
+export function BulkDeleteDialog({ items, noun, open, onOpenChange, onSuccess }: DialogProps) {
   const [typed, setTyped] = useState('')
-  const label = kindLabel(items)
+  const label = nounLabel(noun, items.length)
   const { shown, rest } = preview(items)
   const confirmed = typed === 'DELETE'
 
@@ -175,8 +170,8 @@ export function BulkDeleteDialog({ items, open, onOpenChange, onSuccess }: Dialo
   )
 }
 
-export function BulkRestartDialog({ items, open, onOpenChange, onSuccess }: DialogProps) {
-  const label = kindLabel(items)
+export function BulkRestartDialog({ items, noun, open, onOpenChange, onSuccess }: DialogProps) {
+  const label = nounLabel(noun, items.length)
   const { shown, rest } = preview(items)
 
   const restart = useMutation({
@@ -247,6 +242,7 @@ export function BulkRestartDialog({ items, open, onOpenChange, onSuccess }: Dial
 
 export function BulkCordonDialog({
   items,
+  noun,
   open,
   onOpenChange,
   onSuccess,
@@ -254,13 +250,14 @@ export function BulkCordonDialog({
 }: DialogProps & { cordon: boolean }) {
   const { shown, rest } = preview(items)
   const verb = cordon ? 'Cordon' : 'Uncordon'
+  const label = nounLabel(noun, items.length)
 
   const mut = useMutation({
     mutationFn: async () => {
       return runAll(items, (it) => api.cordonNode(it.contextName, it.name, cordon))
     },
     onSuccess: (res) => {
-      reportOutcome(cordon ? 'Cordoned' : 'Uncordoned', res.ok, res.failed.length, kindLabel(items))
+      reportOutcome(cordon ? 'Cordoned' : 'Uncordoned', res.ok, res.failed.length, label)
       onOpenChange(false)
       onSuccess?.()
     },
@@ -277,7 +274,7 @@ export function BulkCordonDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {verb} {items.length} {kindLabel(items)}?
+            {verb} {items.length} {label}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             {cordon
@@ -325,8 +322,9 @@ function isTerminal(p: NodeDrainProgress): boolean {
   return p.phase === 'done' || p.phase === 'error'
 }
 
-export function BulkDrainDialog({ items, open, onOpenChange, onSuccess }: DialogProps) {
+export function BulkDrainDialog({ items, noun, open, onOpenChange, onSuccess }: DialogProps) {
   const { shown, rest } = preview(items)
+  const label = nounLabel(noun, items.length)
 
   const [progress, setProgress] = useState<Record<string, NodeDrainProgress> | null>(null)
   const unsubsRef = useRef<(() => void)[]>([])
@@ -350,9 +348,9 @@ export function BulkDrainDialog({ items, open, onOpenChange, onSuccess }: Dialog
     reportedRef.current = true
     unsubAll()
     const failed = items.filter((it) => progress[drainKey(it)]?.phase === 'error').length
-    reportOutcome('Drained', items.length - failed, failed, kindLabel(items))
+    reportOutcome('Drained', items.length - failed, failed, label)
     onSuccess?.()
-  }, [allDone, progress, items, onSuccess])
+  }, [allDone, progress, items, label, onSuccess])
 
   const start = () => {
     reportedRef.current = false
@@ -394,7 +392,7 @@ export function BulkDrainDialog({ items, open, onOpenChange, onSuccess }: Dialog
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Drain {items.length} {kindLabel(items)}?
+            Drain {items.length} {label}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             Cordons each node, then evicts all pods through the Eviction API, so
