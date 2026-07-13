@@ -1399,8 +1399,14 @@ function ContextCard({
             <div className="ml-auto flex items-center gap-1.5">
               {shortcut && (
                 <span className="inline-flex items-center gap-0.5 rounded border border-border/70 bg-background/60 px-1 py-px font-mono text-[9px] text-muted-foreground">
-                  <Command className="size-2.5" />
-                  {shortcut.replace(/^⌘|^Ctrl/, '')}
+                  {shortcut.startsWith('⌘') ? (
+                    <>
+                      <Command className="size-2.5" />
+                      {shortcut.slice(1)}
+                    </>
+                  ) : (
+                    shortcut
+                  )}
                 </span>
               )}
               {version && (
