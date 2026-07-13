@@ -21,7 +21,7 @@ Cross-platform Kubernetes desktop client. Multi-context cluster management with 
 | Toolchain | mise (pins Go, Node, Wails CLI versions) |
 | Lint / format | golangci-lint (Go) + ESLint (frontend) |
 | Tests | `go test` (backend) + Vitest + jsdom (frontend) |
-| CI release builds | GitHub Actions matrix on hosted runners (macOS, Windows, Linux) |
+| CI release builds | GitHub Actions matrix on hosted runners (macOS arm64 + Linux amd64; Windows disabled until the v1 distribution path) |
 | Release publishing | `softprops/action-gh-release` (macOS .tar.gz + Linux .tar.gz + .deb assets today), Homebrew cask auto-bump for macOS + AUR `klustr-bin` auto-bump for Arch |
 
 ## Project Structure
@@ -70,7 +70,7 @@ klustr/
 │       ├── flux.go                  Flux Kustomization / source views (CRD-gated)
 │       ├── istio.go                 Istio networking views (CRD-gated)
 │       ├── certmanager.go           cert-manager Certificate / Issuer views (CRD-gated)
-│       ├── keda.go                  KEDA ScaledObject views (CRD-gated)
+│       ├── keda.go                  KEDA ScaledObject-backed HPA trigger enrichment
 │       ├── apiservice.go            aggregated APIService list + availability status
 │       ├── rbac_review.go           Access Review (SelfSubjectAccessReview helpers)
 │       ├── namespaces.go            Namespace lister/detail helpers
@@ -142,7 +142,7 @@ klustr/
 │   └── screenshots/                numbered themed pack `01-*.png` …
 │                                   `10-*.png` for README grid + press / blog
 ├── hack/                         user's local fixtures (NEVER commit anything under hack/)
-└── .github/workflows/            release matrix (release.yml → builds 3 OSes, ships macOS)
+└── .github/workflows/            release matrix (release.yml → builds macOS + Linux)
 ```
 
 The `internal/` ↔ `app/` split is intentional:
@@ -185,9 +185,9 @@ Several CRD families upgrade the sidebar from "browse" to "first-class integrati
 - `kustomize.toolkit.fluxcd.io` (kustomizations) → **Flux** group (`flux.go`).
 - `networking.istio.io` → **Istio** group (`istio.go`).
 - `cert-manager.io` (certificates) → **cert-manager** group (`certmanager.go`).
-- KEDA (`keda.go`) follows the same pattern.
+- KEDA stays in generic CRD browse; `keda.go` additionally enriches HPA metrics with their owning ScaledObject trigger metadata instead of adding a dedicated sidebar group.
 
-All detections live in `App.tsx` (`hasGatewayAPI`, `hasArgoApplications`, `hasKarpenter`, `hasFluxCD`, `hasIstio`, `hasCertManager`, …) by group/resource so reacting to a brand-new CRD install requires no rebuild. They are gated on single-context mode (`!isAggregated`). Adding another integration means: a `<name>.go` builder, an `App.tsx` detection flag, and a feature folder — no change to the generic CRD watcher.
+Dedicated integration visibility is declared in `visibleResourceGroups.ts` through per-view `CRD_REQUIREMENTS` and evaluated against `crdsByContext` for the active context set. An integration item appears when at least one active context serves its CRD; its watch/list path fans out only to supporting contexts, so the same views work in single- and multi-context modes. Adding another integration means: a `<name>.go` builder, a resource-group item plus its `CRD_REQUIREMENTS` entry, and a feature folder — no change to the generic CRD watcher.
 
 ### Helm — release Secrets via the informer cache
 
@@ -248,7 +248,7 @@ plugins that rely on shell-provided PATH or ambient cloud credentials
 
 Klustr can drive 2+ contexts at once as a single virtual cluster:
 
-- `useActiveContexts()` returns `aggregatedContexts` when length ≥ 2, else `[selectedContext]`. Every list/detail call fans out per context client-side and tags rows with a `Context` column.
+- `useActiveContexts()` returns `aggregatedContexts` when length ≥ 2, else `[selectedContext]`. List calls fan out per context client-side and tag rows with a `Context` column; detail and mutation calls target the source row's context.
 - The connection picker (`ConnectionsScreen`) lets the user **save a named group** of contexts. `contextGroups` lives in the UI store; selecting a saved group is one click. The same saved groups also appear in a **Groups section at the top of the in-session `ContextSwitcher` dropdown**, so a group can be activated mid-session without dropping back to the Welcome screen.
 - The status bar pings every active context every ~25 s (`/version` against a copy of the rest.Config with a 5 s timeout — see `manager.go` `Ping`). The dot turns amber on slow pings, red on failure with the real error in the tooltip.
 - Switching contexts (or the namespace selection across them) does not restart informers for already-attached contexts — `Watch` is idempotent per context and `StopWatch` is what tears one down.
@@ -279,7 +279,16 @@ Four-region layout:
 
 - **Top color stripe** (optional): reflects active context tag / group color.
 - **Header**: app name, context switcher, namespace selector, context-tag picker, port-forward indicator, disconnect button, theme picker.
-- **Sidebar**: collapsible resource-type navigation. Static groups in order: **Cluster** (Overview, Nodes, Namespaces, API Services, Flow Schemas, Priority Levels, Events) / **Workloads** (Overview, Pods, Deployments, StatefulSets, DaemonSets, ReplicaSets, ReplicationControllers, Jobs, CronJobs) / **Config** (ConfigMaps, Secrets, ResourceQuotas, LimitRanges, PriorityClasses, RuntimeClasses, Leases) / **Autoscaling** (HorizontalPodAutoscalers, PodDisruptionBudgets) / **Admission** (MutatingWebhooks, ValidatingWebhooks) / **Network** (Services, Ingresses, NetworkPolicies, EndpointSlices, Endpoints, IngressClasses) / **Storage** (PVCs, PVs, StorageClasses, CSI Drivers, CSI Nodes, Volume Attachments) / **Access Control** (Access Review, Service Accounts, Cluster Roles, Roles, Cluster Role Bindings, Role Bindings, CSRs) / **Helm** (always shown). Conditional groups (each shown only when its CRDs are detected in single-context mode): **Gateway API** (`gateway.networking.k8s.io`), **Argo CD** (`applications.argoproj.io`), **Karpenter** (`karpenter.sh`), **Flux** (`kustomize.toolkit.fluxcd.io`), **Istio** (`networking.istio.io`), **cert-manager** (`cert-manager.io`) and **KEDA**. A static **Devices** group covers Dynamic Resource Allocation (DeviceClasses, ResourceSlices, ResourceClaims, ResourceClaimTemplates) — like every static group it just renders empty if the `resource.k8s.io` API isn't served. Discovered CRDs (anything outside the above) are listed by API group below the static groups.
+- **Sidebar**: collapsible resource-type navigation. Core groups follow `RESOURCE_GROUPS` order:
+  - **Cluster** — Overview, Nodes, Namespaces, API Services, Flow Schemas, Priority Levels, Events.
+  - **Workloads** — Overview, Pods, Deployments, StatefulSets, DaemonSets, ReplicaSets, ReplicationControllers, Jobs, CronJobs.
+  - **Config** — ConfigMaps, Secrets, HorizontalPodAutoscalers, PodDisruptionBudgets, ResourceQuotas, LimitRanges, PriorityClasses, RuntimeClasses, Leases, Mutating/Validating Webhooks, ValidatingAdmissionPolicies + VAP Bindings, MutatingAdmissionPolicies + MAP Bindings.
+  - **Devices** — Device Classes, Resource Slices, Resource Claims, Claim Templates.
+  - **Network** — Services, Ingresses, NetworkPolicies, EndpointSlices, Endpoints, IngressClasses, Service CIDRs, IP Addresses.
+  - **Storage** — PVCs, PVs, StorageClasses, CSI Drivers, CSI Nodes, Volume Attachments.
+  - **Access Control** — Access Review, Service Accounts, Cluster Roles, Roles, Cluster Role Bindings, Role Bindings, CSRs.
+  - **Helm** is appended separately and always remains available; Releases is Secret-RBAC-gated while Repositories is local.
+  - CRD-gated integration groups are **Gateway API**, **Istio**, **cert-manager**, **Argo CD**, **Karpenter** and **Flux CD**. Each item appears when its required CRD exists in any active context, including aggregated mode. KEDA has no dedicated group; it enriches HPA trigger data. Other discovered CRDs are listed generically by API group.
 - **Main**: resource list (`ResourceTable` generic over `<T>`) → detail Dialog with `Overview / Logs / Exec / Events / History / YAML` tabs as relevant.
 - **Status bar** (bottom): per-active-context ping dots, port-forward count, GitHub repo link, version label.
 
@@ -287,7 +296,7 @@ The detail panel keeps a small navigation stack (`resourceNavStack` in `ui.ts`):
 
 ## Adding a new built-in resource
 
-Each kind is a thin, repeatable slice. Pick the `<group>` your kind belongs to from the sidebar (`workloads` / `networking` / `config` / `storage` / `cluster` / `autoscaling` / `admission` / `rbac`) and add to the matching per-group files. To add one:
+Each kind is a thin, repeatable slice. Pick the backend file group that owns it (`workloads` / `networking` / `config` / `storage` / `cluster` / `autoscaling` / `admission` / `rbac`) and add it to the matching per-group files. Sidebar placement is separate in `RESOURCE_GROUPS`; autoscaling and admission kinds currently render under **Config**. To add one:
 
 1. **Backend types**: `XxxInfo` (list shape) in `internal/kube/informers_<group>.go`, `XxxDetail` (detail shape) in `internal/kube/details_<group>.go`.
 2. **Informer registration**: add an entry to the `kindBindings` table in `informers.go` mapping `"Xxx"` to its informer constructor. Registration, start and the post-sync touch happen lazily in `ensureKind` — no per-kind handler block or initial-touch list to maintain.
@@ -304,7 +313,7 @@ Always init Go slices through `append([]string{}, src...)` so nil never serializ
 For CRs Klustr **already lists generically** via the CRD watcher with a YAML-only detail. Only carve a dedicated typed view if the CR has meaningful status / spec UI beyond `kubectl edit` — see how `argocd.go` and `gateway.go` are done:
 
 - Either reuse a typed client (Gateway API has one) or unmarshal `*unstructured.Unstructured` into a typed Go struct before populating the Detail.
-- Hide the CR behind the generic CRD sidebar entry by default; promote it to its own sidebar group only when a CRD detection in `App.tsx` confirms the API is present.
+- Hide the CR behind the generic CRD sidebar entry by default; promote it only when a resource-group item and `visibleResourceGroups.ts` `CRD_REQUIREMENTS` entry gate the dedicated view on the served API.
 - Mutations should go through the K8s API (PATCH / annotation flip), not by shelling out to a vendor CLI.
 
 ## Coding Conventions
@@ -416,7 +425,7 @@ Klustr is pre-1.0 and ships from `main`. The flow per release:
 
 Notes on the workflow:
 - `prerelease: true` is set automatically when the tag contains a `-` (e.g. `v0.15.0-rc1`).
-- Linux (amd64) is published as a release asset. Windows is still built-but-unpublished — that ships as part of the v1 path.
+- Linux (amd64) is published as a release asset. Windows builds are disabled and no Windows asset is produced; re-enabling Windows distribution is part of the v1 path.
 - Auto-update is **not** wired in — also a v1 prerequisite.
 
 ## Verification Before Reporting Done
