@@ -417,35 +417,90 @@ function HelmReleaseTabs({
   )
 }
 
+function customResourceOverview(contextName: string | null, resource: SelectedResource) {
+  const detailProps = {
+    contextName,
+    namespace: resource.namespace,
+    name: resource.name,
+  }
+
+  switch (resource.kind) {
+    case 'AppProject':
+      return resource.gvr?.group === 'argoproj.io' ? (
+        <AppProjectDetailBody {...detailProps} />
+      ) : null
+    case 'ApplicationSet':
+      return resource.gvr?.group === 'argoproj.io' ? (
+        <ApplicationSetDetailBody {...detailProps} />
+      ) : null
+    case 'FluxKustomization':
+      return <FluxKustomizationDetailBody {...detailProps} />
+    case 'FluxHelmRelease':
+      return <FluxHelmReleaseDetailBody {...detailProps} />
+    case 'FluxGitRepository':
+      return <FluxGitRepositoryDetailBody {...detailProps} />
+    case 'FluxHelmRepository':
+      return <FluxHelmRepositoryDetailBody {...detailProps} />
+    case 'FluxOCIRepository':
+      return <FluxOCIRepositoryDetailBody {...detailProps} />
+    case 'FluxBucket':
+      return <FluxBucketDetailBody {...detailProps} />
+    case 'FluxProvider':
+      return <FluxProviderDetailBody {...detailProps} />
+    case 'FluxAlert':
+      return <FluxAlertDetailBody {...detailProps} />
+    case 'FluxReceiver':
+      return <FluxReceiverDetailBody {...detailProps} />
+    case 'IstioVirtualService':
+      return resource.gvr?.group === 'networking.istio.io' ? (
+        <IstioVirtualServiceDetailBody {...detailProps} />
+      ) : null
+    case 'IstioDestinationRule':
+      return resource.gvr?.group === 'networking.istio.io' ? (
+        <IstioDestinationRuleDetailBody {...detailProps} />
+      ) : null
+    case 'IstioPeerAuthentication':
+      return resource.gvr?.group === 'security.istio.io' ? (
+        <IstioPeerAuthenticationDetailBody {...detailProps} />
+      ) : null
+    case 'Certificate':
+      return resource.gvr?.group === CERT_MANAGER_GROUP ? (
+        <CertificateDetailBody {...detailProps} />
+      ) : null
+    case 'Issuer':
+      return resource.gvr?.group === CERT_MANAGER_GROUP ? (
+        <IssuerDetailBody {...detailProps} cluster={false} />
+      ) : null
+    case 'ClusterIssuer':
+      return resource.gvr?.group === CERT_MANAGER_GROUP ? (
+        <IssuerDetailBody {...detailProps} cluster />
+      ) : null
+    case 'CertificateRequest':
+      return resource.gvr?.group === CERT_MANAGER_GROUP ? (
+        <CertificateRequestDetailBody {...detailProps} />
+      ) : null
+    case 'Order':
+      return resource.gvr?.group === CERT_MANAGER_ACME_GROUP ? (
+        <OrderDetailBody {...detailProps} />
+      ) : null
+    case 'Challenge':
+      return resource.gvr?.group === CERT_MANAGER_ACME_GROUP ? (
+        <ChallengeDetailBody {...detailProps} />
+      ) : null
+    default:
+      return null
+  }
+}
+
 function CustomResourceTabs({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
   const isArgoApp =
     resource.kind === 'Application' && resource.gvr?.group === 'argoproj.io'
-  const isArgoAppProject =
-    resource.kind === 'AppProject' && resource.gvr?.group === 'argoproj.io'
-  const isArgoAppSet =
-    resource.kind === 'ApplicationSet' && resource.gvr?.group === 'argoproj.io'
   const isFlux = isFluxResource(resource)
-  const isFluxKustomization = resource.kind === 'FluxKustomization'
-  const isFluxHelmRelease = resource.kind === 'FluxHelmRelease'
-  const isFluxGitRepository = resource.kind === 'FluxGitRepository'
-  const isFluxHelmRepository = resource.kind === 'FluxHelmRepository'
-  const isFluxOCIRepository = resource.kind === 'FluxOCIRepository'
-  const isFluxBucket = resource.kind === 'FluxBucket'
-  const isFluxProvider = resource.kind === 'FluxProvider'
-  const isFluxAlert = resource.kind === 'FluxAlert'
-  const isFluxReceiver = resource.kind === 'FluxReceiver'
   const isKarpenterNodePool =
     resource.kind === 'NodePool' && resource.gvr?.group === 'karpenter.sh'
   const isKarpenterNodeClaim =
     resource.kind === 'NodeClaim' && resource.gvr?.group === 'karpenter.sh'
   const hasKarpenterNodes = isKarpenterNodePool || isKarpenterNodeClaim
-  const isIstioVirtualService =
-    resource.kind === 'IstioVirtualService' && resource.gvr?.group === 'networking.istio.io'
-  const isIstioDestinationRule =
-    resource.kind === 'IstioDestinationRule' && resource.gvr?.group === 'networking.istio.io'
-  const isIstioPeerAuthentication =
-    resource.kind === 'IstioPeerAuthentication' && resource.gvr?.group === 'security.istio.io'
-  const isIstio = isIstioVirtualService || isIstioDestinationRule || isIstioPeerAuthentication
   const isCertManagerCert =
     resource.kind === 'Certificate' && resource.gvr?.group === CERT_MANAGER_GROUP
   const isCertManagerIssuer =
@@ -465,7 +520,8 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
     isCertManagerRequest ||
     isCertManagerOrder ||
     isCertManagerChallenge
-  const hasOverview = isArgoAppProject || isArgoAppSet || isFlux || isIstio || isCertManager
+  const overview = customResourceOverview(contextName, resource)
+  const hasOverview = overview !== null
   const hasEvents = isFlux || isCertManager
   const initialTab = isArgoApp
     ? 'resources'
@@ -508,176 +564,9 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
         {hasEvents && <TabsTrigger value="events">Events</TabsTrigger>}
         <TabsTrigger value="yaml">YAML</TabsTrigger>
       </TabsList>
-      {isArgoAppProject && (
+      {hasOverview && (
         <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <AppProjectDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isArgoAppSet && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <ApplicationSetDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isFluxKustomization && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <FluxKustomizationDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isFluxHelmRelease && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <FluxHelmReleaseDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isFluxGitRepository && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <FluxGitRepositoryDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isFluxHelmRepository && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <FluxHelmRepositoryDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isFluxOCIRepository && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <FluxOCIRepositoryDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isFluxBucket && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <FluxBucketDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isFluxProvider && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <FluxProviderDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isFluxAlert && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <FluxAlertDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isFluxReceiver && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <FluxReceiverDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isIstioVirtualService && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <IstioVirtualServiceDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isIstioDestinationRule && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <IstioDestinationRuleDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isIstioPeerAuthentication && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <IstioPeerAuthenticationDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isCertManagerCert && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <CertificateDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {(isCertManagerIssuer || isCertManagerClusterIssuer) && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <IssuerDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-            cluster={isCertManagerClusterIssuer}
-          />
-        </TabsContent>
-      )}
-      {isCertManagerRequest && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <CertificateRequestDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isCertManagerOrder && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <OrderDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
-        </TabsContent>
-      )}
-      {isCertManagerChallenge && (
-        <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <ChallengeDetailBody
-            contextName={contextName}
-            namespace={resource.namespace}
-            name={resource.name}
-          />
+          {overview}
         </TabsContent>
       )}
       {isCertManagerCert && (
