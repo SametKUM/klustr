@@ -146,7 +146,7 @@ export function CredentialKeyButton({
         </div>
         <div className="mt-1 text-muted-foreground">{describeState(status)}</div>
         {status.error && (
-          <div className="mt-1 break-words font-mono text-[10px] text-red-400">{status.error}</div>
+          <div className="mt-1 break-words font-mono text-[10px] text-destructive">{status.error}</div>
         )}
         <div className="mt-2.5 flex items-center gap-1.5">
           <Button
