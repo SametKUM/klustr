@@ -193,11 +193,26 @@ function ResourceRowInner<T>({
       data-index={rowIndex}
       className={[
         'border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors',
-        clickable ? 'cursor-pointer select-none' : '',
+        clickable
+          ? 'cursor-pointer select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring'
+          : '',
         flashing ? 'bg-emerald-100/60 dark:bg-emerald-400/15' : '',
         isSelected ? 'bg-primary/10' : '',
       ].join(' ')}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
       onClick={clickable ? () => onRowClick(tagged) : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.target !== e.currentTarget) return
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onRowClick(tagged)
+              }
+            }
+          : undefined
+      }
     >
       <td className="px-2 py-1.5 align-middle" onClick={(e) => e.stopPropagation()}>
         {rowKey && (
@@ -966,9 +981,33 @@ export function ResourceTable<T>({
                   const isDragging = dragColId === colId
                   const isDropTarget =
                     dragColId !== null && dropTargetColId === colId && dragColId !== colId
+                  const headerContent = (
+                    <>
+                      <span className="truncate">
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                      </span>
+                      {canSort &&
+                        (sorted === 'asc' ? (
+                          <ArrowUp className="size-3 shrink-0" />
+                        ) : sorted === 'desc' ? (
+                          <ArrowDown className="size-3 shrink-0" />
+                        ) : (
+                          <ChevronsUpDown className="size-3 shrink-0 opacity-30" />
+                        ))}
+                    </>
+                  )
                   return (
                     <th
                       key={h.id}
+                      aria-sort={
+                        canSort
+                          ? sorted === 'asc'
+                            ? 'ascending'
+                            : sorted === 'desc'
+                              ? 'descending'
+                              : 'none'
+                          : undefined
+                      }
                       draggable
                       onDragStart={(e) => {
                         if (isResizingRef.current) {
@@ -1016,25 +1055,17 @@ export function ResourceTable<T>({
                           : '',
                       ].join(' ')}
                     >
-                      <span
-                        className={[
-                          'flex min-w-0 items-center gap-1',
-                          canSort ? 'cursor-pointer' : '',
-                        ].join(' ')}
-                        onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
-                      >
-                        <span className="truncate">
-                          {flexRender(h.column.columnDef.header, h.getContext())}
-                        </span>
-                        {canSort &&
-                          (sorted === 'asc' ? (
-                            <ArrowUp className="size-3 shrink-0" />
-                          ) : sorted === 'desc' ? (
-                            <ArrowDown className="size-3 shrink-0" />
-                          ) : (
-                            <ChevronsUpDown className="size-3 shrink-0 opacity-30" />
-                          ))}
-                      </span>
+                      {canSort ? (
+                        <button
+                          type="button"
+                          className="flex w-full min-w-0 cursor-pointer items-center gap-1 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={h.column.getToggleSortingHandler()}
+                        >
+                          {headerContent}
+                        </button>
+                      ) : (
+                        <span className="flex min-w-0 items-center gap-1">{headerContent}</span>
+                      )}
                       <span
                         draggable={false}
                         onMouseDown={startResize(h.column.id)}
