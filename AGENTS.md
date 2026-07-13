@@ -99,6 +99,7 @@ klustr/
 ├── frontend/
 │   ├── eslint.config.js          ESLint flat config
 │   ├── vitest.config.ts          Vitest setup (jsdom environment)
+│   ├── scripts/generate-api.mjs  generates the typed Wails API facade
 │   └── src/
 │       ├── App.tsx               layout shell, sidebar (RESOURCE_GROUPS) + MainView dispatch
 │       ├── features/             one folder per resource kind + _shared/ helpers
@@ -127,7 +128,8 @@ klustr/
 │       │   ├── ui.types.ts         pure type declarations (ResourceView, ResourceKind, …)
 │       │   └── ui.persistence.ts   localStorage read*/persist* helpers + applyThemeClasses
 │       ├── lib/wails/            auto-generated Go bindings — DO NOT EDIT
-│       ├── lib/api.ts            ergonomic wrappers over wails bindings
+│       ├── lib/api.generated.ts  generated model aliases + identity binding facade — DO NOT EDIT
+│       ├── lib/api.ts            custom normalization layered over the generated facade
 │       └── lib/events.ts         onKubeChange / onPFUpdate / onCredsUpdate Wails event
 │                                 subscriptions
 ├── build/                        Wails build artifacts (icons, Info.plist) +
@@ -304,7 +306,7 @@ Each kind is a thin, repeatable slice. Pick the backend file group that owns it 
 4. **Manager**: list and detail forwarder methods on `*ClientManager` in `manager_<group>.go`. Bodies are 5 lines; mirror neighbors. Namespaced list forwarders must route through `listAcrossNamespaces(namespace, w.Xxxs)` — the frontend encodes a multi-namespace selection as a comma-separated set, and a forwarder that passes the raw string straight to a lister renders an empty table whenever 2+ namespaces are selected.
 5. **App bindings**: `ListXxxs` and `GetXxx` on `*App` (in `app/`). Wails autogenerates the TS binding on the next `wails dev`.
 6. **GVR**: entry in `kindToGVR` (`internal/kube/mutate.go`) so YAML edit / delete / scale work via the dynamic client.
-7. **Frontend**: types in `frontend/src/lib/api.ts`, slot in `frontend/src/store/resources.ts`, add the kind/view to the `ResourceKind` / `ResourceView` unions in `frontend/src/store/ui.types.ts`, create `XxxView.tsx` + `XxxDetailBody.tsx` under `frontend/src/features/<plural>/`, dispatch case in `ResourceDetailPanel.tsx`, sidebar entry in `_shared/resourceGroups.ts` (`RESOURCE_GROUPS`) + `MainView` case in `App.tsx`.
+7. **Frontend**: run `npm run generate:api` after Wails regenerates its bindings (`wails dev` and the frontend build do this automatically); only add a hand-written `api.ts` wrapper when the binding needs normalization beyond a lower-camel identity call. Add the store slot in `frontend/src/store/resources.ts`, the kind/view to the `ResourceKind` / `ResourceView` unions in `frontend/src/store/ui.types.ts`, `XxxView.tsx` + `XxxDetailBody.tsx` under `frontend/src/features/<plural>/`, the dispatch case in `ResourceDetailPanel.tsx`, the sidebar entry in `_shared/resourceGroups.ts` (`RESOURCE_GROUPS`) and the `MainView` case in `App.tsx`.
 
 Always init Go slices through `append([]string{}, src...)` so nil never serializes as JSON `null` — the React detail bodies treat these as arrays unconditionally.
 
@@ -344,7 +346,7 @@ For CRs Klustr **already lists generically** via the CRD watcher with a YAML-onl
 
 - `strict: true`. No `any` unless at a true boundary, and only with a comment explaining why.
 - Prefer narrow types over broad ones. Discriminated unions over optional flags.
-- Wails bindings under `frontend/src/lib/wails/` are auto-generated. Never edit by hand. Wrap them in `frontend/src/lib/api.ts` for ergonomic helpers.
+- Wails bindings under `frontend/src/lib/wails/` and `frontend/src/lib/api.generated.ts` are generated. Never edit them by hand. `npm run generate:api` derives the lower-camel facade and model aliases; keep only behavior-changing normalization in `frontend/src/lib/api.ts`.
 - Real-time data is read from Zustand selectors only — never call Go directly in a render path.
 - Wrap heavy components (Monaco, xterm.js) in Suspense so they don't block initial render.
 - Use shadcn/ui primitives as the base; do not pull in a second component library.
@@ -399,6 +401,7 @@ golangci-lint run             # full lint (optional, slower)
 # Frontend (inside frontend/)
 npm test                      # Vitest
 npm run lint                  # ESLint
+npm run check:api             # generated Wails API facade drift
 npm run typecheck             # tsc --noEmit
 npm run build                 # production bundle
 ```
