@@ -6,6 +6,7 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { useContextResourceData } from '@/features/_shared/useContextResourceData'
 import { COL_MD, COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { useActiveContexts, useUIStore } from '@/store/ui'
+import { HelmStatusPill } from './HelmStatusPill'
 
 const columnHelper = createColumnHelper<HelmReleaseInfo>()
 
@@ -21,7 +22,11 @@ export function HelmReleasesView() {
       columnHelper.accessor('chartName', { header: 'Chart' }),
       columnHelper.accessor('chartVersion', { header: 'Chart ver.', size: COL_SM }),
       columnHelper.accessor('appVersion', { header: 'App ver.', size: COL_SM }),
-      columnHelper.accessor('status', { header: 'Status', size: COL_SM }),
+      columnHelper.accessor('status', {
+        header: 'Status',
+        size: COL_SM,
+        cell: (info) => <HelmStatusPill status={info.getValue()} />,
+      }),
       columnHelper.accessor('revision', {
         header: 'Rev',
         size: COL_XS,

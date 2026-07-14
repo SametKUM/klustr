@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { api, type HelmRevisionInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
+import { HelmStatusPill } from './HelmStatusPill'
 
 type Props = {
   contextName: string | null
@@ -101,7 +102,9 @@ export function HelmRollbackPickerDialog({
                       </span>
                       <span className="font-mono">#{r.revision}</span>
                       <span className="font-mono text-muted-foreground">{r.chart}</span>
-                      <span className="ml-auto text-muted-foreground">{r.status}</span>
+                      <span className="ml-auto">
+                        <HelmStatusPill status={r.status} />
+                      </span>
                       <span className="w-20 text-right text-muted-foreground">
                         {r.updated ? formatAge(r.updated) : '—'}
                       </span>

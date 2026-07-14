@@ -6,6 +6,7 @@ import { SkeletonDetail } from '@/features/_shared/SkeletonDetail'
 import { type HelmReleaseDetail, type HelmRevisionInfo } from '@/lib/api'
 import { useThemeMode } from '@/features/_shared/useThemeMode'
 import { formatAge } from '@/lib/time'
+import { HelmStatusPill } from './HelmStatusPill'
 
 const Editor = lazy(() => import('@monaco-editor/react').then((m) => ({ default: m.Editor })))
 
@@ -116,7 +117,9 @@ function Overview({ detail }: { detail: HelmReleaseDetail }) {
         {rows.map(([k, v]) => (
           <tr key={k} className="border-b border-border/40">
             <th className="w-32 py-1 text-left font-medium text-muted-foreground">{k}</th>
-            <td className="py-1 font-mono">{v}</td>
+            <td className="py-1 font-mono">
+              {k === 'Status' ? <HelmStatusPill status={v} /> : v}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -211,7 +214,9 @@ function HistoryList({
         {revisions.map((r) => (
           <tr key={r.revision} className="border-b border-border/40">
             <td className="py-1 font-mono">#{r.revision}</td>
-            <td className="py-1">{r.status}</td>
+            <td className="py-1">
+              <HelmStatusPill status={r.status} />
+            </td>
             <td className="py-1 font-mono">{r.chart}</td>
             <td className="py-1 font-mono">{r.appVersion || '—'}</td>
             <td className="py-1">{r.updated ? formatAge(r.updated) : '—'}</td>
