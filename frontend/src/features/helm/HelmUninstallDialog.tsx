@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { api } from '@/lib/api'
 
 type Props = {
@@ -55,8 +56,7 @@ export function HelmUninstallDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={keepHistory}
             onChange={(e) => setKeepHistory(e.target.checked)}
           />

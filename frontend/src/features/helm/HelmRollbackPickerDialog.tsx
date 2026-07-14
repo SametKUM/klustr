@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { api, type HelmRevisionInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 
@@ -117,8 +118,7 @@ export function HelmRollbackPickerDialog({
           )}
         </div>
         <label className="flex items-center gap-2 border-t border-border px-6 py-2 text-xs">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={wait}
             onChange={(e) => setWait(e.target.checked)}
           />

@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { api } from '@/lib/api'
 
 type Props = {
@@ -59,7 +60,7 @@ export function HelmRollbackDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <label className="flex items-center gap-2 text-xs">
-          <input type="checkbox" checked={wait} onChange={(e) => setWait(e.target.checked)} />
+          <Checkbox checked={wait} onChange={(e) => setWait(e.target.checked)} />
           Wait for resources to become ready
         </label>
         <AlertDialogFooter>

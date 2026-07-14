@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { api, type HelmDryRunResult, type HelmInstallOptions } from '@/lib/api'
 import { useUIStore } from '@/store/ui'
 import { useThemeMode } from '@/features/_shared/useThemeMode'
@@ -224,8 +225,7 @@ export function HelmInstallDialog({
             </Field>
             {mode === 'install' && (
               <label className="mt-2 flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={createNS}
                   onChange={(e) => setCreateNS(e.target.checked)}
                 />
@@ -233,16 +233,14 @@ export function HelmInstallDialog({
               </label>
             )}
             <label className="mt-2 flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={wait}
                 onChange={(e) => setWait(e.target.checked)}
               />
               Wait until ready
             </label>
             <label className="mt-2 flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={atomic}
                 onChange={(e) => setAtomic(e.target.checked)}
               />
@@ -251,8 +249,7 @@ export function HelmInstallDialog({
             {mode === 'upgrade' && (
               <div className="mt-2 flex flex-col gap-1">
                 <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={resetValues}
                     onChange={(e) => setResetValues(e.target.checked)}
                   />
