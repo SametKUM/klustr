@@ -118,7 +118,7 @@ export function FluxKustomizationsView() {
   if (capability.supportedContexts.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <div className="text-sm">Flux CD is not installed in this cluster.</div>
+        <div className="text-sm">Flux Kustomization is not available in the active contexts.</div>
         <div className="max-w-md text-xs text-muted-foreground">
           The <code className="rounded bg-muted px-1">kustomize.toolkit.fluxcd.io</code> CRD is not
           present. Install Flux (e.g.{' '}

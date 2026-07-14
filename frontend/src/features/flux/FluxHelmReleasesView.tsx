@@ -116,10 +116,10 @@ export function FluxHelmReleasesView() {
   if (capability.supportedContexts.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <div className="text-sm">Flux HelmRelease CRD is not present in this cluster.</div>
+        <div className="text-sm">Flux HelmRelease is not available in the active contexts.</div>
         <div className="max-w-md text-xs text-muted-foreground">
           The <code className="rounded bg-muted px-1">helm.toolkit.fluxcd.io</code> CRD is missing —
-          Flux is partly installed or the helm-controller is disabled.
+          install or enable the Flux helm-controller and reconnect.
         </div>
       </div>
     )
