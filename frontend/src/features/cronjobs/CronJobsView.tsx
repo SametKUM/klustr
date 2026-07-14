@@ -27,7 +27,14 @@ export function CronJobsView() {
       columnHelper.accessor('suspend', {
         header: 'Suspend',
         size: COL_XS,
-        cell: (info) => (info.getValue() ? 'true' : 'false'),
+        cell: (info) =>
+          info.getValue() ? (
+            <span className="rounded bg-amber-500/15 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+              suspended
+            </span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
       }),
       columnHelper.accessor('active', { header: 'Active', size: COL_XS }),
       columnHelper.accessor('lastSchedule', {

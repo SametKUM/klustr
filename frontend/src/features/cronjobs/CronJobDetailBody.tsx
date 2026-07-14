@@ -24,7 +24,7 @@ export function CronJobDetailBody({
         <Section title="Schedule">
           <Field label="Schedule" mono>{detail.schedule}</Field>
           {detail.timeZone && <Field label="Time Zone">{detail.timeZone}</Field>}
-          <Field label="Suspend">{detail.suspend ? 'true' : 'false'}</Field>
+          <Field label="Suspend">{detail.suspend ? 'Yes' : 'No'}</Field>
           <Field label="Concurrency">{detail.concurrencyPolicy || 'Allow'}</Field>
           <Field label="Active">{detail.active}</Field>
           <Field label="Last Schedule">{detail.lastSchedule ? formatAge(detail.lastSchedule) : '—'}</Field>
