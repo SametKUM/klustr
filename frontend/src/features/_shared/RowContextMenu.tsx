@@ -123,7 +123,7 @@ export function RowContextMenu({
         )}
         <ContextMenuItem onSelect={() => open('yaml')}>
           <FileCode2 />
-          <span>Edit YAML</span>
+          <span>View YAML</span>
         </ContextMenuItem>
         {!readOnly && isRestartable && (
           <ContextMenuItem onSelect={() => setPendingAction({ kind: 'restart', resource })}>
