@@ -4,6 +4,7 @@ import { api, type ServiceCIDRInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_SM, COL_XS } from '@/features/_shared/columnSizes'
+import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
 
@@ -18,7 +19,11 @@ export function ServiceCIDRsView() {
     () => [
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('cidrs', { header: 'CIDRs' }),
-      columnHelper.accessor('ready', { header: 'Ready', size: COL_XS }),
+      columnHelper.accessor('ready', {
+        header: 'Ready',
+        size: COL_XS,
+        cell: (info) => <ConditionPill status={info.getValue()} />,
+      }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
         size: COL_SM,
