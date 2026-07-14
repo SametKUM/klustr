@@ -2,9 +2,9 @@ import { useCallback } from 'react'
 import { api, type CertManagerCertificateDetail } from '@/lib/api'
 import { formatAge, formatTimestamp } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
+import { CertManagerConditionPill } from './CertManagerConditionPill'
 import { CertManagerConditionsTable } from './CertManagerConditionsTable'
 import { ExpiryCell } from './ExpiryCell'
 
@@ -34,7 +34,7 @@ export function CertificateDetailBody({ contextName, namespace, name }: Props) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section title="Certificate">
           <Field label="Ready">
-            <ConditionPill status={detail.ready} />
+            <CertManagerConditionPill kind="ready" status={detail.ready} />
           </Field>
           <Field label="Status message">{detail.status || '—'}</Field>
           <Field label="Common name">

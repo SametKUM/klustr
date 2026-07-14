@@ -2,8 +2,8 @@ import { useCallback } from 'react'
 import { api, type CertManagerCertificateRequestDetail } from '@/lib/api'
 import { formatAge, formatTimestamp } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
+import { CertManagerConditionPill } from './CertManagerConditionPill'
 import { CertManagerConditionsTable } from './CertManagerConditionsTable'
 
 type Props = {
@@ -31,13 +31,13 @@ export function CertificateRequestDetailBody({ contextName, namespace, name }: P
     <div className="space-y-6">
       <Section title="CertificateRequest">
         <Field label="Ready">
-          <ConditionPill status={detail.ready} />
+          <CertManagerConditionPill kind="ready" status={detail.ready} />
         </Field>
         <Field label="Approved">
-          <ConditionPill status={detail.approved} />
+          <CertManagerConditionPill kind="approved" status={detail.approved} />
         </Field>
         <Field label="Denied">
-          <ConditionPill status={detail.denied} />
+          <CertManagerConditionPill kind="denied" status={detail.denied} />
         </Field>
         <Field label="Status message">{detail.status || '—'}</Field>
         <Field label="Issuer">{issuer}</Field>

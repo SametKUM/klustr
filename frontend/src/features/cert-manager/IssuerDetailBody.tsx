@@ -2,9 +2,9 @@ import { useCallback } from 'react'
 import { api, type CertManagerIssuerDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
+import { CertManagerConditionPill } from './CertManagerConditionPill'
 import { CertManagerConditionsTable } from './CertManagerConditionsTable'
 
 type Props = {
@@ -36,7 +36,7 @@ export function IssuerDetailBody({ contextName, namespace, name, cluster }: Prop
     <div className="space-y-6">
       <Section title={cluster ? 'ClusterIssuer' : 'Issuer'}>
         <Field label="Ready">
-          <ConditionPill status={detail.ready} />
+          <CertManagerConditionPill kind="ready" status={detail.ready} />
         </Field>
         <Field label="Status message">{detail.status || '—'}</Field>
         <Field label="Type">
