@@ -260,9 +260,9 @@ function RepoLink({ url }: { url: string }) {
         BrowserOpenURL(toBrowserURL(url))
       }}
       title={url}
-      className="inline-flex items-center gap-1 rounded font-mono text-xs text-foreground hover:text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex max-w-full min-w-0 items-center gap-1 rounded font-mono text-xs text-foreground hover:text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span className="truncate">{label}</span>
+      <span className="min-w-0 truncate">{label}</span>
       <ExternalLink className="size-3 shrink-0 opacity-60" />
     </button>
   )
