@@ -20,12 +20,12 @@ export function CSIDriversView() {
       columnHelper.accessor('attachRequired', {
         header: 'Attach req',
         size: COL_XS,
-        cell: (info) => (info.getValue() ? 'yes' : 'no'),
+        cell: (info) => (info.getValue() ? 'Yes' : 'No'),
       }),
       columnHelper.accessor('podInfoOnMount', {
         header: 'Pod info',
         size: COL_XS,
-        cell: (info) => (info.getValue() ? 'yes' : 'no'),
+        cell: (info) => (info.getValue() ? 'Yes' : 'No'),
       }),
       columnHelper.accessor('modes', { header: 'Modes' }),
       columnHelper.accessor('createdAt', {

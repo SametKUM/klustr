@@ -28,7 +28,7 @@ export function VolumeAttachmentDetailBody({
         <Field label="PV" mono>
           {detail.pv ? <Copyable value={detail.pv} /> : '—'}
         </Field>
-        <Field label="Attached">{detail.attached ? 'yes' : 'no'}</Field>
+        <Field label="Attached">{detail.attached ? 'Yes' : 'No'}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
 

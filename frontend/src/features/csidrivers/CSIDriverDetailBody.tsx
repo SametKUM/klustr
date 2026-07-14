@@ -18,11 +18,11 @@ export function CSIDriverDetailBody({
   return (
     <div className="space-y-6">
       <Section title="CSI driver">
-        <Field label="Attach required">{detail.attachRequired ? 'yes' : 'no'}</Field>
-        <Field label="Pod info on mount">{detail.podInfoOnMount ? 'yes' : 'no'}</Field>
-        <Field label="Storage capacity">{detail.storageCapacity ? 'yes' : 'no'}</Field>
-        <Field label="Requires republish">{detail.requiresRepublish ? 'yes' : 'no'}</Field>
-        <Field label="SELinux mount">{detail.seLinuxMount ? 'yes' : 'no'}</Field>
+        <Field label="Attach required">{detail.attachRequired ? 'Yes' : 'No'}</Field>
+        <Field label="Pod info on mount">{detail.podInfoOnMount ? 'Yes' : 'No'}</Field>
+        <Field label="Storage capacity">{detail.storageCapacity ? 'Yes' : 'No'}</Field>
+        <Field label="Requires republish">{detail.requiresRepublish ? 'Yes' : 'No'}</Field>
+        <Field label="SELinux mount">{detail.seLinuxMount ? 'Yes' : 'No'}</Field>
         <Field label="FSGroup policy">{detail.fsGroupPolicy || '—'}</Field>
         <Field label="Lifecycle modes">{detail.volumeLifecycleModes.join(', ') || '—'}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>

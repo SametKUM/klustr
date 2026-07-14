@@ -35,7 +35,7 @@ export function StorageClassesView() {
       columnHelper.accessor('allowExpansion', {
         header: 'Expand',
         size: COL_XS,
-        cell: (info) => (info.getValue() ? '✓' : '·'),
+        cell: (info) => (info.getValue() ? 'Yes' : 'No'),
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',

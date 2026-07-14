@@ -23,7 +23,7 @@ export function VolumeAttachmentsView() {
       columnHelper.accessor('attached', {
         header: 'Attached',
         size: COL_XS,
-        cell: (info) => (info.getValue() ? 'yes' : 'no'),
+        cell: (info) => (info.getValue() ? 'Yes' : 'No'),
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
