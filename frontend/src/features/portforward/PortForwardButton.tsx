@@ -225,27 +225,6 @@ type ButtonProps = {
 
 export function PortForwardButton({ contextName, resource }: ButtonProps) {
   const [open, setOpen] = useState(false)
-  const [probe, setProbe] = useState<PodDetail | null>(null)
-
-  useEffect(() => {
-    if (!contextName) return
-    let cancelled = false
-    api
-      .getPod(contextName, resource.namespace, resource.name)
-      .then((d) => {
-        if (!cancelled) setProbe(d)
-      })
-      .catch(() => {
-        /* leave optimistic until proven otherwise */
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [contextName, resource.namespace, resource.name])
-
-  if (probe && !probe.containers.some((c) => (c.ports ?? []).length > 0)) {
-    return null
-  }
 
   return (
     <>
