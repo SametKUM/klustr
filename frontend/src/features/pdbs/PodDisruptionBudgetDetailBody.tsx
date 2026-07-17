@@ -27,7 +27,7 @@ export function PodDisruptionBudgetDetailBody({
         <Field label="Current healthy">{detail.currentHealthy}</Field>
         <Field label="Desired healthy">{detail.desiredHealthy}</Field>
         <Field label="Expected pods">{detail.expectedPods}</Field>
-        <Field label="Disruptions allowed">{detail.disruptionsAllowed}</Field>
+        <Field label="Allowed disruptions">{detail.disruptionsAllowed}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
       {detail.conditions.length > 0 && (
