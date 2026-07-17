@@ -23,18 +23,18 @@ export function CronJobDetailBody({
       <div className="grid gap-6 sm:grid-cols-2">
         <Section title="Schedule">
           <Field label="Schedule" mono>{detail.schedule}</Field>
-          {detail.timeZone && <Field label="Time Zone">{detail.timeZone}</Field>}
+          {detail.timeZone && <Field label="Time zone">{detail.timeZone}</Field>}
           <Field label="Suspend">{detail.suspend ? 'Yes' : 'No'}</Field>
           <Field label="Concurrency">{detail.concurrencyPolicy || 'Allow'}</Field>
           <Field label="Active">{detail.active}</Field>
-          <Field label="Last Schedule">{detail.lastSchedule ? formatAge(detail.lastSchedule) : '—'}</Field>
+          <Field label="Last schedule">{detail.lastSchedule ? formatAge(detail.lastSchedule) : '—'}</Field>
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>
         <Section title="History Limits">
           <Field label="Successful">{detail.successfulJobsHistoryLimit}</Field>
           <Field label="Failed">{detail.failedJobsHistoryLimit}</Field>
           {detail.startingDeadlineSeconds > 0 && (
-            <Field label="Starting Deadline">{`${detail.startingDeadlineSeconds}s`}</Field>
+            <Field label="Starting deadline">{`${detail.startingDeadlineSeconds}s`}</Field>
           )}
         </Section>
       </div>

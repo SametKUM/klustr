@@ -32,13 +32,13 @@ export function PersistentVolumeClaimDetailBody({
           </Field>
           <Field label="Capacity">{detail.capacity || '—'}</Field>
           <Field label="Request">{detail.request || '—'}</Field>
-          <Field label="Volume Mode">{detail.volumeMode || 'Filesystem'}</Field>
+          <Field label="Volume mode">{detail.volumeMode || 'Filesystem'}</Field>
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>
         <Section title="Binding">
           <Field label="Volume" mono>{detail.volume ? <Copyable value={detail.volume} /> : '—'}</Field>
-          <Field label="Storage Class">{detail.storageClass || '—'}</Field>
-          <Field label="Access Modes">{detail.accessModes.join(', ') || '—'}</Field>
+          <Field label="Storage class">{detail.storageClass || '—'}</Field>
+          <Field label="Access modes">{detail.accessModes.join(', ') || '—'}</Field>
         </Section>
       </div>
       <MaybeSection title="Selector" items={detail.selector} render={() => <Chips items={detail.selector} />} />

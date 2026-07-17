@@ -23,7 +23,7 @@ export function WebhookConfigurationDetailBody({
   return (
     <div className="space-y-6">
       <Section title="Status">
-        <Field label="Webhook Count">{detail.webhooks.length}</Field>
+        <Field label="Webhook count">{detail.webhooks.length}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
       {detail.webhooks.length > 0 && (

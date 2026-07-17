@@ -20,10 +20,10 @@ export function NetworkPolicyDetailBody({
   return (
     <div className="space-y-6">
       <Section title="Status">
-        <Field label="Pod Selector" mono>{detail.podSelector}</Field>
-        <Field label="Policy Types">{detail.policyTypes.join(', ') || '—'}</Field>
-        <Field label="Ingress Rules">{detail.ingress}</Field>
-        <Field label="Egress Rules">{detail.egress}</Field>
+        <Field label="Pod selector" mono>{detail.podSelector}</Field>
+        <Field label="Policy types">{detail.policyTypes.join(', ') || '—'}</Field>
+        <Field label="Ingress rules">{detail.ingress}</Field>
+        <Field label="Egress rules">{detail.egress}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
       <MaybeSection title="Labels" items={detail.labels} render={() => <Chips items={detail.labels} />} />

@@ -29,7 +29,7 @@ export function ServiceDetailBody({
           <Field label="External IPs" mono>
             {detail.externalIPs.length === 0 ? '—' : <Copyable value={detail.externalIPs.join(',')}>{detail.externalIPs.join(', ')}</Copyable>}
           </Field>
-          <Field label="Session Affinity">{detail.sessionAffinity || 'None'}</Field>
+          <Field label="Session affinity">{detail.sessionAffinity || 'None'}</Field>
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>
         <MaybeSection title="Selector" items={detail.selector} render={() => <Chips items={detail.selector} />} />

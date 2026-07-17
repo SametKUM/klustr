@@ -34,7 +34,7 @@ export function NodeDetailBody({
         <Field label="Kubelet">{detail.version}</Field>
         <Field label="OS">{detail.osImage}</Field>
         <Field label="Kernel">{detail.kernelVersion}</Field>
-        <Field label="Container Runtime">{detail.containerRuntime}</Field>
+        <Field label="Container runtime">{detail.containerRuntime}</Field>
         <Field label="Architecture">{detail.architecture}</Field>
       </Section>
       {Object.keys(detail.capacity ?? {}).length > 0 && (

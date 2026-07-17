@@ -21,7 +21,7 @@ export function LimitRangeDetailBody({
     <div className="space-y-6">
       <Section title="Status">
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
-        <Field label="Limit Items">{detail.limits.length}</Field>
+        <Field label="Limit items">{detail.limits.length}</Field>
       </Section>
       {detail.limits.map((item, i) => (
         <LimitItem key={i} item={item} />

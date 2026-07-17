@@ -20,9 +20,9 @@ export function StorageClassDetailBody({
     <div className="space-y-6">
       <Section title="Status">
         <Field label="Provisioner"><Copyable value={detail.provisioner} /></Field>
-        <Field label="Reclaim Policy">{detail.reclaimPolicy || '—'}</Field>
-        <Field label="Volume Binding">{detail.volumeBindingMode || '—'}</Field>
-        <Field label="Allow Expansion">{detail.allowExpansion ? 'Yes' : 'No'}</Field>
+        <Field label="Reclaim policy">{detail.reclaimPolicy || '—'}</Field>
+        <Field label="Volume binding">{detail.volumeBindingMode || '—'}</Field>
+        <Field label="Allow expansion">{detail.allowExpansion ? 'Yes' : 'No'}</Field>
         <Field label="Default">{detail.isDefault ? 'Yes' : 'No'}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>

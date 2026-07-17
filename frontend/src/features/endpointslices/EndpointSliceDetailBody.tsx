@@ -21,7 +21,7 @@ export function EndpointSliceDetailBody({
   return (
     <div className="space-y-6">
       <Section title="Status">
-        <Field label="Address Type">{detail.addressType}</Field>
+        <Field label="Address type">{detail.addressType}</Field>
         <Field label="Service">{detail.service ? <Copyable value={detail.service} /> : '—'}</Field>
         <Field label="Endpoints">{detail.endpoints.length}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>

@@ -19,8 +19,8 @@ export function PriorityClassDetailBody({
     <div className="space-y-6">
       <Section title="Status">
         <Field label="Value">{detail.value}</Field>
-        <Field label="Global Default">{detail.globalDefault ? 'Yes' : 'No'}</Field>
-        <Field label="Preemption Policy">{detail.preemptionPolicy || 'PreemptLowerPriority'}</Field>
+        <Field label="Global default">{detail.globalDefault ? 'Yes' : 'No'}</Field>
+        <Field label="Preemption policy">{detail.preemptionPolicy || 'PreemptLowerPriority'}</Field>
         <Field label="Description">{detail.description || '—'}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>

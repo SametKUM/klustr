@@ -26,7 +26,7 @@ export function ServiceAccountDetailBody({
     <div className="space-y-6">
       <Section title="Metadata">
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
-        <Field label="Auto-mount Token">{detail.automountServiceAccountToken || '—'}</Field>
+        <Field label="Auto-mount token">{detail.automountServiceAccountToken || '—'}</Field>
       </Section>
       {detail.secrets.length > 0 && (
         <Section title="Secrets">

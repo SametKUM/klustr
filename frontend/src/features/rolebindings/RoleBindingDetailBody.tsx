@@ -71,7 +71,7 @@ export function RoleRefBlock({
           </button>
         </Copyable>
       </Field>
-      <Field label="API Group">{roleRef.apiGroup || '—'}</Field>
+      <Field label="API group">{roleRef.apiGroup || '—'}</Field>
       <Field label="Age">{formatAge(createdAt)}</Field>
     </Section>
   )

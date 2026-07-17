@@ -28,8 +28,8 @@ export function StatefulSetDetailBody({
         <Section title="Status">
           <Field label="Replicas">{`${detail.ready}/${detail.replicas}`}</Field>
           <Field label="Service">{detail.service || '—'}</Field>
-          <Field label="Update Strategy">{detail.updateStrategy || 'RollingUpdate'}</Field>
-          <Field label="Pod Management">{detail.podManagementPolicy || 'OrderedReady'}</Field>
+          <Field label="Update strategy">{detail.updateStrategy || 'RollingUpdate'}</Field>
+          <Field label="Pod management">{detail.podManagementPolicy || 'OrderedReady'}</Field>
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>
         <MaybeSection title="Selector" items={detail.selector} render={() => <Chips items={detail.selector} />} />

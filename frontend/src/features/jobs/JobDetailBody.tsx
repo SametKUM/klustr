@@ -25,7 +25,7 @@ export function JobDetailBody({
           <Field label="Status">{detail.status}</Field>
           <Field label="Completions">{detail.completions}</Field>
           <Field label="Parallelism">{detail.parallelism}</Field>
-          <Field label="Backoff Limit">{detail.backoffLimit}</Field>
+          <Field label="Backoff limit">{detail.backoffLimit}</Field>
           {detail.duration && <Field label="Duration">{detail.duration}</Field>}
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>

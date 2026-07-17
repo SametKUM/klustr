@@ -21,13 +21,13 @@ export function PodDisruptionBudgetDetailBody({
   return (
     <div className="space-y-6">
       <Section title="Status">
-        <Field label="Min Available">{detail.minAvailable || '—'}</Field>
-        <Field label="Max Unavailable">{detail.maxUnavailable || '—'}</Field>
+        <Field label="Min available">{detail.minAvailable || '—'}</Field>
+        <Field label="Max unavailable">{detail.maxUnavailable || '—'}</Field>
         <Field label="Selector" mono>{detail.selector}</Field>
-        <Field label="Current Healthy">{detail.currentHealthy}</Field>
-        <Field label="Desired Healthy">{detail.desiredHealthy}</Field>
-        <Field label="Expected Pods">{detail.expectedPods}</Field>
-        <Field label="Disruptions Allowed">{detail.disruptionsAllowed}</Field>
+        <Field label="Current healthy">{detail.currentHealthy}</Field>
+        <Field label="Desired healthy">{detail.desiredHealthy}</Field>
+        <Field label="Expected pods">{detail.expectedPods}</Field>
+        <Field label="Disruptions allowed">{detail.disruptionsAllowed}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
       {detail.conditions.length > 0 && (

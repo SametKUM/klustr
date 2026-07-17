@@ -32,7 +32,7 @@ export function DaemonSetDetailBody({
           <Field label="Up-to-date">{detail.upToDate}</Field>
           <Field label="Available">{detail.available}</Field>
           {detail.misscheduled > 0 && <Field label="Misscheduled">{detail.misscheduled}</Field>}
-          <Field label="Update Strategy">{detail.updateStrategy || 'RollingUpdate'}</Field>
+          <Field label="Update strategy">{detail.updateStrategy || 'RollingUpdate'}</Field>
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>
         <div className="space-y-6">

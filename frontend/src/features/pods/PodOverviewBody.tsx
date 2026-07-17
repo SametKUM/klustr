@@ -46,8 +46,8 @@ export function PodOverviewBody({
         <Section title="Status">
           <Field label="Status">{detail.status}</Field>
           <Field label="Phase">{detail.phase}</Field>
-          <Field label="QoS Class">{detail.qosClass || '—'}</Field>
-          <Field label="Restart Policy">{detail.restartPolicy}</Field>
+          <Field label="QoS class">{detail.qosClass || '—'}</Field>
+          <Field label="Restart policy">{detail.restartPolicy}</Field>
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>
 
@@ -63,14 +63,14 @@ export function PodOverviewBody({
               '—'
             )}
           </Field>
-          <Field label="Service Account">
+          <Field label="Service account">
             <ServiceAccountLink
               namespace={detail.namespace}
               name={detail.serviceAccount || 'default'}
               context={contextName}
             />
           </Field>
-          {detail.priorityClassName && <Field label="Priority Class">{detail.priorityClassName}</Field>}
+          {detail.priorityClassName && <Field label="Priority class">{detail.priorityClassName}</Field>}
         </Section>
 
         {detail.owners.length > 0 && (

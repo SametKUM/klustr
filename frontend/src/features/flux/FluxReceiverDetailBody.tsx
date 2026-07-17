@@ -47,7 +47,7 @@ export function FluxReceiverDetailBody({ contextName, namespace, name }: Props) 
             <span className="text-muted-foreground">— (not ready; see Conditions)</span>
           )}
         </Field>
-        <Field label="Token Secret">{detail.secretRef || '—'}</Field>
+        <Field label="Token secret">{detail.secretRef || '—'}</Field>
         <Field label="Event filter">
           {detail.events.length === 0 ? (
             <span className="text-muted-foreground">all events</span>

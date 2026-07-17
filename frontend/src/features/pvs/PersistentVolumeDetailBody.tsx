@@ -25,14 +25,14 @@ export function PersistentVolumeDetailBody({
             <span className={phaseClass(detail.status)}>{detail.status}</span>
           </Field>
           <Field label="Capacity">{detail.capacity || '—'}</Field>
-          <Field label="Reclaim Policy">{detail.reclaimPolicy}</Field>
-          <Field label="Volume Mode">{detail.volumeMode || 'Filesystem'}</Field>
+          <Field label="Reclaim policy">{detail.reclaimPolicy}</Field>
+          <Field label="Volume mode">{detail.volumeMode || 'Filesystem'}</Field>
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>
         <Section title="Binding">
           <Field label="Claim">{detail.claim || '—'}</Field>
-          <Field label="Storage Class">{detail.storageClass || '—'}</Field>
-          <Field label="Access Modes">{detail.accessModes.join(', ') || '—'}</Field>
+          <Field label="Storage class">{detail.storageClass || '—'}</Field>
+          <Field label="Access modes">{detail.accessModes.join(', ') || '—'}</Field>
           {detail.source && (
             <Field label="Source" mono><Copyable value={detail.source} /></Field>
           )}

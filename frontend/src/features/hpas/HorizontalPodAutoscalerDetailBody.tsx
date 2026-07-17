@@ -48,8 +48,8 @@ export function HorizontalPodAutoscalerDetailBody({
           minReplicas={detail.minReplicas}
           maxReplicas={detail.maxReplicas}
         />
-        <Field label="Current Replicas">{detail.currentReplicas}</Field>
-        <Field label="Desired Replicas">{detail.desiredReplicas}</Field>
+        <Field label="Current replicas">{detail.currentReplicas}</Field>
+        <Field label="Desired replicas">{detail.desiredReplicas}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
       {metrics.length > 0 && (

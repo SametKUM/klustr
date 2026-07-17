@@ -21,12 +21,12 @@ export function LeaseDetailBody({
   return (
     <div className="space-y-6">
       <Section title="Status">
-        <Field label="Holder Identity" mono>
+        <Field label="Holder identity" mono>
           {detail.holderIdentity ? <Copyable value={detail.holderIdentity} /> : '—'}
         </Field>
-        <Field label="Lease Duration">{detail.leaseDurationSeconds}s</Field>
-        <Field label="Acquire Time">{detail.acquireTime ? formatAge(detail.acquireTime) + ' ago' : '—'}</Field>
-        <Field label="Renew Time">{detail.renewTime ? formatAge(detail.renewTime) + ' ago' : '—'}</Field>
+        <Field label="Lease duration">{detail.leaseDurationSeconds}s</Field>
+        <Field label="Acquire time">{detail.acquireTime ? formatAge(detail.acquireTime) + ' ago' : '—'}</Field>
+        <Field label="Renew time">{detail.renewTime ? formatAge(detail.renewTime) + ' ago' : '—'}</Field>
         <Field label="Transitions">{detail.leaseTransitions}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
