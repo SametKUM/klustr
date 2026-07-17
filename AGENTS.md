@@ -387,6 +387,21 @@ The test surface is **headless unit tests only** — Vitest+jsdom for frontend, 
 - Staging anything under `hack/`. That directory is the user's local fixtures and is curated by hand.
 - Triggering the release workflow on docs-only / asset-only changes. Append **`[skip ci]`** to those commit subjects so the build doesn't run for a README tweak.
 
+## Code Intelligence
+
+CodeGraph is available through the `codegraph` CLI and keeps its local index
+under `.codegraph/`.
+
+- Before broad discovery or cross-file changes, run `codegraph status .`;
+  run `codegraph sync .` when the index is stale.
+- Prefer `codegraph explore "<area>"` and `codegraph node <symbol-or-path>`
+  for architecture, source, and call-path context.
+- Use `codegraph callers`, `callees`, and `impact` before changing shared
+  symbols; use `codegraph affected` to identify relevant tests.
+- Use `rg` and direct file reads for exact text, generated files, and anything
+  absent from the index.
+- Never commit `.codegraph/`; it is a generated local index.
+
 ## Development Workflow
 
 ```bash
