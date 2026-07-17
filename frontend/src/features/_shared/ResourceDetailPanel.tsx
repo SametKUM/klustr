@@ -8,6 +8,8 @@ import { useUIStore, type DetailTab, type SelectedResource } from '@/store/ui'
 import { useResourceDetail } from './useResourceDetail'
 import { CopyButton } from './Copyable'
 import { ContextBadge } from './ContextBadge'
+import { ErrorBoundary } from './ErrorBoundary'
+import { ErrorRecovery } from './ErrorRecovery'
 import { ErrorBox } from './DetailPrimitives'
 import { SkeletonDetail } from './SkeletonDetail'
 import { ResourceYAMLTab } from './ResourceYAMLTab'
@@ -279,7 +281,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
           )}
         </DialogHeader>
         {resource && (
-          <DetailContent
+          <ErrorBoundary
             key={[
               resource.context ?? '',
               resource.gvr ? `${resource.gvr.group}/${resource.gvr.version}/${resource.gvr.resource}` : '',
@@ -287,9 +289,19 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
               resource.namespace,
               resource.name,
             ].join('|')}
-            contextName={contextName}
-            resource={resource}
-          />
+            fallback={({ error, componentStack, reset }) => (
+              <ErrorRecovery
+                title="This resource detail could not be displayed"
+                description="The rest of Klustr is still available. Close this detail or try rendering it again."
+                error={error}
+                componentStack={componentStack}
+                onRetry={reset}
+                onDismiss={() => setSelectedResource(null)}
+              />
+            )}
+          >
+            <DetailContent contextName={contextName} resource={resource} />
+          </ErrorBoundary>
         )}
       </DialogContent>
     </Dialog>
