@@ -37,6 +37,17 @@ function preview(items: BulkItem[]): { shown: BulkItem[]; rest: number } {
   return { shown: items.slice(0, PREVIEW_LIMIT), rest: items.length - PREVIEW_LIMIT }
 }
 
+function BulkTarget({ item }: { item: BulkItem }) {
+  return (
+    <span className="block min-w-0 truncate">
+      <span className="text-muted-foreground">{item.contextName}</span>
+      <span className="text-muted-foreground"> · </span>
+      {item.namespace ? `${item.namespace}/` : ''}
+      {item.name}
+    </span>
+  )
+}
+
 function nounLabel(noun: DialogProps['noun'], count: number): string {
   return count === 1 ? noun.singular : noun.plural
 }
@@ -122,9 +133,8 @@ export function BulkDeleteDialog({ items, noun, open, onOpenChange, onSuccess }:
         <div className="space-y-3 text-sm">
           <ul className="max-h-40 overflow-auto rounded border border-border bg-muted/30 p-2 font-mono text-xs">
             {shown.map((it) => (
-              <li key={`${it.contextName}/${it.namespace}/${it.name}`} className="truncate">
-                {it.namespace ? `${it.namespace}/` : ''}
-                {it.name}
+              <li key={`${it.contextName}/${it.namespace}/${it.name}`}>
+                <BulkTarget item={it} />
               </li>
             ))}
             {rest > 0 && (
@@ -208,9 +218,8 @@ export function BulkRestartDialog({ items, noun, open, onOpenChange, onSuccess }
         <div className="space-y-3 text-sm">
           <ul className="max-h-40 overflow-auto rounded border border-border bg-muted/30 p-2 font-mono text-xs">
             {shown.map((it) => (
-              <li key={`${it.contextName}/${it.namespace}/${it.name}`} className="truncate">
-                {it.namespace ? `${it.namespace}/` : ''}
-                {it.name}
+              <li key={`${it.contextName}/${it.namespace}/${it.name}`}>
+                <BulkTarget item={it} />
               </li>
             ))}
             {rest > 0 && (
@@ -285,8 +294,8 @@ export function BulkCordonDialog({
         <div className="space-y-3 text-sm">
           <ul className="max-h-40 overflow-auto rounded border border-border bg-muted/30 p-2 font-mono text-xs">
             {shown.map((it) => (
-              <li key={`${it.contextName}/${it.name}`} className="truncate">
-                {it.name}
+              <li key={`${it.contextName}/${it.name}`}>
+                <BulkTarget item={it} />
               </li>
             ))}
             {rest > 0 && <li className="text-muted-foreground">… and {rest} more</li>}
@@ -408,7 +417,7 @@ export function BulkDrainDialog({ items, noun, open, onOpenChange, onSuccess }: 
               const p = progress?.[drainKey(it)]
               return (
                 <li key={drainKey(it)} className="flex items-baseline gap-2">
-                  <span className="truncate">{it.name}</span>
+                  <BulkTarget item={it} />
                   {p && (
                     <span
                       className={
