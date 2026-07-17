@@ -24,7 +24,7 @@ export function DeviceClassDetailBody({
   return (
     <div className="space-y-6">
       <Section title="DeviceClass">
-        <Field label="Configs">{detail.config}</Field>
+        <Field label="Config entries">{detail.config}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
       {detail.selectors.length > 0 && (

@@ -18,7 +18,7 @@ export function DeviceClassesView() {
     () => [
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('selectors', { header: 'Selectors', size: COL_XS }),
-      columnHelper.accessor('config', { header: 'Config', size: COL_XS }),
+      columnHelper.accessor('config', { header: 'Config entries', size: COL_XS }),
       columnHelper.accessor('createdAt', {
         header: 'Age',
         size: COL_SM,
