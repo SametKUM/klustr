@@ -21,7 +21,7 @@ export function GatewaysView() {
       columnHelper.accessor('name', { header: 'Name' }),
       columnHelper.accessor('class', { header: 'Class', size: COL_SM }),
       columnHelper.accessor('addresses', {
-        header: 'Address',
+        header: 'Addresses',
         cell: (info) => <span className="font-mono text-xs">{info.getValue() || '—'}</span>,
       }),
       columnHelper.accessor('listeners', {
