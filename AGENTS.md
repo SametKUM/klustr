@@ -389,17 +389,26 @@ The test surface is **headless unit tests only** — Vitest+jsdom for frontend, 
 
 ## Code Intelligence
 
-CodeGraph is available through the `codegraph` CLI and keeps its local index
-under `.codegraph/`.
+When `.codegraph/` exists, use the CodeGraph MCP server as the primary source
+of code intelligence.
 
-- Before broad discovery or cross-file changes, run `codegraph status .`;
-  run `codegraph sync .` when the index is stale.
-- Prefer `codegraph explore "<area>"` and `codegraph node <symbol-or-path>`
-  for architecture, source, and call-path context.
-- Use `codegraph callers`, `callees`, and `impact` before changing shared
-  symbols; use `codegraph affected` to identify relevant tests.
-- Use `rg` and direct file reads for exact text, generated files, and anything
-  absent from the index.
+- Call `codegraph_explore` before reading or searching indexed code, both for
+  discovery and before editing. Query with a natural-language question or the
+  relevant symbol names and file paths.
+- Treat the line-numbered source returned by `codegraph_explore` as already
+  read. Use its call paths, blast radius, and covering-test information to
+  scope changes; query it again with narrower names only when more context is
+  needed.
+- Do not re-verify CodeGraph results with `rg` or direct reads. Use those tools
+  only for a specific detail CodeGraph did not return or for unindexed content
+  such as configuration, documentation, and generated files.
+- Rely on the MCP file watcher for automatic synchronization. Do not run
+  `codegraph status` or `codegraph sync` during the normal agent workflow. If
+  a response reports stale files, read only the named files directly; if it
+  reports that auto-sync is disabled, use direct reads for changed code until
+  synchronization is restored.
+- If `.codegraph/` does not exist, skip CodeGraph and use the normal discovery
+  tools. Index creation is the user's decision.
 - Never commit `.codegraph/`; it is a generated local index.
 
 ## Development Workflow
