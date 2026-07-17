@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ExternalLink, LayoutGrid, SquareTerminal } from 'lucide-react'
+import { Boxes, ExternalLink, LayoutGrid, SquareTerminal } from 'lucide-react'
 import { toast } from 'sonner'
 import { ProviderIcon } from '@/features/_shared/providerIcons'
 import { useTerminalStore } from '@/store/terminals'
@@ -13,7 +13,9 @@ import {
   CommandSeparator,
 } from '@/components/ui/command'
 import { api, type ContextInfo } from '@/lib/api'
+import { crdKey, useCRDStore } from '@/store/crds'
 import { useActiveContexts, useUIStore } from '@/store/ui'
+import { groupByAPIGroup } from '@/features/crds/crdGrouping'
 import { useVisibleResourceGroups } from './useVisibleResourceGroups'
 
 export function CommandPalette() {
@@ -23,6 +25,8 @@ export function CommandPalette() {
   const setSelectedView = useUIStore((s) => s.setSelectedView)
   const setSelectedCRD = useUIStore((s) => s.setSelectedCRD)
   const groups = useVisibleResourceGroups()
+  const crds = useCRDStore((s) => s.crds)
+  const crdGroups = useMemo(() => groupByAPIGroup(crds), [crds])
 
   const [contexts, setContexts] = useState<ContextInfo[]>([])
 
@@ -82,6 +86,35 @@ export function CommandPalette() {
             </CommandGroup>
           </div>
         ))}
+
+        {crds.length > 0 && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading="Custom Resources">
+              {crdGroups.flatMap((group) =>
+                group.crds.map((crd) => {
+                  const key = crdKey(crd)
+                  return (
+                    <CommandItem
+                      key={key}
+                      value={`custom resource ${crd.kind} ${crd.group} ${crd.resource} ${crd.singular} ${crd.shortNames.join(' ')}`}
+                      onSelect={() => {
+                        setSelectedCRD(key)
+                        setOpen(false)
+                      }}
+                    >
+                      <Boxes />
+                      <span className="truncate">{crd.kind}</span>
+                      <span className="ml-auto max-w-48 truncate font-mono text-[10px] text-muted-foreground">
+                        {crd.group}
+                      </span>
+                    </CommandItem>
+                  )
+                }),
+              )}
+            </CommandGroup>
+          </>
+        )}
 
         {activeContexts.length > 0 && (
           <>
