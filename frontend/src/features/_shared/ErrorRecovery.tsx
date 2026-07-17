@@ -24,6 +24,7 @@ export function ErrorRecovery({
   onDismiss,
   fullscreen = false,
 }: Props) {
+  const visibleMessage = error.message.trim() || error.name.trim() || 'Unknown render error'
   const details = [error.stack ?? `${error.name}: ${error.message}`, componentStack.trim()]
     .filter(Boolean)
     .join('\n\nComponent stack:\n')
@@ -54,7 +55,7 @@ export function ErrorRecovery({
             <CopyButton value={details} toastLabel="error details" ariaLabel="Copy error details" />
           </div>
           <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-destructive">
-            {error.message || error.name}
+            {visibleMessage}
           </pre>
         </div>
         <div className="flex flex-wrap justify-end gap-2">

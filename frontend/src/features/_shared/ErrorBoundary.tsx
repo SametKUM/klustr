@@ -16,14 +16,20 @@ type State = {
   componentStack: string
 }
 
+function normalizeError(value: unknown): Error {
+  if (value instanceof Error) return value
+  if (typeof value === 'string' && value.trim()) return new Error(value)
+  return new Error('Unknown render error')
+}
+
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null, componentStack: '' }
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return { error }
+  static getDerivedStateFromError(error: unknown): Partial<State> {
+    return { error: normalizeError(error) }
   }
 
-  componentDidCatch(_error: Error, info: ErrorInfo) {
+  componentDidCatch(_error: unknown, info: ErrorInfo) {
     this.setState({ componentStack: info.componentStack ?? '' })
   }
 

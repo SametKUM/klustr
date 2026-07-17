@@ -2,6 +2,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ErrorBoundary } from './ErrorBoundary'
+import { ErrorRecovery } from './ErrorRecovery'
 
 describe('ErrorBoundary', () => {
   let container: HTMLDivElement
@@ -16,10 +17,11 @@ describe('ErrorBoundary', () => {
   afterEach(() => {
     act(() => root.unmount())
     container.remove()
+    vi.restoreAllMocks()
   })
 
   it('renders a fallback and can recover its children', () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     let shouldThrow = true
 
     function Child() {
@@ -54,6 +56,41 @@ describe('ErrorBoundary', () => {
     })
 
     expect(container.textContent).toBe('Recovered')
-    consoleError.mockRestore()
+  })
+
+  it('normalizes non-Error thrown values', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    function Child(): never {
+      throw null
+    }
+
+    act(() => {
+      root.render(
+        <ErrorBoundary fallback={({ error }) => <span>{error.message}</span>}>
+          <Child />
+        </ErrorBoundary>,
+      )
+    })
+
+    expect(container.textContent).toBe('Unknown render error')
+  })
+
+  it('shows a fallback message when an Error has no name or message', () => {
+    const error = new Error('')
+    error.name = ''
+
+    act(() => {
+      root.render(
+        <ErrorRecovery
+          title="Render failed"
+          description="Recovery is available."
+          error={error}
+          onRetry={vi.fn()}
+        />,
+      )
+    })
+
+    expect(container.textContent).toContain('Unknown render error')
   })
 })
