@@ -49,7 +49,7 @@ export function CRDGroups({
             const subLabel = SUBGROUP_PREFIX + g.group
             const subExpanded = expandedGroups.includes(subLabel)
             return (
-              <div key={g.group} className="pl-2">
+              <div key={g.group} className="min-w-0 pl-2">
                 <button
                   type="button"
                   onClick={() => toggleGroup(subLabel)}
@@ -63,7 +63,7 @@ export function CRDGroups({
                   <span className="truncate">{g.group}</span>
                 </button>
                 {subExpanded && (
-                  <ul className="flex flex-col pl-3">
+                  <ul className="flex min-w-0 flex-col pl-3">
                     {g.crds.map((crd) => {
                       const key = crdKey(crd)
                       const active = selectedCRDKey === key
@@ -71,7 +71,7 @@ export function CRDGroups({
                         <li
                           key={key}
                           className={[
-                            'cursor-pointer rounded px-2 py-1 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                            'min-w-0 cursor-pointer truncate rounded px-2 py-1 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                             active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '',
                           ].join(' ')}
                           title={`${crd.kind} (${crd.group}/${crd.version})`}
