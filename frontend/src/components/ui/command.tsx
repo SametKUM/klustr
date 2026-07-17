@@ -36,12 +36,14 @@ function CommandDialog({
   description = "Search for a command to run...",
   children,
   className,
+  shouldFilter,
   showCloseButton = false,
   ...props
 }: React.ComponentProps<typeof Dialog> & {
   title?: string
   description?: string
   className?: string
+  shouldFilter?: boolean
   showCloseButton?: boolean
 }) {
   return (
@@ -57,7 +59,9 @@ function CommandDialog({
         )}
         showCloseButton={showCloseButton}
       >
-        <Command className="rounded-xl!">{children}</Command>
+        <Command className="rounded-xl!" shouldFilter={shouldFilter}>
+          {children}
+        </Command>
       </DialogContent>
     </Dialog>
   )

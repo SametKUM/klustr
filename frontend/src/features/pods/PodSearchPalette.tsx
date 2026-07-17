@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { defaultFilter } from 'cmdk'
 import { Box } from 'lucide-react'
 import {
   CommandDialog,
@@ -19,8 +20,11 @@ import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
 // round-trippable bindings.
 type Hit = Omit<PodInfo, 'convertValues'> & { __ctx: string }
 
+const MAX_RENDERED_PODS = 100
+
 export function PodSearchPalette() {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
   const activeContexts = useActiveContexts()
   const isAggregated = useIsAggregated()
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
@@ -72,6 +76,7 @@ export function PodSearchPalette() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'p' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
+        setQuery('')
         setOpen((o) => !o)
       }
     }
@@ -90,14 +95,37 @@ export function PodSearchPalette() {
     return out
   }, [podsByCtx, activeContexts])
 
+  const matchingHits = useMemo(() => {
+    const search = query.trim()
+    if (search.length === 0) return hits
+
+    return hits
+      .map((hit) => ({
+        hit,
+        score: defaultFilter(`${hit.namespace} ${hit.name} ${hit.__ctx}`, search),
+      }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ hit }) => hit)
+  }, [hits, query])
+
+  const visibleHits = matchingHits.slice(0, MAX_RENDERED_PODS)
+  const hiddenHitCount = matchingHits.length - visibleHits.length
+
   return (
     <CommandDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (!nextOpen) setQuery('')
+      }}
       title="Pod search"
       description="Jump to any pod across active contexts"
+      shouldFilter={false}
     >
       <CommandInput
+        value={query}
+        onValueChange={setQuery}
         placeholder={
           isAggregated
             ? `Search pods across ${activeContexts.length} contexts…`
@@ -108,9 +136,9 @@ export function PodSearchPalette() {
         <CommandEmpty>
           {activeContexts.length === 0 ? 'Select a context first.' : 'No matching pods.'}
         </CommandEmpty>
-        {hits.length > 0 && (
-          <CommandGroup heading={`Pods (${hits.length})`}>
-            {hits.map((p) => (
+        {visibleHits.length > 0 && (
+          <CommandGroup heading={`Pods (${matchingHits.length})`}>
+            {visibleHits.map((p) => (
               <CommandItem
                 key={`${p.__ctx}/${p.namespace}/${p.name}`}
                 value={`${p.namespace} ${p.name} ${p.__ctx}`}
@@ -123,6 +151,7 @@ export function PodSearchPalette() {
                     context: p.__ctx,
                   })
                   setOpen(false)
+                  setQuery('')
                 }}
               >
                 <Box />
@@ -142,6 +171,19 @@ export function PodSearchPalette() {
           </CommandGroup>
         )}
       </CommandList>
+      <div
+        className={
+          hiddenHitCount > 0
+            ? 'border-t border-border/50 px-3 py-2 text-center text-xs text-muted-foreground'
+            : 'sr-only'
+        }
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {hiddenHitCount > 0
+          ? `Showing ${MAX_RENDERED_PODS} of ${matchingHits.length} matching pods. Refine your search to narrow the list.`
+          : ''}
+      </div>
     </CommandDialog>
   )
 }
