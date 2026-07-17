@@ -44,7 +44,7 @@ export function FluxReceiverDetailBody({ contextName, namespace, name }: Props) 
               <CopyButton value={detail.webhookPath} ariaLabel="Copy webhook path" />
             </span>
           ) : (
-            <span className="text-muted-foreground">— (not ready — fix Conditions first)</span>
+            <span className="text-muted-foreground">— (not ready; see Conditions)</span>
           )}
         </Field>
         <Field label="Token Secret">{detail.secretRef || '—'}</Field>
