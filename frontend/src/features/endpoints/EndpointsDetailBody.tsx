@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type EndpointsDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
@@ -56,9 +57,7 @@ export function EndpointsDetailBody({
                       <Td className="font-mono"><Copyable value={a.ip} /></Td>
                       <Td>{a.hostname ? <Copyable value={a.hostname} /> : '—'}</Td>
                       <Td>{a.nodeName || '—'}</Td>
-                      <Td className={a.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
-                        {a.ready ? '✓' : '·'}
-                      </Td>
+                      <Td><ConditionPill status={a.ready ? 'True' : 'False'} /></Td>
                     </tr>
                   ))}
                 </tbody>

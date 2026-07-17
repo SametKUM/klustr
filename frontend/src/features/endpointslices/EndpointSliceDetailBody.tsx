@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { api, type EndpointSliceDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
@@ -59,9 +60,7 @@ export function EndpointSliceDetailBody({
                     <Td className="font-mono"><Copyable value={e.addresses.join(',')}>{e.addresses.join(', ')}</Copyable></Td>
                     <Td>{e.nodeName || '—'}</Td>
                     <Td>{e.hostname || '—'}</Td>
-                    <Td className={e.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
-                      {e.ready ? '✓' : '·'}
-                    </Td>
+                    <Td><ConditionPill status={e.ready ? 'True' : 'False'} /></Td>
                   </tr>
                 ))}
               </tbody>
