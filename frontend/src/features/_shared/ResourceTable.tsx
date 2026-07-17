@@ -759,6 +759,14 @@ export function ResourceTable<T>({
     }
     return items
   }, [selectableRows, selectedKeys, kind])
+  const selectedContextCounts = useMemo(() => {
+    if (!isAggregated) return []
+    const counts = new Map<string, number>()
+    for (const item of selectedItems) {
+      counts.set(item.contextName, (counts.get(item.contextName) ?? 0) + 1)
+    }
+    return Array.from(counts.entries()).sort(([a], [b]) => a.localeCompare(b))
+  }, [isAggregated, selectedItems])
   const allVisibleSelected = visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k))
   const toggleRow = useCallback((key: string) => {
     setSelectedKeys((prev) => {
@@ -825,7 +833,28 @@ export function ResourceTable<T>({
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
       {selectedItems.length > 0 && (
         <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs">
-          <span className="font-medium text-foreground">{selectedItems.length} selected</span>
+          <span className="shrink-0 font-medium text-foreground">
+            {selectedItems.length} selected
+          </span>
+          {isAggregated && (
+            <div
+              className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+              aria-label="Selection by context"
+              title={selectedContextCounts
+                .map(([contextName, count]) => `${contextName}: ${count} selected`)
+                .join(', ')}
+            >
+              {selectedContextCounts.map(([contextName, count]) => (
+                <span
+                  key={contextName}
+                  className="inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border/70 bg-background px-1.5 text-muted-foreground"
+                >
+                  <span className="max-w-40 truncate font-mono">{contextName}</span>
+                  <span className="font-medium text-foreground">{count}</span>
+                </span>
+              ))}
+            </div>
+          )}
           {!readOnly && canRestart && (
             <Button
               size="sm"
