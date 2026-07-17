@@ -25,11 +25,11 @@ export function IstioPeerAuthenticationDetailBody({ contextName, namespace, name
     <div className="space-y-6">
       <Section title="PeerAuthentication">
         <Field label="mTLS mode">{detail.mtlsMode}</Field>
-        <Field label="Applies to">
+        <Field label="Selector">
           {hasSelector ? (
             <Chips items={detail.selectorLabels} />
           ) : (
-            <span className="text-muted-foreground">all workloads in {namespace}</span>
+            <span className="text-muted-foreground">namespace-wide</span>
           )}
         </Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
