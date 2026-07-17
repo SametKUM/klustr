@@ -195,15 +195,28 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
                 />
               )}
             </div>
-            {resource?.namespace && (
-              <div className="group flex min-w-0 items-center gap-1.5">
-                <div className="truncate text-xs text-muted-foreground">{resource.namespace}</div>
-                <CopyButton
-                  value={resource.namespace}
-                  ariaLabel="Copy namespace"
-                  iconClassName="size-2.5"
-                  className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                />
+            {(contextName || resource?.namespace) && (
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                {contextName && (
+                  <span
+                    className="inline-flex min-w-0 max-w-64 items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[10px]"
+                    title={`Context: ${contextName}`}
+                  >
+                    <span className="uppercase tracking-wide text-muted-foreground">Context</span>
+                    <span className="truncate font-mono font-medium text-foreground">{contextName}</span>
+                  </span>
+                )}
+                {resource?.namespace && (
+                  <div className="group flex min-w-0 items-center gap-1.5">
+                    <div className="truncate text-xs text-muted-foreground">{resource.namespace}</div>
+                    <CopyButton
+                      value={resource.namespace}
+                      ariaLabel="Copy namespace"
+                      iconClassName="size-2.5"
+                      className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
