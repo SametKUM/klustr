@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ScanSearch, ShieldAlert, Sparkles, User as UserIcon, Users } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, RefreshCcw, ScanSearch, ShieldAlert, Sparkles, User as UserIcon, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -43,12 +43,24 @@ type MatrixRow = {
   cells: Record<Verb, EffectiveCell>
 }
 
+type AccessState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'success'; value: SubjectAccess }
+
+function accessErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message || error.name
+  if (typeof error === 'string' && error.trim()) return error
+  return 'Failed to load access'
+}
+
 export function AccessReviewView() {
   const activeContexts = useActiveContexts()
   const isAggregated = useIsAggregated()
   const [subject, setSubject] = useState<AccessSubject | null>(null)
   const [subjects, setSubjects] = useState<Record<string, AccessSubject[]>>({})
-  const [access, setAccess] = useState<Record<string, SubjectAccess | null>>({})
+  const [access, setAccess] = useState<Record<string, AccessState>>({})
+  const accessRequestIds = useRef<Record<string, number>>({})
   const ctxKey = activeContexts.join('|')
 
   useEffect(() => {
@@ -86,35 +98,58 @@ export function AccessReviewView() {
     return Array.from(seen.values()).sort(compareSubject)
   }, [subjects, activeContexts])
 
+  const loadAccess = useCallback(
+    (ctx: string) => {
+      if (!subject) return
+      const requestId = (accessRequestIds.current[ctx] ?? 0) + 1
+      accessRequestIds.current[ctx] = requestId
+      setAccess((prev) =>
+        prev[ctx]?.status === 'success'
+          ? prev
+          : { ...prev, [ctx]: { status: 'loading' } },
+      )
+      api
+        .getSubjectAccess(ctx, subject.kind, subject.namespace ?? '', subject.name)
+        .then((value) => {
+          if (accessRequestIds.current[ctx] !== requestId) return
+          setAccess((prev) => ({ ...prev, [ctx]: { status: 'success', value } }))
+        })
+        .catch((error: unknown) => {
+          if (accessRequestIds.current[ctx] !== requestId) return
+          setAccess((prev) =>
+            prev[ctx]?.status === 'success'
+              ? prev
+              : {
+                  ...prev,
+                  [ctx]: { status: 'error', message: accessErrorMessage(error) },
+                },
+          )
+        })
+    },
+    [subject],
+  )
+
   useEffect(() => {
     if (!subject || activeContexts.length === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- The result is scoped to the selected remote subject.
       setAccess({})
       return
     }
-    let cancelled = false
-    const reload = (ctx: string) => {
-      api
-        .getSubjectAccess(ctx, subject.kind, subject.namespace ?? '', subject.name)
-        .then((res) => {
-          if (!cancelled) setAccess((prev) => ({ ...prev, [ctx]: res }))
-        })
-        .catch(() => {
-          if (!cancelled) setAccess((prev) => ({ ...prev, [ctx]: null }))
-        })
-    }
+    const requestIds = accessRequestIds.current
     setAccess({})
-    for (const ctx of activeContexts) reload(ctx)
+    for (const ctx of activeContexts) loadAccess(ctx)
     const unsubs = ['Role', 'RoleBinding', 'ClusterRole', 'ClusterRoleBinding'].map((k) =>
       onKubeChange(k, (ctx) => {
-        if (activeContexts.includes(ctx)) reload(ctx)
+        if (activeContexts.includes(ctx)) loadAccess(ctx)
       }),
     )
     return () => {
-      cancelled = true
+      for (const ctx of activeContexts) {
+        requestIds[ctx] = (requestIds[ctx] ?? 0) + 1
+      }
       unsubs.forEach((u) => u())
     }
-  }, [subject, ctxKey, activeContexts])
+  }, [subject, ctxKey, activeContexts, loadAccess])
 
   if (activeContexts.length === 0) {
     return (
@@ -155,8 +190,9 @@ export function AccessReviewView() {
               key={ctx}
               contextName={ctx}
               isAggregated={isAggregated}
-              access={access[ctx] ?? null}
+              state={access[ctx] ?? { status: 'loading' }}
               isFirst={idx === 0}
+              onRetry={() => loadAccess(ctx)}
             />
           ))}
         </div>
@@ -185,14 +221,17 @@ function EmptyHero({ count }: { count: number }) {
 function ContextSection({
   contextName,
   isAggregated,
-  access,
+  state,
   isFirst,
+  onRetry,
 }: {
   contextName: string
   isAggregated: boolean
-  access: SubjectAccess | null
+  state: AccessState
   isFirst: boolean
+  onRetry: () => void
 }) {
+  const access = state.status === 'success' ? state.value : null
   const rows = useMemo(() => buildMatrixRows(access?.rules ?? []), [access?.rules])
 
   return (
@@ -222,7 +261,18 @@ function ContextSection({
         </div>
       </div>
 
-      {!access && <Status text="Loading…" />}
+      {state.status === 'loading' && <Status text="Loading…" />}
+      {state.status === 'error' && (
+        <div className="flex flex-col items-center gap-3 px-6 py-6 text-center">
+          <p className="max-w-2xl break-words font-mono text-xs text-destructive">
+            {state.message}
+          </p>
+          <Button type="button" size="xs" variant="outline" onClick={onRetry}>
+            <RefreshCcw />
+            Retry
+          </Button>
+        </div>
+      )}
       {access && access.rules.length === 0 && (
         <Status text={isAggregated ? 'No access in this context.' : 'This subject has no access.'} />
       )}
