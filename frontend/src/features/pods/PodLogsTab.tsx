@@ -18,9 +18,10 @@ type Props = {
   detail: PodDetail
   contextName?: string | null
   initialContainer?: string
+  active: boolean
 }
 
-export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
+export function PodLogsTab({ detail, contextName, initialContainer, active }: Props) {
   const fallbackContext = useUIStore((s) => s.selectedContext)
   const selectedContext = contextName ?? fallbackContext
   const themeId = useUIStore((s) => s.themeId)
@@ -159,6 +160,19 @@ export function PodLogsTab({ detail, contextName, initialContainer }: Props) {
       termRef.current.options.theme = xtermThemeFor(themeId)
     }
   }, [themeId])
+
+  useEffect(() => {
+    if (!active) return
+    const fit = fitRef.current
+    if (!fit) return
+    requestAnimationFrame(() => {
+      try {
+        fit.fit()
+      } catch {
+        return
+      }
+    })
+  }, [active])
 
   useEffect(() => {
     if (!selectedContext || !container) return

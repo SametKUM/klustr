@@ -866,15 +866,31 @@ function PodTabs({
   const { detail, error } = useResourceDetail<PodDetail>(contextName, 'Pod', namespace, name, load)
   const requestedTab = useUIStore((s) => s.requestedTab)
   const requestedContainer = useUIStore((s) => s.selectedResource?.logContainer)
-  const [tab, setTab] = useState<DetailTab>(requestedTab ?? 'overview')
+  const [tabState, setTabState] = useState(() => ({
+    active: requestedTab ?? 'overview',
+    logsMounted: requestedTab === 'logs',
+    execMounted: requestedTab === 'exec',
+  }))
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Requested navigation synchronizes the controlled tab.
-    setTab(requestedTab ?? 'overview')
+    setTabState({
+      active: requestedTab ?? 'overview',
+      logsMounted: requestedTab === 'logs',
+      execMounted: requestedTab === 'exec',
+    })
   }, [namespace, name, requestedTab])
 
+  const selectTab = (active: DetailTab) => {
+    setTabState((current) => ({
+      active,
+      logsMounted: current.logsMounted || active === 'logs',
+      execMounted: current.execMounted || active === 'exec',
+    }))
+  }
+
   return (
-    <Tabs value={tab} onValueChange={(v) => setTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
+    <Tabs value={tabState.active} onValueChange={(v) => selectTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="logs" disabled={!detail}>Logs</TabsTrigger>
@@ -887,17 +903,26 @@ function PodTabs({
         {!detail && !error && <SkeletonDetail />}
         {detail && <PodOverviewBody contextName={contextName} detail={detail} />}
       </TabsContent>
-      <TabsContent value="logs" className="min-h-0 flex-1 p-0">
-        {detail && (
+      <TabsContent forceMount value="logs" className="min-h-0 flex-1 p-0 data-[state=inactive]:hidden">
+        {tabState.logsMounted && detail && (
           <Suspense fallback={<TerminalFallback />}>
-            <PodLogsTab detail={detail} contextName={contextName} initialContainer={requestedContainer} />
+            <PodLogsTab
+              detail={detail}
+              contextName={contextName}
+              initialContainer={requestedContainer}
+              active={tabState.active === 'logs'}
+            />
           </Suspense>
         )}
       </TabsContent>
-      <TabsContent value="exec" className="min-h-0 flex-1 p-0">
-        {detail && (
+      <TabsContent forceMount value="exec" className="min-h-0 flex-1 p-0 data-[state=inactive]:hidden">
+        {tabState.execMounted && detail && (
           <Suspense fallback={<TerminalFallback />}>
-            <PodExecTab detail={detail} contextName={contextName} />
+            <PodExecTab
+              detail={detail}
+              contextName={contextName}
+              active={tabState.active === 'exec'}
+            />
           </Suspense>
         )}
       </TabsContent>

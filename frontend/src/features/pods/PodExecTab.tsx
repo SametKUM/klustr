@@ -18,9 +18,10 @@ const SHELLS = ['/bin/sh', '/bin/bash']
 type Props = {
   detail: PodDetail
   contextName?: string | null
+  active: boolean
 }
 
-export function PodExecTab({ detail, contextName }: Props) {
+export function PodExecTab({ detail, contextName, active }: Props) {
   const fallbackContext = useUIStore((s) => s.selectedContext)
   const selectedContext = contextName ?? fallbackContext
   const themeId = useUIStore((s) => s.themeId)
@@ -93,6 +94,24 @@ export function PodExecTab({ detail, contextName }: Props) {
       termRef.current.options.theme = xtermThemeFor(themeId)
     }
   }, [themeId])
+
+  useEffect(() => {
+    if (!active) return
+    const fit = fitRef.current
+    const term = termRef.current
+    if (!fit || !term) return
+    requestAnimationFrame(() => {
+      try {
+        fit.fit()
+        if (sessionRef.current) {
+          api.resizeExec(sessionRef.current, term.cols, term.rows).catch(() => {})
+        }
+        term.focus()
+      } catch {
+        return
+      }
+    })
+  }, [active])
 
   useEffect(() => {
     const term = termRef.current
