@@ -33,8 +33,13 @@ function parentLabel(p: { namespace?: string; name: string }, ownNS: string): st
 function matchLabel(m: HTTPRouteMatchDetail): string {
   const parts: string[] = []
   if (m.path) {
-    const t = m.pathType === 'Exact' ? '==' : m.pathType === 'RegularExpression' ? '~=' : '^'
-    parts.push(`path ${t} ${m.path}`)
+    const pathMatch =
+      m.pathType === 'Exact'
+        ? `path == ${m.path}`
+        : m.pathType === 'RegularExpression'
+          ? `path ~= ${m.path}`
+          : `path starts with ${m.path}`
+    parts.push(pathMatch)
   }
   if (m.method) parts.push(`method=${m.method}`)
   for (const h of m.headers) parts.push(`header[${h}]`)
