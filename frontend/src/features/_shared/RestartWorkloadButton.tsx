@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import type { SelectedResource } from '@/store/ui'
+import { ContextBadge } from './ContextBadge'
 
 type DialogProps = {
   contextName: string | null
@@ -56,6 +57,7 @@ export function RestartWorkloadDialog({ contextName, resource, open, onOpenChang
                 <code className="font-mono text-xs">spec.template.metadata.annotations</code>{' '}
                 — equivalent to <code className="font-mono text-xs">kubectl rollout restart</code>.
               </p>
+              <ContextBadge contextName={contextName} label="Target context" />
               {restart.error && (
                 <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
                   {String(restart.error)}

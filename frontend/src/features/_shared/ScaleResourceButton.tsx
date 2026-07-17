@@ -16,6 +16,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import type { SelectedResource } from '@/store/ui'
+import { ContextBadge } from './ContextBadge'
 
 const MIN_REPLICAS = 0
 const MAX_REPLICAS = 1000
@@ -89,6 +90,7 @@ export function ScaleResourceButton({ contextName, resource }: Props) {
                 </span>{' '}
                 in <span className="font-mono text-xs">{resource.namespace}</span>.
               </p>
+              <ContextBadge contextName={contextName} label="Target context" />
               {loadError && (
                 <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
                   Failed to read current replicas: {loadError}

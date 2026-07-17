@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { api } from '@/lib/api'
 import { useResources } from '@/store/resources'
 import type { SelectedResource } from '@/store/ui'
+import { ContextBadge } from '@/features/_shared/ContextBadge'
 
 type Props = {
   contextName: string | null
@@ -84,6 +85,7 @@ export function CordonNodeButton({ contextName, resource }: Props) {
                     ? 'New pods stop landing on the node; running pods keep running.'
                     : 'The scheduler can place new pods on the node again.'}
                 </p>
+                <ContextBadge contextName={contextName} label="Target context" />
                 {mutate.error && (
                   <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
                     {String(mutate.error)}

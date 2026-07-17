@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import { sameResource, useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
+import { ContextBadge } from './ContextBadge'
 
 const CONFIRM_BY_TYPING_KINDS: ReadonlySet<ResourceKind> = new Set<ResourceKind>([
   'Namespace',
@@ -81,10 +82,15 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {resource.kind}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will issue DELETE against {resource.kind.toLowerCase()}/{resource.name}
-            {resource.namespace ? ` in namespace ${resource.namespace}` : ''}. The cluster's default
-            propagation policy applies.
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              <p>
+                This will issue DELETE against {resource.kind.toLowerCase()}/{resource.name}
+                {resource.namespace ? ` in namespace ${resource.namespace}` : ''}. The cluster's default
+                propagation policy applies.
+              </p>
+              <ContextBadge contextName={contextName} label="Target context" />
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         {del.error && (

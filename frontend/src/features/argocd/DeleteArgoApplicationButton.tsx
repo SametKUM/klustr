@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api, type ArgoApplicationResource, type ArgoCascadeMode } from '@/lib/api'
 import { useUIStore, type SelectedResource } from '@/store/ui'
+import { ContextBadge } from '@/features/_shared/ContextBadge'
 
 type Props = {
   contextName: string | null
@@ -147,9 +148,14 @@ export function DeleteArgoApplicationDialog({ contextName, resource, open, onOpe
       <AlertDialogContent className="max-w-2xl">
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Application "{resource.name}"?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Choose how Argo CD should handle the {managed?.length ?? '…'} resources this
-            Application currently manages.
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              <p>
+                Choose how Argo CD should handle the {managed?.length ?? '…'} resources this
+                Application currently manages.
+              </p>
+              <ContextBadge contextName={contextName} label="Target context" />
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
 

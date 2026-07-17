@@ -27,6 +27,7 @@ import { api, type WorkloadRevision } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { deltaTouches, onKubeChange } from '@/lib/events'
 import { useThemeMode } from '@/features/_shared/useThemeMode'
+import { ContextBadge } from './ContextBadge'
 
 const DiffEditor = lazy(() =>
   import('@monaco-editor/react').then((m) => ({ default: m.DiffEditor })),
@@ -348,11 +349,16 @@ export function RolloutHistoryTab({ contextName, kind, namespace, name }: Props)
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Rollback to revision {targetRevision}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Restores the pod template from revision {targetRevision} onto {kind.toLowerCase()}/
-              {name}
-              {namespace ? ` in namespace ${namespace}` : ''}. Pods will be replaced with the
-              older template.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Restores the pod template from revision {targetRevision} onto {kind.toLowerCase()}/
+                  {name}
+                  {namespace ? ` in namespace ${namespace}` : ''}. Pods will be replaced with the
+                  older template.
+                </p>
+                <ContextBadge contextName={contextName} label="Target context" />
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

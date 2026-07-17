@@ -7,6 +7,7 @@ import { api, type PodDetail } from '@/lib/api'
 import { useUIStore, type DetailTab, type SelectedResource } from '@/store/ui'
 import { useResourceDetail } from './useResourceDetail'
 import { CopyButton } from './Copyable'
+import { ContextBadge } from './ContextBadge'
 import { ErrorBox } from './DetailPrimitives'
 import { SkeletonDetail } from './SkeletonDetail'
 import { ResourceYAMLTab } from './ResourceYAMLTab'
@@ -198,13 +199,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
             {(contextName || resource?.namespace) && (
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {contextName && (
-                  <span
-                    className="inline-flex min-w-0 max-w-64 items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[10px]"
-                    title={`Context: ${contextName}`}
-                  >
-                    <span className="uppercase tracking-wide text-muted-foreground">Context</span>
-                    <span className="truncate font-mono font-medium text-foreground">{contextName}</span>
-                  </span>
+                  <ContextBadge contextName={contextName} className="max-w-64" />
                 )}
                 {resource?.namespace && (
                   <div className="group flex min-w-0 items-center gap-1.5">

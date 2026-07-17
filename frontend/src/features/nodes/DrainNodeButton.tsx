@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { api, type NodeDrainProgress } from '@/lib/api'
 import type { SelectedResource } from '@/store/ui'
+import { ContextBadge } from '@/features/_shared/ContextBadge'
 
 const PENDING_PREVIEW = 6
 
@@ -100,6 +101,7 @@ export function DrainNodeButton({ contextName, resource }: Props) {
                   . Pods not managed by a controller cannot be rescheduled, so the drain stops
                   and asks before permanently deleting them.
                 </p>
+                <ContextBadge contextName={contextName} label="Target context" />
                 {progress && (
                   <div className="space-y-1 rounded border border-border bg-muted/40 p-2 font-mono text-xs">
                     <p>
