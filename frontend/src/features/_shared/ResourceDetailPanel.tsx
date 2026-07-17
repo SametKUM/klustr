@@ -875,7 +875,13 @@ function PodTabs({
   name: string
 }) {
   const load = useCallback((ctx: string) => api.getPod(ctx, namespace, name), [namespace, name])
-  const { detail, error } = useResourceDetail<PodDetail>(contextName, 'Pod', namespace, name, load)
+  const { detail, error, loading, reload } = useResourceDetail<PodDetail>(
+    contextName,
+    'Pod',
+    namespace,
+    name,
+    load,
+  )
   const requestedTab = useUIStore((s) => s.requestedTab)
   const requestedContainer = useUIStore((s) => s.selectedResource?.logContainer)
   const [tabState, setTabState] = useState(() => ({
@@ -911,7 +917,22 @@ function PodTabs({
         <TabsTrigger value="yaml">YAML</TabsTrigger>
       </TabsList>
       <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-        {error && <ErrorBox>{error}</ErrorBox>}
+        {error && (
+          <div className="space-y-3">
+            <ErrorBox>{error}</ErrorBox>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void reload()}
+              disabled={loading}
+              className="gap-1.5"
+            >
+              <RefreshCcw className={loading ? 'animate-spin' : undefined} />
+              {loading ? 'Retrying…' : 'Retry'}
+            </Button>
+          </div>
+        )}
         {!detail && !error && <SkeletonDetail />}
         {detail && <PodOverviewBody contextName={contextName} detail={detail} />}
       </TabsContent>

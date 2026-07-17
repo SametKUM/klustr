@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { deltaTouches, onKubeChange } from '@/lib/events'
 import { useUIStore } from '@/store/ui'
 
@@ -11,6 +11,8 @@ export function useResourceDetail<T>(
 ) {
   const [detail, setDetail] = useState<T | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const requestRef = useRef(0)
 
   // CR-backed detail bodies pass a bare kind (e.g. 'Challenge') but the CR
   // watcher only emits under the gvr key ('cr:<group>/<resource>'). The viewed
@@ -19,41 +21,47 @@ export function useResourceDetail<T>(
   const gvr = useUIStore((s) => s.selectedResource?.gvr)
   const changeKind = gvr ? `cr:${gvr.group}/${gvr.resource}` : kind
 
-  useEffect(() => {
+  const reload = useCallback(async () => {
+    const request = ++requestRef.current
     if (!contextName) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Connection loss invalidates the remote detail snapshot.
       setDetail(null)
       setError(null)
+      setLoading(false)
       return
     }
-    let cancelled = false
-    const reload = () => {
-      load(contextName)
-        .then((d) => {
-          if (cancelled) return
-          setDetail(d)
-          setError(null)
-        })
-        .catch((e: unknown) => {
-          if (cancelled) return
-          setError(String(e))
-          setDetail(null)
-        })
+
+    setLoading(true)
+    try {
+      const next = await load(contextName)
+      if (request !== requestRef.current) return
+      setDetail(next)
+      setError(null)
+    } catch (e: unknown) {
+      if (request !== requestRef.current) return
+      setError(String(e))
+      setDetail(null)
+    } finally {
+      if (request === requestRef.current) setLoading(false)
     }
-    reload()
+  }, [contextName, load])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial detail loading belongs to this remote subscription lifecycle.
+    void reload()
+    if (!contextName) return
     const unsub = onKubeChange(changeKind, (ctx, delta) => {
       if (ctx !== contextName) return
       // Skip bursts from other objects of the same kind — a busy cluster would
       // otherwise refetch the open detail on every debounced batch. Absent or
       // reset deltas can't be attributed and fall through to a reload.
       if (delta && !delta.reset && !deltaTouches(delta, namespace, name)) return
-      reload()
+      void reload()
     })
     return () => {
-      cancelled = true
+      requestRef.current += 1
       unsub()
     }
-  }, [contextName, changeKind, namespace, name, load])
+  }, [contextName, changeKind, namespace, name, reload])
 
-  return { detail, error }
+  return { detail, error, loading, reload }
 }
