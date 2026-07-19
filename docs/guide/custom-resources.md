@@ -29,6 +29,10 @@ API is detected:
 - **cert-manager** — Certificates, Issuers / ClusterIssuers and the full issuance
   chain (CertificateRequest → Order → Challenge), with ready/expiry status and a
   one-click **Renew**.
+- **Istio** — VirtualServices, DestinationRules and PeerAuthentications, with the
+  served API version read from the discovered CRD.
+- **Karpenter** — NodePools and NodeClaims with provisioning status, surfaced when
+  the `karpenter.sh` CRDs are present.
 
 Everything else stays under the generic CRD browser — which is enough for most
 operators most of the time.

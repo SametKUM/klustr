@@ -141,8 +141,14 @@ klustr/
 │   │                               (only domain that github's README HTML
 │   │                               sanitizer allows in <video src>)
 │   ├── hero-poster.png             video poster + source-of-truth backup
+│   ├── guide/                      task-focused user guides (getting-started,
+│   │                               multi-context, credential-helpers, helm,
+│   │                               gitops, gateway-api, custom-resources,
+│   │                               workloads-and-debugging) indexed by README.md
+│   ├── perf-testing.md             performance testing protocol (microbenchmarks
+│   │                               + benchstat + on-cluster profiling)
 │   └── screenshots/                numbered themed pack `01-*.png` …
-│                                   `10-*.png` for README grid + press / blog
+│                                   `16-*.png` for README grid + press / blog
 ├── hack/                         user's local fixtures (NEVER commit anything under hack/)
 └── .github/workflows/            release matrix (release.yml → builds macOS + Linux)
 ```
