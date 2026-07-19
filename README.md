@@ -173,8 +173,10 @@ Task-focused guides live in [`docs/guide/`](docs/guide):
 - [Getting started](docs/guide/getting-started.md) — contexts, namespaces, read-only mode
 - [Multi-context & aggregated mode](docs/guide/multi-context.md) — many clusters as one, groups, tags
 - [Credential helpers](docs/guide/credential-helpers.md) — aws-vault and other exec plugins under a GUI launch
+- [Cluster & workloads overviews](docs/guide/overview.md) — capacity donuts, workload health, events feed
 - [Workloads & debugging](docs/guide/workloads-and-debugging.md) — logs, exec, port-forward, node shell
-- [Helm](docs/guide/helm.md) · [GitOps: Argo CD & Flux](docs/guide/gitops.md) · [Gateway API](docs/guide/gateway-api.md) · [Custom Resources](docs/guide/custom-resources.md)
+- [Terminal](docs/guide/terminal.md) — the built-in shell drawer and external terminal apps
+- [Helm](docs/guide/helm.md) · [GitOps: Argo CD & Flux](docs/guide/gitops.md) · [Gateway API](docs/guide/gateway-api.md) · [Platform integrations](docs/guide/integrations.md) · [Custom Resources](docs/guide/custom-resources.md)
 
 ## Build from source
 

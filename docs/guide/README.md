@@ -21,12 +21,18 @@ added over time.
 
 ## Working with resources
 
+- [Cluster & workloads overviews](overview.md) — capacity donuts, workload health
+  bars, and the recent-events feed.
 - [Workloads & debugging](workloads-and-debugging.md) — logs, exec, port-forward,
   node shell, events, and pod diagnosis.
+- [Terminal](terminal.md) — the built-in shell drawer and launching an external
+  terminal app.
 - [Helm](helm.md) — browsing releases and install / upgrade / rollback / uninstall.
 - [GitOps: Argo CD & Flux](gitops.md) — sync, refresh, reconcile and suspend
   without the vendor CLIs.
 - [Gateway API](gateway-api.md) — Gateways, routes, and reading route status.
+- [Platform integrations](integrations.md) — cert-manager, Istio, Karpenter and
+  KEDA.
 - [Custom Resources (CRDs)](custom-resources.md) — auto-discovery and the generic
   CR browser.
 

@@ -142,9 +142,10 @@ klustr/
 │   │                               sanitizer allows in <video src>)
 │   ├── hero-poster.png             video poster + source-of-truth backup
 │   ├── guide/                      task-focused user guides (getting-started,
-│   │                               multi-context, credential-helpers, helm,
-│   │                               gitops, gateway-api, custom-resources,
-│   │                               workloads-and-debugging) indexed by README.md
+│   │                               multi-context, credential-helpers, overview,
+│   │                               workloads-and-debugging, terminal, helm,
+│   │                               gitops, gateway-api, integrations,
+│   │                               custom-resources) indexed by README.md
 │   ├── perf-testing.md             performance testing protocol (microbenchmarks
 │   │                               + benchstat + on-cluster profiling)
 │   └── screenshots/                numbered themed pack `01-*.png` …
