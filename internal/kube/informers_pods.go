@@ -140,25 +140,26 @@ type EnvVarRef struct {
 }
 
 type PodDetail struct {
-	Name              string            `json:"name"`
-	Namespace         string            `json:"namespace"`
-	UID               string            `json:"uid"`
-	Status            string            `json:"status"`
-	Phase             string            `json:"phase"`
-	Node              string            `json:"node"`
-	PodIP             string            `json:"podIP"`
-	HostIP            string            `json:"hostIP"`
-	QOSClass          string            `json:"qosClass"`
-	ServiceAccount    string            `json:"serviceAccount"`
-	RestartPolicy     string            `json:"restartPolicy"`
-	PriorityClassName string            `json:"priorityClassName"`
-	CreatedAt         string            `json:"createdAt"`
-	Labels            map[string]string `json:"labels"`
-	Annotations       map[string]string `json:"annotations"`
-	Owners            []OwnerRef        `json:"owners"`
-	InitContainers    []ContainerDetail `json:"initContainers"`
-	Containers        []ContainerDetail `json:"containers"`
-	Conditions        []ConditionDetail `json:"conditions"`
+	Name                string            `json:"name"`
+	Namespace           string            `json:"namespace"`
+	UID                 string            `json:"uid"`
+	Status              string            `json:"status"`
+	Phase               string            `json:"phase"`
+	Node                string            `json:"node"`
+	PodIP               string            `json:"podIP"`
+	HostIP              string            `json:"hostIP"`
+	QOSClass            string            `json:"qosClass"`
+	ServiceAccount      string            `json:"serviceAccount"`
+	RestartPolicy       string            `json:"restartPolicy"`
+	PriorityClassName   string            `json:"priorityClassName"`
+	CreatedAt           string            `json:"createdAt"`
+	Labels              map[string]string `json:"labels"`
+	Annotations         map[string]string `json:"annotations"`
+	Owners              []OwnerRef        `json:"owners"`
+	InitContainers      []ContainerDetail `json:"initContainers"`
+	Containers          []ContainerDetail `json:"containers"`
+	EphemeralContainers []ContainerDetail `json:"ephemeralContainers"`
+	Conditions          []ConditionDetail `json:"conditions"`
 	// ResizeStatus reflects an in-flight in-place resize: "Proposed",
 	// "InProgress", "Deferred" or "Infeasible" (empty when none is pending).
 	// Read from .status.resize on older clusters and from the
@@ -184,27 +185,32 @@ func (w *contextWatcher) Pod(namespace, name string) (*PodDetail, error) {
 			}
 		}
 	}
+	ephemeralSpecs := make([]corev1.Container, 0, len(p.Spec.EphemeralContainers))
+	for _, ec := range p.Spec.EphemeralContainers {
+		ephemeralSpecs = append(ephemeralSpecs, corev1.Container(ec.EphemeralContainerCommon))
+	}
 	return &PodDetail{
-		Name:              p.Name,
-		Namespace:         p.Namespace,
-		UID:               string(p.UID),
-		Status:            derivePodStatus(p),
-		Phase:             string(p.Status.Phase),
-		Node:              p.Spec.NodeName,
-		PodIP:             p.Status.PodIP,
-		HostIP:            p.Status.HostIP,
-		QOSClass:          string(p.Status.QOSClass),
-		ServiceAccount:    p.Spec.ServiceAccountName,
-		RestartPolicy:     string(p.Spec.RestartPolicy),
-		PriorityClassName: p.Spec.PriorityClassName,
-		CreatedAt:         p.CreationTimestamp.UTC().Format(time.RFC3339),
-		Labels:            p.Labels,
-		Annotations:       p.Annotations,
-		Owners:            owners,
-		InitContainers:    w.containerDetails(p, p.Spec.InitContainers, p.Status.InitContainerStatuses),
-		Containers:        w.containerDetails(p, p.Spec.Containers, p.Status.ContainerStatuses),
-		Conditions:        podConditions(p.Status.Conditions),
-		ResizeStatus:      podResizeStatus(p),
+		Name:                p.Name,
+		Namespace:           p.Namespace,
+		UID:                 string(p.UID),
+		Status:              derivePodStatus(p),
+		Phase:               string(p.Status.Phase),
+		Node:                p.Spec.NodeName,
+		PodIP:               p.Status.PodIP,
+		HostIP:              p.Status.HostIP,
+		QOSClass:            string(p.Status.QOSClass),
+		ServiceAccount:      p.Spec.ServiceAccountName,
+		RestartPolicy:       string(p.Spec.RestartPolicy),
+		PriorityClassName:   p.Spec.PriorityClassName,
+		CreatedAt:           p.CreationTimestamp.UTC().Format(time.RFC3339),
+		Labels:              p.Labels,
+		Annotations:         p.Annotations,
+		Owners:              owners,
+		InitContainers:      w.containerDetails(p, p.Spec.InitContainers, p.Status.InitContainerStatuses),
+		Containers:          w.containerDetails(p, p.Spec.Containers, p.Status.ContainerStatuses),
+		EphemeralContainers: w.containerDetails(p, ephemeralSpecs, p.Status.EphemeralContainerStatuses),
+		Conditions:          podConditions(p.Status.Conditions),
+		ResizeStatus:        podResizeStatus(p),
 	}, nil
 }
 
