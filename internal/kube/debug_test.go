@@ -42,8 +42,9 @@ func TestRunningEphemeralContainer(t *testing.T) {
 			{Name: "dbg", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}},
 		},
 	}
-	if running, reason := runningEphemeralContainer(status, "dbg"); !running || reason != "" {
-		t.Errorf("running=%v reason=%q, want true/empty", running, reason)
+	running, reason, terminal := runningEphemeralContainer(status, "dbg")
+	if !running || reason != "" || terminal {
+		t.Errorf("running=%v reason=%q terminal=%v, want true/empty/false", running, reason, terminal)
 	}
 }
 
@@ -55,15 +56,31 @@ func TestRunningEphemeralContainerWaiting(t *testing.T) {
 			}},
 		},
 	}
-	if running, reason := runningEphemeralContainer(status, "dbg"); running || reason != "ImagePullBackOff" {
-		t.Errorf("running=%v reason=%q, want false/ImagePullBackOff", running, reason)
+	running, reason, terminal := runningEphemeralContainer(status, "dbg")
+	if running || reason != "ImagePullBackOff" || terminal {
+		t.Errorf("running=%v reason=%q terminal=%v, want false/ImagePullBackOff/false", running, reason, terminal)
 	}
 }
 
 func TestRunningEphemeralContainerAbsent(t *testing.T) {
 	status := &corev1.PodStatus{}
-	if running, reason := runningEphemeralContainer(status, "dbg"); running || reason != "" {
-		t.Errorf("running=%v reason=%q, want false/empty", running, reason)
+	running, reason, terminal := runningEphemeralContainer(status, "dbg")
+	if running || reason != "" || terminal {
+		t.Errorf("running=%v reason=%q terminal=%v, want false/empty/false", running, reason, terminal)
+	}
+}
+
+func TestRunningEphemeralContainerTerminated(t *testing.T) {
+	status := &corev1.PodStatus{
+		EphemeralContainerStatuses: []corev1.ContainerStatus{
+			{Name: "dbg", State: corev1.ContainerState{
+				Terminated: &corev1.ContainerStateTerminated{Reason: "Error"},
+			}},
+		},
+	}
+	running, reason, terminal := runningEphemeralContainer(status, "dbg")
+	if running || reason == "" || !terminal {
+		t.Errorf("running=%v reason=%q terminal=%v, want false/non-empty/true", running, reason, terminal)
 	}
 }
 
@@ -97,6 +114,24 @@ func TestWaitEphemeralRunningImagePullFails(t *testing.T) {
 	err := waitEphemeralRunning(context.Background(), cs, "ns", "p", "dbg", time.Second)
 	if err == nil {
 		t.Fatal("expected an error on ImagePullBackOff")
+	}
+}
+
+func TestWaitEphemeralRunningTerminatedFailsFast(t *testing.T) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "ns"},
+		Status: corev1.PodStatus{
+			EphemeralContainerStatuses: []corev1.ContainerStatus{
+				{Name: "dbg", State: corev1.ContainerState{
+					Terminated: &corev1.ContainerStateTerminated{Reason: "Error"},
+				}},
+			},
+		},
+	}
+	cs := fake.NewSimpleClientset(pod)
+	err := waitEphemeralRunning(context.Background(), cs, "ns", "p", "dbg", time.Second)
+	if err == nil {
+		t.Fatal("expected an error when the debug container terminates before ready")
 	}
 }
 
