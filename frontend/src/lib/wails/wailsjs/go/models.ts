@@ -1,3 +1,22 @@
+export namespace app {
+	
+	export class DebugSession {
+	    sessionID: string;
+	    containerName: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DebugSession(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sessionID = source["sessionID"];
+	        this.containerName = source["containerName"];
+	    }
+	}
+
+}
+
 export namespace kube {
 	
 	export class ConditionDetail {
@@ -5854,6 +5873,7 @@ export namespace kube {
 	    owners: OwnerRef[];
 	    initContainers: ContainerDetail[];
 	    containers: ContainerDetail[];
+	    ephemeralContainers: ContainerDetail[];
 	    conditions: ConditionDetail[];
 	    resizeStatus: string;
 	
@@ -5881,6 +5901,7 @@ export namespace kube {
 	        this.owners = this.convertValues(source["owners"], OwnerRef);
 	        this.initContainers = this.convertValues(source["initContainers"], ContainerDetail);
 	        this.containers = this.convertValues(source["containers"], ContainerDetail);
+	        this.ephemeralContainers = this.convertValues(source["ephemeralContainers"], ContainerDetail);
 	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.resizeStatus = source["resizeStatus"];
 	    }
