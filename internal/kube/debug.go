@@ -41,8 +41,11 @@ func debugEphemeralContainer(name, image, target string) corev1.EphemeralContain
 
 // runningEphemeralContainer reports whether the named ephemeral container is
 // Running; otherwise it returns the Waiting/Terminated reason (empty when the
-// container is not present in status yet).
-func runningEphemeralContainer(status *corev1.PodStatus, name string) (bool, string) {
+// container is not present in status yet). terminal is true for Terminated —
+// the kubelet never restarts an ephemeral container, so that state is
+// permanent the instant it's observed, unlike a Waiting reason which may
+// still resolve on its own.
+func runningEphemeralContainer(status *corev1.PodStatus, name string) (running bool, reason string, terminal bool) {
 	for i := range status.EphemeralContainerStatuses {
 		cs := &status.EphemeralContainerStatuses[i]
 		if cs.Name != name {
@@ -50,19 +53,19 @@ func runningEphemeralContainer(status *corev1.PodStatus, name string) (bool, str
 		}
 		switch {
 		case cs.State.Running != nil:
-			return true, ""
+			return true, "", false
 		case cs.State.Waiting != nil:
-			return false, cs.State.Waiting.Reason
+			return false, cs.State.Waiting.Reason, false
 		case cs.State.Terminated != nil:
 			r := cs.State.Terminated.Reason
 			if r == "" {
 				r = fmt.Sprintf("Terminated (exit %d)", cs.State.Terminated.ExitCode)
 			}
-			return false, r
+			return false, r, true
 		}
-		return false, ""
+		return false, "", false
 	}
-	return false, ""
+	return false, "", false
 }
 
 // waitEphemeralRunning polls until the named ephemeral container is Running.
@@ -78,9 +81,12 @@ func waitEphemeralRunning(ctx context.Context, cs kubernetes.Interface, namespac
 			return fmt.Errorf("pod %q disappeared while starting debug container", podName)
 		}
 		if err == nil {
-			running, reason := runningEphemeralContainer(&pod.Status, containerName)
+			running, reason, terminal := runningEphemeralContainer(&pod.Status, containerName)
 			if running {
 				return nil
+			}
+			if terminal {
+				return fmt.Errorf("debug container %q terminated before ready: %s", containerName, reason)
 			}
 			switch reason {
 			case "ErrImagePull", "ImagePullBackOff", "InvalidImageName",
