@@ -166,6 +166,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
     sessionRef.current = null
     if (id) api.stopExec(id).catch(() => {})
     setRunning(false)
+    setBusy(false)
   }, [])
 
   // connect tears down any current session, prints a banner, runs start() to
