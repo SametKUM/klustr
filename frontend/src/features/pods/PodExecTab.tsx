@@ -47,13 +47,14 @@ export function PodExecTab({ detail, contextName, active }: Props) {
 
   // Name of the live debug container once created, so Reattach execs back into
   // the same ephemeral container rather than injecting another.
-  const debugContainerRef = useRef<string | null>(null)
+  const [debugContainer, setDebugContainer] = useState<string | null>(null)
 
   const termHostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
   const sessionRef = useRef<string | null>(null)
   const detachRef = useRef<(() => void) | null>(null)
+  const connGenRef = useRef(0)
 
   useEffect(() => {
     if (!termHostRef.current) return
@@ -158,6 +159,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
   }, [])
 
   const disconnect = useCallback(() => {
+    connGenRef.current++
     detachRef.current?.()
     detachRef.current = null
     const id = sessionRef.current
@@ -173,18 +175,24 @@ export function PodExecTab({ detail, contextName, active }: Props) {
       const term = termRef.current
       if (!term) return
       disconnect()
+      const gen = connGenRef.current
       term.clear()
       term.writeln(`\x1b[2m# ${banner}\x1b[0m`)
       setBusy(true)
       setError(null)
       try {
         const id = await start()
+        if (gen !== connGenRef.current) {
+          api.stopExec(id).catch(() => {})
+          return
+        }
         detachRef.current = attachSession(id)
       } catch (e: unknown) {
+        if (gen !== connGenRef.current) return
         setError(String(e))
         setRunning(false)
       } finally {
-        setBusy(false)
+        if (gen === connGenRef.current) setBusy(false)
       }
     },
     [attachSession, disconnect],
@@ -228,17 +236,16 @@ export function PodExecTab({ detail, contextName, active }: Props) {
           container,
           image,
         )
-        debugContainerRef.current = s.containerName
+        setDebugContainer(s.containerName)
         return s.sessionID
       },
     )
   }
 
   const reattachDebug = () => {
-    const name = debugContainerRef.current
-    if (!selectedContext || !name || busy) return
-    void connect(`reattaching to ${name} (${shell})`, () =>
-      api.startExec(selectedContext, detail.namespace, detail.name, name, [shell]),
+    if (!selectedContext || !debugContainer || busy) return
+    void connect(`reattaching to ${debugContainer} (${shell})`, () =>
+      api.startExec(selectedContext, detail.namespace, detail.name, debugContainer, [shell]),
     )
   }
 
@@ -330,7 +337,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
               size="xs"
               variant="outline"
               onClick={reattachDebug}
-              disabled={!debugContainerRef.current || busy}
+              disabled={!debugContainer || busy}
               title="Exec back into the debug container"
             >
               Reattach
