@@ -468,6 +468,43 @@ func (a *App) StartExec(contextName, namespace, podName, container string, comma
 	return id, nil
 }
 
+// DebugSession is the result of StartPodDebug: the live exec session id plus
+// the name of the ephemeral debug container that was created, so the frontend
+// can reattach into the same container via StartExec.
+type DebugSession struct {
+	SessionID     string `json:"sessionID"`
+	ContainerName string `json:"containerName"`
+}
+
+func (a *App) StartPodDebug(contextName, namespace, podName, target, image string) (DebugSession, error) {
+	gate := newSessionGate()
+	id, container, err := a.clients.StartPodDebug(
+		a.ctx, contextName, namespace, podName, target, image,
+		func(data string) {
+			if id := gate.wait(); id != "" {
+				runtime.EventsEmit(a.ctx, "exec:out:"+id, data)
+			}
+		},
+		func(err error) {
+			id := gate.wait()
+			if id == "" {
+				return
+			}
+			msg := ""
+			if err != nil {
+				msg = err.Error()
+			}
+			runtime.EventsEmit(a.ctx, "exec:close:"+id, msg)
+		},
+	)
+	if err != nil {
+		gate.set("")
+		return DebugSession{}, err
+	}
+	gate.set(id)
+	return DebugSession{SessionID: id, ContainerName: container}, nil
+}
+
 func (a *App) SendExecInput(sessionID, data string) {
 	a.clients.SendExecInput(sessionID, data)
 }
