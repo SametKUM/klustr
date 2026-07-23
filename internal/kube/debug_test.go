@@ -1,9 +1,13 @@
 package kube
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestDebugEphemeralContainer(t *testing.T) {
@@ -60,5 +64,47 @@ func TestRunningEphemeralContainerAbsent(t *testing.T) {
 	status := &corev1.PodStatus{}
 	if running, reason := runningEphemeralContainer(status, "dbg"); running || reason != "" {
 		t.Errorf("running=%v reason=%q, want false/empty", running, reason)
+	}
+}
+
+func TestWaitEphemeralRunningReady(t *testing.T) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "ns"},
+		Status: corev1.PodStatus{
+			EphemeralContainerStatuses: []corev1.ContainerStatus{
+				{Name: "dbg", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}},
+			},
+		},
+	}
+	cs := fake.NewSimpleClientset(pod)
+	if err := waitEphemeralRunning(context.Background(), cs, "ns", "p", "dbg", time.Second); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestWaitEphemeralRunningImagePullFails(t *testing.T) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "ns"},
+		Status: corev1.PodStatus{
+			EphemeralContainerStatuses: []corev1.ContainerStatus{
+				{Name: "dbg", State: corev1.ContainerState{
+					Waiting: &corev1.ContainerStateWaiting{Reason: "ImagePullBackOff"},
+				}},
+			},
+		},
+	}
+	cs := fake.NewSimpleClientset(pod)
+	err := waitEphemeralRunning(context.Background(), cs, "ns", "p", "dbg", time.Second)
+	if err == nil {
+		t.Fatal("expected an error on ImagePullBackOff")
+	}
+}
+
+func TestWaitEphemeralRunningTimeout(t *testing.T) {
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "ns"}}
+	cs := fake.NewSimpleClientset(pod)
+	err := waitEphemeralRunning(context.Background(), cs, "ns", "p", "dbg", 50*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected a timeout error")
 	}
 }
