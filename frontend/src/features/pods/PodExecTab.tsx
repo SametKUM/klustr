@@ -45,9 +45,17 @@ export function PodExecTab({ detail, contextName, active }: Props) {
   const [nonce, setNonce] = useState(0) // bumps to restart the exec-mode session
   const [externalOpen, setExternalOpen] = useState(false)
 
-  // Name of the live debug container once created, so Reattach execs back into
-  // the same ephemeral container rather than injecting another.
-  const [debugContainer, setDebugContainer] = useState<string | null>(null)
+  // Seed from a debug container created in an earlier session so Reattach works
+  // after a dialog reopen (component state has reset by then) instead of
+  // injecting a second, unremovable ephemeral container. Newest wins: ephemeral
+  // containers are appended, so the last running klustr-debugger-* is the most
+  // recent.
+  const [debugContainer, setDebugContainer] = useState<string | null>(() => {
+    const existing = (detail.ephemeralContainers ?? []).filter(
+      (c) => c.name.startsWith('klustr-debugger-') && c.state === 'Running',
+    )
+    return existing.length ? existing[existing.length - 1].name : null
+  })
 
   const termHostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
