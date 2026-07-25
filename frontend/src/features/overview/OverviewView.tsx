@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Info, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,12 +9,16 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { MetricsServerInstaller } from '@/features/_shared/MetricsServerInstaller'
 import { MetricsServerUninstaller } from '@/features/_shared/MetricsServerUninstaller'
+import { ProviderIcon } from '@/features/_shared/providerIcons'
+import { providerMeta } from '@/features/_shared/providerInfo'
 import {
   api,
   type ClusterOverview,
   type ClusterPods,
   type ClusterResource,
+  type ContextInfo,
   type EventInfo,
+  type ServerVersion,
 } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
 import { formatAge } from '@/lib/time'
@@ -31,6 +35,9 @@ function isWatcherNotReady(err: unknown): boolean {
 type ClusterState = {
   overview: ClusterOverview | null
   overviewError: string | null
+  contextInfo: ContextInfo | null
+  serverVersion: ServerVersion | null
+  identityError: string | null
   warnings: EventInfo[]
   warningsError: string | null
   lastUpdatedAt: number | null
@@ -39,9 +46,17 @@ type ClusterState = {
 const EMPTY_STATE: ClusterState = {
   overview: null,
   overviewError: null,
+  contextInfo: null,
+  serverVersion: null,
+  identityError: null,
   warnings: [],
   warningsError: null,
   lastUpdatedAt: null,
+}
+
+type ContextWarning = {
+  contextName: string
+  event: EventInfo
 }
 
 export function OverviewView() {
@@ -50,6 +65,21 @@ export function OverviewView() {
   const [byContext, setByContext] = useState<Record<string, ClusterState>>({})
   const debounceRef = useRef<number | null>(null)
   const ctxKey = activeContexts.join('|')
+  const aggregatedWarnings = useMemo(
+    () =>
+      activeContexts
+        .flatMap((contextName) =>
+          (byContext[contextName]?.warnings ?? []).map((event) => ({ contextName, event })),
+        )
+        .sort((a, b) => Date.parse(b.event.lastSeen) - Date.parse(a.event.lastSeen)),
+    [activeContexts, byContext],
+  )
+  const aggregatedWarningsError = activeContexts
+    .flatMap((contextName) => {
+      const error = byContext[contextName]?.warningsError
+      return error ? [`${contextName}: ${error}`] : []
+    })
+    .join('; ')
 
   useEffect(() => {
     if (activeContexts.length === 0) {
@@ -74,6 +104,34 @@ export function OverviewView() {
         ...prev,
         [ctx]: { ...(prev[ctx] ?? EMPTY_STATE), ...patch },
       }))
+    }
+
+    const loadIdentity = () => {
+      api
+        .listContexts()
+        .then((cfg) => {
+          if (cancelled) return
+          const contexts = new Map(cfg.contexts.map((context) => [context.name, context]))
+          for (const ctx of activeContexts) {
+            updateContext(ctx, { contextInfo: contexts.get(ctx) ?? null })
+          }
+        })
+        .catch(() => {})
+
+      for (const ctx of activeContexts) {
+        api
+          .pingContext(ctx)
+          .then((version) => {
+            if (!cancelled) {
+              updateContext(ctx, { serverVersion: version, identityError: null })
+            }
+          })
+          .catch((e) => {
+            if (!cancelled) {
+              updateContext(ctx, { identityError: String(e) })
+            }
+          })
+      }
     }
 
     const pullOne = (ctx: string) => {
@@ -135,6 +193,7 @@ export function OverviewView() {
       }
       return keep
     })
+    loadIdentity()
     pullAll()
     const id = window.setInterval(pullAll, POLL_INTERVAL_MS)
     const unsubs = ['Node', 'Pod', 'Namespace'].map((kind) =>
@@ -174,8 +233,16 @@ export function OverviewView() {
           isAggregated={isAggregated}
           state={byContext[ctx] ?? EMPTY_STATE}
           isFirst={idx === 0}
+          showWarnings={!isAggregated}
         />
       ))}
+      {isAggregated && (
+        <WarningsSection
+          warnings={aggregatedWarnings}
+          error={aggregatedWarningsError || null}
+          showContext
+        />
+      )}
     </div>
   )
 }
@@ -185,11 +252,13 @@ function ClusterSection({
   isAggregated,
   state,
   isFirst,
+  showWarnings,
 }: {
   contextName: string
   isAggregated: boolean
   state: ClusterState
   isFirst: boolean
+  showWarnings: boolean
 }) {
   const { overview, overviewError, warnings, warningsError, lastUpdatedAt } = state
   const [installerOpen, setInstallerOpen] = useState(false)
@@ -272,7 +341,7 @@ function ClusterSection({
         </div>
       )}
 
-      <div className="grid gap-4 px-6 py-4 sm:grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-4 px-6 py-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4">
         <ResourceCard
           title="CPU"
           metric={overview?.cpu ?? null}
@@ -286,9 +355,21 @@ function ClusterSection({
           unit=""
         />
         <PodsCard pods={overview?.pods ?? null} />
+        <ClusterIdentityCard
+          contextName={contextName}
+          context={state.contextInfo}
+          version={state.serverVersion}
+          error={state.identityError}
+        />
       </div>
 
-      <WarningsSection warnings={warnings} error={warningsError} contextName={contextName} />
+      {showWarnings && (
+        <WarningsSection
+          warnings={warnings.map((event) => ({ contextName, event }))}
+          error={warningsError}
+          showContext={false}
+        />
+      )}
       <MetricsServerInstaller
         open={installerOpen}
         onOpenChange={setInstallerOpen}
@@ -299,6 +380,68 @@ function ClusterSection({
         onOpenChange={setUninstallerOpen}
         contextName={contextName}
       />
+    </div>
+  )
+}
+
+function ClusterIdentityCard({
+  contextName,
+  context,
+  version,
+  error,
+}: {
+  contextName: string
+  context: ContextInfo | null
+  version: ServerVersion | null
+  error: string | null
+}) {
+  const meta = context ? providerMeta(context) : null
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Cluster
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="grid size-12 shrink-0 place-items-center rounded-full bg-muted shadow-sm ring-1 ring-border/60">
+          {context ? (
+            <ProviderIcon context={context} className="size-6" />
+          ) : (
+            <span className="size-2 rounded-full bg-muted-foreground/40" aria-hidden />
+          )}
+        </span>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold" title={meta?.label ?? 'Kubernetes'}>
+            {meta?.label ?? 'Kubernetes'}
+          </div>
+          <div className="truncate text-xs text-muted-foreground" title={contextName}>
+            {contextName}
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-col gap-2 border-t border-border/60 pt-3 text-xs">
+        <IdentityRow
+          label="Kubernetes"
+          value={version?.gitVersion ?? '—'}
+          title={error ?? version?.gitVersion}
+        />
+        <IdentityRow
+          label="Control plane"
+          value={version?.platform ?? '—'}
+          title={error ?? version?.platform}
+        />
+      </div>
+    </div>
+  )
+}
+
+function IdentityRow({ label, value, title }: { label: string; value: string; title?: string }) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="truncate font-mono text-[11px] text-foreground" title={title}>
+        {value}
+      </span>
     </div>
   )
 }
@@ -499,11 +642,11 @@ function usageColor(pct: number): string {
 function WarningsSection({
   warnings,
   error,
-  contextName,
+  showContext,
 }: {
-  warnings: EventInfo[]
+  warnings: ContextWarning[]
   error: string | null
-  contextName: string
+  showContext: boolean
 }) {
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
   return (
@@ -522,6 +665,7 @@ function WarningsSection({
           <table className="w-full text-xs tabular-nums">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                {showContext && <th className="px-3 py-2 font-medium">Context</th>}
                 <th className="px-3 py-2 font-medium">Message</th>
                 <th className="px-3 py-2 font-medium">Object</th>
                 <th className="px-3 py-2 font-medium">Reason</th>
@@ -530,11 +674,11 @@ function WarningsSection({
               </tr>
             </thead>
             <tbody>
-              {warnings.map((w, i) => {
+              {warnings.map(({ contextName, event: w }, i) => {
                 const clickable = Boolean(w.objectKind && w.objectName)
                 return (
                   <tr
-                    key={`${w.namespace}/${w.name}/${i}`}
+                    key={`${contextName}/${w.namespace}/${w.name}/${i}`}
                     className={`border-b border-border/50 last:border-0 hover:bg-muted/40 ${clickable ? 'cursor-pointer' : ''}`}
                     onClick={
                       clickable
@@ -548,6 +692,16 @@ function WarningsSection({
                         : undefined
                     }
                   >
+                    {showContext && (
+                      <td className="max-w-44 px-3 py-2 align-top">
+                        <span
+                          className="block truncate font-mono text-[11px] text-muted-foreground"
+                          title={contextName}
+                        >
+                          {contextName}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-3 py-2 align-top text-foreground">{w.message}</td>
                     <td className="px-3 py-2 align-top font-mono text-[11px] text-muted-foreground">
                       {w.objectKind}/{w.objectName}
