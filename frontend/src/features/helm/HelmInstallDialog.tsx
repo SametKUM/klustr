@@ -12,11 +12,17 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { api, type HelmDryRunResult, type HelmInstallOptions } from '@/lib/api'
 import { useUIStore } from '@/store/ui'
+import { CopyButton } from '@/features/_shared/Copyable'
 import { useThemeMode } from '@/features/_shared/useThemeMode'
 
 const Editor = lazy(() => import('@monaco-editor/react').then((m) => ({ default: m.Editor })))
 
 type Mode = 'install' | 'upgrade'
+
+type OperationError = {
+  title: string
+  message: string
+}
 
 type Props = {
   open: boolean
@@ -55,6 +61,7 @@ export function HelmInstallDialog({
   const [resetValues, setResetValues] = useState(false)
   const [dryRunResult, setDryRunResult] = useState<HelmDryRunResult | null>(null)
   const [ambiguous, setAmbiguous] = useState<{ chart: string; repos: string[] } | null>(null)
+  const [operationError, setOperationError] = useState<OperationError | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -70,6 +77,7 @@ export function HelmInstallDialog({
     setResetValues(false)
     setDryRunResult(null)
     setAmbiguous(null)
+    setOperationError(null)
   }, [open, mode, initialName, initialNamespace, initialChartRef, initialVersion, initialValues])
 
   const opts: HelmInstallOptions = useMemo(
@@ -104,8 +112,10 @@ export function HelmInstallDialog({
       const amb = parseAmbiguousRepos(e)
       if (amb) {
         setAmbiguous(amb)
+        setOperationError(null)
         return
       }
+      setOperationError({ title: 'Dry-run failed', message: String(e) })
       toast.error(`Dry-run failed: ${String(e)}`)
     },
   })
@@ -125,17 +135,30 @@ export function HelmInstallDialog({
       const amb = parseAmbiguousRepos(e)
       if (amb) {
         setAmbiguous(amb)
+        setOperationError(null)
         return
       }
-      toast.error(`${mode === 'install' ? 'Install' : 'Upgrade'} failed: ${String(e)}`)
+      const title = `${mode === 'install' ? 'Install' : 'Upgrade'} failed`
+      setOperationError({ title, message: String(e) })
+      toast.error(`${title}: ${String(e)}`)
     },
   })
 
   const formInvalid = !name.trim() || !chartRef.trim() || !namespace.trim()
   const pending = dryRun.isPending || apply.isPending
+  const operationErrorSummary = operationError
+    ? summarizeServerError(operationError.message)
+    : ''
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (pending) return
+        if (!nextOpen) setOperationError(null)
+        onOpenChange(nextOpen)
+      }}
+    >
       <DialogContent className="flex h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
         <DialogHeader className="border-b border-border px-6 py-4">
           <DialogTitle>
@@ -317,11 +340,45 @@ export function HelmInstallDialog({
           </div>
         </div>
 
+        {operationError && (
+          <div
+            role="alert"
+            className="shrink-0 border-t border-destructive/40 bg-destructive/10 px-6 py-3 text-xs text-destructive"
+          >
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{operationError.title}</p>
+                <p className="mt-0.5 break-words font-mono">{operationErrorSummary}</p>
+              </div>
+              <CopyButton
+                value={operationError.message}
+                toastLabel="Helm error"
+                ariaLabel="Copy Helm error"
+                className="shrink-0"
+                iconClassName="size-3.5"
+              />
+            </div>
+            {operationErrorSummary !== operationError.message && (
+              <details className="mt-2">
+                <summary className="cursor-pointer select-none text-[11px] text-destructive/80 hover:text-destructive">
+                  Full server response
+                </summary>
+                <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] text-destructive/90">
+                  {operationError.message}
+                </pre>
+              </details>
+            )}
+          </div>
+        )}
+
         <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-muted/40 px-6 py-3">
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              setOperationError(null)
+              onOpenChange(false)
+            }}
             disabled={pending}
           >
             Cancel
@@ -329,14 +386,20 @@ export function HelmInstallDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => dryRun.mutate()}
+            onClick={() => {
+              setOperationError(null)
+              dryRun.mutate()
+            }}
             disabled={pending || formInvalid}
           >
             {dryRun.isPending ? 'Rendering…' : 'Dry-run'}
           </Button>
           <Button
             type="button"
-            onClick={() => apply.mutate()}
+            onClick={() => {
+              setOperationError(null)
+              apply.mutate()
+            }}
             disabled={pending || formInvalid}
           >
             {apply.isPending
@@ -351,6 +414,13 @@ export function HelmInstallDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function summarizeServerError(raw: string): string {
+  return raw
+    .replace(/\{.*\}/s, '{…}')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 const ambiguousRepoPattern = /chart "([^"]+)" is provided by multiple repos \(([^)]+)\)/
