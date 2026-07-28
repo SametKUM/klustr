@@ -56,7 +56,7 @@
     "vitest": "^4.1.10"
   },
   "overrides": {
-    "dompurify": "^3.4.9",
+    "dompurify": "^3.4.12",
     "@babel/core": "^7.29.7"
   }
 }
