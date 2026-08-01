@@ -1,5 +1,6 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { parseDocument } from 'yaml'
 import { api, type MutationDiff } from '@/lib/api'
+import { deltaTouches, onKubeChange } from '@/lib/events'
 import { useUIStore } from '@/store/ui'
 import { Spinner } from '@/components/ui/spinner'
 import { CopyButton } from './Copyable'
@@ -48,36 +50,70 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Pro
   const [source, setSource] = useState<string>('')
   const [draft, setDraft] = useState<string>('')
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [stale, setStale] = useState(false)
   const [diffOpen, setDiffOpen] = useState(false)
+  const requestRef = useRef(0)
+  const gvrGroup = gvr?.group ?? ''
+  const gvrVersion = gvr?.version ?? ''
+  const gvrResource = gvr?.resource
+  const changeKind = gvrResource ? `cr:${gvrGroup}/${gvrResource}` : kind
+
+  const loadYAML = useCallback(async (refresh: boolean) => {
+    if (!contextName) return
+    const request = ++requestRef.current
+    if (refresh) {
+      setRefreshing(true)
+      setRefreshError(null)
+    } else {
+      setLoaded(false)
+      setLoadError(null)
+      setRefreshError(null)
+      setStale(false)
+    }
+    const fetcher = gvrResource
+      ? api.getCustomResourceYAML(contextName, gvrGroup, gvrVersion, gvrResource, namespace, name)
+      : api.getResourceYAML(contextName, kind, namespace, name)
+
+    try {
+      const yaml = await fetcher
+      if (request !== requestRef.current) return
+      setSource(yaml)
+      setDraft(yaml)
+      setLoaded(true)
+      setStale(false)
+    } catch (e: unknown) {
+      if (request !== requestRef.current) return
+      if (refresh) {
+        setRefreshError(String(e))
+      } else {
+        setLoadError(String(e))
+        setLoaded(true)
+      }
+    } finally {
+      if (request === requestRef.current) setRefreshing(false)
+    }
+  }, [contextName, gvrGroup, gvrVersion, gvrResource, namespace, name, kind])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Resource identity starts a fresh remote YAML lifecycle.
+    void loadYAML(false)
+    return () => {
+      requestRef.current += 1
+    }
+  }, [loadYAML])
 
   useEffect(() => {
     if (!contextName) return
-    let cancelled = false
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on resource change so the previous YAML doesn't flash before the new fetch
-    setLoaded(false)
-    setLoadError(null)
-    const fetcher = gvr
-      ? api.getCustomResourceYAML(contextName, gvr.group, gvr.version, gvr.resource, namespace, name)
-      : api.getResourceYAML(contextName, kind, namespace, name)
-    fetcher
-      .then((y) => {
-        if (cancelled) return
-        setSource(y)
-        setDraft(y)
-        setLoaded(true)
-      })
-      .catch((e: unknown) => {
-        if (cancelled) return
-        setLoadError(String(e))
-        setLoaded(true)
-      })
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- depending on the gvr object identity would re-fire whenever the parent rebuilds it; the destructured primitive fields below are the real inputs
-  }, [contextName, kind, namespace, name, gvr?.group, gvr?.version, gvr?.resource])
+    return onKubeChange(changeKind, (changedContext, delta) => {
+      if (changedContext !== contextName) return
+      if (delta && !delta.reset && !deltaTouches(delta, namespace, name)) return
+      setStale(true)
+    })
+  }, [contextName, changeKind, namespace, name])
 
   const dryRun = useMutation({
     mutationFn: async (): Promise<MutationDiff> => {
@@ -131,6 +167,17 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Pro
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs">
         <span className="text-muted-foreground">YAML</span>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          onClick={() => void loadYAML(true)}
+          disabled={!loaded || !!loadError || editing || dirty || refreshing}
+          title={editing ? 'Finish or cancel editing before refreshing' : 'Refresh YAML'}
+        >
+          <RefreshCw className={`size-3 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </Button>
         {editing ? (
           <>
             <Button
@@ -170,8 +217,14 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Pro
             size="xs"
             variant="outline"
             onClick={() => setEditing(true)}
-            disabled={!loaded || !!loadError || readOnly}
-            title={readOnly ? 'Read-only mode — editing is disabled' : undefined}
+            disabled={!loaded || !!loadError || readOnly || stale}
+            title={
+              readOnly
+                ? 'Read-only mode — editing is disabled'
+                : stale
+                  ? 'Refresh the latest YAML before editing'
+                  : undefined
+            }
           >
             Edit
           </Button>
@@ -188,9 +241,22 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Pro
           />
         )}
       </div>
+      {stale && (
+        <div className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs text-amber-700 dark:text-amber-300">
+          Resource changed in the cluster.{' '}
+          {editing
+            ? 'Finish or cancel your edits, then refresh to load the latest YAML.'
+            : 'Refresh to load the latest YAML.'}
+        </div>
+      )}
       {loadError && (
         <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-xs font-mono text-destructive break-words">
           {loadError}
+        </div>
+      )}
+      {refreshError && (
+        <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-xs font-mono text-destructive break-words">
+          Refresh failed: {refreshError}
         </div>
       )}
       {apply.error && (
