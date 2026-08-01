@@ -90,6 +90,8 @@ klustr/
 │       ├── overview.go              cluster-wide CPU / memory / pod aggregation
 │       ├── logs.go                  streaming log sessions
 │       ├── exec.go                  SPDY exec sessions
+│       ├── debug.go                 ephemeral debug container (`kubectl debug`)
+│       │                            injected into a shell-less pod, then exec'd
 │       ├── nodeshell.go             root node shell via a temporary privileged
 │       │                            nsenter pod, attached through exec.go
 │       ├── nodeops.go               node cordon/uncordon + PDB-aware drain

@@ -17,7 +17,9 @@ import { useTerminalStore } from '@/store/terminals'
 import { useUIStore } from '@/store/ui'
 
 const SHELLS = ['/bin/sh', '/bin/bash']
-const DEBUG_IMAGE_PRESETS = ['nicolaka/netshoot', 'busybox', 'alpine']
+// Tagged, so the kubelet pulls once instead of on every session (an unpinned
+// tag implies imagePullPolicy: Always).
+const DEBUG_IMAGE_PRESETS = ['nicolaka/netshoot:v0.16', 'busybox:1.38', 'alpine:3.23']
 const DEFAULT_DEBUG_IMAGE = DEBUG_IMAGE_PRESETS[0]
 
 type Mode = 'exec' | 'debug'
@@ -239,7 +241,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
   const startDebug = () => {
     if (!selectedContext || !container || busy) return
     void connect(
-      `starting debug container (${image}${elevated ? ', SYS_PTRACE' : ''}) targeting ${container}`,
+      `starting debug container (${image}, ${shell}${elevated ? ', SYS_PTRACE' : ''}) targeting ${container}`,
       async () => {
         const s = await api.startPodDebug(
           selectedContext,
@@ -247,6 +249,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
           detail.name,
           container,
           image,
+          shell,
           elevated,
         )
         setDebugContainer(s.containerName)
@@ -309,7 +312,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
                 variant={image === p ? 'default' : 'outline'}
                 onClick={() => setImage(p)}
               >
-                {p.split('/').pop()}
+                {p.split('/').pop()?.split(':')[0]}
               </Button>
             ))}
             <Tooltip>
