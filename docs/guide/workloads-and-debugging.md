@@ -21,6 +21,27 @@ In aggregated mode the stream spans the pods across every active context.
 The **Exec** tab opens an interactive shell into any container over SPDY — the same
 transport `kubectl exec` uses. Pick the container if the pod has more than one.
 
+## Debug (shell-less containers)
+
+Distroless and hardened images ship no shell, so Exec has nothing to run. Switch
+the Exec tab's mode picker to **debug** and Klustr injects an ephemeral debug
+container — the same thing `kubectl debug` does — then opens a shell in it. Pick
+the target container, an image (`netshoot`, `busybox`, `alpine` or your own) and
+press **Start debug**.
+
+The debug container joins the target's process namespace and the pod's network
+namespace, so you see the target's processes and can reach whatever it can reach
+— `curl`, `dig` and `tcpdump` from netshoot all run against the target's network.
+
+Reading the target's *filesystem* through `/proc/1/root` additionally needs the
+**SYS_PTRACE** capability, which the checkbox adds. It is off by default because
+that capability also exposes the target process's memory, and the PodSecurity
+baseline policy rejects pods that add it.
+
+Ephemeral containers cannot be removed once added; the debug container lingers
+until the pod restarts. **Reattach** re-enters the existing one instead of
+injecting another.
+
 ## Port-forwarding
 
 Start a forward from a pod or service. Klustr suggests a free local port, keeps a

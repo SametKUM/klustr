@@ -13,10 +13,22 @@ import (
 )
 
 const (
-	defaultDebugImage    = "nicolaka/netshoot"
+	// Pinned, not :latest — an unpinned tag makes the kubelet default to
+	// imagePullPolicy: Always, so every debug session re-pulls a ~600 MB image
+	// and a cold node can outrun debugReadyTimeout.
+	defaultDebugImage    = "nicolaka/netshoot:v0.16"
+	defaultDebugShell    = "/bin/sh"
 	debugContainerPrefix = "klustr-debugger-"
 	debugReadyTimeout    = 90 * time.Second
 )
+
+// DebugSession is what StartPodDebug hands back: the live exec session id plus
+// the ephemeral container it created, so a reattach is a plain StartExec into
+// the same container rather than a second injection.
+type DebugSession struct {
+	SessionID     string `json:"sessionID"`
+	ContainerName string `json:"containerName"`
+}
 
 // debugEphemeralContainer builds the ephemeral container kubectl-debug injects.
 // The keep-alive command is a large fixed number, not `sleep infinity`, because
@@ -33,11 +45,12 @@ const (
 func debugEphemeralContainer(name, image, target string, elevated bool) corev1.EphemeralContainer {
 	ec := corev1.EphemeralContainer{
 		EphemeralContainerCommon: corev1.EphemeralContainerCommon{
-			Name:    name,
-			Image:   image,
-			Command: []string{"sleep", "2147483647"},
-			Stdin:   true,
-			TTY:     true,
+			Name:            name,
+			Image:           image,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command:         []string{"sleep", "2147483647"},
+			Stdin:           true,
+			TTY:             true,
 		},
 	}
 	if target != "" {
@@ -125,29 +138,32 @@ func waitEphemeralRunning(ctx context.Context, cs kubernetes.Interface, namespac
 // StartExec into the returned container name, never a second injection.
 func (m *ClientManager) StartPodDebug(
 	parent context.Context,
-	contextName, namespace, podName, target, image string,
+	contextName, namespace, podName, target, image, shell string,
 	elevated bool,
 	onData ExecDataFunc,
 	onClose ExecCloseFunc,
-) (string, string, error) {
+) (DebugSession, error) {
 	if err := m.assertWritable(contextName); err != nil {
-		return "", "", err
+		return DebugSession{}, err
 	}
 	if image == "" {
 		image = defaultDebugImage
 	}
+	if shell == "" {
+		shell = defaultDebugShell
+	}
 	cs, err := m.Clientset(contextName)
 	if err != nil {
-		return "", "", err
+		return DebugSession{}, err
 	}
 	cfg, err := m.restConfig(contextName)
 	if err != nil {
-		return "", "", err
+		return DebugSession{}, err
 	}
 
 	pod, err := cs.CoreV1().Pods(namespace).Get(parent, podName, metav1.GetOptions{})
 	if err != nil {
-		return "", "", fmt.Errorf("get pod: %w", err)
+		return DebugSession{}, fmt.Errorf("get pod: %w", err)
 	}
 
 	name := debugContainerPrefix + utilrand.String(5)
@@ -155,16 +171,16 @@ func (m *ClientManager) StartPodDebug(
 
 	if _, err := cs.CoreV1().Pods(namespace).UpdateEphemeralContainers(
 		parent, podName, pod, metav1.UpdateOptions{FieldManager: "klustr"}); err != nil {
-		return "", "", fmt.Errorf("add debug container: %w", err)
+		return DebugSession{}, fmt.Errorf("add debug container: %w", err)
 	}
 
 	if err := waitEphemeralRunning(parent, cs, namespace, podName, name, debugReadyTimeout); err != nil {
-		return "", "", err
+		return DebugSession{}, err
 	}
 
-	id, err := m.execs.start(parent, cfg, cs, contextName, namespace, podName, name, []string{"/bin/sh"}, onData, onClose)
+	id, err := m.execs.start(parent, cfg, cs, contextName, namespace, podName, name, []string{shell}, onData, onClose)
 	if err != nil {
-		return "", "", err
+		return DebugSession{}, err
 	}
-	return id, name, nil
+	return DebugSession{SessionID: id, ContainerName: name}, nil
 }

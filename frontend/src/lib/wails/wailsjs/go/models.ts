@@ -1,22 +1,3 @@
-export namespace app {
-	
-	export class DebugSession {
-	    sessionID: string;
-	    containerName: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new DebugSession(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.sessionID = source["sessionID"];
-	        this.containerName = source["containerName"];
-	    }
-	}
-
-}
-
 export namespace kube {
 	
 	export class ConditionDetail {
@@ -2353,6 +2334,20 @@ export namespace kube {
 	        this.available = source["available"];
 	        this.nodeSelector = source["nodeSelector"];
 	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class DebugSession {
+	    sessionID: string;
+	    containerName: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DebugSession(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sessionID = source["sessionID"];
+	        this.containerName = source["containerName"];
 	    }
 	}
 	export class DeploymentDetail {
