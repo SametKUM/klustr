@@ -476,10 +476,10 @@ type DebugSession struct {
 	ContainerName string `json:"containerName"`
 }
 
-func (a *App) StartPodDebug(contextName, namespace, podName, target, image string) (DebugSession, error) {
+func (a *App) StartPodDebug(contextName, namespace, podName, target, image string, elevated bool) (DebugSession, error) {
 	gate := newSessionGate()
 	id, container, err := a.clients.StartPodDebug(
-		a.ctx, contextName, namespace, podName, target, image,
+		a.ctx, contextName, namespace, podName, target, image, elevated,
 		func(data string) {
 			if id := gate.wait(); id != "" {
 				runtime.EventsEmit(a.ctx, "exec:out:"+id, data)

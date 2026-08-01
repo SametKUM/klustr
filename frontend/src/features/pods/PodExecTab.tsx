@@ -6,7 +6,9 @@ import { toast } from 'sonner'
 import '@xterm/xterm/css/xterm.css'
 import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api, type PodDetail } from '@/lib/api'
 import { xtermThemeFor } from '@/features/_shared/xtermTheme'
 import { InlinePicker } from '@/features/_shared/InlinePicker'
@@ -39,6 +41,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
   const [container, setContainer] = useState(defaultContainer)
   const [shell, setShell] = useState(SHELLS[0])
   const [image, setImage] = useState(DEFAULT_DEBUG_IMAGE)
+  const [elevated, setElevated] = useState(false)
   const [running, setRunning] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -236,7 +239,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
   const startDebug = () => {
     if (!selectedContext || !container || busy) return
     void connect(
-      `starting debug container (${image}) targeting ${container}`,
+      `starting debug container (${image}${elevated ? ', SYS_PTRACE' : ''}) targeting ${container}`,
       async () => {
         const s = await api.startPodDebug(
           selectedContext,
@@ -244,6 +247,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
           detail.name,
           container,
           image,
+          elevated,
         )
         setDebugContainer(s.containerName)
         return s.sessionID
@@ -308,6 +312,28 @@ export function PodExecTab({ detail, contextName, active }: Props) {
                 {p.split('/').pop()}
               </Button>
             ))}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <label className="ml-2 flex cursor-pointer items-center gap-1.5 text-muted-foreground">
+                  <Checkbox
+                    checked={elevated}
+                    onChange={(e) => setElevated((e.target as HTMLInputElement).checked)}
+                    aria-label="Add SYS_PTRACE capability"
+                  />
+                  <span className="underline decoration-dotted underline-offset-2">
+                    SYS_PTRACE
+                  </span>
+                </label>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[20rem] text-xs">
+                Adds the CAP_SYS_PTRACE capability to the debug container. Without it the
+                target's filesystem (/proc/1/root), environment and open files are
+                Permission denied even as root — only its process names are visible. It
+                also grants read access to the target process's memory, so anything it
+                holds in RAM (tokens, keys) is exposed, and the PodSecurity baseline
+                policy rejects pods that add it.
+              </TooltipContent>
+            </Tooltip>
           </>
         )}
 
@@ -397,9 +423,10 @@ export function PodExecTab({ detail, contextName, active }: Props) {
 
       {mode === 'debug' && (
         <div className="border-b border-border bg-muted/40 px-4 py-1.5 text-[11px] text-muted-foreground">
-          Adds an ephemeral debug container to this pod (sharing the target's
-          process namespace). Ephemeral containers can't be removed — it stays
-          until the pod restarts.
+          Adds an ephemeral debug container to this pod, sharing the target's
+          process namespace. Reading the target's filesystem under /proc/1/root
+          additionally needs SYS_PTRACE. Ephemeral containers can't be removed —
+          it stays until the pod restarts.
         </div>
       )}
 
