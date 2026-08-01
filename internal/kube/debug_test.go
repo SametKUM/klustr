@@ -11,7 +11,7 @@ import (
 )
 
 func TestDebugEphemeralContainer(t *testing.T) {
-	ec := debugEphemeralContainer("klustr-debugger-abcde", "nicolaka/netshoot", "app")
+	ec := debugEphemeralContainer("klustr-debugger-abcde", "nicolaka/netshoot", "app", false)
 	if ec.Name != "klustr-debugger-abcde" {
 		t.Errorf("name = %q", ec.Name)
 	}
@@ -30,9 +30,31 @@ func TestDebugEphemeralContainer(t *testing.T) {
 }
 
 func TestDebugEphemeralContainerNoTarget(t *testing.T) {
-	ec := debugEphemeralContainer("klustr-debugger-abcde", "busybox", "")
+	ec := debugEphemeralContainer("klustr-debugger-abcde", "busybox", "", false)
 	if ec.TargetContainerName != "" {
 		t.Errorf("targetContainerName = %q, want empty", ec.TargetContainerName)
+	}
+}
+
+func TestDebugEphemeralContainerSecurityContext(t *testing.T) {
+	plain := debugEphemeralContainer("klustr-debugger-abcde", "busybox", "app", false)
+	if plain.SecurityContext != nil {
+		t.Errorf("securityContext = %+v, want nil without elevation", plain.SecurityContext)
+	}
+
+	elevated := debugEphemeralContainer("klustr-debugger-abcde", "busybox", "app", true)
+	if elevated.SecurityContext == nil || elevated.SecurityContext.Capabilities == nil {
+		t.Fatalf("securityContext = %+v, want added capabilities", elevated.SecurityContext)
+	}
+	caps := elevated.SecurityContext.Capabilities
+	if len(caps.Add) != 1 || caps.Add[0] != "SYS_PTRACE" {
+		t.Errorf("capabilities.add = %v, want [SYS_PTRACE]", caps.Add)
+	}
+	if len(caps.Drop) != 0 {
+		t.Errorf("capabilities.drop = %v, want none", caps.Drop)
+	}
+	if elevated.SecurityContext.Privileged != nil {
+		t.Errorf("privileged = %v, want unset — SYS_PTRACE alone unlocks /proc/<pid>/root", *elevated.SecurityContext.Privileged)
 	}
 }
 

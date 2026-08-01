@@ -974,8 +974,8 @@ export function StartNodeShell(arg1, arg2) {
   return window['go']['app']['App']['StartNodeShell'](arg1, arg2);
 }
 
-export function StartPodDebug(arg1, arg2, arg3, arg4, arg5) {
-  return window['go']['app']['App']['StartPodDebug'](arg1, arg2, arg3, arg4, arg5);
+export function StartPodDebug(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['app']['App']['StartPodDebug'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
 export function StartPodLogs(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {

@@ -490,7 +490,7 @@ export function StartExec(arg1:string,arg2:string,arg3:string,arg4:string,arg5:A
 
 export function StartNodeShell(arg1:string,arg2:string):Promise<string>;
 
-export function StartPodDebug(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<app.DebugSession>;
+export function StartPodDebug(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<app.DebugSession>;
 
 export function StartPodLogs(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean,arg6:boolean,arg7:number):Promise<string>;
 

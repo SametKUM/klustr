@@ -21,9 +21,16 @@ const (
 // debugEphemeralContainer builds the ephemeral container kubectl-debug injects.
 // The keep-alive command is a large fixed number, not `sleep infinity`, because
 // busybox/alpine `sleep` (netshoot, busybox, alpine images) reject the word
-// "infinity". TargetContainerName shares the target's PID namespace so the
-// debug shell reaches the target filesystem at /proc/1/root.
-func debugEphemeralContainer(name, image, target string) corev1.EphemeralContainer {
+// "infinity". TargetContainerName joins the target's PID namespace, which is
+// what makes its processes visible.
+//
+// elevated adds CAP_SYS_PTRACE. Reading the target's filesystem through
+// /proc/<pid>/root needs ptrace permission, and the container runtime's default
+// capability set omits it — without this, that path is "Permission denied" even
+// as root. It stays opt-in because the PodSecurity baseline policy rejects any
+// added capability except NET_BIND_SERVICE, so defaulting it on would make
+// debugging impossible in exactly the hardened namespaces that need it.
+func debugEphemeralContainer(name, image, target string, elevated bool) corev1.EphemeralContainer {
 	ec := corev1.EphemeralContainer{
 		EphemeralContainerCommon: corev1.EphemeralContainerCommon{
 			Name:    name,
@@ -35,6 +42,11 @@ func debugEphemeralContainer(name, image, target string) corev1.EphemeralContain
 	}
 	if target != "" {
 		ec.TargetContainerName = target
+	}
+	if elevated {
+		ec.SecurityContext = &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{Add: []corev1.Capability{"SYS_PTRACE"}},
+		}
 	}
 	return ec
 }
@@ -114,6 +126,7 @@ func waitEphemeralRunning(ctx context.Context, cs kubernetes.Interface, namespac
 func (m *ClientManager) StartPodDebug(
 	parent context.Context,
 	contextName, namespace, podName, target, image string,
+	elevated bool,
 	onData ExecDataFunc,
 	onClose ExecCloseFunc,
 ) (string, string, error) {
@@ -138,7 +151,7 @@ func (m *ClientManager) StartPodDebug(
 	}
 
 	name := debugContainerPrefix + utilrand.String(5)
-	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, debugEphemeralContainer(name, image, target))
+	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, debugEphemeralContainer(name, image, target, elevated))
 
 	if _, err := cs.CoreV1().Pods(namespace).UpdateEphemeralContainers(
 		parent, podName, pod, metav1.UpdateOptions{FieldManager: "klustr"}); err != nil {
