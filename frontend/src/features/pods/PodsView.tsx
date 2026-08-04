@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { api, type PodInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
@@ -72,6 +72,7 @@ function statusClass(status: string): string {
 }
 
 export function PodsView() {
+  const [statusFilter, setStatusFilter] = useState('')
   const pods = useResources((s) => s.pods)
   const setPods = useResources((s) => s.setPods)
   const applyPodsDelta = useResources((s) => s.applyPodsDelta)
@@ -80,6 +81,14 @@ export function PodsView() {
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const metricsAvailable = useMetrics(selectMetricsAvailable(activeContexts))
   usePodMetricsPoll(activeContexts, namespaceQuery(selectedNamespaces).apiNamespace)
+
+  const statusOptions = useMemo(() => {
+    const statuses = new Set<string>()
+    for (const list of Object.values(pods)) {
+      for (const pod of list) statuses.add(pod.status)
+    }
+    return [...statuses].sort((a, b) => a.localeCompare(b))
+  }, [pods])
 
   const columns = useMemo(
     () => [
@@ -148,6 +157,15 @@ export function PodsView() {
       applyDelta={applyPodsDelta}
       fetch={api.listPods}
       columns={columns}
+      headerFilters={[
+        {
+          columnId: 'status',
+          options: statusOptions,
+          value: statusFilter,
+          onChange: setStatusFilter,
+          accessor: (pod) => pod.status,
+        },
+      ]}
       onRowClick={(row, ctx) =>
         setSelectedResource({ kind: 'Pod', namespace: row.namespace, name: row.name, context: ctx })
       }
