@@ -61,6 +61,7 @@ import {
   type BulkItem,
 } from './BulkActionDialogs'
 import { isRestartable } from './workloadCapabilities'
+import { applyHeaderFilters, headerFilterOptions } from './headerFilter'
 import { parseSearch, rowMatchesSearch } from './rowSearch'
 import { KLUSTR_CTX, resolveResourceContexts, type Tagged } from './resourceContext'
 import { resourcePageCount } from './pagination'
@@ -111,8 +112,10 @@ export type ResourceTableProps<T> = {
   // refetching the whole list. Falls back to a full refetch on reset/gap and on
   // the initial load, which stays the source of truth.
   applyDelta?: (contextName: string, upserts: T[], removed: string[]) => void
-  // Exact-match filters rendered as a funnel icon in the column header.
-  headerFilters?: HeaderFilter<T>[]
+  // Column ids that get a funnel icon in their header for exact-match
+  // filtering. Options and selection are owned by the table; pass a
+  // module-level constant so the array identity stays stable.
+  headerFilters?: string[]
 }
 
 function identityKey(ctx: string, r: RowIdentity): string {
@@ -153,14 +156,6 @@ function mergeOrder(all: string[], saved: string[]): string[] {
     if (!seen.has(id)) result.push(id)
   }
   return result
-}
-
-export type HeaderFilter<T> = {
-  columnId: string
-  options: string[]
-  value: string
-  onChange: (value: string) => void
-  accessor: (row: T) => string
 }
 
 type ResourceRowProps<T> = {
@@ -328,11 +323,8 @@ export function ResourceTable<T>({
     const id = window.setTimeout(() => setAppliedFilter(filter), 180)
     return () => window.clearTimeout(id)
   }, [filter])
-  // Read via ref + content key so an inline headerFilters literal in the
-  // calling view doesn't re-filter on every render.
-  const headerFiltersRef = useRef(headerFilters)
-  headerFiltersRef.current = headerFilters
-  const headerFilterKey = (headerFilters ?? []).map((f) => f.value).join('\u0000')
+  const [headerFilterValues, setHeaderFilterValues] = useState<Record<string, string>>({})
+  const hasHeaderFilter = Object.values(headerFilterValues).some(Boolean)
   const prefs = useTablePrefs((s) => s.byKind[kind])
   const persistedSizing = useMemo<ColumnSizingState>(
     () => prefs?.sizing ?? EMPTY_SIZING,
@@ -417,7 +409,7 @@ export function ResourceTable<T>({
   }, [resourceContexts, selectedNamespaces, kind])
   useEffect(() => {
     setPageIndex(0)
-  }, [resourceContexts, selectedNamespaces, kind, appliedFilter, headerFilterKey, pageSize])
+  }, [resourceContexts, selectedNamespaces, kind, appliedFilter, headerFilterValues, pageSize])
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
   const [loadedSet, setLoadedSet] = useState<Set<string>>(() => new Set())
@@ -635,14 +627,22 @@ export function ResourceTable<T>({
     }
     return m
   }, [tableColumns])
-  const filteredData = useMemo(() => {
-    const active = (headerFiltersRef.current ?? []).filter((f) => f.value)
-    if (active.length === 0) return mergedData
-    return mergedData.filter((row) =>
-      active.every((f) => f.accessor(row as unknown as T) === f.value),
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- headerFilterKey is the content key for headerFilters
-  }, [mergedData, headerFilterKey])
+  const filteredData = useMemo(
+    () =>
+      applyHeaderFilters(mergedData, headerFilterValues, (row, id) =>
+        columnGetters.get(id.toLowerCase())?.(row),
+      ),
+    [mergedData, headerFilterValues, columnGetters],
+  )
+  const headerFilterOpts = useMemo(() => {
+    const m = new Map<string, string[]>()
+    for (const id of headerFilters ?? []) {
+      const get = columnGetters.get(id.toLowerCase())
+      if (!get) continue
+      m.set(id, headerFilterOptions(mergedData, get, headerFilterValues[id] ?? ''))
+    }
+    return m
+  }, [headerFilters, columnGetters, mergedData, headerFilterValues])
   const searchedData = useMemo(() => {
     const terms = parseSearch(appliedFilter)
     if (terms.length === 0) return filteredData
@@ -838,7 +838,7 @@ export function ResourceTable<T>({
   const total = mergedData.length
   const countLabel = !allLoaded
     ? `Loading ${noun.plural}…`
-    : appliedFilter || headerFilterKey
+    : appliedFilter || hasHeaderFilter
       ? `${filteredCount} of ${total} ${total === 1 ? noun.singular : noun.plural}`
       : `${total} ${total === 1 ? noun.singular : noun.plural}`
   const scopeLabel =
@@ -1032,7 +1032,8 @@ export function ResourceTable<T>({
                   const sorted = h.column.getIsSorted()
                   const canSort = h.column.getCanSort()
                   const colId = h.column.id
-                  const headerFilter = headerFilters?.find((f) => f.columnId === colId)
+                  const filterOptions = headerFilterOpts.get(colId)
+                  const filterValue = headerFilterValues[colId] ?? ''
                   const isDragging = dragColId === colId
                   const isDropTarget =
                     dragColId !== null && dropTargetColId === colId && dragColId !== colId
@@ -1124,16 +1125,15 @@ export function ResourceTable<T>({
                             {headerContent}
                           </span>
                         )}
-                        {headerFilter && (
+                        {filterOptions && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                aria-label={`Filter by ${String(h.column.columnDef.header ?? colId)}`}
-                                onClick={(e) => e.stopPropagation()}
+                                aria-label={`Filter by ${typeof h.column.columnDef.header === 'string' ? h.column.columnDef.header : colId}`}
                                 className={[
                                   '-my-1 -mr-1 shrink-0 rounded p-1.5 hover:bg-muted hover:text-foreground',
-                                  headerFilter.value
+                                  filterValue
                                     ? 'text-primary'
                                     : 'text-muted-foreground opacity-0 focus-visible:opacity-100 group-hover:opacity-100',
                                 ].join(' ')}
@@ -1143,11 +1143,13 @@ export function ResourceTable<T>({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-auto">
                               <DropdownMenuRadioGroup
-                                value={headerFilter.value}
-                                onValueChange={headerFilter.onChange}
+                                value={filterValue}
+                                onValueChange={(v) =>
+                                  setHeaderFilterValues((prev) => ({ ...prev, [colId]: v }))
+                                }
                               >
                                 <DropdownMenuRadioItem value="">All</DropdownMenuRadioItem>
-                                {headerFilter.options.map((opt) => (
+                                {filterOptions.map((opt) => (
                                   <DropdownMenuRadioItem key={opt} value={opt}>
                                     {opt}
                                   </DropdownMenuRadioItem>
