@@ -1141,7 +1141,7 @@ export function ResourceTable<T>({
                                 <Filter className="size-3.5" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+                            <DropdownMenuContent align="start" className="w-auto">
                               <DropdownMenuRadioGroup
                                 value={headerFilter.value}
                                 onValueChange={headerFilter.onChange}
