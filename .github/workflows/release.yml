@@ -57,16 +57,26 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      # The CLI generates the bindings the wails/v2 library consumes at runtime,
+      # so it must track the module version rather than a hand-written pin.
+      - name: Resolve Wails CLI version
+        id: wails
+        shell: bash
+        run: |
+          echo "version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Wails CLI
         id: wails-cache
         uses: actions/cache@v6
         with:
           path: ~/go/bin/wails
-          key: wails-cli-v2.12.0-${{ runner.os }}
+          key: wails-cli-${{ steps.wails.outputs.version }}-${{ runner.os }}-${{ runner.arch }}
 
       - name: Install Wails CLI
         if: steps.wails-cache.outputs.cache-hit != 'true'
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+        env:
+          WAILS_VERSION: ${{ steps.wails.outputs.version }}
+        run: go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-24.04'
