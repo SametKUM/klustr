@@ -19,6 +19,7 @@ concurrency:
 jobs:
   bump:
     name: Bump Homebrew and AUR
+    timeout-minutes: 15
     if: github.event.release.prerelease == false
     runs-on: ubuntu-24.04
     steps:

@@ -25,6 +25,7 @@ concurrency:
 jobs:
   build:
     name: Build ${{ matrix.label }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -167,7 +168,7 @@ jobs:
             --apple-id "$APPLE_ID" \
             --team-id "$TEAM_ID" \
             --password "$APPLE_PASSWORD" \
-            --wait
+            --wait --timeout 30m
           xcrun stapler staple build/bin/klustr.app
           rm -f notarize.zip
 
@@ -226,6 +227,7 @@ jobs:
 
   release:
     name: Publish release
+    timeout-minutes: 15
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04

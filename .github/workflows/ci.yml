@@ -17,6 +17,7 @@ concurrency:
 jobs:
   backend:
     name: Backend (Go)
+    timeout-minutes: 20
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -54,6 +55,7 @@ jobs:
 
   frontend:
     name: Frontend (TypeScript)
+    timeout-minutes: 15
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -83,6 +85,7 @@ jobs:
 
   site:
     name: Site (landing)
+    timeout-minutes: 15
     runs-on: ubuntu-24.04
     defaults:
       run:
