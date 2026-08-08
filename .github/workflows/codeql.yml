@@ -48,8 +48,7 @@ jobs:
       - uses: actions/setup-go@v7
         if: matrix.language == 'go'
         with:
-          go-version: "1.26"
-          check-latest: true
+          go-version-file: go.mod
 
       - uses: ./.github/actions/linux-build-deps
         if: matrix.language == 'go'

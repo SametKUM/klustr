@@ -2,6 +2,8 @@ module klustr
 
 go 1.26.0
 
+toolchain go1.26.5
+
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/creack/pty v1.1.24
