@@ -55,6 +55,7 @@ jobs:
             suffix: linux-amd64.tar.gz
             tags: webkit2_41
     runs-on: ${{ matrix.os }}
+    environment: release
     steps:
       - uses: actions/checkout@v7
         with:
@@ -276,6 +277,7 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
+    environment: release
     permissions:
       contents: write
       attestations: write

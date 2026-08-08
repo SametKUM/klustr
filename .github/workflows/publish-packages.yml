@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 15
     if: github.event.release.prerelease == false
     runs-on: ubuntu-24.04
+    environment: release
     steps:
       - uses: actions/checkout@v7
         with:
