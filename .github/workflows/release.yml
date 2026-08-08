@@ -219,11 +219,15 @@ jobs:
             --packager deb \
             --target "build/bin/${DEB_NAME}"
 
+      # A .tar.gz and a .deb are already compressed, and these only need to
+      # outlive a re-run of the release job.
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.meta.outputs.name }}
           path: build/bin/${{ steps.meta.outputs.name }}
           if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
 
       - if: matrix.os == 'ubuntu-24.04'
         uses: actions/upload-artifact@v7
@@ -231,6 +235,8 @@ jobs:
           name: ${{ steps.meta.outputs.deb_name }}
           path: build/bin/${{ steps.meta.outputs.deb_name }}
           if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
 
   release:
     name: Publish release
