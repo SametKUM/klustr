@@ -153,9 +153,14 @@ klustr/
 │   └── screenshots/                numbered themed pack `01-*.png` …
 │                                   `16-*.png` for README grid + press / blog
 ├── hack/                         user's local fixtures (NEVER commit anything under hack/)
-└── .github/workflows/            release matrix (release.yml → builds macOS + Linux,
-                                  drafts the GitHub release) + publish-packages.yml
-                                  (on release published → Homebrew + AUR bumps)
+└── .github/
+    ├── actions/linux-build-deps/  composite action: GTK + WebKit headers
+    └── workflows/                 ci.yml (also `workflow_call`, so release.yml
+                                   gates on it) + release.yml (builds macOS +
+                                   Linux, drafts the release) +
+                                   publish-packages.yml (on release published →
+                                   Homebrew + AUR bumps) + codeql.yml +
+                                   site.yml + pages.yml
 ```
 
 The `internal/` ↔ `app/` split is intentional:
@@ -468,6 +473,6 @@ Notes on the workflow:
 
 ## Verification Before Reporting Done
 
-- Go: `go test klustr/internal/...` and `go vet ./...` pass.
-- Frontend (inside `frontend/`): `npm test`, `npm run lint`, `npm run typecheck` pass.
+- Go: `go test klustr/internal/...`, `go test -race klustr/internal/...` and `go vet ./...` pass.
+- Frontend (inside `frontend/`): `npm test`, `npm run lint`, `npm run typecheck`, `npm run build` pass.
 - Manual: `wails dev` runs and the changed feature actually works in the native window. Type checks alone are not sufficient for UI work.
