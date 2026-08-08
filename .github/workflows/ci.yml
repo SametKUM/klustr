@@ -86,6 +86,12 @@ jobs:
       - name: Test
         run: npm test
 
+      # tsc --noEmit says nothing about whether rollup can resolve and chunk
+      # the bundle. Keep this after Lint, whose check:api runs before the
+      # build regenerates the bindings.
+      - name: Build
+        run: npm run build
+
   site:
     name: Site (landing)
     timeout-minutes: 15
