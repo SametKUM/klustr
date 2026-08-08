@@ -23,8 +23,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    name: Verify
+    uses: ./.github/workflows/ci.yml
+
   build:
     name: Build ${{ matrix.label }}
+    needs: verify
     timeout-minutes: 45
     strategy:
       fail-fast: false
