@@ -89,14 +89,23 @@ jobs:
         shell: bash
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          SUFFIX: ${{ matrix.suffix }}
         run: |
+          set -euo pipefail
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
           else
             VERSION="$INPUT_VERSION"
           fi
+          # Both a tag name and a workflow_dispatch input are free-form text
+          # that ends up in artifact names and in $GITHUB_OUTPUT. Reject
+          # anything that isn't a release version before it gets that far.
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "Refusing to build unexpected version: $VERSION" >&2
+            exit 1
+          fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "name=klustr-${VERSION}-${{ matrix.suffix }}" >> "$GITHUB_OUTPUT"
+          echo "name=klustr-${VERSION}-${SUFFIX}" >> "$GITHUB_OUTPUT"
           DEB_VERSION="${VERSION#v}"
           echo "deb_version=${DEB_VERSION}" >> "$GITHUB_OUTPUT"
           echo "deb_name=klustr_${DEB_VERSION}_amd64.deb" >> "$GITHUB_OUTPUT"
@@ -160,9 +169,11 @@ jobs:
       - name: Package macOS
         if: startsWith(matrix.os, 'macos')
         shell: bash
+        env:
+          ARTIFACT: ${{ steps.meta.outputs.name }}
         run: |
           cd build/bin
-          tar -czf ${{ steps.meta.outputs.name }} klustr.app
+          tar -czf "$ARTIFACT" klustr.app
 
       # - name: Package Windows
       #   if: matrix.os == 'windows-latest'
@@ -174,9 +185,11 @@ jobs:
       - name: Package Linux
         if: matrix.os == 'ubuntu-24.04'
         shell: bash
+        env:
+          ARTIFACT: ${{ steps.meta.outputs.name }}
         run: |
           cd build/bin
-          tar -czf ${{ steps.meta.outputs.name }} klustr
+          tar -czf "$ARTIFACT" klustr
 
       - name: Build Linux .deb
         if: matrix.os == 'ubuntu-24.04'
@@ -184,13 +197,14 @@ jobs:
         env:
           NFPM_VERSION: "2.46.3"
           VERSION: ${{ steps.meta.outputs.deb_version }}
+          DEB_NAME: ${{ steps.meta.outputs.deb_name }}
         run: |
           curl -sSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
             | tar -xz -C /tmp nfpm
           /tmp/nfpm package \
             --config build/linux/nfpm.yaml \
             --packager deb \
-            --target "build/bin/${{ steps.meta.outputs.deb_name }}"
+            --target "build/bin/${DEB_NAME}"
 
       - uses: actions/upload-artifact@v7
         with:
