@@ -56,7 +56,10 @@ jobs:
             exit 1
           fi
           SHA=$(sha256sum "$ASSET" | awk '{print $1}')
-          git clone "https://x-access-token:${GH_TOKEN}@github.com/SametKUM/homebrew-klustr.git" tap
+          # Keep the token in the environment: a credentialed clone URL lands
+          # in the process table and stays in tap/.git/config for the job.
+          gh auth setup-git
+          gh repo clone SametKUM/homebrew-klustr tap
           cd tap
           python3 - "$VERSION" "$SHA" <<'PY'
           import pathlib, re, sys
