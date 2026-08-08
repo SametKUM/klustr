@@ -136,7 +136,7 @@ jobs:
 
       - name: Import code-signing certificate
         if: startsWith(matrix.os, 'macos')
-        uses: Apple-actions/import-codesign-certs@v7
+        uses: Apple-actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466 # v7.0.0
         with:
           p12-file-base64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
           p12-password: ${{ secrets.MACOS_CERT_PASSWORD }}
@@ -239,7 +239,7 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v3
+      - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           files: |
             artifacts/klustr-*-darwin-arm64.tar.gz
