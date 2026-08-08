@@ -1,0 +1,13 @@
+name: Linux build dependencies
+description: >
+  Install the GTK and WebKit headers the Wails runtime links against on Linux.
+  internal/kube is Wails-agnostic, but the root and app packages import the
+  runtime, so vet, test, lint and build all need these present.
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
