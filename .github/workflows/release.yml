@@ -180,6 +180,20 @@ jobs:
           xcrun stapler staple build/bin/klustr.app
           rm -f notarize.zip
 
+      # codesign --verify above only inspects the signature. These answer the
+      # two questions it cannot: did the ticket actually attach, and is this
+      # the architecture the artifact name promises. spctl --assess is
+      # deliberately absent — it rejects on Gatekeeper policy grounds that
+      # have nothing to do with a broken build.
+      - name: Verify macOS bundle
+        if: startsWith(matrix.os, 'macos')
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun stapler validate build/bin/klustr.app
+          lipo build/bin/klustr.app/Contents/MacOS/klustr -verify_arch arm64
+          [ "$(lipo -archs build/bin/klustr.app/Contents/MacOS/klustr)" = "arm64" ]
+
       - name: Package macOS
         if: startsWith(matrix.os, 'macos')
         shell: bash
@@ -223,6 +237,19 @@ jobs:
             --config build/linux/nfpm.yaml \
             --packager deb \
             --target "build/bin/${DEB_NAME}"
+
+      - name: Verify Linux packages
+        if: matrix.os == 'ubuntu-24.04'
+        shell: bash
+        env:
+          ARTIFACT: ${{ steps.meta.outputs.name }}
+          DEB_NAME: ${{ steps.meta.outputs.deb_name }}
+        run: |
+          set -euo pipefail
+          file build/bin/klustr | grep -q 'ELF 64-bit LSB.*x86-64'
+          tar -tzf "build/bin/${ARTIFACT}" | grep -qx klustr
+          dpkg-deb --info "build/bin/${DEB_NAME}"
+          dpkg-deb --contents "build/bin/${DEB_NAME}" | grep -q './usr/bin/klustr'
 
       # A .tar.gz and a .deb are already compressed, and these only need to
       # outlive a re-run of the release job.
