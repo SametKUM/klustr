@@ -1,0 +1,132 @@
+# Draft release assets are not downloadable from their public URL, so bumping
+# Homebrew or AUR from the release workflow points both package managers at a
+# 404 until the draft is published by hand. Run the bumps off the publish event
+# instead, and read the assets back from the release so the checksums are the
+# ones users actually download.
+name: Publish packages
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-packages
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    name: Bump Homebrew and AUR
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Download published assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          gh release download "$TAG" --dir artifacts \
+            --pattern "klustr-*-darwin-arm64.tar.gz" \
+            --pattern "klustr-*-linux-amd64.tar.gz"
+
+      - name: Bump Homebrew cask
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "HOMEBREW_TAP_TOKEN secret is not set; skipping cask bump." >&2
+            exit 0
+          fi
+          VERSION="${TAG#v}"
+          ASSET="artifacts/klustr-${TAG}-darwin-arm64.tar.gz"
+          if [ ! -f "$ASSET" ]; then
+            echo "Expected asset $ASSET not found." >&2
+            exit 1
+          fi
+          SHA=$(sha256sum "$ASSET" | awk '{print $1}')
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/SametKUM/homebrew-klustr.git" tap
+          cd tap
+          python3 - "$VERSION" "$SHA" <<'PY'
+          import pathlib, re, sys
+          version, sha = sys.argv[1], sys.argv[2]
+          path = pathlib.Path("Casks/klustr.rb")
+          text = path.read_text()
+          text = re.sub(r'^( *version )"[^"]*"', rf'\1"{version}"', text, count=1, flags=re.M)
+          text = re.sub(r'^( *sha256 )"[^"]*"', rf'\1"{sha}"', text, count=1, flags=re.M)
+          path.write_text(text)
+          PY
+          if git diff --quiet; then
+            echo "Cask already at ${VERSION}, nothing to bump."
+            exit 0
+          fi
+          git config user.name "klustr-release-bot"
+          git config user.email "noreply@github.com"
+          git add Casks/klustr.rb
+          git commit -m "klustr ${VERSION}"
+          git push
+
+      - name: Check AUR secret
+        id: aur_secret
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -n "${AUR_SSH_PRIVATE_KEY:-}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "AUR_SSH_PRIVATE_KEY secret is not set; AUR bump will be skipped."
+          fi
+
+      - name: Render klustr-bin PKGBUILD
+        if: steps.aur_secret.outputs.configured == 'true'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          # This job only runs for non-prerelease tags, so the version must be
+          # a clean x.y.z. Reject anything else before it reaches the sed
+          # templating below (a '|' would break the s|@VERSION@|...| delimiter).
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Refusing to render PKGBUILD for unexpected version: $VERSION" >&2
+            exit 1
+          fi
+          TARBALL="artifacts/klustr-${TAG}-linux-amd64.tar.gz"
+          if [ ! -f "$TARBALL" ]; then
+            echo "Expected asset $TARBALL not found." >&2
+            exit 1
+          fi
+          SHA_TARBALL=$(sha256sum "$TARBALL" | awk '{print $1}')
+          SHA_DESKTOP=$(sha256sum build/linux/klustr.desktop | awk '{print $1}')
+          SHA_PNG=$(sha256sum build/appicon.png | awk '{print $1}')
+          SHA_SVG=$(sha256sum build/appicon.svg | awk '{print $1}')
+          mkdir -p build/aur/rendered
+          sed -e "s|@VERSION@|${VERSION}|g" \
+              -e "s|@SHA_TARBALL@|${SHA_TARBALL}|g" \
+              -e "s|@SHA_DESKTOP@|${SHA_DESKTOP}|g" \
+              -e "s|@SHA_PNG@|${SHA_PNG}|g" \
+              -e "s|@SHA_SVG@|${SHA_SVG}|g" \
+              build/aur/PKGBUILD.tmpl > build/aur/rendered/PKGBUILD
+          cat build/aur/rendered/PKGBUILD
+
+      - name: Deploy klustr-bin to AUR
+        if: steps.aur_secret.outputs.configured == 'true'
+        uses: KSXGitHub/github-actions-deploy-aur@v4.2.0
+        with:
+          pkgname: klustr-bin
+          pkgbuild: build/aur/rendered/PKGBUILD
+          commit_username: klustr-release-bot
+          commit_email: noreply@github.com
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: klustr-bin ${{ github.event.release.tag_name }}
+          ssh_keyscan_types: ed25519
