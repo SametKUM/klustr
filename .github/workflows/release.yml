@@ -182,6 +182,8 @@ jobs:
         shell: bash
         env:
           ARTIFACT: ${{ steps.meta.outputs.name }}
+          # bsdtar otherwise stores an AppleDouble ._ entry beside every file.
+          COPYFILE_DISABLE: "1"
         run: |
           cd build/bin
           tar -czf "$ARTIFACT" klustr.app
