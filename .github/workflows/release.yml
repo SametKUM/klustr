@@ -35,7 +35,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          # On macOS runners, bare labels are arm64 while -large is Intel.
+          # macos-latest points here today; pinning removes the ambiguity
+          # during the next alias migration, when either image can answer.
+          - os: macos-26
             label: macOS (Apple Silicon)
             platform: darwin/arm64
             suffix: darwin-arm64.tar.gz
