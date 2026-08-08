@@ -75,3 +75,11 @@ export function detectProvider(c: { name: string; server: string; cluster?: stri
 export function providerMeta(context: ContextInfo): ProviderMeta {
   return PROVIDERS[detectProvider(context)]
 }
+
+// Any exec credential helper — `aws eks get-token`, gke-gcloud-auth-plugin,
+// kubelogin, oidc-login, tsh — authenticates when pinged, so probing a context
+// the user has not selected pops browser logins and MFA prompts, and on a large
+// kubeconfig does it en masse, all for a decorative version badge.
+export function versionProbeTargets(contexts: ContextInfo[]): ContextInfo[] {
+  return contexts.filter((c) => !c.execCommand)
+}

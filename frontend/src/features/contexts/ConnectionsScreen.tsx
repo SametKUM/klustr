@@ -34,7 +34,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ReadOnlyToggle } from '@/features/_shared/ReadOnlyToggle'
 import { ProviderIcon, ProviderIconStack } from '@/features/_shared/providerIcons'
-import { providerMeta } from '@/features/_shared/providerInfo'
+import { providerMeta, versionProbeTargets } from '@/features/_shared/providerInfo'
 import { api, type ContextInfo } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
 import {
@@ -140,12 +140,7 @@ export function ConnectionsScreen() {
     let cancelled = false
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Version badges are scoped to the current context list.
     setVersions({})
-    // Skip exec-auth contexts: pinging them here, before any credential helper
-    // is mapped, invokes `aws eks get-token` / aws-vault and fails or hangs —
-    // a thundering herd on a large kubeconfig for a purely decorative version
-    // label. Bound the rest to a small worker pool instead of fanning out a
-    // /version call per context at once.
-    const targets = contexts.filter((c) => !c.awsExec && !c.awsVaultExec)
+    const targets = versionProbeTargets(contexts)
     let next = 0
     const worker = async () => {
       while (!cancelled) {
