@@ -118,7 +118,13 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "name=klustr-${VERSION}-${SUFFIX}" >> "$GITHUB_OUTPUT"
+          # SemVer's '-' prerelease separator is Debian's *revision* separator,
+          # so dpkg ranks 1.2.3-rc.1 above 1.2.3. '~' sorts before everything,
+          # even end-of-string. nfpm already applies this to the control field;
+          # mirror it here or the filename disagrees with the package inside.
+          # The escape matters: a bare ~ in the replacement is tilde-expanded.
           DEB_VERSION="${VERSION#v}"
+          DEB_VERSION="${DEB_VERSION/-/\~}"
           echo "deb_version=${DEB_VERSION}" >> "$GITHUB_OUTPUT"
           echo "deb_name=klustr_${DEB_VERSION}_amd64.deb" >> "$GITHUB_OUTPUT"
 
@@ -242,12 +248,21 @@ jobs:
         env:
           ARTIFACT: ${{ steps.meta.outputs.name }}
           DEB_NAME: ${{ steps.meta.outputs.deb_name }}
+          DEB_VERSION: ${{ steps.meta.outputs.deb_version }}
         run: |
           set -euo pipefail
           file build/bin/klustr | grep -q 'ELF 64-bit LSB.*x86-64'
           tar -tzf "build/bin/${ARTIFACT}" | grep -qx klustr
           dpkg-deb --info "build/bin/${DEB_NAME}"
           dpkg-deb --contents "build/bin/${DEB_NAME}" | grep -q './usr/bin/klustr'
+          # The filename and the control field must agree, and a prerelease
+          # must sort below the release it precedes.
+          PKG_VERSION=$(dpkg-deb --field "build/bin/${DEB_NAME}" Version)
+          [ "$PKG_VERSION" = "$DEB_VERSION" ]
+          BASE="${DEB_VERSION%%[~+]*}"
+          if [ "$DEB_VERSION" != "$BASE" ]; then
+            dpkg --compare-versions "$DEB_VERSION" lt "$BASE"
+          fi
 
       # A .tar.gz and a .deb are already compressed, and these only need to
       # outlive a re-run of the release job.
@@ -342,7 +357,7 @@ jobs:
             registers a `klustr` desktop entry.
 
             ```bash
-            VERSION="${{ github.ref_name }}"; DEB="klustr_${VERSION#v}_amd64.deb"
+            VERSION="${{ github.ref_name }}"; V="${VERSION#v}"; DEB="klustr_${V/-/\~}_amd64.deb"
             curl -LO "https://github.com/SametKUM/klustr/releases/download/${VERSION}/${DEB}"
             sudo apt install "./${DEB}"
             ```
