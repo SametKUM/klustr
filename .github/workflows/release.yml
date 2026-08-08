@@ -240,11 +240,28 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      attestations: write
+      id-token: write
     steps:
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          set -euo pipefail
+          cd artifacts
+          sha256sum klustr-*.tar.gz klustr_*.deb > SHA256SUMS
+          cat SHA256SUMS
+
+      # Checksums catch a truncated download; provenance is what ties a binary
+      # to the commit and workflow run that produced it.
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            artifacts/klustr-*.tar.gz
+            artifacts/klustr_*.deb
 
       - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
@@ -252,6 +269,7 @@ jobs:
             artifacts/klustr-*-darwin-arm64.tar.gz
             artifacts/klustr-*-linux-amd64.tar.gz
             artifacts/klustr_*_amd64.deb
+            artifacts/SHA256SUMS
           generate_release_notes: true
           append_body: true
           body: |
@@ -300,6 +318,22 @@ jobs:
             tar -xzf klustr-${{ github.ref_name }}-linux-amd64.tar.gz
             install -Dm755 klustr ~/.local/bin/klustr
             klustr
+            ```
+
+            ## Verify a download
+
+            Checksums for every asset:
+
+            ```bash
+            curl -LO https://github.com/SametKUM/klustr/releases/download/${{ github.ref_name }}/SHA256SUMS
+            sha256sum -c --ignore-missing SHA256SUMS   # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
+            ```
+
+            Each asset also carries build provenance, which ties it to the
+            commit and workflow run that produced it:
+
+            ```bash
+            gh attestation verify klustr-${{ github.ref_name }}-linux-amd64.tar.gz --repo SametKUM/klustr
             ```
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
