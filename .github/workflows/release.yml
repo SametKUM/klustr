@@ -205,9 +205,11 @@ jobs:
           VERSION: ${{ steps.meta.outputs.deb_version }}
           DEB_NAME: ${{ steps.meta.outputs.deb_name }}
         run: |
-          curl -sSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
-            | tar -xz -C /tmp nfpm
-          /tmp/nfpm package \
+          set -euo pipefail
+          # go install verifies against sum.golang.org, which a GitHub release
+          # asset cannot offer: an asset can be replaced under its own tag.
+          go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@v${NFPM_VERSION}"
+          nfpm package \
             --config build/linux/nfpm.yaml \
             --packager deb \
             --target "build/bin/${DEB_NAME}"
