@@ -66,8 +66,12 @@ jobs:
           version, sha = sys.argv[1], sys.argv[2]
           path = pathlib.Path("Casks/klustr.rb")
           text = path.read_text()
-          text = re.sub(r'^( *version )"[^"]*"', rf'\1"{version}"', text, count=1, flags=re.M)
-          text = re.sub(r'^( *sha256 )"[^"]*"', rf'\1"{sha}"', text, count=1, flags=re.M)
+          # A miss leaves the text untouched rather than raising, so a cask
+          # format change could commit a new version against the old checksum.
+          text, n_version = re.subn(r'^( *version )"[^"]*"', rf'\1"{version}"', text, count=1, flags=re.M)
+          text, n_sha = re.subn(r'^( *sha256 )"[^"]*"', rf'\1"{sha}"', text, count=1, flags=re.M)
+          if n_version != 1 or n_sha != 1:
+              sys.exit(f"Cask edit matched version={n_version} sha256={n_sha}, expected 1 each")
           path.write_text(text)
           PY
           if git diff --quiet; then
