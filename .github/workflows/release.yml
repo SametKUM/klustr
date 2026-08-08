@@ -4,11 +4,14 @@ on:
   push:
     tags:
       - "v*"
+  # Manual runs build and sign artifacts but never publish: the release job is
+  # gated on a tag ref. Use this to check that a branch still builds and signs
+  # on both platforms, not to cut a release.
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version tag to build (e.g., v0.1.0)"
-        required: true
+      ref:
+        description: "Branch, tag or SHA to build (artifacts only, no release)"
+        required: false
 
 permissions:
   contents: write
@@ -45,6 +48,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-go@v7
         with:
@@ -88,18 +93,17 @@ jobs:
         id: meta
         shell: bash
         env:
-          INPUT_VERSION: ${{ inputs.version }}
           SUFFIX: ${{ matrix.suffix }}
         run: |
           set -euo pipefail
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
           else
-            VERSION="$INPUT_VERSION"
+            VERSION="v0.0.0-dev"
           fi
-          # Both a tag name and a workflow_dispatch input are free-form text
-          # that ends up in artifact names and in $GITHUB_OUTPUT. Reject
-          # anything that isn't a release version before it gets that far.
+          # A tag matching v* is free-form text that ends up in artifact names
+          # and in $GITHUB_OUTPUT. Reject anything that isn't a release version
+          # before it gets that far.
           if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
             echo "Refusing to build unexpected version: $VERSION" >&2
             exit 1
