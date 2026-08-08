@@ -279,7 +279,6 @@ jobs:
             artifacts/klustr_*_amd64.deb
             artifacts/SHA256SUMS
           generate_release_notes: true
-          append_body: true
           body: |
             ## Install (macOS Apple Silicon)
 
