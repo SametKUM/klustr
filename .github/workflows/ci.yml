@@ -51,6 +51,12 @@ jobs:
       - name: go test
         run: go test ./...
 
+      # The concurrent code — informers, log streams, exec sessions, the
+      # port-forward registry, the credential refresh timer — all lives under
+      # internal, and -race costs 2-3x runtime.
+      - name: go test -race
+        run: go test -race ./internal/...
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
