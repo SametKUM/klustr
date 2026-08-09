@@ -253,7 +253,8 @@ jobs:
           file build/bin/klustr | grep -q 'ELF 64-bit LSB.*x86-64'
           tar -tzf "build/bin/${ARTIFACT}" | grep -qx klustr
           dpkg-deb --info "build/bin/${DEB_NAME}"
-          dpkg-deb --contents "build/bin/${DEB_NAME}" | grep -q './usr/bin/klustr'
+          # grep must drain dpkg-deb output; -q closes the pipe early under pipefail.
+          dpkg-deb --contents "build/bin/${DEB_NAME}" | grep -F './usr/bin/klustr' >/dev/null
           # The filename and the control field must agree, and a prerelease
           # must sort below the release it precedes.
           PKG_VERSION=$(dpkg-deb --field "build/bin/${DEB_NAME}" Version)
