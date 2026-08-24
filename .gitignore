@@ -6,3 +6,4 @@ frontend/package.json.md5
 .DS_Store
 /klustr
 /hack/
+.codegraph/
