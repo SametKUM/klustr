@@ -297,7 +297,7 @@ export function ResourceTable<T>({
   const readOnly = useUIStore((s) => s.globalReadOnly)
   const selectedResource = useUIStore((s) => s.selectedResource)
   const lastSelectedResource = useUIStore((s) => s.lastSelectedResource)
-  // ponytail: key on the selection *content*, not the array ref — the store
+  // Key on the selection *content*, not the array ref — the store
   // hands back a fresh array even for an unchanged selection, and a new query
   // object would tear down the fetch effect and refetch every context.
   const nsKey = selectedNamespaces.join(',')

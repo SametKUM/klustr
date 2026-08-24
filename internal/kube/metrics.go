@@ -14,7 +14,7 @@ import (
 // podMetricsTTL caches the cluster-wide pod-metrics list briefly so the Overview
 // and the pod table (both ~15s polls) don't each hit metrics.k8s.io. Metrics are
 // approximate and already 15s-polled, so this much staleness is noise.
-// ponytail: only pays off when both views poll within the window; cheap + safe regardless.
+// Only pays off when both views poll within the window; cheap + safe regardless.
 const podMetricsTTL = 10 * time.Second
 
 // metricsUnavailableCooldown is how long the overview skips its cluster-wide

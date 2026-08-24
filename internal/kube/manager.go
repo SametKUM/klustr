@@ -377,7 +377,7 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 		}
 	})
 	// The prior watcher's access map is immutable after its start(), so reusing
-	// it here lets start() skip discoverAccess. ponytail: the new watcher still
+	// it here lets start() skip discoverAccess. The new watcher still
 	// starts cold informers and the frontend re-LISTs open views on _access —
 	// avoiding that needs client-go informer-cache reuse, a bigger change.
 	if reuseAccess && existing != nil {

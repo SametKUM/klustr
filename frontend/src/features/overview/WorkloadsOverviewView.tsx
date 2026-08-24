@@ -231,7 +231,7 @@ export function WorkloadsOverviewView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctxKey, pullCounts, pullEvents])
 
-  // ponytail: memoize so typing in the events search (same component) doesn't
+  // Memoize so typing in the events search (same component) doesn't
   // re-filter all 8 workload lists on every keystroke — they didn't change.
   const cards = useMemo<WorkloadHealth[]>(() => [
     {
