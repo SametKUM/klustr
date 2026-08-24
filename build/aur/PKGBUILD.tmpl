@@ -9,10 +9,13 @@ license=('MIT')
 depends=('webkit2gtk-4.1' 'gtk3')
 provides=('klustr')
 conflicts=('klustr')
+# Every local filename carries ${pkgver}: makepkg reuses any same-named file
+# already in the build directory instead of re-downloading it, so an unversioned
+# name serves a stale icon from an older release and fails the checksum.
 source=("klustr-v${pkgver}-linux-amd64.tar.gz::${url}/releases/download/v${pkgver}/klustr-v${pkgver}-linux-amd64.tar.gz"
-        "klustr.desktop::${url}/raw/v${pkgver}/build/linux/klustr.desktop"
-        "klustr.png::${url}/raw/v${pkgver}/build/appicon.png"
-        "klustr.svg::${url}/raw/v${pkgver}/build/appicon.svg")
+        "klustr-${pkgver}.desktop::${url}/raw/v${pkgver}/build/linux/klustr.desktop"
+        "klustr-${pkgver}.png::${url}/raw/v${pkgver}/build/appicon.png"
+        "klustr-${pkgver}.svg::${url}/raw/v${pkgver}/build/appicon.svg")
 sha256sums=('@SHA_TARBALL@'
             '@SHA_DESKTOP@'
             '@SHA_PNG@'
@@ -20,7 +23,7 @@ sha256sums=('@SHA_TARBALL@'
 
 package() {
   install -Dm755 "${srcdir}/klustr" "${pkgdir}/usr/bin/klustr"
-  install -Dm644 "${srcdir}/klustr.desktop" "${pkgdir}/usr/share/applications/klustr.desktop"
-  install -Dm644 "${srcdir}/klustr.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/klustr.png"
-  install -Dm644 "${srcdir}/klustr.svg" "${pkgdir}/usr/share/icons/hicolor/scalable/apps/klustr.svg"
+  install -Dm644 "${srcdir}/klustr-${pkgver}.desktop" "${pkgdir}/usr/share/applications/klustr.desktop"
+  install -Dm644 "${srcdir}/klustr-${pkgver}.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/klustr.png"
+  install -Dm644 "${srcdir}/klustr-${pkgver}.svg" "${pkgdir}/usr/share/icons/hicolor/scalable/apps/klustr.svg"
 }
