@@ -561,6 +561,16 @@ export function ResourceTable<T>({
         reload(ctx)
         return
       }
+      // A fetch already in flight will land a snapshot taken before this delta
+      // and overwrite whatever we apply here — and its genRef reset hides the
+      // loss, so the row stays stale until the kind's next event. Route the
+      // change into that fetch's trailing refetch instead. This also keeps the
+      // initial load from momentarily rendering a table of only the changed
+      // rows, since the baseline the delta would merge into is still empty.
+      if (inflight.has(ctx)) {
+        reload(ctx)
+        return
+      }
       const last = genRef.current.get(ctx)
       if (last !== undefined && delta.gen !== last + 1) {
         // Missed or out-of-order batch ⇒ resync from a full fetch.
