@@ -17,6 +17,13 @@ updates:
     groups:
       npm-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # TanStack Table v9 rewrote the API (createCoreRowModel, two-argument
+      # Table/Row generics, feature maps). Every list view renders through
+      # ResourceTable, so that upgrade is a migration to schedule, not a bump
+      # to review weekly.
+      - dependency-name: "@tanstack/react-table"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: "/site"
