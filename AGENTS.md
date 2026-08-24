@@ -55,6 +55,8 @@ klustr/
 │       │                            start + shared helpers
 │       │                            (sortByNamespaceName, formatLabelSelector, OwnerRef, …)
 │       ├── informers_<group>.go     per-sidebar-group XxxInfo types and lister methods
+│       ├── permissions.go           per-kind SelfSubjectAccessReview probing →
+│       │                            cluster-wide / scoped / denied routing map
 │       ├── details.go               shared types (ContainerSummary) + helpers
 │       │                            (matchLabels, deploymentConditions, quantitiesToStrings,
 │       │                             policyRules, rbacSubjects, …)
@@ -90,6 +92,10 @@ klustr/
 │       ├── overview.go              cluster-wide CPU / memory / pod aggregation
 │       ├── logs.go                  streaming log sessions
 │       ├── exec.go                  SPDY exec sessions
+│       ├── streamcoalesce.go        byte-stream batching for exec / terminal output
+│       │                            before it crosses the Wails bridge (perf)
+│       ├── debug.go                 ephemeral debug container (`kubectl debug`)
+│       │                            injected into a shell-less pod, then exec'd
 │       ├── nodeshell.go             root node shell via a temporary privileged
 │       │                            nsenter pod, attached through exec.go
 │       ├── nodeops.go               node cordon/uncordon + PDB-aware drain
@@ -151,7 +157,14 @@ klustr/
 │   └── screenshots/                numbered themed pack `01-*.png` …
 │                                   `16-*.png` for README grid + press / blog
 ├── hack/                         user's local fixtures (NEVER commit anything under hack/)
-└── .github/workflows/            release matrix (release.yml → builds macOS + Linux)
+└── .github/
+    ├── actions/linux-build-deps/  composite action: GTK + WebKit headers
+    └── workflows/                 ci.yml (also `workflow_call`, so release.yml
+                                   gates on it) + release.yml (builds macOS +
+                                   Linux, drafts the release) +
+                                   publish-packages.yml (on release published →
+                                   Homebrew + AUR bumps) + codeql.yml +
+                                   site.yml + pages.yml
 ```
 
 The `internal/` ↔ `app/` split is intentional:
@@ -455,7 +468,7 @@ Klustr is pre-1.0 and ships from `main`. The flow per release:
    gh release edit vX.Y.Z --notes-file release-notes.md
    ```
    `--notes-file` is required — inline heredocs (`--notes "$(cat <<EOF…EOF)"`) silently break triple-backtick code fences inside the body. Keep the **Install** block at the bottom of the file verbatim (Homebrew + Manual `curl` snippet, with the tag pinned in the URL).
-7. **Publish**: `gh release edit vX.Y.Z --draft=false`. The same workflow run automatically bumps the Homebrew cask in the tap repo (`HOMEBREW_TAP_TOKEN`) and the AUR `klustr-bin` package (`AUR_SSH_PRIVATE_KEY`). Both bumps are skipped for prerelease tags (those containing a `-`).
+7. **Publish**: `gh release edit vX.Y.Z --draft=false`. Publishing fires `.github/workflows/publish-packages.yml`, which downloads the now-public assets and bumps the Homebrew cask in the tap repo (`HOMEBREW_TAP_TOKEN`) and the AUR `klustr-bin` package (`AUR_SSH_PRIVATE_KEY`). Both bumps are skipped for prereleases. The bumps deliberately run off the publish event, not inside `release.yml` — draft assets are not downloadable from their public URL, so bumping earlier would point both package managers at a 404.
 
 Notes on the workflow:
 - `prerelease: true` is set automatically when the tag contains a `-` (e.g. `v0.15.0-rc1`).
@@ -464,6 +477,6 @@ Notes on the workflow:
 
 ## Verification Before Reporting Done
 
-- Go: `go test klustr/internal/...` and `go vet ./...` pass.
-- Frontend (inside `frontend/`): `npm test`, `npm run lint`, `npm run typecheck` pass.
+- Go: `go test klustr/internal/...`, `go test -race klustr/internal/...` and `go vet ./...` pass.
+- Frontend (inside `frontend/`): `npm test`, `npm run lint`, `npm run typecheck`, `npm run build` pass.
 - Manual: `wails dev` runs and the changed feature actually works in the native window. Type checks alone are not sufficient for UI work.

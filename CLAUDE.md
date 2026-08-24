@@ -55,6 +55,8 @@ klustr/
 │       │                            start + shared helpers
 │       │                            (sortByNamespaceName, formatLabelSelector, OwnerRef, …)
 │       ├── informers_<group>.go     per-sidebar-group XxxInfo types and lister methods
+│       ├── permissions.go           per-kind SelfSubjectAccessReview probing →
+│       │                            cluster-wide / scoped / denied routing map
 │       ├── details.go               shared types (ContainerSummary) + helpers
 │       │                            (matchLabels, deploymentConditions, quantitiesToStrings,
 │       │                             policyRules, rbacSubjects, …)
@@ -90,6 +92,8 @@ klustr/
 │       ├── overview.go              cluster-wide CPU / memory / pod aggregation
 │       ├── logs.go                  streaming log sessions
 │       ├── exec.go                  SPDY exec sessions
+│       ├── streamcoalesce.go        byte-stream batching for exec / terminal output
+│       │                            before it crosses the Wails bridge (perf)
 │       ├── debug.go                 ephemeral debug container (`kubectl debug`)
 │       │                            injected into a shell-less pod, then exec'd
 │       ├── nodeshell.go             root node shell via a temporary privileged
