@@ -243,6 +243,15 @@ func (g *restClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
 
 // --- read paths ---------------------------------------------------------
 
+// helmListStateMask widens the Helm SDK default of deployed|failed. List.Run
+// applies the mask *after* reducing to the latest revision per release, so under
+// that default a release whose newest revision is pending-install,
+// pending-upgrade, pending-rollback or uninstalling drops out of the list
+// entirely instead of showing its in-progress state — which is exactly when the
+// user needs to see it. Uninstalled leftovers (`helm uninstall --keep-history`)
+// stay hidden.
+const helmListStateMask = action.ListAll & ^action.ListUninstalled
+
 // ListReleases returns the latest revision of each release, optionally
 // filtered to a single namespace. Empty namespace lists across the cluster.
 func (h *helmManager) ListReleases(contextName, namespace string) ([]HelmReleaseInfo, error) {
@@ -250,10 +259,12 @@ func (h *helmManager) ListReleases(contextName, namespace string) ([]HelmRelease
 	if err != nil {
 		return nil, err
 	}
+	return listReleases(cfg)
+}
+
+func listReleases(cfg *action.Configuration) ([]HelmReleaseInfo, error) {
 	list := action.NewList(cfg)
-	list.All = false
-	list.AllNamespaces = namespace == ""
-	list.SetStateMask()
+	list.StateMask = helmListStateMask
 	releases, err := list.Run()
 	if err != nil {
 		return nil, err
