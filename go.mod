@@ -11,7 +11,7 @@ require (
 	helm.sh/helm/v3 v3.21.4
 	k8s.io/api v0.37.0
 	k8s.io/apimachinery v0.37.0
-	k8s.io/cli-runtime v0.36.2
+	k8s.io/cli-runtime v0.37.0
 	k8s.io/client-go v0.37.0
 	k8s.io/metrics v0.37.0
 	sigs.k8s.io/gateway-api v1.6.1
@@ -144,12 +144,4 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.21.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
-)
-
-// Helm v3.21 pulls in kubectl v0.35.x, which still imports the long-removed
-// scheduling/v1alpha1 group that k8s.io/api v0.36+ no longer ships. Pin the
-// kubectl + cli-runtime that match the rest of our k8s.io/* modules.
-replace (
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.36.1
-	k8s.io/kubectl => k8s.io/kubectl v0.36.1
 )
