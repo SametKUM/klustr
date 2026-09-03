@@ -11,6 +11,7 @@ import { xtermThemeFor } from '@/features/_shared/xtermTheme'
 import { installClipboardBindings } from '@/features/_shared/xtermClipboard'
 import { highlightLogContent } from '@/features/_shared/logHighlight'
 import { pushCapped } from '@/features/_shared/pushCapped'
+import { TerminalContextMenu } from '@/features/_shared/TerminalContextMenu'
 import { useUIStore } from '@/store/ui'
 
 const TAIL_LINES = 50
@@ -390,7 +391,9 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
         </div>
       )}
       <div className="relative min-h-0 flex-1">
-        <div ref={termHostRef} className="absolute inset-0 bg-background px-2 py-1" />
+        <TerminalContextMenu terminal={() => termRef.current} readOnly>
+          <div ref={termHostRef} className="absolute inset-0 bg-background px-2 py-1" />
+        </TerminalContextMenu>
         {!atBottom && (
           <button
             type="button"
