@@ -5,6 +5,7 @@ import '@xterm/xterm/css/xterm.css'
 import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { api } from '@/lib/api'
 import { xtermThemeFor } from '@/features/_shared/xtermTheme'
+import { installClipboardBindings } from '@/features/_shared/xtermClipboard'
 import { useUIStore } from '@/store/ui'
 
 type Props = {
@@ -50,6 +51,7 @@ export function TerminalTab({ tabId, contextName, active }: Props) {
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(hostRef.current)
+    installClipboardBindings(term)
     fit.fit()
     termRef.current = term
     fitRef.current = fit

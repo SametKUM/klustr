@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { api, type PodLogTarget } from '@/lib/api'
 import { xtermThemeFor } from '@/features/_shared/xtermTheme'
+import { installClipboardBindings } from '@/features/_shared/xtermClipboard'
 import { highlightLogContent } from '@/features/_shared/logHighlight'
 import { pushCapped } from '@/features/_shared/pushCapped'
 import { useUIStore } from '@/store/ui'
@@ -139,6 +140,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(termHostRef.current)
+    installClipboardBindings(term, { readOnly: true })
     fit.fit()
     termRef.current = term
     fitRef.current = fit

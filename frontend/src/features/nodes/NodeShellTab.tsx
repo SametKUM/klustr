@@ -6,6 +6,7 @@ import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { xtermThemeFor } from '@/features/_shared/xtermTheme'
+import { installClipboardBindings } from '@/features/_shared/xtermClipboard'
 import { useUIStore } from '@/store/ui'
 
 type Props = {
@@ -41,6 +42,7 @@ export function NodeShellTab({ contextName, nodeName }: Props) {
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(termHostRef.current)
+    installClipboardBindings(term)
     fit.fit()
     termRef.current = term
     fitRef.current = fit
