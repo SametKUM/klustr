@@ -20,6 +20,9 @@ In aggregated mode the stream spans the pods across every active context.
 
 The **Exec** tab opens an interactive shell into any container over SPDY — the same
 transport `kubectl exec` uses. Pick the container if the pod has more than one.
+Copy and paste follow the terminal conventions in
+[Terminal → Copy and paste](terminal.md#copy-and-paste): `⌘C` / `⌘V` on macOS,
+`Ctrl+Shift+C` / `Ctrl+Shift+V` or the right-click menu on Linux and Windows.
 
 ## Debug (shell-less containers)
 

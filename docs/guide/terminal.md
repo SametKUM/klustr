@@ -31,6 +31,21 @@ Windows is not supported yet.
   Closing the last tab closes the drawer.
 - Disconnecting a context closes every terminal bound to it.
 
+## Copy and paste
+
+The same bindings apply to every terminal surface — this drawer, **Exec**,
+**Node shell** and the **Logs** viewers (copy only there):
+
+| | macOS | Linux / Windows |
+|---|---|---|
+| Copy selection | `⌘C` | `Ctrl+Shift+C` or `Ctrl+Insert` |
+| Paste | `⌘V` | `Ctrl+Shift+V` or `Shift+Insert` |
+
+On Linux and Windows a plain `Ctrl+C` copies while text is selected and is the
+shell's interrupt otherwise — the same rule Windows Terminal and VS Code use.
+`Ctrl+V` is never intercepted; it reaches the shell as `^V`. Right-click any
+terminal for a **Copy / Paste / Select all** menu.
+
 ## Opening an external terminal app
 
 Prefer your own terminal? A tab can launch an external app (Terminal, iTerm2,
