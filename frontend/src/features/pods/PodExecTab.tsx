@@ -13,6 +13,7 @@ import { api, type PodDetail } from '@/lib/api'
 import { xtermThemeFor } from '@/features/_shared/xtermTheme'
 import { installClipboardBindings } from '@/features/_shared/xtermClipboard'
 import { InlinePicker } from '@/features/_shared/InlinePicker'
+import { TerminalContextMenu } from '@/features/_shared/TerminalContextMenu'
 import { TerminalAppPickerDialog } from '@/features/terminal/TerminalAppPickerDialog'
 import { useTerminalStore } from '@/store/terminals'
 import { useUIStore } from '@/store/ui'
@@ -440,7 +441,9 @@ export function PodExecTab({ detail, contextName, active }: Props) {
           {error}
         </div>
       )}
-      <div ref={termHostRef} className="min-h-0 flex-1 bg-background px-2 py-1" />
+      <TerminalContextMenu terminal={() => termRef.current}>
+        <div ref={termHostRef} className="min-h-0 flex-1 bg-background px-2 py-1" />
+      </TerminalContextMenu>
 
       <TerminalAppPickerDialog
         open={externalOpen}

@@ -6,6 +6,7 @@ import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { api } from '@/lib/api'
 import { xtermThemeFor } from '@/features/_shared/xtermTheme'
 import { installClipboardBindings } from '@/features/_shared/xtermClipboard'
+import { TerminalContextMenu } from '@/features/_shared/TerminalContextMenu'
 import { useUIStore } from '@/store/ui'
 
 type Props = {
@@ -186,7 +187,9 @@ export function TerminalTab({ tabId, contextName, active }: Props) {
           </button>
         </div>
       )}
-      <div ref={hostRef} className="min-h-0 flex-1 bg-background px-2 py-1" />
+      <TerminalContextMenu terminal={() => termRef.current}>
+        <div ref={hostRef} className="min-h-0 flex-1 bg-background px-2 py-1" />
+      </TerminalContextMenu>
     </div>
   )
 }
