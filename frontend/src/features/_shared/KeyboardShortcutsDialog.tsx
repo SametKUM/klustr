@@ -41,6 +41,9 @@ const GROUPS: Group[] = [
     shortcuts: [
       { keys: [MOD_KEY, '`'], label: 'Toggle terminal panel' },
       { keys: ['Alt', 'Click'], label: 'Show external terminal picker' },
+      { keys: IS_MAC ? [MOD_KEY, 'C'] : ['Ctrl', 'Shift', 'C'], label: 'Copy terminal selection' },
+      { keys: IS_MAC ? [MOD_KEY, 'V'] : ['Ctrl', 'Shift', 'V'], label: 'Paste into terminal' },
+      { keys: ['Right-click'], label: 'Terminal copy / paste menu' },
     ],
   },
   {
