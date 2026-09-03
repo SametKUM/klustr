@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api, type PodDetail } from '@/lib/api'
 import { xtermThemeFor } from '@/features/_shared/xtermTheme'
+import { installClipboardBindings } from '@/features/_shared/xtermClipboard'
 import { InlinePicker } from '@/features/_shared/InlinePicker'
 import { TerminalAppPickerDialog } from '@/features/terminal/TerminalAppPickerDialog'
 import { useTerminalStore } from '@/store/terminals'
@@ -83,6 +84,7 @@ export function PodExecTab({ detail, contextName, active }: Props) {
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(termHostRef.current)
+    installClipboardBindings(term)
     fit.fit()
     termRef.current = term
     fitRef.current = fit
