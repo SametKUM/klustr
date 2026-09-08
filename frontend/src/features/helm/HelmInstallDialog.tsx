@@ -25,6 +25,8 @@ type OperationError = {
 
 type Props = {
   contextName: string | null
+  availableContexts?: string[]
+  onContextChange?: (contextName: string) => void
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: Mode
@@ -39,6 +41,8 @@ type Props = {
 
 export function HelmInstallDialog({
   contextName,
+  availableContexts,
+  onContextChange,
   open,
   onOpenChange,
   mode,
@@ -173,6 +177,26 @@ export function HelmInstallDialog({
 
         <div className="flex min-h-0 flex-1">
           <aside className="w-72 shrink-0 overflow-y-auto border-r border-border bg-sidebar/30 px-4 py-3 text-xs">
+            <Field label="Target context">
+              {mode === 'install' && onContextChange ? (
+                <select
+                  aria-label="Target context"
+                  value={contextName ?? ''}
+                  disabled={pending}
+                  onChange={(e) => {
+                    setDryRunResult(null)
+                    setOperationError(null)
+                    setAmbiguous(null)
+                    onContextChange(e.target.value)
+                  }}
+                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs"
+                >
+                  <option value="" disabled>Select a context</option>
+                  {availableContexts?.map((ctx) => <option key={ctx} value={ctx}>{ctx}</option>)}
+                </select>
+              ) : <div className="break-all font-mono">{contextName ?? 'No context selected'}</div>}
+              {!contextName && <p className="mt-1 text-muted-foreground">Select a target context to continue.</p>}
+            </Field>
             <Field label="Release name">
               <input
                 type="text"

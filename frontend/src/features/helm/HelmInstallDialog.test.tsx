@@ -1,4 +1,4 @@
-import { act, type ReactNode } from 'react'
+import { act, useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -198,6 +198,43 @@ describe('HelmInstallDialog', () => {
       expect(mocks.upgradeHelmRelease).not.toHaveBeenCalled()
     },
   )
+
+  it('requires an explicit install target in aggregated mode and discards the old preview when it changes', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    function Install() {
+      const [context, setContext] = useState<string | null>(null)
+      return <HelmInstallDialog contextName={context} availableContexts={['cluster-a', 'cluster-b']}
+        onContextChange={setContext} open onOpenChange={vi.fn()} mode="install"
+        initialName="api" initialChartRef="example/api" />
+    }
+    await act(async () => root.render(<QueryClientProvider client={queryClient}><Install /></QueryClientProvider>))
+    expect(button(container, 'Install').disabled).toBe(true)
+    expect(container.textContent).toContain('Select a target context to continue.')
+    const select = container.querySelector<HTMLSelectElement>('[aria-label="Target context"]')!
+    await act(async () => {
+      select.value = 'cluster-b'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    let finish!: (result: { manifest: string; notes: string }) => void
+    mocks.installHelmRelease.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+    await act(async () => {
+      button(container, 'Dry-run').click()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(select.disabled).toBe(true)
+    expect(mocks.installHelmRelease).toHaveBeenLastCalledWith(expect.objectContaining({ contextName: 'cluster-b', dryRun: true }))
+    await act(async () => finish({ manifest: 'preview-for-cluster-b', notes: '' }))
+    expect(container.textContent).toContain('preview-for-cluster-b')
+    await act(async () => {
+      select.value = 'cluster-a'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(container.textContent).not.toContain('preview-for-cluster-b')
+    expect(container.textContent).toContain('No preview yet')
+    mocks.installHelmRelease.mockResolvedValueOnce(undefined)
+    await act(async () => button(container, 'Install').click())
+    expect(mocks.installHelmRelease).toHaveBeenLastCalledWith(expect.objectContaining({ contextName: 'cluster-a', dryRun: false }))
+  })
 
   it('clears the previous inline error when a new attempt starts', async () => {
     let finishRetry!: (result: { manifest: string; notes: string }) => void
