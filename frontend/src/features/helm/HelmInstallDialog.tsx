@@ -11,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { api, type HelmDryRunResult, type HelmInstallOptions } from '@/lib/api'
-import { useUIStore } from '@/store/ui'
 import { CopyButton } from '@/features/_shared/Copyable'
 import { useThemeMode } from '@/features/_shared/useThemeMode'
 
@@ -25,6 +24,7 @@ type OperationError = {
 }
 
 type Props = {
+  contextName: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: Mode
@@ -38,6 +38,7 @@ type Props = {
 }
 
 export function HelmInstallDialog({
+  contextName,
   open,
   onOpenChange,
   mode,
@@ -48,7 +49,6 @@ export function HelmInstallDialog({
   initialValues = '',
   onSuccess,
 }: Props) {
-  const contextName = useUIStore((s) => s.selectedContext)
   const theme = useThemeMode()
   const [name, setName] = useState(initialName)
   const [namespace, setNamespace] = useState(initialNamespace)
@@ -144,7 +144,7 @@ export function HelmInstallDialog({
     },
   })
 
-  const formInvalid = !name.trim() || !chartRef.trim() || !namespace.trim()
+  const formInvalid = !contextName || !name.trim() || !chartRef.trim() || !namespace.trim()
   const pending = dryRun.isPending || apply.isPending
   const operationErrorSummary = operationError
     ? summarizeServerError(operationError.message)

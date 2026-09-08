@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Plus, RefreshCw, Search as SearchIcon, Trash2 } from 'lucide-react'
 import { api, type HelmChartSearchResult, type HelmRepoInfo } from '@/lib/api'
 import { useHelmStore } from '@/store/helm'
+import { useUIStore } from '@/store/ui'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -18,6 +19,7 @@ import {
 import { HelmInstallDialog } from './HelmInstallDialog'
 
 export function HelmReposView() {
+  const contextName = useUIStore((s) => s.selectedContext)
   const repos = useHelmStore((s) => s.repos)
   const setRepos = useHelmStore((s) => s.setRepos)
   const [query, setQuery] = useState('')
@@ -222,6 +224,7 @@ export function HelmReposView() {
       </div>
 
       <HelmInstallDialog
+        contextName={contextName}
         open={installFor !== null}
         onOpenChange={(o) => {
           if (!o) setInstallFor(null)

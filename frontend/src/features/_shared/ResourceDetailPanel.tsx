@@ -415,6 +415,7 @@ function HelmReleaseTabs({
         />
       )}
       <HelmInstallDialog
+        contextName={contextName}
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         mode="upgrade"

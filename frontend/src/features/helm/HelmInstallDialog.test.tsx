@@ -96,6 +96,7 @@ describe('HelmInstallDialog', () => {
       root.render(
         <QueryClientProvider client={queryClient}>
           <HelmInstallDialog
+            contextName="test-context"
             open
             onOpenChange={vi.fn()}
             mode="install"
@@ -120,6 +121,84 @@ describe('HelmInstallDialog', () => {
     )
   })
 
+  it.each(['install', 'upgrade'] as const)(
+    'targets the explicit context for %s dry-run and apply when another context is selected',
+    async (mode) => {
+      const operation = mode === 'install' ? mocks.installHelmRelease : mocks.upgradeHelmRelease
+      operation.mockResolvedValue({ manifest: 'kind: Deployment\n', notes: '' })
+      const queryClient = new QueryClient({
+        defaultOptions: { mutations: { retry: false } },
+      })
+
+      await act(async () => {
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <HelmInstallDialog
+              contextName="release-context"
+              open
+              onOpenChange={vi.fn()}
+              mode={mode}
+              initialName="api"
+              initialNamespace="apps"
+              initialChartRef="example/api"
+            />
+          </QueryClientProvider>,
+        )
+      })
+
+      await act(async () => button(container, 'Dry-run').click())
+      expect(operation).toHaveBeenNthCalledWith(1, expect.objectContaining({
+        contextName: 'release-context',
+        namespace: 'apps',
+        releaseName: 'api',
+        dryRun: true,
+      }))
+
+      await act(async () => button(container, mode === 'install' ? 'Install' : 'Upgrade').click())
+      expect(operation).toHaveBeenNthCalledWith(2, expect.objectContaining({
+        contextName: 'release-context',
+        namespace: 'apps',
+        releaseName: 'api',
+        dryRun: false,
+      }))
+    },
+  )
+
+  it.each(['install', 'upgrade'] as const)(
+    'disables %s without a target context instead of using the selected context',
+    async (mode) => {
+      const queryClient = new QueryClient({
+        defaultOptions: { mutations: { retry: false } },
+      })
+
+      await act(async () => {
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <HelmInstallDialog
+              contextName={null}
+              open
+              onOpenChange={vi.fn()}
+              mode={mode}
+              initialName="api"
+              initialChartRef="example/api"
+            />
+          </QueryClientProvider>,
+        )
+      })
+
+      const dryRunButton = button(container, 'Dry-run')
+      const applyButton = button(container, mode === 'install' ? 'Install' : 'Upgrade')
+      expect(dryRunButton.disabled).toBe(true)
+      expect(applyButton.disabled).toBe(true)
+      await act(async () => {
+        dryRunButton.click()
+        applyButton.click()
+      })
+      expect(mocks.installHelmRelease).not.toHaveBeenCalled()
+      expect(mocks.upgradeHelmRelease).not.toHaveBeenCalled()
+    },
+  )
+
   it('clears the previous inline error when a new attempt starts', async () => {
     let finishRetry!: (result: { manifest: string; notes: string }) => void
     const retry = new Promise<{ manifest: string; notes: string }>((resolve) => {
@@ -136,6 +215,7 @@ describe('HelmInstallDialog', () => {
       root.render(
         <QueryClientProvider client={queryClient}>
           <HelmInstallDialog
+            contextName="test-context"
             open
             onOpenChange={vi.fn()}
             mode="install"
