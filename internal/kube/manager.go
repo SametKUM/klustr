@@ -549,6 +549,7 @@ func (m *ClientManager) rewatchAfterRefresh(contextName string, allowRetry bool)
 	// Helm builds its own rest.Config from a cached action.Configuration; drop
 	// it so the next Helm op rebuilds with the freshly captured credentials.
 	m.helm.invalidate(contextName)
+	m.metrics.invalidate(contextName)
 	m.mu.Lock()
 	delete(m.cache, contextName)
 	appCtx := m.appCtx
