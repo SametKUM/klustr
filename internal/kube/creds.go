@@ -187,6 +187,7 @@ func (c *credentialManager) ensureFresh(ctx context.Context, contextName string)
 	c.mu.Lock()
 	// A reconnect un-pauses background refresh (pauseRefresh set it on the
 	// previous disconnect).
+	paused := c.paused[contextName]
 	delete(c.paused, contextName)
 	mapping, ok := c.mappings[contextName]
 	if !ok {
@@ -194,6 +195,9 @@ func (c *credentialManager) ensureFresh(ctx context.Context, contextName string)
 		return false, nil
 	}
 	if cred, ok := c.captured[contextName]; ok && cred.valid(c.now()) {
+		if paused {
+			c.scheduleRefreshLocked(contextName, cred.expiry)
+		}
 		c.mu.Unlock()
 		return false, nil
 	}
@@ -274,6 +278,10 @@ func (c *credentialManager) fail(contextName, msg string) error {
 func (c *credentialManager) scheduleRefresh(contextName string, expiry time.Time) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.scheduleRefreshLocked(contextName, expiry)
+}
+
+func (c *credentialManager) scheduleRefreshLocked(contextName string, expiry time.Time) {
 	c.stopTimerLocked(contextName)
 	// A capture that finished after the context was disconnected must not
 	// re-arm the timer — that would keep re-capturing on a paused context.

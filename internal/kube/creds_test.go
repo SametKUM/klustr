@@ -94,6 +94,59 @@ func TestRefreshBailsWhilePaused(t *testing.T) {
 	}
 }
 
+func TestEnsureFreshReconnectRestoresRefresh(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		expiring bool
+	}{
+		{name: "expiring credentials", expiring: true},
+		{name: "non-expiring credentials"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &fakeProvider{name: "fake"}
+			cred := validCred()
+			if !tc.expiring {
+				cred.expiry = time.Time{}
+			}
+			p.set(cred, nil)
+			c := testCredManager(t, p)
+			t.Cleanup(c.stopAll)
+			if err := c.setMapping("ctx1", CredentialMapping{Provider: "fake", Profile: "p1"}); err != nil {
+				t.Fatal(err)
+			}
+			if captured, err := c.ensureFresh(context.Background(), "ctx1"); err != nil || !captured {
+				t.Fatalf("initial capture: captured=%v err=%v", captured, err)
+			}
+			c.pauseRefresh("ctx1")
+			if captured, err := c.ensureFresh(context.Background(), "ctx1"); err != nil || captured {
+				t.Fatalf("reconnect: captured=%v err=%v", captured, err)
+			}
+			c.mu.Lock()
+			paused := c.paused["ctx1"]
+			timer := c.timers["ctx1"]
+			c.mu.Unlock()
+			if paused {
+				t.Fatal("reconnected context is still paused")
+			}
+			if (timer != nil) != tc.expiring {
+				t.Fatalf("refresh timer armed=%v, want %v", timer != nil, tc.expiring)
+			}
+			if captured, err := c.ensureFresh(context.Background(), "ctx1"); err != nil || captured {
+				t.Fatalf("reuse: captured=%v err=%v", captured, err)
+			}
+			c.mu.Lock()
+			reusedTimer := c.timers["ctx1"]
+			c.mu.Unlock()
+			if reusedTimer != timer {
+				t.Error("reusing credentials replaced the active refresh timer")
+			}
+			if got := p.captures.Load(); got != 1 {
+				t.Errorf("captures = %d, want 1", got)
+			}
+		})
+	}
+}
+
 func TestEnsureFreshClearsPaused(t *testing.T) {
 	p := &fakeProvider{name: "fake"}
 	p.set(validCred(), nil)
