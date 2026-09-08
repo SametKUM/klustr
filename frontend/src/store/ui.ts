@@ -5,6 +5,7 @@ import { ALL_RESOURCE_VIEWS } from '@/features/_shared/resourceGroups'
 import {
   MAX_TAGS_PER_CONTEXT,
   type ContextGroup,
+  type ContextHealth,
   type ContextTag,
   type CustomTagDef,
   type DetailTab,
@@ -71,6 +72,8 @@ export type {
 } from './ui.types'
 
 type UIState = {
+  contextHealth: Record<string, ContextHealth>
+  setContextHealth: (update: (previous: Record<string, ContextHealth>) => Record<string, ContextHealth>) => void
   selectedContext: string | null
   aggregatedContexts: string[]
   activeGroupId: string | null
@@ -244,6 +247,8 @@ export const useUIStore = create<UIState>((set) => {
   }
 
   return {
+    contextHealth: {},
+    setContextHealth: (update) => set((s) => ({ contextHealth: update(s.contextHealth) })),
     selectedContext: selectedAtBoot,
     aggregatedContexts: aggregatedAtBoot,
     activeGroupId: null,

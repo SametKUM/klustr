@@ -10,6 +10,15 @@ export const SIDEBAR_WIDTH_DEFAULT = 256
 
 export type ContextTag = string
 
+export type ContextHealth = {
+  status: 'pinging' | 'ok' | 'slow' | 'stale' | 'error'
+  latencyMs: number
+  error: string | null
+  version: string | null
+  lastPingAt: number
+  failures: number
+}
+
 export type TagColor =
   | 'rose'
   | 'red'

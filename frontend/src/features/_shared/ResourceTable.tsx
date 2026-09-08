@@ -72,6 +72,8 @@ type Scope = 'namespaced' | 'cluster'
 
 type Noun = { singular: string; plural: string }
 
+type LoadError = { message: string; retrying: boolean }
+
 // Skeleton grace fallback: re-check every step while the kind is still syncing,
 // giving up (showing the possibly-empty result) only at the hard cap.
 const GRACE_STEP_MS = 5_000
@@ -294,6 +296,7 @@ export function ResourceTable<T>({
   const resourceContexts = resolveResourceContexts(activeContexts, contexts)
   const isAggregated = useIsAggregated()
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
+  const contextHealth = useUIStore((s) => s.contextHealth)
   const readOnly = useUIStore((s) => s.globalReadOnly)
   const selectedResource = useUIStore((s) => s.selectedResource)
   const lastSelectedResource = useUIStore((s) => s.lastSelectedResource)
@@ -413,6 +416,8 @@ export function ResourceTable<T>({
   const filterRef = useRef<HTMLInputElement>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
   const [loadedSet, setLoadedSet] = useState<Set<string>>(() => new Set())
+  const [loadErrors, setLoadErrors] = useState<Record<string, LoadError>>({})
+  const retryLoadRef = useRef<((ctx: string) => void) | null>(null)
   const fetchRef = useRef(fetch)
   fetchRef.current = fetch
   const setDataRef = useRef(setData)
@@ -476,6 +481,8 @@ export function ResourceTable<T>({
   }, [])
 
   useEffect(() => {
+    setLoadErrors({})
+    retryLoadRef.current = null
     if (resourceContexts.length === 0) {
       setLoadedSet(new Set())
       return
@@ -494,6 +501,7 @@ export function ResourceTable<T>({
     // bridge/render churn on busy clusters to roughly one refetch per fetch
     // latency instead of one per event.
     const inflight = new Map<string, { dirty: boolean }>()
+    const failedContexts = new Set<string>()
     const reload = (ctx: string): Promise<void> => {
       const st = inflight.get(ctx)
       if (st) {
@@ -501,6 +509,9 @@ export function ResourceTable<T>({
         return Promise.resolve()
       }
       inflight.set(ctx, { dirty: false })
+      setLoadErrors((prev) =>
+        prev[ctx] ? { ...prev, [ctx]: { ...prev[ctx], retrying: true } } : prev,
+      )
       const t0 = import.meta.env.DEV ? performance.now() : 0
       return fetchRef
         .current(ctx, query.apiNamespace)
@@ -509,6 +520,13 @@ export function ResourceTable<T>({
           const tFetched = import.meta.env.DEV ? performance.now() : 0
           const items = stableList(dataRef.current[ctx], list ?? [])
           setDataRef.current(ctx, items)
+          failedContexts.delete(ctx)
+          setLoadErrors((prev) => {
+            if (!prev[ctx]) return prev
+            const next = { ...prev }
+            delete next[ctx]
+            return next
+          })
           // A full fetch is the source of truth: clear the delta baseline so the
           // next delta is accepted and reseeds it.
           genRef.current.delete(ctx)
@@ -525,9 +543,13 @@ export function ResourceTable<T>({
           // of flashing "No X" and then popping in the real rows a moment later.
           if (items.length > 0 || isKindSynced(ctx, kind)) markLoaded(ctx)
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           if (cancelled) return
-          setDataRef.current(ctx, [])
+          failedContexts.add(ctx)
+          setLoadErrors((prev) => ({
+            ...prev,
+            [ctx]: { message: String(error), retrying: false },
+          }))
           genRef.current.delete(ctx)
           markLoaded(ctx)
         })
@@ -540,6 +562,9 @@ export function ResourceTable<T>({
             }, 150)
           }
         })
+    }
+    retryLoadRef.current = (ctx) => {
+      if (resourceContexts.includes(ctx)) void reload(ctx)
     }
     // Bound the initial fan-out so a large aggregated group doesn't fire N
     // simultaneous bridge round-trips on a context-set/namespace change; the
@@ -557,7 +582,8 @@ export function ResourceTable<T>({
       const apply = applyDeltaRef.current
       // No delta support for this kind, no payload (e.g. _access fan-out), or an
       // explicit reset ⇒ full refetch (today's behavior).
-      if (!apply || !delta || delta.reset) {
+      // A failed snapshot must recover before deltas can be merged safely.
+      if (!apply || !delta || delta.reset || failedContexts.has(ctx)) {
         reload(ctx)
         return
       }
@@ -604,6 +630,7 @@ export function ResourceTable<T>({
     }, GRACE_STEP_MS)
     return () => {
       cancelled = true
+      retryLoadRef.current = null
       unsub()
       window.clearTimeout(graceTimer)
     }
@@ -844,6 +871,19 @@ export function ResourceTable<T>({
   }
 
   const allLoaded = resourceContexts.every((c) => loadedSet.has(c))
+  const errors = resourceContexts.flatMap((ctx) =>
+    loadErrors[ctx] ? [{ ctx, ...loadErrors[ctx] }] : [],
+  )
+  const hasLoadErrors = errors.length > 0
+  const connectionWarnings = resourceContexts.flatMap((ctx) => {
+    const health = contextHealth[ctx]
+    if (!health || (!health.error && health.status !== 'stale')) return []
+    return [{
+      ctx,
+      label: health.failures >= 2 ? 'Offline' : health.error ? 'Connection issue' : 'Connection status unknown',
+      message: health.error ?? 'The last connection check is outdated.',
+    }]
+  })
   const filteredCount = selectableRows.length
   const total = mergedData.length
   const countLabel = !allLoaded
@@ -972,6 +1012,8 @@ export function ResourceTable<T>({
           {countLabel}
           {scopeLabel}
           {contextLabel}
+          {hasLoadErrors && ' (incomplete)'}
+          {connectionWarnings.length > 0 && ' (possibly outdated)'}
         </span>
         <div className="relative ml-auto w-64 max-w-full">
           <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
@@ -1006,6 +1048,56 @@ export function ResourceTable<T>({
         </div>
         <ColumnControls table={table} onReset={() => resetPrefs(kind)} />
       </div>
+      {connectionWarnings.length > 0 && (
+        <div
+          role="status"
+          aria-label="Cluster connection warnings"
+          className="max-h-40 shrink-0 overflow-y-auto border-b border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs"
+        >
+          <p className="font-medium text-amber-700 dark:text-amber-400">
+            Showing cached data. Resource status may be outdated.
+          </p>
+          <ul className="mt-2 space-y-2">
+            {connectionWarnings.map(({ ctx, label, message }) => (
+              <li key={ctx}>
+                <p className="break-words font-medium">{label}: <span className="font-mono">{ctx}</span></p>
+                <p className="whitespace-pre-wrap break-words text-muted-foreground">{message}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-muted-foreground">Connection checks continue automatically.</p>
+        </div>
+      )}
+      {hasLoadErrors && (
+        <div
+          role="alert"
+          aria-label="Resource loading errors"
+          className="max-h-40 shrink-0 overflow-y-auto border-b border-destructive/40 bg-destructive/10 px-4 py-3 text-xs"
+        >
+          <p className="font-medium text-destructive">Results may be outdated or incomplete.</p>
+          <ul className="mt-2 space-y-2">
+            {errors.map(({ ctx, message, retrying }) => (
+              <li key={ctx} className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="break-words font-mono font-medium">{ctx}</p>
+                  <p className="whitespace-pre-wrap break-words text-muted-foreground">{message}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 shrink-0 text-xs"
+                  disabled={retrying}
+                  aria-label={`Retry loading ${noun.plural} from ${ctx}`}
+                  onClick={() => retryLoadRef.current?.(ctx)}
+                >
+                  {retrying ? 'Retrying…' : 'Retry'}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 overflow-auto">
         <table
           className="border-collapse text-sm"
@@ -1214,9 +1306,13 @@ export function ResourceTable<T>({
                   colSpan={tableColumns.length + 2}
                   className="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
-                  {appliedFilter
-                    ? `No ${noun.plural} matching "${appliedFilter}".`
-                    : `No ${noun.plural}${scope === 'namespaced' && selectedNamespaces.length > 0 ? scopeLabel : ''}.`}
+                  {hasLoadErrors
+                    ? `Could not load a complete list of ${noun.plural}.`
+                    : connectionWarnings.length > 0
+                      ? `No cached ${noun.plural} for the current selection.`
+                      : appliedFilter
+                        ? `No ${noun.plural} matching "${appliedFilter}".`
+                        : `No ${noun.plural}${scope === 'namespaced' && selectedNamespaces.length > 0 ? scopeLabel : ''}.`}
                 </td>
               </tr>
             ) : (

@@ -8,15 +8,6 @@ import { BrowserOpenURL } from '@/lib/wails/wailsjs/runtime/runtime'
 
 const REPO_URL = 'https://github.com/SametKUM/klustr'
 
-type Health = {
-  status: 'pinging' | 'ok' | 'slow' | 'stale' | 'error'
-  latencyMs: number
-  error: string | null
-  version: string | null
-  lastPingAt: number
-  failures: number
-}
-
 const PING_INTERVAL_MS = 25_000
 const SLOW_THRESHOLD_MS = 300
 const STALE_THRESHOLD_MS = 60_000
@@ -28,7 +19,8 @@ export function StatusBar() {
   const selectedNamespaces = useUIStore((s) => s.selectedNamespaces)
   const readOnly = useUIStore((s) => s.globalReadOnly)
   const portForwards = usePortForwards((s) => s.list)
-  const [healthByCtx, setHealthByCtx] = useState<Record<string, Health>>({})
+  const healthByCtx = useUIStore((s) => s.contextHealth)
+  const setHealthByCtx = useUIStore((s) => s.setContextHealth)
   const [appVersion, setAppVersion] = useState<string | null>(null)
   const [update, setUpdate] = useState<UpdateResult | null>(null)
 
@@ -65,11 +57,13 @@ export function StatusBar() {
 
   useEffect(() => {
     if (activeContexts.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Health is a snapshot of the active external connections.
-      setHealthByCtx({})
+      setHealthByCtx(() => ({}))
       return
     }
     let cancelled = false
+    setHealthByCtx((prev) => Object.fromEntries(
+      Object.entries(prev).filter(([ctx]) => activeContexts.includes(ctx)),
+    ))
     const intervals: number[] = []
 
     const ping = (ctx: string) => {
@@ -77,7 +71,7 @@ export function StatusBar() {
       setHealthByCtx((prev) => ({
         ...prev,
         [ctx]: prev[ctx]
-          ? { ...prev[ctx], status: 'pinging' }
+          ? prev[ctx]
           : { status: 'pinging', latencyMs: -1, error: null, version: null, lastPingAt: 0, failures: 0 },
       }))
       api
@@ -148,7 +142,9 @@ export function StatusBar() {
       for (const id of intervals) window.clearInterval(id)
       window.clearInterval(staleChecker)
     }
-  }, [activeContexts])
+  }, [activeContexts, setHealthByCtx])
+
+  useEffect(() => () => setHealthByCtx(() => ({})), [setHealthByCtx])
 
   const namespaceText =
     selectedNamespaces.length === 0
