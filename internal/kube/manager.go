@@ -720,15 +720,17 @@ func (m *ClientManager) StopLocalTerminal(sessionID string) {
 // ---- Port-forward ------------------------------------------------------
 
 func (m *ClientManager) StartPortForward(contextName, namespace, podName string, localPort, remotePort uint16) (PortForwardInfo, error) {
-	cs, err := m.Clientset(contextName)
-	if err != nil {
-		return PortForwardInfo{}, err
-	}
-	cfg, err := m.restConfig(contextName)
-	if err != nil {
-		return PortForwardInfo{}, err
-	}
-	return m.pf.start(contextName, cs, cfg, namespace, podName, localPort, remotePort)
+	return m.pf.start(contextName, namespace, podName, func(ctx context.Context, readyCh chan struct{}) (portForwarder, error) {
+		cs, err := m.Clientset(contextName)
+		if err != nil {
+			return nil, err
+		}
+		cfg, err := m.restConfig(contextName)
+		if err != nil {
+			return nil, err
+		}
+		return newPortForwarder(ctx, cs, cfg, namespace, podName, localPort, remotePort, readyCh)
+	})
 }
 
 func (m *ClientManager) StopPortForward(id string) {

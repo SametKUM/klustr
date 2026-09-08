@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -33,12 +35,22 @@ type pfChangeFunc func()
 
 type pfSession struct {
 	info   PortForwardInfo
-	stopCh chan struct{}
-	closed sync.Once
+	cancel context.CancelFunc
 }
 
 func (s *pfSession) close() {
-	s.closed.Do(func() { close(s.stopCh) })
+	s.cancel()
+}
+
+type portForwarder interface {
+	ForwardPorts() error
+	GetPorts() ([]portforward.ForwardedPort, error)
+}
+
+type pfDialer func(...string) (httpstream.Connection, string, error)
+
+func (d pfDialer) Dial(protocols ...string) (httpstream.Connection, string, error) {
+	return d(protocols...)
 }
 
 type pfManager struct {
@@ -67,16 +79,17 @@ func (mgr *pfManager) notify() {
 	}
 }
 
-func (mgr *pfManager) start(
-	contextName string,
+func newPortForwarder(
+	ctx context.Context,
 	cs *kubernetes.Clientset,
 	restCfg *rest.Config,
 	namespace, podName string,
 	localPort, remotePort uint16,
-) (PortForwardInfo, error) {
+	readyCh chan struct{},
+) (portForwarder, error) {
 	rt, upgrader, err := spdy.RoundTripperFor(restCfg)
 	if err != nil {
-		return PortForwardInfo{}, err
+		return nil, err
 	}
 	url := cs.CoreV1().RESTClient().Post().
 		Resource("pods").
@@ -84,45 +97,73 @@ func (mgr *pfManager) start(
 		Name(podName).
 		SubResource("portforward").
 		URL()
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: rt}, "POST", url)
-
-	stopCh := make(chan struct{})
-	readyCh := make(chan struct{})
-	resultCh := make(chan error, 1)
-
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	// client-go's default SPDY dialer creates a request without a context.
+	dialer := pfDialer(func(protocols ...string) (httpstream.Connection, string, error) {
+		return spdy.Negotiate(upgrader, &http.Client{Transport: rt}, req, protocols...)
+	})
 	ports := []string{fmt.Sprintf("%d:%d", localPort, remotePort)}
-	forwarder, err := portforward.New(dialer, ports, stopCh, readyCh, io.Discard, io.Discard)
+	return portforward.NewOnAddressesWithContext(ctx, dialer, []string{"localhost"}, ports, readyCh, io.Discard, io.Discard)
+}
+
+func (mgr *pfManager) start(
+	contextName, namespace, podName string,
+	build func(context.Context, chan struct{}) (portForwarder, error),
+) (PortForwardInfo, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	id := fmt.Sprintf("pf-%d", atomic.AddUint64(&mgr.counter, 1))
+	sess := &pfSession{
+		info:   PortForwardInfo{ID: id, Context: contextName, Namespace: namespace, PodName: podName, Status: "starting"},
+		cancel: cancel,
+	}
+	mgr.mu.Lock()
+	mgr.sessions[id] = sess
+	mgr.mu.Unlock()
+	started := false
+	defer func() {
+		if !started {
+			mgr.stop(id)
+		}
+	}()
+
+	readyCh := make(chan struct{})
+	forwarder, err := build(ctx, readyCh)
 	if err != nil {
 		return PortForwardInfo{}, err
 	}
+	if err := ctx.Err(); err != nil {
+		return PortForwardInfo{}, err
+	}
+	resultCh := make(chan error, 1)
 
 	go func() {
 		resultCh <- forwarder.ForwardPorts()
 	}()
 
 	select {
+	case <-ctx.Done():
+		return PortForwardInfo{}, ctx.Err()
 	case <-readyCh:
 	case err := <-resultCh:
-		close(stopCh)
 		if err == nil {
 			err = errors.New("port-forward terminated before ready")
 		}
 		return PortForwardInfo{}, err
 	case <-time.After(pfReadyTimeout):
-		close(stopCh)
 		return PortForwardInfo{}, fmt.Errorf("timed out waiting for port-forward to become ready")
 	}
 
 	actualPorts, err := forwarder.GetPorts()
 	if err != nil || len(actualPorts) == 0 {
-		close(stopCh)
 		if err == nil {
 			err = errors.New("no ports reported by forwarder")
 		}
 		return PortForwardInfo{}, err
 	}
 
-	id := fmt.Sprintf("pf-%d", atomic.AddUint64(&mgr.counter, 1))
 	info := PortForwardInfo{
 		ID:         id,
 		Context:    contextName,
@@ -132,14 +173,18 @@ func (mgr *pfManager) start(
 		RemotePort: actualPorts[0].Remote,
 		Status:     "ready",
 	}
-	sess := &pfSession{info: info, stopCh: stopCh}
-
 	mgr.mu.Lock()
-	mgr.sessions[id] = sess
+	if mgr.sessions[id] != sess {
+		mgr.mu.Unlock()
+		return PortForwardInfo{}, context.Canceled
+	}
+	sess.info = info
 	mgr.mu.Unlock()
+	started = true
 	mgr.notify()
 
 	go func() {
+		defer cancel()
 		err := <-resultCh
 		mgr.mu.Lock()
 		s, ok := mgr.sessions[id]
@@ -185,6 +230,9 @@ func (mgr *pfManager) list() []PortForwardInfo {
 	mgr.mu.Lock()
 	out := make([]PortForwardInfo, 0, len(mgr.sessions))
 	for _, s := range mgr.sessions {
+		if s.info.Status == "starting" {
+			continue
+		}
 		out = append(out, s.info)
 	}
 	mgr.mu.Unlock()
@@ -196,7 +244,7 @@ func (mgr *pfManager) list() []PortForwardInfo {
 // given context. Called from StopWatch so disconnecting a cluster releases its
 // local listeners and forwarder goroutines instead of leaking them, and the
 // change notification lets the frontend store drop the now-dead entries. A
-// healthy session's monitor goroutine wakes when its stopCh closes, finds its
+// healthy session's monitor goroutine wakes when its context is canceled, finds its
 // id already gone (the ok check in start's monitor guards this) and is a no-op.
 func (mgr *pfManager) stopForContext(contextName string) {
 	mgr.mu.Lock()
