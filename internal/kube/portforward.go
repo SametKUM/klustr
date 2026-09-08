@@ -5,17 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/http/httptrace"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/httpstream"
+	httpstreamspdy "k8s.io/apimachinery/pkg/util/httpstream/spdy"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/transport/spdy"
 )
 
 const pfReadyTimeout = 10 * time.Second
@@ -53,6 +56,24 @@ func (d pfDialer) Dial(protocols ...string) (httpstream.Connection, string, erro
 	return d(protocols...)
 }
 
+type pfUpgradeConn struct {
+	net.Conn
+	reader io.ReadCloser
+}
+
+func (c *pfUpgradeConn) Read(p []byte) (int, error) { return c.reader.Read(p) }
+func (c *pfUpgradeConn) Close() error               { return c.reader.Close() }
+
+type pfContextConn struct {
+	net.Conn
+	stop func() bool
+}
+
+func (c *pfContextConn) Close() error {
+	c.stop()
+	return c.Conn.Close()
+}
+
 type pfManager struct {
 	mu       sync.Mutex
 	sessions map[string]*pfSession
@@ -87,7 +108,26 @@ func newPortForwarder(
 	localPort, remotePort uint16,
 	readyCh chan struct{},
 ) (portForwarder, error) {
-	rt, upgrader, err := spdy.RoundTripperFor(restCfg)
+	cfg := rest.CopyConfig(restCfg)
+	cfg.NextProtos = []string{"http/1.1"}
+	cfg.Timeout = 0
+	dial := cfg.Dial
+	if dial == nil {
+		dial = (&net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}).DialContext
+	}
+	cfg.Dial = func(dialCtx context.Context, network, address string) (net.Conn, error) {
+		dialCtx, cancel := context.WithCancel(dialCtx)
+		stop := context.AfterFunc(ctx, cancel)
+		defer cancel()
+		defer stop()
+		conn, err := dial(dialCtx, network, address)
+		if err != nil {
+			return nil, err
+		}
+		// net/http may detach dialing from the request to reuse connections.
+		return &pfContextConn{Conn: conn, stop: context.AfterFunc(ctx, func() { conn.Close() })}, nil
+	}
+	client, err := rest.HTTPClientFor(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -101,9 +141,41 @@ func newPortForwarder(
 	if err != nil {
 		return nil, err
 	}
-	// client-go's default SPDY dialer creates a request without a context.
+	// The SPDY round tripper ignores cancellation while reading HTTP responses.
 	dialer := pfDialer(func(protocols ...string) (httpstream.Connection, string, error) {
-		return spdy.Negotiate(upgrader, &http.Client{Transport: rt}, req, protocols...)
+		var conn net.Conn
+		trace := &httptrace.ClientTrace{GotConn: func(info httptrace.GotConnInfo) { conn = info.Conn }}
+		req := req.Clone(httptrace.WithClientTrace(ctx, trace))
+		req.Header.Set(httpstream.HeaderConnection, httpstream.HeaderUpgrade)
+		req.Header.Set(httpstream.HeaderUpgrade, httpstreamspdy.HeaderSpdy31)
+		for _, protocol := range protocols {
+			req.Header.Add(httpstream.HeaderProtocolVersion, protocol)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, "", err
+		}
+		if resp.StatusCode != http.StatusSwitchingProtocols ||
+			!strings.Contains(strings.ToLower(resp.Header.Get(httpstream.HeaderConnection)), "upgrade") ||
+			!strings.EqualFold(resp.Header.Get(httpstream.HeaderUpgrade), httpstreamspdy.HeaderSpdy31) {
+			defer resp.Body.Close()
+			body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
+			if err != nil {
+				return nil, "", fmt.Errorf("unable to read upgrade response: %w", err)
+			}
+			return nil, "", fmt.Errorf("unable to upgrade connection: %s: %s", resp.Status, strings.TrimSpace(string(body)))
+		}
+		if conn == nil {
+			resp.Body.Close()
+			return nil, "", errors.New("upgrade transport did not expose its connection")
+		}
+		// The response body retains bytes net/http buffered past the 101 headers.
+		stream, err := httpstreamspdy.NewClientConnectionWithPings(&pfUpgradeConn{Conn: conn, reader: resp.Body}, 5*time.Second)
+		if err != nil {
+			resp.Body.Close()
+			return nil, "", err
+		}
+		return stream, resp.Header.Get(httpstream.HeaderProtocolVersion), nil
 	})
 	ports := []string{fmt.Sprintf("%d:%d", localPort, remotePort)}
 	return portforward.NewOnAddressesWithContext(ctx, dialer, []string{"localhost"}, ports, readyCh, io.Discard, io.Discard)

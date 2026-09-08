@@ -2,10 +2,22 @@ package kube
 
 import (
 	"context"
+	"encoding/pem"
 	"errors"
+	"fmt"
+	"io"
+	"net"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/httpstream"
+	httpstreamspdy "k8s.io/apimachinery/pkg/util/httpstream/spdy"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -287,4 +299,155 @@ func TestPortForwardFailedStartRemovesPendingSession(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPortForwardCancelClosesBlockedUpgrade(t *testing.T) {
+	for _, stage := range []string{"headers", "error body", "proxy CONNECT"} {
+		t.Run(stage, func(t *testing.T) {
+			entered := make(chan struct{})
+			exited := make(chan struct{})
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				defer close(exited)
+				if stage == "proxy CONNECT" && r.Method != http.MethodConnect {
+					t.Errorf("proxy method = %s, want CONNECT", r.Method)
+				}
+				if stage == "error body" {
+					w.WriteHeader(http.StatusForbidden)
+					w.(http.Flusher).Flush()
+				}
+				close(entered)
+				<-r.Context().Done()
+			}))
+			t.Cleanup(server.Close)
+			t.Cleanup(server.CloseClientConnections)
+			cfg := &rest.Config{Host: server.URL}
+			if stage == "proxy CONNECT" {
+				proxyURL, err := url.Parse(server.URL)
+				if err != nil {
+					t.Fatal(err)
+				}
+				cfg.Host = "https://portforward.example.invalid"
+				cfg.Proxy = http.ProxyURL(proxyURL)
+			}
+			cs, err := kubernetes.NewForConfig(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
+			forwarder, err := newPortForwarder(ctx, cs, cfg, "default", "pod", 0, 80, make(chan struct{}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			result := make(chan error, 1)
+			go func() { result <- forwarder.ForwardPorts() }()
+			receivePFTest(t, entered)
+			cancel()
+			if err := receivePFTest(t, result); err == nil {
+				t.Fatal("canceled upgrade returned success")
+			}
+			receivePFTest(t, exited)
+		})
+	}
+}
+
+func TestPortForwardUpgradePreservesTLSAuthAndSessionLifetime(t *testing.T) {
+	closed := make(chan struct{})
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			t.Error("upgrade lost authentication")
+		}
+		if r.URL.Path != "/api/v1/namespaces/default/pods/pod/portforward" {
+			t.Errorf("unexpected upgrade path: %s", r.URL.Path)
+		}
+		w.Header().Set(httpstream.HeaderProtocolVersion, portforward.PortForwardProtocolV1Name)
+		conn := httpstreamspdy.NewResponseUpgrader().UpgradeResponse(w, r, func(stream httpstream.Stream, replySent <-chan struct{}) error {
+			go func() {
+				defer stream.Close()
+				<-replySent
+				if stream.Headers().Get(corev1.StreamType) == corev1.StreamTypeData {
+					_, _ = io.Copy(stream, stream)
+				}
+			}()
+			return nil
+		})
+		if conn == nil {
+			close(closed)
+			return
+		}
+		defer conn.Close()
+		<-conn.CloseChan()
+		close(closed)
+	}))
+	defer server.Close()
+	cfg := &rest.Config{Host: server.URL, BearerToken: "test-token"}
+	cfg.CAData = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
+	cs, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ready := make(chan struct{})
+	forwarder, err := newPortForwarder(ctx, cs, cfg, "default", "pod", 0, 80, ready)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := make(chan error, 1)
+	go func() { result <- forwarder.ForwardPorts() }()
+	receivePFTest(t, ready)
+	ports, err := forwarder.GetPorts()
+	if err != nil || len(ports) != 1 || ports[0].Local == 0 {
+		t.Fatalf("forward not listening: ports=%v err=%v", ports, err)
+	}
+	if isClosed(closed) {
+		t.Fatal("successful upgrade closed the session")
+	}
+	local, err := net.DialTimeout("tcp", net.JoinHostPort("localhost", fmt.Sprint(ports[0].Local)), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer local.Close()
+	if err := local.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.WriteString(local, "ping"); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, 4)
+	if _, err := io.ReadFull(local, buf); err != nil || string(buf) != "ping" {
+		t.Fatalf("forwarded stream returned %q, err=%v", buf, err)
+	}
+	cancel()
+	if err := receivePFTest(t, result); err != nil {
+		t.Fatalf("stopping ready forward: %v", err)
+	}
+	receivePFTest(t, closed)
+}
+
+func TestPortForwardReadyTimeoutCancelsWorker(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		mgr := newPFManager()
+		defer mgr.stopAll()
+		exited := make(chan struct{})
+		_, err := mgr.start("ctx-a", "default", "pod", func(ctx context.Context, _ chan struct{}) (portForwarder, error) {
+			return &fakePortForwarder{run: func() error {
+				defer close(exited)
+				<-ctx.Done()
+				return ctx.Err()
+			}}, nil
+		})
+		if err == nil || !strings.Contains(err.Error(), "timed out") {
+			t.Fatalf("start returned %v, want readiness timeout", err)
+		}
+		synctest.Wait()
+		if !isClosed(exited) {
+			t.Fatal("timed-out worker was not canceled")
+		}
+		mgr.mu.Lock()
+		defer mgr.mu.Unlock()
+		if len(mgr.sessions) != 0 {
+			t.Fatal("timed-out session remains registered")
+		}
+	})
 }
