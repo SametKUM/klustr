@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -452,4 +453,48 @@ func TestCredentialMappingsStoreRoundTrip(t *testing.T) {
 	if out["prod"] != in["prod"] {
 		t.Errorf("round-trip = %+v, want %+v", out, in)
 	}
+}
+
+func TestReconnectTimerRecapturesAndNotifies(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		p := &fakeProvider{name: "fake"}
+		p.set(validCred(), nil)
+		c := testCredManager(t, p)
+		c.setBaseContext(context.Background())
+		defer c.stopAll()
+		if err := c.setMapping("ctx1", CredentialMapping{Provider: "fake", Profile: "p1"}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := c.ensureFresh(context.Background(), "ctx1"); err != nil {
+			t.Fatal(err)
+		}
+		c.pauseRefresh("ctx1")
+		time.Sleep(10 * time.Minute)
+		if captured, err := c.ensureFresh(context.Background(), "ctx1"); err != nil || captured {
+			t.Fatalf("reconnect: captured=%v err=%v", captured, err)
+		}
+		updated := validCred()
+		updated.env["AWS_ACCESS_KEY_ID"] = "refreshed"
+		p.set(updated, nil)
+		refreshed := make(chan string, 2)
+		c.mu.Lock()
+		c.onRefreshed = func(ctx string) { refreshed <- ctx }
+		c.mu.Unlock()
+		time.Sleep(45*time.Minute - time.Second)
+		synctest.Wait()
+		if p.captures.Load() != 1 {
+			t.Fatal("refresh fired before the ahead-of-expiry window")
+		}
+		time.Sleep(time.Second)
+		synctest.Wait()
+		if p.captures.Load() != 2 || len(refreshed) != 1 {
+			t.Fatalf("capture count=%d, refresh count=%d", p.captures.Load(), len(refreshed))
+		}
+		if got := <-refreshed; got != "ctx1" {
+			t.Fatalf("refreshed context=%q", got)
+		}
+		if c.envFor("ctx1")["AWS_ACCESS_KEY_ID"] != "refreshed" {
+			t.Fatal("refresh did not replace captured credentials")
+		}
+	})
 }
