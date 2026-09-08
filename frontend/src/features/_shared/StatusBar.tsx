@@ -68,11 +68,9 @@ export function StatusBar() {
 
     const ping = (ctx: string) => {
       const start = performance.now()
-      setHealthByCtx((prev) => ({
+      setHealthByCtx((prev) => prev[ctx] ? prev : ({
         ...prev,
-        [ctx]: prev[ctx]
-          ? prev[ctx]
-          : { status: 'pinging', latencyMs: -1, error: null, version: null, lastPingAt: 0, failures: 0 },
+        [ctx]: { status: 'pinging', latencyMs: -1, error: null, version: null, lastPingAt: 0, failures: 0 },
       }))
       api
         .pingContext(ctx)

@@ -877,10 +877,10 @@ export function ResourceTable<T>({
   const hasLoadErrors = errors.length > 0
   const connectionWarnings = resourceContexts.flatMap((ctx) => {
     const health = contextHealth[ctx]
-    if (!health || (!health.error && health.status !== 'stale')) return []
+    if (!health || (health.status !== 'error' && health.status !== 'stale')) return []
     return [{
       ctx,
-      label: health.failures >= 2 ? 'Offline' : health.error ? 'Connection issue' : 'Connection status unknown',
+      label: health.status === 'error' ? 'Offline' : 'Connection status unknown',
       message: health.error ?? 'The last connection check is outdated.',
     }]
   })

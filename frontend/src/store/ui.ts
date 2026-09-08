@@ -248,7 +248,10 @@ export const useUIStore = create<UIState>((set) => {
 
   return {
     contextHealth: {},
-    setContextHealth: (update) => set((s) => ({ contextHealth: update(s.contextHealth) })),
+    setContextHealth: (update) => set((s) => {
+      const contextHealth = update(s.contextHealth)
+      return contextHealth === s.contextHealth ? s : { contextHealth }
+    }),
     selectedContext: selectedAtBoot,
     aggregatedContexts: aggregatedAtBoot,
     activeGroupId: null,

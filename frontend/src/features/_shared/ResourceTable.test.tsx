@@ -162,6 +162,10 @@ describe('ResourceTable load failures', () => {
       status: 'error', latencyMs: -1, error: 'connection refused', version: 'v1.35.0',
       lastPingAt: Date.now(), failures: 2,
     }
+    mocks.contextHealth = { 'cluster-b': { ...offline, status: 'slow', failures: 1 } }
+    await act(async () => root.render(<Harness fetch={load} />))
+    expect(container.querySelector('[aria-label="Cluster connection warnings"]')).toBeNull()
+    expect(container.textContent).not.toContain('(possibly outdated)')
     mocks.contextHealth = { 'cluster-b': offline, 'inactive-cluster': offline }
     await act(async () => root.render(<Harness fetch={load} />))
     await act(async () => change('cluster-b'))

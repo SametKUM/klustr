@@ -46,6 +46,9 @@ describe('StatusBar shared connection health', () => {
   it('keeps offline health during a pending check and clears it only on successful recovery', async () => {
     mocks.ping.mockRejectedValue(new Error('connection refused'))
     await act(async () => root.render(<StatusBar />))
+    expect(useUIStore.getState().contextHealth['cluster-a']).toMatchObject({
+      status: 'slow', failures: 1, error: 'Error: connection refused',
+    })
     await act(async () => vi.advanceTimersByTimeAsync(25_000))
     expect(useUIStore.getState().contextHealth['cluster-a'].status).toBe('error')
     expect(container.textContent).toContain('offline')
@@ -78,5 +81,39 @@ describe('StatusBar shared connection health', () => {
     expect(useUIStore.getState().contextHealth).toEqual({})
     await act(async () => vi.advanceTimersByTimeAsync(25_000))
     expect(mocks.ping).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not notify subscribers when a check starts without changing health', async () => {
+    mocks.ping.mockResolvedValueOnce({ gitVersion: 'v1.35.0' })
+    await act(async () => root.render(<StatusBar />))
+    const health = useUIStore.getState().contextHealth
+    const notified = vi.fn()
+    const unsubscribe = useUIStore.subscribe(notified)
+    mocks.ping.mockImplementation(() => new Promise(() => {}))
+    try {
+      await act(async () => vi.advanceTimersByTimeAsync(25_000))
+      expect(mocks.ping).toHaveBeenCalledTimes(2)
+      expect(useUIStore.getState().contextHealth).toBe(health)
+      expect(notified).not.toHaveBeenCalled()
+    } finally {
+      unsubscribe()
+    }
+  })
+
+  it('marks an overdue check stale and clears it when the check recovers', async () => {
+    mocks.ping.mockResolvedValueOnce({ gitVersion: 'v1.35.0' })
+    await act(async () => root.render(<StatusBar />))
+    let recover!: (result: { gitVersion: string }) => void
+    const pending = new Promise((resolve) => { recover = resolve })
+    mocks.ping.mockReturnValue(pending)
+    await act(async () => vi.advanceTimersByTimeAsync(60_000))
+    expect(useUIStore.getState().contextHealth['cluster-a'].status).toBe('ok')
+    await act(async () => vi.advanceTimersByTimeAsync(10_000))
+    expect(useUIStore.getState().contextHealth['cluster-a'].status).toBe('stale')
+    await act(async () => recover({ gitVersion: 'v1.35.0' }))
+    expect(useUIStore.getState().contextHealth['cluster-a']).toMatchObject({
+      error: null, failures: 0, lastPingAt: Date.now(),
+    })
+    expect(useUIStore.getState().contextHealth['cluster-a'].status).not.toBe('stale')
   })
 })
