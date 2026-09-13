@@ -12,9 +12,9 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
-    "lucide": "^1.35.0",
-    "simple-icons": "^16.28.0",
-    "swetrix": "^4.6.0"
+    "lucide": "^1.41.0",
+    "simple-icons": "^16.29.0",
+    "swetrix": "^4.6.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
