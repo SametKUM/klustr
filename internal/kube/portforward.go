@@ -14,11 +14,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/httpstream"
-	httpstreamspdy "k8s.io/apimachinery/pkg/util/httpstream/spdy"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
+	"k8s.io/streaming/pkg/httpstream"
+	httpstreamspdy "k8s.io/streaming/pkg/httpstream/spdy"
 )
 
 const pfReadyTimeout = 10 * time.Second
@@ -125,7 +125,7 @@ func newPortForwarder(
 			return nil, err
 		}
 		// net/http may detach dialing from the request to reuse connections.
-		return &pfContextConn{Conn: conn, stop: context.AfterFunc(ctx, func() { conn.Close() })}, nil
+		return &pfContextConn{Conn: conn, stop: context.AfterFunc(ctx, func() { _ = conn.Close() })}, nil
 	}
 	client, err := rest.HTTPClientFor(cfg)
 	if err != nil {
@@ -158,7 +158,7 @@ func newPortForwarder(
 		if resp.StatusCode != http.StatusSwitchingProtocols ||
 			!strings.Contains(strings.ToLower(resp.Header.Get(httpstream.HeaderConnection)), "upgrade") ||
 			!strings.EqualFold(resp.Header.Get(httpstream.HeaderUpgrade), httpstreamspdy.HeaderSpdy31) {
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 			if err != nil {
 				return nil, "", fmt.Errorf("unable to read upgrade response: %w", err)
@@ -166,19 +166,19 @@ func newPortForwarder(
 			return nil, "", fmt.Errorf("unable to upgrade connection: %s: %s", resp.Status, strings.TrimSpace(string(body)))
 		}
 		if conn == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil, "", errors.New("upgrade transport did not expose its connection")
 		}
 		// The response body retains bytes net/http buffered past the 101 headers.
 		stream, err := httpstreamspdy.NewClientConnectionWithPings(&pfUpgradeConn{Conn: conn, reader: resp.Body}, 5*time.Second)
 		if err != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil, "", err
 		}
 		return stream, resp.Header.Get(httpstream.HeaderProtocolVersion), nil
 	})
 	ports := []string{fmt.Sprintf("%d:%d", localPort, remotePort)}
-	return portforward.NewOnAddressesWithContext(ctx, dialer, []string{"localhost"}, ports, readyCh, io.Discard, io.Discard)
+	return portforward.NewOnAddressesForStreamingWithContext(ctx, dialer, []string{"localhost"}, ports, readyCh, io.Discard, io.Discard)
 }
 
 func (mgr *pfManager) start(
