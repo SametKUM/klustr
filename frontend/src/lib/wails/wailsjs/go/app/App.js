@@ -90,6 +90,10 @@ export function GetArgoApplicationSet(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetArgoApplicationSet'](arg1, arg2, arg3);
 }
 
+export function GetBackendTLSPolicy(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetBackendTLSPolicy'](arg1, arg2, arg3);
+}
+
 export function GetCSIDriver(arg1, arg2) {
   return window['go']['app']['App']['GetCSIDriver'](arg1, arg2);
 }
@@ -270,6 +274,10 @@ export function GetLimitRange(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetLimitRange'](arg1, arg2, arg3);
 }
 
+export function GetListenerSet(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetListenerSet'](arg1, arg2, arg3);
+}
+
 export function GetMutatingAdmissionPolicy(arg1, arg2) {
   return window['go']['app']['App']['GetMutatingAdmissionPolicy'](arg1, arg2);
 }
@@ -390,6 +398,18 @@ export function GetSubjectAccess(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['GetSubjectAccess'](arg1, arg2, arg3, arg4);
 }
 
+export function GetTCPRoute(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTCPRoute'](arg1, arg2, arg3);
+}
+
+export function GetTLSRoute(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTLSRoute'](arg1, arg2, arg3);
+}
+
+export function GetUDPRoute(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetUDPRoute'](arg1, arg2, arg3);
+}
+
 export function GetValidatingAdmissionPolicy(arg1, arg2) {
   return window['go']['app']['App']['GetValidatingAdmissionPolicy'](arg1, arg2);
 }
@@ -452,6 +472,10 @@ export function ListArgoApplicationSets(arg1, arg2) {
 
 export function ListArgoApplications(arg1, arg2) {
   return window['go']['app']['App']['ListArgoApplications'](arg1, arg2);
+}
+
+export function ListBackendTLSPolicies(arg1, arg2) {
+  return window['go']['app']['App']['ListBackendTLSPolicies'](arg1, arg2);
 }
 
 export function ListCRDs(arg1) {
@@ -682,6 +706,10 @@ export function ListLimitRanges(arg1, arg2) {
   return window['go']['app']['App']['ListLimitRanges'](arg1, arg2);
 }
 
+export function ListListenerSets(arg1, arg2) {
+  return window['go']['app']['App']['ListListenerSets'](arg1, arg2);
+}
+
 export function ListMutatingAdmissionPolicies(arg1) {
   return window['go']['app']['App']['ListMutatingAdmissionPolicies'](arg1);
 }
@@ -820,6 +848,18 @@ export function ListStorageClasses(arg1) {
 
 export function ListSystemTerminals() {
   return window['go']['app']['App']['ListSystemTerminals']();
+}
+
+export function ListTCPRoutes(arg1, arg2) {
+  return window['go']['app']['App']['ListTCPRoutes'](arg1, arg2);
+}
+
+export function ListTLSRoutes(arg1, arg2) {
+  return window['go']['app']['App']['ListTLSRoutes'](arg1, arg2);
+}
+
+export function ListUDPRoutes(arg1, arg2) {
+  return window['go']['app']['App']['ListUDPRoutes'](arg1, arg2);
 }
 
 export function ListValidatingAdmissionPolicies(arg1) {

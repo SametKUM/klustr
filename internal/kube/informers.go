@@ -89,8 +89,12 @@ type contextWatcher struct {
 	cs             kubernetes.Interface            // kept around for SelfSubjectAccessReview
 	disco          discovery.DiscoveryInterface    // timeout-bounded; used for construction-time probes
 	gwFactory      gwinformers.SharedInformerFactory
-	gwServed       map[string]bool // resource names served at gateway v1; nil = discovery blip, register optimistically
-	refGrantVer    string          // served referencegrants version ("v1"/"v1beta1"), "" when not served
+	gwScoped       gwinformers.SharedInformerFactory
+	gwVersions     map[string]string
+	gwAccess       *contextAccess
+	gwMu           sync.RWMutex
+	gwPending      map[string]bool
+	gwStarted      map[string]bool
 	apiSvcFactory  dynamicinformer.DynamicSharedInformerFactory
 	apiSvcInformer cache.SharedIndexInformer
 	dyn            dynamic.Interface
@@ -120,10 +124,12 @@ func newContextWatcher(cs *kubernetes.Clientset, disco discovery.DiscoveryInterf
 		pending:   make(map[string]*pendingKind),
 		gen:       make(map[string]uint64),
 	}
-	if gw != nil && hasGatewayAPIGroup(disco) {
+	if gw != nil {
 		w.gwFactory = gwinformers.NewSharedInformerFactory(gw, 0)
-		w.gwServed = gatewayV1Served(disco)
-		w.refGrantVer = refGrantsVersion(disco)
+		if defaultNS != "" {
+			w.gwScoped = gwinformers.NewSharedInformerFactoryWithOptions(gw, 0, gwinformers.WithNamespace(defaultNS))
+		}
+		w.gwVersions, w.gwPending = discoverGatewayVersions(context.Background(), disco)
 	}
 	return w
 }

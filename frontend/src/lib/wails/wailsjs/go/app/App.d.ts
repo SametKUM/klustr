@@ -47,6 +47,8 @@ export function GetArgoApplicationOperationState(arg1:string,arg2:string,arg3:st
 
 export function GetArgoApplicationSet(arg1:string,arg2:string,arg3:string):Promise<kube.ArgoApplicationSetDetail>;
 
+export function GetBackendTLSPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.BackendTLSPolicyDetail>;
+
 export function GetCSIDriver(arg1:string,arg2:string):Promise<kube.CSIDriverDetail>;
 
 export function GetCSINode(arg1:string,arg2:string):Promise<kube.CSINodeDetail>;
@@ -137,6 +139,8 @@ export function GetLease(arg1:string,arg2:string,arg3:string):Promise<kube.Lease
 
 export function GetLimitRange(arg1:string,arg2:string,arg3:string):Promise<kube.LimitRangeDetail>;
 
+export function GetListenerSet(arg1:string,arg2:string,arg3:string):Promise<kube.ListenerSetDetail>;
+
 export function GetMutatingAdmissionPolicy(arg1:string,arg2:string):Promise<kube.AdmissionPolicyDetail>;
 
 export function GetMutatingAdmissionPolicyBinding(arg1:string,arg2:string):Promise<kube.AdmissionPolicyBindingDetail>;
@@ -197,6 +201,12 @@ export function GetStorageClass(arg1:string,arg2:string):Promise<kube.StorageCla
 
 export function GetSubjectAccess(arg1:string,arg2:string,arg3:string,arg4:string):Promise<kube.SubjectAccess>;
 
+export function GetTCPRoute(arg1:string,arg2:string,arg3:string):Promise<kube.TCPRouteDetail>;
+
+export function GetTLSRoute(arg1:string,arg2:string,arg3:string):Promise<kube.TLSRouteDetail>;
+
+export function GetUDPRoute(arg1:string,arg2:string,arg3:string):Promise<kube.UDPRouteDetail>;
+
 export function GetValidatingAdmissionPolicy(arg1:string,arg2:string):Promise<kube.AdmissionPolicyDetail>;
 
 export function GetValidatingAdmissionPolicyBinding(arg1:string,arg2:string):Promise<kube.AdmissionPolicyBindingDetail>;
@@ -228,6 +238,8 @@ export function ListArgoApplicationResources(arg1:string,arg2:string,arg3:string
 export function ListArgoApplicationSets(arg1:string,arg2:string):Promise<Array<kube.ArgoApplicationSetInfo>>;
 
 export function ListArgoApplications(arg1:string,arg2:string):Promise<Array<kube.ArgoApplicationInfo>>;
+
+export function ListBackendTLSPolicies(arg1:string,arg2:string):Promise<Array<kube.BackendTLSPolicyInfo>>;
 
 export function ListCRDs(arg1:string):Promise<Array<kube.CRDInfo>>;
 
@@ -343,6 +355,8 @@ export function ListLeases(arg1:string,arg2:string):Promise<Array<kube.LeaseInfo
 
 export function ListLimitRanges(arg1:string,arg2:string):Promise<Array<kube.LimitRangeInfo>>;
 
+export function ListListenerSets(arg1:string,arg2:string):Promise<Array<kube.ListenerSetInfo>>;
+
 export function ListMutatingAdmissionPolicies(arg1:string):Promise<Array<kube.AdmissionPolicyInfo>>;
 
 export function ListMutatingAdmissionPolicyBindings(arg1:string):Promise<Array<kube.AdmissionPolicyBindingInfo>>;
@@ -412,6 +426,12 @@ export function ListStatefulSets(arg1:string,arg2:string):Promise<Array<kube.Sta
 export function ListStorageClasses(arg1:string):Promise<Array<kube.StorageClassInfo>>;
 
 export function ListSystemTerminals():Promise<Array<kube.SystemTerminal>>;
+
+export function ListTCPRoutes(arg1:string,arg2:string):Promise<Array<kube.TCPRouteInfo>>;
+
+export function ListTLSRoutes(arg1:string,arg2:string):Promise<Array<kube.TLSRouteInfo>>;
+
+export function ListUDPRoutes(arg1:string,arg2:string):Promise<Array<kube.UDPRouteInfo>>;
 
 export function ListValidatingAdmissionPolicies(arg1:string):Promise<Array<kube.AdmissionPolicyInfo>>;
 

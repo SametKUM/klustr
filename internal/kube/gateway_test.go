@@ -12,16 +12,16 @@ func TestConditionStatus(t *testing.T) {
 		{Type: "Accepted", Status: metav1.ConditionTrue},
 		{Type: "Programmed", Status: metav1.ConditionFalse},
 	}
-	if got := conditionStatus(conds, "Accepted"); got != "True" {
+	if got := conditionStatus(conds, "Accepted", 0); got != "True" {
 		t.Errorf("Accepted: got %q, want True", got)
 	}
-	if got := conditionStatus(conds, "Programmed"); got != "False" {
+	if got := conditionStatus(conds, "Programmed", 0); got != "False" {
 		t.Errorf("Programmed: got %q, want False", got)
 	}
-	if got := conditionStatus(conds, "Missing"); got != "" {
+	if got := conditionStatus(conds, "Missing", 0); got != "" {
 		t.Errorf("Missing: got %q, want empty", got)
 	}
-	if got := conditionStatus(nil, "Accepted"); got != "" {
+	if got := conditionStatus(nil, "Accepted", 0); got != "" {
 		t.Errorf("nil: got %q, want empty", got)
 	}
 }
@@ -47,7 +47,7 @@ func TestAnyParentConditionStatus(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := anyParentConditionStatus(tc.parents, "Accepted"); got != tc.want {
+			if got := anyParentConditionStatus(tc.parents, "Accepted", 0); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -55,7 +55,7 @@ func TestAnyParentConditionStatus(t *testing.T) {
 }
 
 func TestConditionsToDetail(t *testing.T) {
-	got := conditionsToDetail(nil)
+	got := conditionsToDetail(nil, 0)
 	if got == nil {
 		t.Fatal("should return empty slice, not nil")
 	}
@@ -66,7 +66,7 @@ func TestConditionsToDetail(t *testing.T) {
 	in := []metav1.Condition{
 		{Type: "Accepted", Status: metav1.ConditionTrue, Reason: "Ok", Message: "all good"},
 	}
-	out := conditionsToDetail(in)
+	out := conditionsToDetail(in, 0)
 	if len(out) != 1 || out[0].Type != "Accepted" || out[0].Status != "True" ||
 		out[0].Reason != "Ok" || out[0].Message != "all good" {
 		t.Errorf("got %+v", out)

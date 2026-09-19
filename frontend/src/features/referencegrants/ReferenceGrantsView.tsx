@@ -6,10 +6,12 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
+import { useGatewayResourceContexts } from '@/features/gateways/useGatewayResourceContexts'
 
 const columnHelper = createColumnHelper<ReferenceGrantInfo>()
 
 export function ReferenceGrantsView() {
+  const contexts = useGatewayResourceContexts('referencegrants', 'ReferenceGrant')
   const grants = useResources((s) => s.referenceGrants)
   const setGrants = useResources((s) => s.setReferenceGrants)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
@@ -39,6 +41,7 @@ export function ReferenceGrantsView() {
   return (
     <ResourceTable
       kind="ReferenceGrant"
+      contexts={contexts}
       noun={{ singular: 'reference grant', plural: 'reference grants' }}
       scope="namespaced"
       data={grants}

@@ -1,16 +1,12 @@
 package kube
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/tools/cache"
 
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -202,145 +198,15 @@ type ReferenceGrantDetail struct {
 }
 
 // ----------------------------------------------------------------------
-// Discovery + informer setup.
-// ----------------------------------------------------------------------
-
-// hasGatewayAPIGroup probes discovery for the gateway.networking.k8s.io API
-// group. We gate Gateway API informer registration behind this so clusters
-// without Gateway API CRDs do not have the reflector spam "no matches" log
-// lines.
-func hasGatewayAPIGroup(d discovery.DiscoveryInterface) bool {
-	groups, err := d.ServerGroups()
-	if err != nil {
-		return false
-	}
-	for _, g := range groups.Groups {
-		if g.Name == "gateway.networking.k8s.io" {
-			return true
-		}
-	}
-	return false
-}
-
-// refGrantsVersion returns the gateway.networking.k8s.io version that serves
-// referencegrants on this cluster. The kind graduated to v1 only in Gateway
-// API 1.5, so older CRDs serve it under v1beta1 alone — pinning either
-// version would 404-loop the informer on the other side of that line.
-func refGrantsVersion(d discovery.DiscoveryInterface) string {
-	for _, v := range []string{"v1", "v1beta1"} {
-		list, err := d.ServerResourcesForGroupVersion("gateway.networking.k8s.io/" + v)
-		if err != nil {
-			continue
-		}
-		for _, r := range list.APIResources {
-			if r.Name == "referencegrants" {
-				return v
-			}
-		}
-	}
-	return ""
-}
-
-// gatewayV1Served returns the resource names served at
-// gateway.networking.k8s.io/v1. The group existing does not mean every kind
-// is served there — GRPCRoute is commonly absent, and pre-1.0 CRDs serve
-// everything under v1beta1 only — and a v1 informer for an unserved kind
-// 404-loops forever and blocks the factory's WaitForCacheSync. Returns nil on
-// a transient discovery error so callers register optimistically instead of
-// blanking Gateway views for the watcher's lifetime over a blip.
-func gatewayV1Served(d discovery.DiscoveryInterface) map[string]bool {
-	list, err := d.ServerResourcesForGroupVersion("gateway.networking.k8s.io/v1")
-	if apierrors.IsNotFound(err) {
-		return map[string]bool{}
-	}
-	if err != nil {
-		return nil
-	}
-	served := make(map[string]bool, len(list.APIResources))
-	for _, r := range list.APIResources {
-		served[r.Name] = true
-	}
-	return served
-}
-
-func (w *contextWatcher) startGatewayInformers(ctx context.Context) error {
-	if w.gwFactory == nil {
-		return nil
-	}
-	// Gateway API uses a single typed factory across all five kinds. If the
-	// user can't list any of them cluster-wide we'd loop-spam the log just
-	// like the built-in factories would; drop the whole factory in that
-	// case. A future enhancement could route per-kind like the built-in
-	// factory does.
-	gvr := kindToGVR["Gateway"]
-	if !canListRetry(ctx, w.cs, gvr) {
-		w.gwFactory = nil
-		return nil
-	}
-	// Register only kinds discovery says are served at v1 (nil = discovery
-	// blip, register all as before): an informer for an unserved kind
-	// 404-loops forever and keeps WaitForCacheSync from ever finishing.
-	serves := func(resource string) bool {
-		return w.gwServed == nil || w.gwServed[resource]
-	}
-	type gwKind struct {
-		kind     string
-		resource string
-		informer func() cache.SharedIndexInformer
-	}
-	for _, k := range []gwKind{
-		{"Gateway", "gateways", func() cache.SharedIndexInformer { return w.gwFactory.Gateway().V1().Gateways().Informer() }},
-		{"HTTPRoute", "httproutes", func() cache.SharedIndexInformer { return w.gwFactory.Gateway().V1().HTTPRoutes().Informer() }},
-		{"GRPCRoute", "grpcroutes", func() cache.SharedIndexInformer { return w.gwFactory.Gateway().V1().GRPCRoutes().Informer() }},
-		{"GatewayClass", "gatewayclasses", func() cache.SharedIndexInformer { return w.gwFactory.Gateway().V1().GatewayClasses().Informer() }},
-	} {
-		if !serves(k.resource) {
-			continue
-		}
-		kind := k.kind
-		if _, err := k.informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    func(any) { w.touch(kind) },
-			UpdateFunc: func(any, any) { w.touch(kind) },
-			DeleteFunc: func(any) { w.touch(kind) },
-		}); err != nil {
-			return err
-		}
-	}
-	var refGrants cache.SharedIndexInformer
-	switch w.refGrantVer {
-	case "v1":
-		refGrants = w.gwFactory.Gateway().V1().ReferenceGrants().Informer()
-	case "v1beta1":
-		refGrants = w.gwFactory.Gateway().V1beta1().ReferenceGrants().Informer()
-	}
-	if refGrants != nil {
-		if _, err := refGrants.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    func(any) { w.touch("ReferenceGrant") },
-			UpdateFunc: func(any, any) { w.touch("ReferenceGrant") },
-			DeleteFunc: func(any) { w.touch("ReferenceGrant") },
-		}); err != nil {
-			return err
-		}
-	}
-	w.gwFactory.Start(ctx.Done())
-	go func() {
-		w.gwFactory.WaitForCacheSync(ctx.Done())
-		for _, kind := range []string{"Gateway", "HTTPRoute", "GRPCRoute", "GatewayClass", "ReferenceGrant"} {
-			w.touch(kind)
-		}
-	}()
-	return nil
-}
-
-// ----------------------------------------------------------------------
 // Listers — Gateways.
 // ----------------------------------------------------------------------
 
 func (w *contextWatcher) Gateways(namespace string) []GatewayInfo {
-	if w.gwFactory == nil {
+	f := w.gatewayFactoryFor("Gateway")
+	if f == nil {
 		return []GatewayInfo{}
 	}
-	lister := w.gwFactory.Gateway().V1().Gateways().Lister()
+	lister := f.Gateway().V1().Gateways().Lister()
 	var (
 		list []*gatewayv1.Gateway
 		err  error
@@ -371,7 +237,7 @@ func (w *contextWatcher) Gateways(namespace string) []GatewayInfo {
 			Class:      string(g.Spec.GatewayClassName),
 			Addresses:  strings.Join(addresses, ", "),
 			Listeners:  strings.Join(listeners, ", "),
-			Programmed: conditionStatus(g.Status.Conditions, "Programmed"),
+			Programmed: conditionStatus(g.Status.Conditions, "Programmed", g.Generation),
 			CreatedAt:  g.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}
@@ -380,10 +246,11 @@ func (w *contextWatcher) Gateways(namespace string) []GatewayInfo {
 }
 
 func (w *contextWatcher) Gateway(namespace, name string) (*GatewayDetail, error) {
-	if w.gwFactory == nil {
+	f := w.gatewayFactoryFor("Gateway")
+	if f == nil {
 		return nil, fmt.Errorf("gateway api not available in this cluster")
 	}
-	g, err := w.gwFactory.Gateway().V1().Gateways().Lister().Gateways(namespace).Get(name)
+	g, err := f.Gateway().V1().Gateways().Lister().Gateways(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -402,10 +269,10 @@ func (w *contextWatcher) Gateway(namespace, name string) (*GatewayDetail, error)
 			allowed = string(*l.AllowedRoutes.Namespaces.From)
 		}
 		var attached int32
-		var conds []ConditionDetail
+		conds := []ConditionDetail{}
 		if ls, ok := listenerStatus[string(l.Name)]; ok {
 			attached = ls.AttachedRoutes
-			conds = conditionsToDetail(ls.Conditions)
+			conds = conditionsToDetail(ls.Conditions, g.Generation)
 		}
 		listeners = append(listeners, ListenerDetail{
 			Name:              string(l.Name),
@@ -430,7 +297,7 @@ func (w *contextWatcher) Gateway(namespace, name string) (*GatewayDetail, error)
 		Class:       string(g.Spec.GatewayClassName),
 		Addresses:   addresses,
 		Listeners:   listeners,
-		Conditions:  conditionsToDetail(g.Status.Conditions),
+		Conditions:  conditionsToDetail(g.Status.Conditions, g.Generation),
 		Labels:      g.Labels,
 		Annotations: g.Annotations,
 		CreatedAt:   g.CreationTimestamp.UTC().Format(time.RFC3339),
@@ -442,10 +309,11 @@ func (w *contextWatcher) Gateway(namespace, name string) (*GatewayDetail, error)
 // ----------------------------------------------------------------------
 
 func (w *contextWatcher) HTTPRoutes(namespace string) []HTTPRouteInfo {
-	if w.gwFactory == nil {
+	f := w.gatewayFactoryFor("HTTPRoute")
+	if f == nil {
 		return []HTTPRouteInfo{}
 	}
-	lister := w.gwFactory.Gateway().V1().HTTPRoutes().Lister()
+	lister := f.Gateway().V1().HTTPRoutes().Lister()
 	var (
 		list []*gatewayv1.HTTPRoute
 		err  error
@@ -474,7 +342,7 @@ func (w *contextWatcher) HTTPRoutes(namespace string) []HTTPRouteInfo {
 			Hostnames: strings.Join(hostnames, ", "),
 			Parents:   strings.Join(parents, ", "),
 			Rules:     len(r.Spec.Rules),
-			Accepted:  anyParentConditionStatus(r.Status.Parents, "Accepted"),
+			Accepted:  anyParentConditionStatus(r.Status.Parents, "Accepted", r.Generation),
 			CreatedAt: r.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}
@@ -483,10 +351,11 @@ func (w *contextWatcher) HTTPRoutes(namespace string) []HTTPRouteInfo {
 }
 
 func (w *contextWatcher) HTTPRoute(namespace, name string) (*HTTPRouteDetail, error) {
-	if w.gwFactory == nil {
+	f := w.gatewayFactoryFor("HTTPRoute")
+	if f == nil {
 		return nil, fmt.Errorf("gateway api not available in this cluster")
 	}
-	r, err := w.gwFactory.Gateway().V1().HTTPRoutes().Lister().HTTPRoutes(namespace).Get(name)
+	r, err := f.Gateway().V1().HTTPRoutes().Lister().HTTPRoutes(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -537,7 +406,7 @@ func (w *contextWatcher) HTTPRoute(namespace, name string) (*HTTPRouteDetail, er
 		}
 		rules = append(rules, HTTPRouteRuleDetail{Matches: matches, Backends: backends})
 	}
-	status := routeParentStatusDetail(r.Status.Parents, r.Namespace)
+	status := routeParentStatusDetail(r.Status.Parents, r.Namespace, r.Generation)
 	return &HTTPRouteDetail{
 		Name:        r.Name,
 		Namespace:   r.Namespace,
@@ -557,10 +426,11 @@ func (w *contextWatcher) HTTPRoute(namespace, name string) (*HTTPRouteDetail, er
 // ----------------------------------------------------------------------
 
 func (w *contextWatcher) GRPCRoutes(namespace string) []GRPCRouteInfo {
-	if w.gwFactory == nil {
+	f := w.gatewayFactoryFor("GRPCRoute")
+	if f == nil {
 		return []GRPCRouteInfo{}
 	}
-	lister := w.gwFactory.Gateway().V1().GRPCRoutes().Lister()
+	lister := f.Gateway().V1().GRPCRoutes().Lister()
 	var (
 		list []*gatewayv1.GRPCRoute
 		err  error
@@ -589,7 +459,7 @@ func (w *contextWatcher) GRPCRoutes(namespace string) []GRPCRouteInfo {
 			Hostnames: strings.Join(hostnames, ", "),
 			Parents:   strings.Join(parents, ", "),
 			Rules:     len(r.Spec.Rules),
-			Accepted:  anyParentConditionStatus(r.Status.Parents, "Accepted"),
+			Accepted:  anyParentConditionStatus(r.Status.Parents, "Accepted", r.Generation),
 			CreatedAt: r.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}
@@ -598,10 +468,11 @@ func (w *contextWatcher) GRPCRoutes(namespace string) []GRPCRouteInfo {
 }
 
 func (w *contextWatcher) GRPCRoute(namespace, name string) (*GRPCRouteDetail, error) {
-	if w.gwFactory == nil {
+	f := w.gatewayFactoryFor("GRPCRoute")
+	if f == nil {
 		return nil, fmt.Errorf("gateway api not available in this cluster")
 	}
-	r, err := w.gwFactory.Gateway().V1().GRPCRoutes().Lister().GRPCRoutes(namespace).Get(name)
+	r, err := f.Gateway().V1().GRPCRoutes().Lister().GRPCRoutes(namespace).Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -646,7 +517,7 @@ func (w *contextWatcher) GRPCRoute(namespace, name string) (*GRPCRouteDetail, er
 		}
 		rules = append(rules, GRPCRouteRuleDetail{Matches: matches, Backends: backends})
 	}
-	status := routeParentStatusDetail(r.Status.Parents, r.Namespace)
+	status := routeParentStatusDetail(r.Status.Parents, r.Namespace, r.Generation)
 	return &GRPCRouteDetail{
 		Name:        r.Name,
 		Namespace:   r.Namespace,
@@ -666,10 +537,11 @@ func (w *contextWatcher) GRPCRoute(namespace, name string) (*GRPCRouteDetail, er
 // ----------------------------------------------------------------------
 
 func (w *contextWatcher) GatewayClasses() []GatewayClassInfo {
-	if w.gwFactory == nil {
+	f := w.gatewayFactoryFor("GatewayClass")
+	if f == nil {
 		return []GatewayClassInfo{}
 	}
-	list, err := w.gwFactory.Gateway().V1().GatewayClasses().Lister().List(labels.Everything())
+	list, err := f.Gateway().V1().GatewayClasses().Lister().List(labels.Everything())
 	if err != nil {
 		return []GatewayClassInfo{}
 	}
@@ -678,7 +550,7 @@ func (w *contextWatcher) GatewayClasses() []GatewayClassInfo {
 		out = append(out, GatewayClassInfo{
 			Name:       c.Name,
 			Controller: string(c.Spec.ControllerName),
-			Accepted:   conditionStatus(c.Status.Conditions, "Accepted"),
+			Accepted:   conditionStatus(c.Status.Conditions, "Accepted", c.Generation),
 			CreatedAt:  c.CreationTimestamp.UTC().Format(time.RFC3339),
 		})
 	}
@@ -687,10 +559,11 @@ func (w *contextWatcher) GatewayClasses() []GatewayClassInfo {
 }
 
 func (w *contextWatcher) GatewayClass(name string) (*GatewayClassDetail, error) {
-	if w.gwFactory == nil {
+	f := w.gatewayFactoryFor("GatewayClass")
+	if f == nil {
 		return nil, fmt.Errorf("gateway api not available in this cluster")
 	}
-	c, err := w.gwFactory.Gateway().V1().GatewayClasses().Lister().Get(name)
+	c, err := f.Gateway().V1().GatewayClasses().Lister().Get(name)
 	if err != nil {
 		return nil, err
 	}
@@ -703,7 +576,7 @@ func (w *contextWatcher) GatewayClass(name string) (*GatewayClassDetail, error) 
 		UID:         string(c.UID),
 		Controller:  string(c.Spec.ControllerName),
 		Description: desc,
-		Conditions:  conditionsToDetail(c.Status.Conditions),
+		Conditions:  conditionsToDetail(c.Status.Conditions, c.Generation),
 		Labels:      c.Labels,
 		Annotations: c.Annotations,
 		CreatedAt:   c.CreationTimestamp.UTC().Format(time.RFC3339),
@@ -718,15 +591,19 @@ func (w *contextWatcher) GatewayClass(name string) (*GatewayClassDetail, error) 
 // informer this cluster got, normalized to the v1 type (v1beta1.ReferenceGrant
 // is defined on top of it, so the cast is exact).
 func (w *contextWatcher) referenceGrantList(namespace string) ([]*gatewayv1.ReferenceGrant, error) {
-	switch w.refGrantVer {
+	f := w.gatewayFactoryFor("ReferenceGrant")
+	if f == nil {
+		return nil, errKindNoAccess("ReferenceGrant")
+	}
+	switch w.gatewayVersion("ReferenceGrant") {
 	case "v1":
-		lister := w.gwFactory.Gateway().V1().ReferenceGrants().Lister()
+		lister := f.Gateway().V1().ReferenceGrants().Lister()
 		if namespace == "" {
 			return lister.List(labels.Everything())
 		}
 		return lister.ReferenceGrants(namespace).List(labels.Everything())
 	case "v1beta1":
-		lister := w.gwFactory.Gateway().V1beta1().ReferenceGrants().Lister()
+		lister := f.Gateway().V1beta1().ReferenceGrants().Lister()
 		var (
 			list []*gatewayv1beta1.ReferenceGrant
 			err  error
@@ -749,9 +626,6 @@ func (w *contextWatcher) referenceGrantList(namespace string) ([]*gatewayv1.Refe
 }
 
 func (w *contextWatcher) ReferenceGrants(namespace string) []ReferenceGrantInfo {
-	if w.gwFactory == nil {
-		return []ReferenceGrantInfo{}
-	}
 	list, err := w.referenceGrantList(namespace)
 	if err != nil {
 		return []ReferenceGrantInfo{}
@@ -783,19 +657,20 @@ func (w *contextWatcher) ReferenceGrants(namespace string) []ReferenceGrantInfo 
 }
 
 func (w *contextWatcher) ReferenceGrant(namespace, name string) (*ReferenceGrantDetail, error) {
-	if w.gwFactory == nil {
+	f := w.gatewayFactoryFor("ReferenceGrant")
+	if f == nil {
 		return nil, fmt.Errorf("gateway api not available in this cluster")
 	}
 	var g *gatewayv1.ReferenceGrant
-	switch w.refGrantVer {
+	switch w.gatewayVersion("ReferenceGrant") {
 	case "v1":
-		got, err := w.gwFactory.Gateway().V1().ReferenceGrants().Lister().ReferenceGrants(namespace).Get(name)
+		got, err := f.Gateway().V1().ReferenceGrants().Lister().ReferenceGrants(namespace).Get(name)
 		if err != nil {
 			return nil, err
 		}
 		g = got
 	case "v1beta1":
-		got, err := w.gwFactory.Gateway().V1beta1().ReferenceGrants().Lister().ReferenceGrants(namespace).Get(name)
+		got, err := f.Gateway().V1beta1().ReferenceGrants().Lister().ReferenceGrants(namespace).Get(name)
 		if err != nil {
 			return nil, err
 		}
@@ -839,22 +714,33 @@ func (w *contextWatcher) ReferenceGrant(namespace, name string) (*ReferenceGrant
 // Helpers.
 // ----------------------------------------------------------------------
 
-func conditionStatus(conds []metav1.Condition, kind string) string {
+func conditionStatus(conds []metav1.Condition, kind string, generation int64) string {
 	for _, c := range conds {
 		if c.Type == kind {
+			if c.ObservedGeneration != generation {
+				return "Unknown"
+			}
 			return string(c.Status)
 		}
 	}
 	return ""
 }
 
-func anyParentConditionStatus(parents []gatewayv1.RouteParentStatus, kind string) string {
+func anyParentConditionStatus(parents []gatewayv1.RouteParentStatus, kind string, generation int64) string {
+	conditions := make([][]metav1.Condition, 0, len(parents))
+	for _, parent := range parents {
+		conditions = append(conditions, parent.Conditions)
+	}
+	return anyConditionStatus(conditions, kind, generation)
+}
+
+func anyConditionStatus(conditions [][]metav1.Condition, kind string, generation int64) string {
 	// Routes are accepted by parent. We report "True" if any parent accepts,
 	// "False" if any rejects (and none accept), otherwise the first non-empty
 	// status — empty if no parent has the condition yet.
 	hasFalse, hasUnknown := false, false
-	for _, p := range parents {
-		s := conditionStatus(p.Conditions, kind)
+	for _, group := range conditions {
+		s := conditionStatus(group, kind, generation)
 		switch s {
 		case "True":
 			return "True"
@@ -873,14 +759,19 @@ func anyParentConditionStatus(parents []gatewayv1.RouteParentStatus, kind string
 	return ""
 }
 
-func conditionsToDetail(conds []metav1.Condition) []ConditionDetail {
+func conditionsToDetail(conds []metav1.Condition, generation int64) []ConditionDetail {
 	out := make([]ConditionDetail, 0, len(conds))
 	for _, c := range conds {
+		status, message := string(c.Status), c.Message
+		if c.ObservedGeneration != generation {
+			status = "Unknown"
+			message = strings.TrimSpace(fmt.Sprintf("Stale status %s: observed generation %d, current generation %d. %s", c.Status, c.ObservedGeneration, generation, c.Message))
+		}
 		out = append(out, ConditionDetail{
 			Type:    c.Type,
-			Status:  string(c.Status),
+			Status:  status,
 			Reason:  c.Reason,
-			Message: c.Message,
+			Message: message,
 		})
 	}
 	return out
@@ -946,13 +837,13 @@ func backendRefDetail(b gatewayv1.BackendRef, defaultNS string, weight *int32) B
 	return out
 }
 
-func routeParentStatusDetail(parents []gatewayv1.RouteParentStatus, defaultNS string) []RouteParentStatusDetail {
+func routeParentStatusDetail(parents []gatewayv1.RouteParentStatus, defaultNS string, generation int64) []RouteParentStatusDetail {
 	out := make([]RouteParentStatusDetail, 0, len(parents))
 	for _, p := range parents {
 		out = append(out, RouteParentStatusDetail{
 			Parent:     parentRefDetail(p.ParentRef, defaultNS),
 			Controller: string(p.ControllerName),
-			Conditions: conditionsToDetail(p.Conditions),
+			Conditions: conditionsToDetail(p.Conditions, generation),
 		})
 	}
 	return out

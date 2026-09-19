@@ -27,6 +27,11 @@ const CRD_REQUIREMENTS: Partial<Record<ResourceView, { group: string; resource: 
   gateways: { group: 'gateway.networking.k8s.io', resource: 'gateways' },
   httproutes: { group: 'gateway.networking.k8s.io', resource: 'httproutes' },
   grpcroutes: { group: 'gateway.networking.k8s.io', resource: 'grpcroutes' },
+  tlsroutes: { group: 'gateway.networking.k8s.io', resource: 'tlsroutes' },
+  tcproutes: { group: 'gateway.networking.k8s.io', resource: 'tcproutes' },
+  udproutes: { group: 'gateway.networking.k8s.io', resource: 'udproutes' },
+  listenersets: { group: 'gateway.networking.k8s.io', resource: 'listenersets' },
+  backendtlspolicies: { group: 'gateway.networking.k8s.io', resource: 'backendtlspolicies' },
   gatewayclasses: {
     group: 'gateway.networking.k8s.io',
     resource: 'gatewayclasses',
@@ -125,13 +130,14 @@ export function buildVisibleResourceGroups({
         const capabilityVisible =
           !requirement ||
           activeContexts.some((contextName) =>
-            crdsByContext[contextName]?.some(
-              (crd) => crd.group === requirement.group && crd.resource === requirement.resource,
-            ),
+            (!item.kind || !accessByContext[contextName] || accessByContext[contextName].has(item.kind)) &&
+              crdsByContext[contextName]?.some(
+                (crd) => crd.group === requirement.group && crd.resource === requirement.resource,
+              ),
           )
         return (
           capabilityVisible &&
-          (!item.kind || kindAccessibleInAny(accessByContext, activeContexts, item.kind)) &&
+          (requirement || !item.kind || kindAccessibleInAny(accessByContext, activeContexts, item.kind)) &&
           (!item.view || !hidden.has(item.view))
         )
       }),

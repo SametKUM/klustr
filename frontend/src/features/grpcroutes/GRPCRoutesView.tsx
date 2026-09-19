@@ -6,11 +6,13 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
+import { useGatewayResourceContexts } from '@/features/gateways/useGatewayResourceContexts'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
 
 const columnHelper = createColumnHelper<GRPCRouteInfo>()
 
 export function GRPCRoutesView() {
+  const contexts = useGatewayResourceContexts('grpcroutes', 'GRPCRoute')
   const routes = useResources((s) => s.grpcRoutes)
   const setRoutes = useResources((s) => s.setGRPCRoutes)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
@@ -46,6 +48,7 @@ export function GRPCRoutesView() {
   return (
     <ResourceTable
       kind="GRPCRoute"
+      contexts={contexts}
       noun={{ singular: 'gRPC route', plural: 'gRPC routes' }}
       scope="namespaced"
       data={routes}

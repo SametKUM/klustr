@@ -7,6 +7,52 @@ function viewsFor(groups: ReturnType<typeof buildVisibleResourceGroups>): string
 }
 
 describe('buildVisibleResourceGroups', () => {
+  it.each([
+    ['tlsroutes', 'TLSRoute'],
+    ['tcproutes', 'TCPRoute'],
+    ['udproutes', 'UDPRoute'],
+    ['listenersets', 'ListenerSet'],
+    ['backendtlspolicies', 'BackendTLSPolicy'],
+  ])('shows %s only when the same active context serves and permits it', (resource, kind) => {
+    const input = {
+      activeContexts: ['with-crd', 'without-crd'],
+      crdsByContext: {
+        'with-crd': [{ group: 'gateway.networking.k8s.io', resource } as CRDInfo],
+        'without-crd': [],
+      },
+      accessByContext: {
+        'with-crd': new Set<string>(),
+        'without-crd': new Set([kind]),
+      },
+      hiddenItems: [],
+    }
+    expect(viewsFor(buildVisibleResourceGroups(input))).not.toContain(resource)
+    expect(viewsFor(buildVisibleResourceGroups({
+      ...input, accessByContext: { 'with-crd': new Set([kind]) },
+    }))).toContain(resource)
+    expect(viewsFor(buildVisibleResourceGroups({ ...input, accessByContext: {} })))
+      .toContain(resource)
+    expect(viewsFor(buildVisibleResourceGroups({
+      ...input, accessByContext: { 'without-crd': new Set<string>() },
+    }))).toContain(resource)
+  })
+
+  it('does not promote the old XListenerSet API or unrelated groups', () => {
+    const groups = buildVisibleResourceGroups({
+      activeContexts: ['test'],
+      crdsByContext: {
+        test: [
+          { group: 'gateway.networking.x-k8s.io', resource: 'xlistenersets' } as CRDInfo,
+          { group: 'example.com', resource: 'backendtlspolicies' } as CRDInfo,
+        ],
+      },
+      accessByContext: {},
+      hiddenItems: [],
+    })
+    expect(viewsFor(groups)).not.toContain('listenersets')
+    expect(viewsFor(groups)).not.toContain('backendtlspolicies')
+  })
+
   it('filters inaccessible and hidden views from the shared navigation model', () => {
     const groups = buildVisibleResourceGroups({
       activeContexts: ['restricted'],

@@ -382,6 +382,7 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 	// avoiding that needs client-go informer-cache reuse, a bigger change.
 	if reuseAccess && existing != nil {
 		w.access = existing.access
+		w.reuseGatewayAccess(existing)
 	}
 	// The old watcher keeps serving (and stays registered) until the new one
 	// has synced: start() runs up to ~8s of SSAR probes, and during a re-watch
@@ -507,7 +508,8 @@ func (m *ClientManager) AccessibleKinds(contextName string) []string {
 	if !ok {
 		return []string{}
 	}
-	return w.access.AccessibleKinds()
+	out := append([]string{}, w.access.AccessibleKinds()...)
+	return append(out, w.accessibleGatewayKinds()...)
 }
 
 func (m *ClientManager) restConfig(contextName string) (*rest.Config, error) {

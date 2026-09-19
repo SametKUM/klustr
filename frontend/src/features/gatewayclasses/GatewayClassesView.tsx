@@ -6,11 +6,13 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
+import { useGatewayResourceContexts } from '@/features/gateways/useGatewayResourceContexts'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
 
 const columnHelper = createColumnHelper<GatewayClassInfo>()
 
 export function GatewayClassesView() {
+  const contexts = useGatewayResourceContexts('gatewayclasses', 'GatewayClass')
   const classes = useResources((s) => s.gatewayClasses)
   const setClasses = useResources((s) => s.setGatewayClasses)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
@@ -40,6 +42,7 @@ export function GatewayClassesView() {
   return (
     <ResourceTable
       kind="GatewayClass"
+      contexts={contexts}
       noun={{ singular: 'gateway class', plural: 'gateway classes' }}
       scope="cluster"
       data={classes}

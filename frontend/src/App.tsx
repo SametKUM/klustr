@@ -77,6 +77,11 @@ import { HelmReposView } from '@/features/helm/HelmReposView'
 import { GatewaysView } from '@/features/gateways/GatewaysView'
 import { HTTPRoutesView } from '@/features/httproutes/HTTPRoutesView'
 import { GRPCRoutesView } from '@/features/grpcroutes/GRPCRoutesView'
+import { TLSRoutesView } from '@/features/tlsroutes/TLSRoutesView'
+import { TCPRoutesView } from '@/features/tcproutes/TCPRoutesView'
+import { UDPRoutesView } from '@/features/udproutes/UDPRoutesView'
+import { ListenerSetsView } from '@/features/listenersets/ListenerSetsView'
+import { BackendTLSPoliciesView } from '@/features/backendtlspolicies/BackendTLSPoliciesView'
 import { GatewayClassesView } from '@/features/gatewayclasses/GatewayClassesView'
 import { ReferenceGrantsView } from '@/features/referencegrants/ReferenceGrantsView'
 import { KarpenterNodePoolsView } from '@/features/karpenter-nodepools/KarpenterNodePoolsView'
@@ -286,6 +291,16 @@ function MainView() {
       return <HTTPRoutesView />
     case 'grpcroutes':
       return <GRPCRoutesView />
+    case 'tlsroutes':
+      return <TLSRoutesView />
+    case 'tcproutes':
+      return <TCPRoutesView />
+    case 'udproutes':
+      return <UDPRoutesView />
+    case 'listenersets':
+      return <ListenerSetsView />
+    case 'backendtlspolicies':
+      return <BackendTLSPoliciesView />
     case 'gatewayclasses':
       return <GatewayClassesView />
     case 'referencegrants':

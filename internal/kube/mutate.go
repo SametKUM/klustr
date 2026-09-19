@@ -78,13 +78,16 @@ var kindToGVR = map[string]schema.GroupVersionResource{
 	"FlowSchema":                 {Group: "flowcontrol.apiserver.k8s.io", Version: "v1", Resource: "flowschemas"},
 	"PriorityLevelConfiguration": {Group: "flowcontrol.apiserver.k8s.io", Version: "v1", Resource: "prioritylevelconfigurations"},
 
-	"Gateway":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"},
-	"HTTPRoute":    {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"},
-	"GRPCRoute":    {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "grpcroutes"},
-	"GatewayClass": {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"},
-	// v1beta1 deliberately: v1 referencegrants serving needs Gateway API >=1.5
-	// CRDs, v1beta1 is served everywhere the kind exists.
-	"ReferenceGrant": {Group: "gateway.networking.k8s.io", Version: "v1beta1", Resource: "referencegrants"},
+	"Gateway":          {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"},
+	"HTTPRoute":        {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"},
+	"GRPCRoute":        {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "grpcroutes"},
+	"TLSRoute":         {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "tlsroutes"},
+	"TCPRoute":         {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "tcproutes"},
+	"UDPRoute":         {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "udproutes"},
+	"ListenerSet":      {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "listenersets"},
+	"BackendTLSPolicy": {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "backendtlspolicies"},
+	"GatewayClass":     {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"},
+	"ReferenceGrant":   {Group: "gateway.networking.k8s.io", Version: "v1", Resource: "referencegrants"},
 }
 
 func resourceForKind(kind string) (schema.GroupVersionResource, error) {
@@ -107,11 +110,13 @@ func resourceForKind(kind string) (schema.GroupVersionResource, error) {
 // as the kind label — splitting it into a GVR keeps the bulk path working.
 func (m *ClientManager) resolveKind(contextName, kind string) (schema.GroupVersionResource, error) {
 	if gvr, ok := kindToGVR[kind]; ok {
-		// ReferenceGrant's served version varies with the installed Gateway
-		// API CRDs; follow what the watcher detected at connect time.
-		if kind == "ReferenceGrant" {
-			if w, wok := m.watcher(contextName); wok && w.refGrantVer != "" {
-				gvr.Version = w.refGrantVer
+		if gvr.Group == "gateway.networking.k8s.io" {
+			if w, wok := m.watcher(contextName); wok {
+				version := w.gatewayVersion(kind)
+				if version == "" {
+					return schema.GroupVersionResource{}, fmt.Errorf("%s is not served by this cluster", kind)
+				}
+				gvr.Version = version
 			}
 		}
 		return gvr, nil

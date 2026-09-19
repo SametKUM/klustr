@@ -75,6 +75,11 @@ import { IngressDetailBody } from '@/features/ingresses/IngressDetailBody'
 import { GatewayDetailBody } from '@/features/gateways/GatewayDetailBody'
 import { HTTPRouteDetailBody } from '@/features/httproutes/HTTPRouteDetailBody'
 import { GRPCRouteDetailBody } from '@/features/grpcroutes/GRPCRouteDetailBody'
+import { TLSRouteDetailBody } from '@/features/tlsroutes/TLSRouteDetailBody'
+import { TCPRouteDetailBody } from '@/features/tcproutes/TCPRouteDetailBody'
+import { UDPRouteDetailBody } from '@/features/udproutes/UDPRouteDetailBody'
+import { ListenerSetDetailBody } from '@/features/listenersets/ListenerSetDetailBody'
+import { BackendTLSPolicyDetailBody } from '@/features/backendtlspolicies/BackendTLSPolicyDetailBody'
 import { GatewayClassDetailBody } from '@/features/gatewayclasses/GatewayClassDetailBody'
 import { ReferenceGrantDetailBody } from '@/features/referencegrants/ReferenceGrantDetailBody'
 import { NodeDetailBody } from '@/features/nodes/NodeDetailBody'
@@ -1134,6 +1139,16 @@ function OverviewByKind({ contextName, resource }: { contextName: string | null;
       return <HTTPRouteDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
     case 'GRPCRoute':
       return <GRPCRouteDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'TLSRoute':
+      return <TLSRouteDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'TCPRoute':
+      return <TCPRouteDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'UDPRoute':
+      return <UDPRouteDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'ListenerSet':
+      return <ListenerSetDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    case 'BackendTLSPolicy':
+      return <BackendTLSPolicyDetailBody contextName={contextName} namespace={resource.namespace} name={resource.name} />
     case 'GatewayClass':
       return <GatewayClassDetailBody contextName={contextName} name={resource.name} />
     case 'ReferenceGrant':

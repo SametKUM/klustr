@@ -278,15 +278,15 @@ func probeAccess(ctx context.Context, cs kubernetes.Interface, kind string, gvr 
 	return KindAccess{Mode: AccessDenied}, err
 }
 
-// canList issues a SelfSubjectAccessReview for the (gvr, namespace, verb=list)
-// triple and reports whether the API server says yes. We probe `list` (not
-// `watch`) because the apiserver's RBAC evaluator returns the same answer
-// for both and `list` is the universally-implemented verb.
 func canList(ctx context.Context, cs kubernetes.Interface, gvr schema.GroupVersionResource, namespace string) (bool, error) {
+	return canResourceVerb(ctx, cs, gvr, namespace, "list")
+}
+
+func canResourceVerb(ctx context.Context, cs kubernetes.Interface, gvr schema.GroupVersionResource, namespace, verb string) (bool, error) {
 	review := &authv1.SelfSubjectAccessReview{
 		Spec: authv1.SelfSubjectAccessReviewSpec{
 			ResourceAttributes: &authv1.ResourceAttributes{
-				Verb:      "list",
+				Verb:      verb,
 				Group:     gvr.Group,
 				Version:   gvr.Version,
 				Resource:  gvr.Resource,

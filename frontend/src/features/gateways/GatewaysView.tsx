@@ -6,11 +6,13 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
+import { useGatewayResourceContexts } from '@/features/gateways/useGatewayResourceContexts'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
 
 const columnHelper = createColumnHelper<GatewayInfo>()
 
 export function GatewaysView() {
+  const contexts = useGatewayResourceContexts('gateways', 'Gateway')
   const gateways = useResources((s) => s.gateways)
   const setGateways = useResources((s) => s.setGateways)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
@@ -46,6 +48,7 @@ export function GatewaysView() {
   return (
     <ResourceTable
       kind="Gateway"
+      contexts={contexts}
       noun={{ singular: 'gateway', plural: 'gateways' }}
       scope="namespaced"
       data={gateways}

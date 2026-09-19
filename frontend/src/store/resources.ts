@@ -45,6 +45,11 @@ import type {
   GatewayInfo,
   HTTPRouteInfo,
   GRPCRouteInfo,
+  TLSRouteInfo,
+  TCPRouteInfo,
+  UDPRouteInfo,
+  ListenerSetInfo,
+  BackendTLSPolicyInfo,
   GatewayClassInfo,
   ReferenceGrantInfo,
   AdmissionPolicyInfo,
@@ -105,6 +110,11 @@ type ResourcesState = {
   gateways: ByContext<GatewayInfo>
   httpRoutes: ByContext<HTTPRouteInfo>
   grpcRoutes: ByContext<GRPCRouteInfo>
+  tlsRoutes: ByContext<TLSRouteInfo>
+  tcpRoutes: ByContext<TCPRouteInfo>
+  udpRoutes: ByContext<UDPRouteInfo>
+  listenerSets: ByContext<ListenerSetInfo>
+  backendTLSPolicies: ByContext<BackendTLSPolicyInfo>
   gatewayClasses: ByContext<GatewayClassInfo>
   referenceGrants: ByContext<ReferenceGrantInfo>
   validatingAdmissionPolicies: ByContext<AdmissionPolicyInfo>
@@ -185,6 +195,11 @@ type ResourcesState = {
   setGateways: (ctx: string, list: GatewayInfo[]) => void
   setHTTPRoutes: (ctx: string, list: HTTPRouteInfo[]) => void
   setGRPCRoutes: (ctx: string, list: GRPCRouteInfo[]) => void
+  setTLSRoutes: (ctx: string, list: TLSRouteInfo[]) => void
+  setTCPRoutes: (ctx: string, list: TCPRouteInfo[]) => void
+  setUDPRoutes: (ctx: string, list: UDPRouteInfo[]) => void
+  setListenerSets: (ctx: string, list: ListenerSetInfo[]) => void
+  setBackendTLSPolicies: (ctx: string, list: BackendTLSPolicyInfo[]) => void
   setGatewayClasses: (ctx: string, list: GatewayClassInfo[]) => void
   setReferenceGrants: (ctx: string, list: ReferenceGrantInfo[]) => void
   setValidatingAdmissionPolicies: (ctx: string, list: AdmissionPolicyInfo[]) => void
@@ -247,6 +262,11 @@ const KIND_KEYS = [
   'gateways',
   'httpRoutes',
   'grpcRoutes',
+  'tlsRoutes',
+  'tcpRoutes',
+  'udpRoutes',
+  'listenerSets',
+  'backendTLSPolicies',
   'gatewayClasses',
   'referenceGrants',
   'validatingAdmissionPolicies',
@@ -409,6 +429,12 @@ export const useResources = create<ResourcesState>((set) => ({
   setGateways: (ctx, list) => set((s) => ({ gateways: withCtx(s.gateways, ctx, list) })),
   setHTTPRoutes: (ctx, list) => set((s) => ({ httpRoutes: withCtx(s.httpRoutes, ctx, list) })),
   setGRPCRoutes: (ctx, list) => set((s) => ({ grpcRoutes: withCtx(s.grpcRoutes, ctx, list) })),
+  setTLSRoutes: (ctx, list) => set((s) => ({ tlsRoutes: withCtx(s.tlsRoutes, ctx, list) })),
+  setTCPRoutes: (ctx, list) => set((s) => ({ tcpRoutes: withCtx(s.tcpRoutes, ctx, list) })),
+  setUDPRoutes: (ctx, list) => set((s) => ({ udpRoutes: withCtx(s.udpRoutes, ctx, list) })),
+  setListenerSets: (ctx, list) => set((s) => ({ listenerSets: withCtx(s.listenerSets, ctx, list) })),
+  setBackendTLSPolicies: (ctx, list) =>
+    set((s) => ({ backendTLSPolicies: withCtx(s.backendTLSPolicies, ctx, list) })),
   setGatewayClasses: (ctx, list) =>
     set((s) => ({ gatewayClasses: withCtx(s.gatewayClasses, ctx, list) })),
   setReferenceGrants: (ctx, list) =>

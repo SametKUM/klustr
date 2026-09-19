@@ -236,11 +236,16 @@ export const GATEWAY_GROUP: ResourceGroup = {
   label: 'Gateway API',
   icon: Waypoints,
   items: [
-    { label: 'Gateways', view: 'gateways', icon: DoorOpen },
-    { label: 'HTTPRoutes', view: 'httproutes', icon: Route },
-    { label: 'GRPCRoutes', view: 'grpcroutes', icon: Route },
-    { label: 'GatewayClasses', view: 'gatewayclasses', icon: Compass },
-    { label: 'ReferenceGrants', view: 'referencegrants', icon: Stamp },
+    { label: 'Gateways', view: 'gateways', kind: 'Gateway', icon: DoorOpen },
+    { label: 'HTTPRoutes', view: 'httproutes', kind: 'HTTPRoute', icon: Route },
+    { label: 'GRPCRoutes', view: 'grpcroutes', kind: 'GRPCRoute', icon: Route },
+    { label: 'TLSRoutes', view: 'tlsroutes', kind: 'TLSRoute', icon: Route },
+    { label: 'TCPRoutes', view: 'tcproutes', kind: 'TCPRoute', icon: Route },
+    { label: 'UDPRoutes', view: 'udproutes', kind: 'UDPRoute', icon: Route },
+    { label: 'ListenerSets', view: 'listenersets', kind: 'ListenerSet', icon: DoorOpen },
+    { label: 'BackendTLSPolicies', view: 'backendtlspolicies', kind: 'BackendTLSPolicy', icon: Stamp },
+    { label: 'GatewayClasses', view: 'gatewayclasses', kind: 'GatewayClass', icon: Compass },
+    { label: 'ReferenceGrants', view: 'referencegrants', kind: 'ReferenceGrant', icon: Stamp },
   ],
 }
 

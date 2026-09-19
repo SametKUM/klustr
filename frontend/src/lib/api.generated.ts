@@ -36,6 +36,11 @@ export type ArgoOperationState = kube.ArgoOperationState
 export type ArgoSyncResourceSelector = kube.ArgoSyncResourceSelector
 export type ArgoSyncOptions = kube.ArgoSyncOptions
 export type BackendRefDetail = kube.BackendRefDetail
+export type PolicyAncestorStatusDetail = kube.PolicyAncestorStatusDetail
+export type BackendTLSSubjectAltNameDetail = kube.BackendTLSSubjectAltNameDetail
+export type ParentRefDetail = kube.ParentRefDetail
+export type BackendTLSPolicyDetail = kube.BackendTLSPolicyDetail
+export type BackendTLSPolicyInfo = kube.BackendTLSPolicyInfo
 export type PrinterColumn = kube.PrinterColumn
 export type CRDInfo = kube.CRDInfo
 export type CSIDriverDetail = kube.CSIDriverDetail
@@ -126,7 +131,6 @@ export type FluxReceiverInfo = kube.FluxReceiverInfo
 export type RouteParentStatusDetail = kube.RouteParentStatusDetail
 export type GRPCRouteMatchDetail = kube.GRPCRouteMatchDetail
 export type GRPCRouteRuleDetail = kube.GRPCRouteRuleDetail
-export type ParentRefDetail = kube.ParentRefDetail
 export type GRPCRouteDetail = kube.GRPCRouteDetail
 export type GRPCRouteInfo = kube.GRPCRouteInfo
 export type GatewayClassDetail = kube.GatewayClassDetail
@@ -172,11 +176,15 @@ export type JobInfo = kube.JobInfo
 export type KarpenterNodeClaimInfo = kube.KarpenterNodeClaimInfo
 export type KarpenterNodePoolInfo = kube.KarpenterNodePoolInfo
 export type Kubeconfig = kube.Kubeconfig
+export type L4RouteRuleDetail = kube.L4RouteRuleDetail
 export type LeaseDetail = kube.LeaseDetail
 export type LeaseInfo = kube.LeaseInfo
 export type LimitRangeItem = kube.LimitRangeItem
 export type LimitRangeDetail = kube.LimitRangeDetail
 export type LimitRangeInfo = kube.LimitRangeInfo
+export type ListenerSetListenerDetail = kube.ListenerSetListenerDetail
+export type ListenerSetDetail = kube.ListenerSetDetail
+export type ListenerSetInfo = kube.ListenerSetInfo
 export type MutationDiff = kube.MutationDiff
 export type NamespaceDetail = kube.NamespaceDetail
 export type NamespaceInfo = kube.NamespaceInfo
@@ -247,6 +255,12 @@ export type StorageClassInfo = kube.StorageClassInfo
 export type SubjectAccessRule = kube.SubjectAccessRule
 export type SubjectAccess = kube.SubjectAccess
 export type SystemTerminal = kube.SystemTerminal
+export type TCPRouteDetail = kube.TCPRouteDetail
+export type TCPRouteInfo = kube.TCPRouteInfo
+export type TLSRouteDetail = kube.TLSRouteDetail
+export type TLSRouteInfo = kube.TLSRouteInfo
+export type UDPRouteDetail = kube.UDPRouteDetail
+export type UDPRouteInfo = kube.UDPRouteInfo
 export type VolumeAttachmentDetail = kube.VolumeAttachmentDetail
 export type VolumeAttachmentInfo = kube.VolumeAttachmentInfo
 export type WebhookSummary = kube.WebhookSummary
@@ -278,6 +292,7 @@ export const generatedApi = {
   getArgoApplicationHealth: bindings.GetArgoApplicationHealth,
   getArgoApplicationOperationState: bindings.GetArgoApplicationOperationState,
   getArgoApplicationSet: bindings.GetArgoApplicationSet,
+  getBackendTLSPolicy: bindings.GetBackendTLSPolicy,
   getCSIDriver: bindings.GetCSIDriver,
   getCSINode: bindings.GetCSINode,
   getCertManagerCertificate: bindings.GetCertManagerCertificate,
@@ -323,6 +338,7 @@ export const generatedApi = {
   getJob: bindings.GetJob,
   getLease: bindings.GetLease,
   getLimitRange: bindings.GetLimitRange,
+  getListenerSet: bindings.GetListenerSet,
   getMutatingAdmissionPolicy: bindings.GetMutatingAdmissionPolicy,
   getMutatingAdmissionPolicyBinding: bindings.GetMutatingAdmissionPolicyBinding,
   getMutatingWebhookConfiguration: bindings.GetMutatingWebhookConfiguration,
@@ -353,6 +369,9 @@ export const generatedApi = {
   getStatefulSet: bindings.GetStatefulSet,
   getStorageClass: bindings.GetStorageClass,
   getSubjectAccess: bindings.GetSubjectAccess,
+  getTCPRoute: bindings.GetTCPRoute,
+  getTLSRoute: bindings.GetTLSRoute,
+  getUDPRoute: bindings.GetUDPRoute,
   getValidatingAdmissionPolicy: bindings.GetValidatingAdmissionPolicy,
   getValidatingAdmissionPolicyBinding: bindings.GetValidatingAdmissionPolicyBinding,
   getValidatingWebhookConfiguration: bindings.GetValidatingWebhookConfiguration,
@@ -369,6 +388,7 @@ export const generatedApi = {
   listArgoApplicationResources: bindings.ListArgoApplicationResources,
   listArgoApplicationSets: bindings.ListArgoApplicationSets,
   listArgoApplications: bindings.ListArgoApplications,
+  listBackendTLSPolicies: bindings.ListBackendTLSPolicies,
   listCRDs: bindings.ListCRDs,
   listCSIDrivers: bindings.ListCSIDrivers,
   listCSINodes: bindings.ListCSINodes,
@@ -426,6 +446,7 @@ export const generatedApi = {
   listKarpenterNodePools: bindings.ListKarpenterNodePools,
   listLeases: bindings.ListLeases,
   listLimitRanges: bindings.ListLimitRanges,
+  listListenerSets: bindings.ListListenerSets,
   listMutatingAdmissionPolicies: bindings.ListMutatingAdmissionPolicies,
   listMutatingAdmissionPolicyBindings: bindings.ListMutatingAdmissionPolicyBindings,
   listMutatingWebhookConfigurations: bindings.ListMutatingWebhookConfigurations,
@@ -461,6 +482,9 @@ export const generatedApi = {
   listStatefulSets: bindings.ListStatefulSets,
   listStorageClasses: bindings.ListStorageClasses,
   listSystemTerminals: bindings.ListSystemTerminals,
+  listTCPRoutes: bindings.ListTCPRoutes,
+  listTLSRoutes: bindings.ListTLSRoutes,
+  listUDPRoutes: bindings.ListUDPRoutes,
   listValidatingAdmissionPolicies: bindings.ListValidatingAdmissionPolicies,
   listValidatingAdmissionPolicyBindings: bindings.ListValidatingAdmissionPolicyBindings,
   listValidatingWebhookConfigurations: bindings.ListValidatingWebhookConfigurations,

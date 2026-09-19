@@ -6,11 +6,13 @@ import { ResourceTable } from '@/features/_shared/ResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { useResources } from '@/store/resources'
 import { useUIStore } from '@/store/ui'
+import { useGatewayResourceContexts } from '@/features/gateways/useGatewayResourceContexts'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
 
 const columnHelper = createColumnHelper<HTTPRouteInfo>()
 
 export function HTTPRoutesView() {
+  const contexts = useGatewayResourceContexts('httproutes', 'HTTPRoute')
   const routes = useResources((s) => s.httpRoutes)
   const setRoutes = useResources((s) => s.setHTTPRoutes)
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
@@ -46,6 +48,7 @@ export function HTTPRoutesView() {
   return (
     <ResourceTable
       kind="HTTPRoute"
+      contexts={contexts}
       noun={{ singular: 'HTTP route', plural: 'HTTP routes' }}
       scope="namespaced"
       data={routes}
