@@ -10,12 +10,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
 
+	"github.com/gorilla/websocket"
 	corev1 "k8s.io/api/core/v1"
+	pfconstants "k8s.io/apimachinery/pkg/util/portforward"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -351,16 +355,40 @@ func TestPortForwardCancelClosesBlockedUpgrade(t *testing.T) {
 }
 
 func TestPortForwardUpgradePreservesTLSAuthAndSessionLifetime(t *testing.T) {
+	for _, status := range []int{0, http.StatusOK, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusBadRequest, http.StatusForbidden, http.StatusNotFound, http.StatusMethodNotAllowed, http.StatusUpgradeRequired, http.StatusNotImplemented} {
+		name := "websocket"
+		if status != 0 {
+			name = fmt.Sprintf("spdy_after_%d", status)
+		}
+		t.Run(name, func(t *testing.T) {
+			testPortForwardUpgrade(t, status)
+		})
+	}
+}
+
+func testPortForwardUpgrade(t *testing.T, websocketStatus int) {
+	t.Helper()
 	closed := make(chan struct{})
+	requests := make(chan string, 2)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests <- r.Method
 		if r.Header.Get("Authorization") != "Bearer test-token" {
 			t.Error("upgrade lost authentication")
+		}
+		if r.Header.Get("Impersonate-User") != "test-user" || r.Header.Get("Impersonate-Group") != "test-group" {
+			t.Error("upgrade lost impersonation")
+		}
+		if r.Header.Get("User-Agent") != "klustr-transport-test" || r.Header.Get("X-Klustr-Test") != "wrapped" {
+			t.Error("upgrade lost config wrappers")
 		}
 		if r.URL.Path != "/api/v1/namespaces/default/pods/pod/portforward" {
 			t.Errorf("unexpected upgrade path: %s", r.URL.Path)
 		}
-		w.Header().Set(httpstream.HeaderProtocolVersion, portforward.PortForwardProtocolV1Name)
-		conn := httpstreamspdy.NewResponseUpgrader().UpgradeResponse(w, r, func(stream httpstream.Stream, replySent <-chan struct{}) error {
+		if r.Method == http.MethodGet && websocketStatus != 0 {
+			http.Error(w, "websocket upgrade unavailable", websocketStatus)
+			return
+		}
+		handler := func(stream httpstream.Stream, replySent <-chan struct{}) error {
 			go func() {
 				defer stream.Close()
 				<-replySent
@@ -369,7 +397,35 @@ func TestPortForwardUpgradePreservesTLSAuthAndSessionLifetime(t *testing.T) {
 				}
 			}()
 			return nil
-		})
+		}
+		var conn httpstream.Connection
+		if websocketStatus == 0 {
+			if r.Method != http.MethodGet {
+				t.Errorf("websocket method = %s, want GET", r.Method)
+			}
+			protocol := pfconstants.WebsocketsSPDYTunnelingPrefix + portforward.PortForwardProtocolV1Name
+			if !slices.Contains(websocket.Subprotocols(r), protocol) {
+				t.Errorf("missing websocket tunnel protocol: %v", websocket.Subprotocols(r))
+			}
+			upgrader := websocket.Upgrader{Subprotocols: []string{protocol}}
+			ws, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				t.Error(err)
+				close(closed)
+				return
+			}
+			conn, err = httpstreamspdy.NewServerConnection(portforward.NewTunnelingConnection("test", ws), handler)
+			if err != nil {
+				t.Error(err)
+				_ = ws.Close()
+			}
+		} else {
+			if r.Method != http.MethodPost {
+				t.Errorf("SPDY method = %s, want POST", r.Method)
+			}
+			w.Header().Set(httpstream.HeaderProtocolVersion, portforward.PortForwardProtocolV1Name)
+			conn = httpstreamspdy.NewResponseUpgrader().UpgradeResponse(w, r, handler)
+		}
 		if conn == nil {
 			close(closed)
 			return
@@ -378,15 +434,32 @@ func TestPortForwardUpgradePreservesTLSAuthAndSessionLifetime(t *testing.T) {
 		<-conn.CloseChan()
 		close(closed)
 	}))
-	defer server.Close()
-	cfg := &rest.Config{Host: server.URL, BearerToken: "test-token"}
+	t.Cleanup(server.Close)
+	var dials atomic.Int32
+	cfg := &rest.Config{
+		Host: server.URL, BearerToken: "test-token", UserAgent: "klustr-transport-test",
+		Timeout:     time.Nanosecond,
+		Impersonate: rest.ImpersonationConfig{UserName: "test-user", Groups: []string{"test-group"}},
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			dials.Add(1)
+			return (&net.Dialer{}).DialContext(ctx, network, address)
+		},
+		WrapTransport: func(rt http.RoundTripper) http.RoundTripper {
+			return pfTestTransport(func(req *http.Request) (*http.Response, error) {
+				req = req.Clone(req.Context())
+				req.Header.Set("X-Klustr-Test", "wrapped")
+				return rt.RoundTrip(req)
+			})
+		},
+	}
+	cfg.NextProtos = []string{"h2", "http/1.1"}
 	cfg.CAData = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
 	cs, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 	ready := make(chan struct{})
 	forwarder, err := newPortForwarder(ctx, cs, cfg, "default", "pod", 0, 80, ready)
 	if err != nil {
@@ -417,11 +490,32 @@ func TestPortForwardUpgradePreservesTLSAuthAndSessionLifetime(t *testing.T) {
 	if _, err := io.ReadFull(local, buf); err != nil || string(buf) != "ping" {
 		t.Fatalf("forwarded stream returned %q, err=%v", buf, err)
 	}
+	if method := receivePFTest(t, requests); method != http.MethodGet {
+		t.Fatalf("first upgrade = %s, want GET", method)
+	}
+	if websocketStatus != 0 {
+		if method := receivePFTest(t, requests); method != http.MethodPost {
+			t.Fatalf("fallback upgrade = %s, want POST", method)
+		}
+	}
+	if len(requests) != 0 {
+		t.Fatal("unexpected additional upgrade attempt")
+	}
+	if dials.Load() == 0 {
+		t.Fatal("upgrade ignored the configured dialer")
+	}
+	if cfg.Timeout != time.Nanosecond || !slices.Equal(cfg.NextProtos, []string{"h2", "http/1.1"}) {
+		t.Fatal("upgrade mutated the shared REST config")
+	}
 	cancel()
 	if err := receivePFTest(t, result); err != nil {
 		t.Fatalf("stopping ready forward: %v", err)
 	}
 	receivePFTest(t, closed)
+	if conn, err := net.DialTimeout("tcp", net.JoinHostPort("localhost", fmt.Sprint(ports[0].Local)), time.Second); err == nil {
+		_ = conn.Close()
+		t.Fatal("stopped port-forward retained its listener")
+	}
 }
 
 func TestPortForwardReadyTimeoutCancelsWorker(t *testing.T) {

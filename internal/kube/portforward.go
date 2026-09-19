@@ -5,18 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/http/httptrace"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	pfconstants "k8s.io/apimachinery/pkg/util/portforward"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
+	clientspdy "k8s.io/client-go/transport/spdy"
+	clientwebsocket "k8s.io/client-go/transport/websocket"
 	"k8s.io/streaming/pkg/httpstream"
 	httpstreamspdy "k8s.io/streaming/pkg/httpstream/spdy"
 )
@@ -56,24 +58,6 @@ func (d pfDialer) Dial(protocols ...string) (httpstream.Connection, string, erro
 	return d(protocols...)
 }
 
-type pfUpgradeConn struct {
-	net.Conn
-	reader io.ReadCloser
-}
-
-func (c *pfUpgradeConn) Read(p []byte) (int, error) { return c.reader.Read(p) }
-func (c *pfUpgradeConn) Close() error               { return c.reader.Close() }
-
-type pfContextConn struct {
-	net.Conn
-	stop func() bool
-}
-
-func (c *pfContextConn) Close() error {
-	c.stop()
-	return c.Conn.Close()
-}
-
 type pfManager struct {
 	mu       sync.Mutex
 	sessions map[string]*pfSession
@@ -108,77 +92,61 @@ func newPortForwarder(
 	localPort, remotePort uint16,
 	readyCh chan struct{},
 ) (portForwarder, error) {
-	cfg := rest.CopyConfig(restCfg)
-	cfg.NextProtos = []string{"http/1.1"}
-	cfg.Timeout = 0
-	dial := cfg.Dial
-	if dial == nil {
-		dial = (&net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}).DialContext
-	}
-	cfg.Dial = func(dialCtx context.Context, network, address string) (net.Conn, error) {
-		dialCtx, cancel := context.WithCancel(dialCtx)
-		stop := context.AfterFunc(ctx, cancel)
-		defer cancel()
-		defer stop()
-		conn, err := dial(dialCtx, network, address)
-		if err != nil {
-			return nil, err
-		}
-		// net/http may detach dialing from the request to reuse connections.
-		return &pfContextConn{Conn: conn, stop: context.AfterFunc(ctx, func() { _ = conn.Close() })}, nil
-	}
-	client, err := rest.HTTPClientFor(cfg)
+	transport, upgrader, err := newStreamingSPDYTransport(ctx, restCfg)
 	if err != nil {
 		return nil, err
 	}
+	client := &http.Client{Transport: transport}
 	url := cs.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace(namespace).
 		Name(podName).
 		SubResource("portforward").
 		URL()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url.String(), nil)
+	spdyDialer := pfDialer(func(protocols ...string) (httpstream.Connection, string, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url.String(), nil)
+		if err != nil {
+			return nil, "", err
+		}
+		return clientspdy.NegotiateStreaming(upgrader, client, req, protocols...)
+	})
+	websocketDialer, err := newPFWebSocketDialer(ctx, restCfg, url)
 	if err != nil {
 		return nil, err
 	}
-	// The SPDY round tripper ignores cancellation while reading HTTP responses.
-	dialer := pfDialer(func(protocols ...string) (httpstream.Connection, string, error) {
-		var conn net.Conn
-		trace := &httptrace.ClientTrace{GotConn: func(info httptrace.GotConnInfo) { conn = info.Conn }}
-		req := req.Clone(httptrace.WithClientTrace(ctx, trace))
-		req.Header.Set(httpstream.HeaderConnection, httpstream.HeaderUpgrade)
-		req.Header.Set(httpstream.HeaderUpgrade, httpstreamspdy.HeaderSpdy31)
-		for _, protocol := range protocols {
-			req.Header.Add(httpstream.HeaderProtocolVersion, protocol)
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, "", err
-		}
-		if resp.StatusCode != http.StatusSwitchingProtocols ||
-			!strings.Contains(strings.ToLower(resp.Header.Get(httpstream.HeaderConnection)), "upgrade") ||
-			!strings.EqualFold(resp.Header.Get(httpstream.HeaderUpgrade), httpstreamspdy.HeaderSpdy31) {
-			defer func() { _ = resp.Body.Close() }()
-			body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
-			if err != nil {
-				return nil, "", fmt.Errorf("unable to read upgrade response: %w", err)
-			}
-			return nil, "", fmt.Errorf("unable to upgrade connection: %s: %s", resp.Status, strings.TrimSpace(string(body)))
-		}
-		if conn == nil {
-			_ = resp.Body.Close()
-			return nil, "", errors.New("upgrade transport did not expose its connection")
-		}
-		// The response body retains bytes net/http buffered past the 101 headers.
-		stream, err := httpstreamspdy.NewClientConnectionWithPings(&pfUpgradeConn{Conn: conn, reader: resp.Body}, 5*time.Second)
-		if err != nil {
-			_ = resp.Body.Close()
-			return nil, "", err
-		}
-		return stream, resp.Header.Get(httpstream.HeaderProtocolVersion), nil
+	dialer := portforward.NewFallbackDialerForStreaming(websocketDialer, spdyDialer, func(err error) bool {
+		return ctx.Err() == nil && shouldFallbackStreaming(err)
 	})
 	ports := []string{fmt.Sprintf("%d:%d", localPort, remotePort)}
 	return portforward.NewOnAddressesForStreamingWithContext(ctx, dialer, []string{"localhost"}, ports, readyCh, io.Discard, io.Discard)
+}
+
+func newPFWebSocketDialer(ctx context.Context, cfg *rest.Config, endpoint *url.URL) (httpstream.Dialer, error) {
+	transport, holder, err := clientwebsocket.RoundTripperFor(streamingWebSocketConfig(ctx, cfg))
+	if err != nil {
+		return nil, err
+	}
+	return pfDialer(func(protocols ...string) (httpstream.Connection, string, error) {
+		// The upstream tunneling dialer creates a background-context request.
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+		if err != nil {
+			return nil, "", err
+		}
+		tunneled := make([]string, len(protocols))
+		for i, protocol := range protocols {
+			tunneled[i] = pfconstants.WebsocketsSPDYTunnelingPrefix + protocol
+		}
+		conn, err := clientwebsocket.Negotiate(transport, holder, req, tunneled...)
+		if err != nil {
+			return nil, "", err
+		}
+		stream, err := httpstreamspdy.NewClientConnectionWithPings(portforward.NewTunnelingConnection("client", conn), portforward.PingPeriod)
+		if err != nil {
+			_ = conn.Close()
+			return nil, "", err
+		}
+		return stream, strings.TrimPrefix(conn.Subprotocol(), pfconstants.WebsocketsSPDYTunnelingPrefix), nil
+	}), nil
 }
 
 func (mgr *pfManager) start(

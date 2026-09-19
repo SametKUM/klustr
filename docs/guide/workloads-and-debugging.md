@@ -18,8 +18,14 @@ In aggregated mode the stream spans the pods across every active context.
 
 ## Exec
 
-The **Exec** tab opens an interactive shell into any container over SPDY — the same
-transport `kubectl exec` uses. Pick the container if the pod has more than one.
+The **Exec** tab opens an interactive shell into any container using WebSocket,
+with SPDY fallback when the opening request is rejected for a supported compatibility
+reason. Pick the container if the pod has more than one.
+
+Fallback also supports roles that allow `create` on `pods/exec` but reject the
+WebSocket `get` request. A command is never retried after the connection upgrades;
+if the session disconnects, start another shell explicitly.
+
 Copy and paste follow the terminal conventions in
 [Terminal → Copy and paste](terminal.md#copy-and-paste): `⌘C` / `⌘V` on macOS,
 `Ctrl+Shift+C` / `Ctrl+Shift+V` or the right-click menu on Linux and Windows.
@@ -51,6 +57,11 @@ Start a forward from a pod or service. Klustr suggests a free local port, keeps 
 persistent indicator in the header while forwards are active, and lets you
 click-to-open an HTTP forward in your browser. Active forwards are listed in the
 header indicator and can be stopped individually.
+
+Port-forwarding also prefers WebSocket and falls back to SPDY for compatible
+upgrade rejections, including roles that grant only `create` on `pods/portforward`.
+Stopping a forward or disconnecting its context closes its connection and local port,
+including connections still waiting for a server or proxy response.
 
 ## Node shell
 

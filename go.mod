@@ -7,6 +7,7 @@ toolchain go1.26.6
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/creack/pty v1.1.24
+	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/wailsapp/wails/v2 v2.15.0
 	helm.sh/helm/v3 v3.22.0
 	k8s.io/api v0.37.0
@@ -64,7 +65,6 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect

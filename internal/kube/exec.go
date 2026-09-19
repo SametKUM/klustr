@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"sync"
 	"sync/atomic"
 
@@ -72,12 +73,30 @@ func (mgr *execSessionManager) start(
 			TTY:       true,
 		}, scheme.ParameterCodec)
 
-	executor, err := remotecommand.NewSPDYExecutor(restCfg, "POST", req.URL())
+	ctx, cancel := context.WithCancel(parent)
+	spdyTransport, spdyUpgrader, err := newStreamingSPDYTransport(ctx, restCfg)
 	if err != nil {
+		cancel()
+		return "", err
+	}
+	spdyExecutor, err := remotecommand.NewSPDYExecutorForTransports(spdyTransport, spdyUpgrader, http.MethodPost, req.URL())
+	if err != nil {
+		cancel()
+		return "", err
+	}
+	websocketExecutor, err := remotecommand.NewWebSocketExecutor(streamingWebSocketConfig(ctx, restCfg), http.MethodGet, req.URL().String())
+	if err != nil {
+		cancel()
 		return "", err
 	}
 
-	ctx, cancel := context.WithCancel(parent)
+	executor, err := remotecommand.NewFallbackExecutor(websocketExecutor, spdyExecutor, func(err error) bool {
+		return ctx.Err() == nil && shouldFallbackStreaming(err)
+	})
+	if err != nil {
+		cancel()
+		return "", err
+	}
 	pr, pw := io.Pipe()
 	resizeCh := make(chan remotecommand.TerminalSize, 4)
 
@@ -161,7 +180,7 @@ func (mgr *execSessionManager) stop(id string) {
 }
 
 // stopForContext closes every live exec/node-shell session for a context,
-// called from StopWatch on disconnect so the SPDY channel unwinds instead of
+// called from StopWatch on disconnect so the stream unwinds instead of
 // staying open on the pre-disconnect client.
 func (mgr *execSessionManager) stopForContext(contextName string) {
 	mgr.mu.Lock()
@@ -179,7 +198,7 @@ func (mgr *execSessionManager) stopForContext(contextName string) {
 }
 
 // stopAll closes every live exec session. Called from
-// ClientManager.Shutdown so SPDY streams unwind cleanly on app quit
+// ClientManager.Shutdown so streams unwind cleanly on app quit
 // rather than getting truncated when the process exits.
 func (mgr *execSessionManager) stopAll() {
 	mgr.mu.Lock()
