@@ -1,0 +1,32 @@
+---
+import { Hammer } from '@lucide/astro'
+import { siApple, siArchlinux, siLinux, siUbuntu } from 'simple-icons'
+
+interface Props {
+  brand: 'apple' | 'archlinux' | 'ubuntu' | 'linux' | 'source'
+  size?: string
+  colored?: boolean
+}
+
+const { brand, size = '1em', colored = false } = Astro.props
+
+const ICONS = {
+  apple: { path: siApple.path, hex: null },
+  archlinux: { path: siArchlinux.path, hex: siArchlinux.hex },
+  ubuntu: { path: siUbuntu.path, hex: siUbuntu.hex },
+  linux: { path: siLinux.path, hex: null },
+} as const
+
+const icon = brand === 'source' ? null : ICONS[brand]
+const fill = icon && colored && icon.hex ? `#${icon.hex}` : 'currentColor'
+---
+
+{
+  icon ? (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill={fill} aria-hidden="true">
+      <path d={icon.path} />
+    </svg>
+  ) : (
+    <Hammer size={size} />
+  )
+}

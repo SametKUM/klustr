@@ -1,0 +1,513 @@
+---
+import { Picture, getImage } from 'astro:assets'
+import {
+  Blocks,
+  Boxes,
+  Download,
+  FileDiff,
+  KeyRound,
+  Layers,
+  Play,
+  Puzzle,
+  Scale,
+  ScanSearch,
+  Server,
+  ShieldCheck,
+  SquareTerminal,
+  X,
+  Zap,
+} from '@lucide/astro'
+import BaseLayout from '../layouts/BaseLayout.astro'
+import BrandIcon from '../components/BrandIcon.astro'
+import CommandBlock from '../components/CommandBlock.astro'
+import CompareTable from '../components/CompareTable.astro'
+import HeroSlider from '../components/HeroSlider.astro'
+import InstallTabs from '../components/InstallTabs.astro'
+import heroPoster from '../assets/hero-poster.png'
+import { COMPARE_PAGES, REVIEWED_ON, TOOLS } from '../data/compare'
+import { FEATURE_LIST } from '../data/features'
+import { ARCH_HELPERS, FROM_SOURCE, INSTALL_TABS, LINUX_TARBALL, MAC_MANUAL } from '../data/install'
+import { SHOTS, shotBySlug } from '../data/shots'
+import { latestRelease } from '../lib/github'
+import { graph, personLd, softwareLd, sourceCodeLd, websiteLd } from '../lib/seo'
+import { LATEST_RELEASE_URL, REPO_URL, SITE, absoluteUrl } from '../lib/site'
+
+const release = await latestRelease()
+const version = release?.tag
+
+const screenshotUrls = await Promise.all(
+  SHOTS.slice(0, 8).map(async (s) => absoluteUrl((await getImage({ src: s.image, width: 1600, format: 'webp' })).src)),
+)
+const poster = await getImage({ src: heroPoster, width: 1280, format: 'webp' })
+
+const jsonLd = graph([
+  personLd(),
+  websiteLd(),
+  softwareLd({ version, screenshots: screenshotUrls, features: FEATURE_LIST }),
+  sourceCodeLd(),
+])
+
+const macTab = INSTALL_TABS.find((t) => t.id === 'mac')!
+const debTab = INSTALL_TABS.find((t) => t.id === 'deb')!
+
+const proofs = [
+  {
+    id: 'multi-context',
+    eyebrow: 'multi-context',
+    heading: 'Two clusters. One table.',
+    body: 'Check two or more contexts on the Connections screen and every list fans out across them with a Context column. Save the selection as a named group, tag production with a color, and the top bar paints a stripe so you always know which environment you are touching. Per-context read-only mode blocks every mutation when you only mean to look.',
+    chips: [
+      { value: '2+', label: 'contexts in one list' },
+      { value: 'Groups', label: 'one-click reconnect' },
+      { value: 'Read-only', label: 'per context' },
+    ],
+    shot: shotBySlug('pods-aggregated'),
+    link: { href: '/docs/multi-context/', label: 'Multi-context guide' },
+  },
+  {
+    id: 'gitops',
+    eyebrow: 'argo cd and flux',
+    heading: 'Sync, reconcile, suspend. No vendor CLI.',
+    body: 'Argo CD Applications and Flux reconcilers appear as soon as their CRDs are detected. Sync is the same PATCH that argocd app sync sends, Refresh flips the annotation, and Flux Reconcile and Suspend set the standard annotations. The only requirement is that your kubeconfig user may update those resources.',
+    chips: [
+      { value: 'Argo CD', label: 'Sync, Refresh, Rollback' },
+      { value: 'Flux', label: '9 toolkit kinds' },
+      { value: '0', label: 'CLIs or extra logins' },
+    ],
+    shot: shotBySlug('argo-applications'),
+    link: { href: '/docs/gitops/', label: 'GitOps guide' },
+  },
+  {
+    id: 'helm',
+    eyebrow: 'helm',
+    heading: 'Dry-run first. Then apply.',
+    body: 'Helm v3 runs inside Klustr through the upstream library, with no helm binary on your PATH. Every install and upgrade renders as a dry-run diff you confirm before anything changes. Releases are read from the Secret informer that is already open, so the list stays live without extra polling.',
+    chips: [
+      { value: 'Diff', label: 'before every apply' },
+      { value: 'Rollback', label: 'to any revision' },
+      { value: 'Repos', label: 'chart search and versions' },
+    ],
+    shot: shotBySlug('helm-upgrade'),
+    link: { href: '/docs/helm/', label: 'Helm guide' },
+  },
+  {
+    id: 'debugging',
+    eyebrow: 'debugging',
+    heading: 'Logs, exec, debug containers, node shell.',
+    body: 'Stream logs across every pod of a workload with a color per pod, follow, regex and save. Open a shell in any container, or inject an ephemeral debug container when the image has no shell. From a node, open a root shell through a temporary nsenter pod that is removed when you close it, then cordon and drain with live progress.',
+    chips: [
+      { value: 'Multi-pod', label: 'one stream, one color each' },
+      { value: 'kubectl debug', label: 'built in' },
+      { value: 'Drain', label: 'PDB-aware, live progress' },
+    ],
+    shot: shotBySlug('logs-stream'),
+    link: { href: '/docs/workloads-and-debugging/', label: 'Workloads and debugging guide' },
+  },
+  {
+    id: 'gateway',
+    eyebrow: 'gateway api and cert-manager',
+    heading: 'Status you can read without opening YAML.',
+    body: 'Gateway API routes render as a per-rule match, backend and weight matrix with the RouteParentStatus beside it, so a parent that has not accepted a route or a RefNotPermitted backend is one click away. cert-manager Certificates drill through the issuance chain, CertificateRequest to Order to Challenge, with a one-click Renew.',
+    chips: [
+      { value: 'RouteParentStatus', label: 'per parent, per controller' },
+      { value: 'Chain', label: 'Certificate to Challenge' },
+      { value: 'Renew', label: 'one click, no cmctl' },
+    ],
+    shot: shotBySlug('gateway-httproutes'),
+    link: { href: '/docs/gateway-api/', label: 'Gateway API guide' },
+  },
+]
+
+const stats = [
+  { value: '62', label: 'resource kinds with YAML edit, delete and scale' },
+  { value: '8', label: 'platform integrations with typed views and actions' },
+  { value: '12', label: 'themes, six light and six dark' },
+  { value: '0', label: 'components installed in the cluster' },
+  { value: '22 MB', label: 'macOS download, signed and notarized' },
+  { value: 'MIT', label: 'license, no account, no tier' },
+]
+
+const capabilities = [
+  {
+    icon: Boxes,
+    title: 'Every built-in kind',
+    body: 'Workloads, networking, storage, config, admission, autoscaling and the full RBAC set, each with list, detail, YAML edit, delete and scale where it applies.',
+  },
+  {
+    icon: ScanSearch,
+    title: 'Access Review',
+    body: 'Pick a user, group or ServiceAccount and read its effective permissions as a resource-by-verb matrix, with the binding and role behind every cell. Wildcards and cluster-admin are flagged.',
+  },
+  {
+    icon: Puzzle,
+    title: 'Custom resources',
+    body: 'CRDs are discovered on connect and grouped by API group. A kind installed while you are connected appears without a restart.',
+  },
+  {
+    icon: Blocks,
+    title: 'Istio, Karpenter and KEDA',
+    body: 'VirtualServices and DestinationRules, NodePools and NodeClaims, and KEDA triggers mapped back onto the HPAs they drive.',
+  },
+  {
+    icon: FileDiff,
+    title: 'YAML, scale and rollout',
+    body: 'Monaco editor with a server-side dry-run diff, inline scale, restart, pause and resume, in-place pod resize, and rollout history with one-click rollback.',
+  },
+  {
+    icon: Server,
+    title: 'Nodes',
+    body: 'Usage and pressure per node, cordon and uncordon, PDB-aware drain with live progress, and a root shell without SSH.',
+  },
+  {
+    icon: SquareTerminal,
+    title: 'Terminal drawer',
+    body: 'A local shell per context with KUBECONFIG already set, so kubectl, helm and k9s hit the right cluster. Or launch your own terminal app with the context selected.',
+  },
+  {
+    icon: Layers,
+    title: 'Cluster overviews',
+    body: 'Capacity donuts, workload health bars and a recent-events feed, for a single cluster or an aggregated set.',
+  },
+]
+
+const landingTools = ['klustr', 'lens', 'k9s', 'headlamp'] as const
+---
+
+<BaseLayout
+  title={`${SITE.name}: ${SITE.tagline}`}
+  bareTitle
+  description={SITE.description}
+  path="/"
+  jsonLd={jsonLd}
+>
+  <!-- Hero -->
+  <section class="mx-auto max-w-6xl px-5 pb-12 pt-12 md:pt-20">
+    <div class="mx-auto max-w-5xl text-center">
+      <p class="eyebrow rise">kubernetes desktop client for macOS and Linux</p>
+      <h1 class="display rise rise-2 mt-5 text-[2.25rem] sm:text-5xl lg:text-[3.75rem]">
+        Your clusters, live.<br />
+        <span class="marker">Nothing installed in them.</span>
+      </h1>
+      <p class="lede rise rise-3 mx-auto mt-7 max-w-2xl">
+        Klustr reads the kubeconfig you already have and drives the Kubernetes API the way kubectl does. Live
+        resources, RBAC review, Helm, Argo CD, Flux, Gateway API and cert-manager in one window. Free and open
+        source under MIT.
+      </p>
+
+      <InstallTabs group="hero" version={version} detectOs class="rise rise-4 mx-auto mt-9 max-w-2xl" />
+
+      <div class="rise rise-4 mt-6 flex flex-wrap items-center justify-center gap-3">
+        <a href={LATEST_RELEASE_URL} class="btn btn-primary" target="_blank" rel="noreferrer">
+          <Download size={15} />
+          <span>Download <span data-version-inline>{version}</span></span>
+        </a>
+        <button class="btn btn-ghost" type="button" data-demo-open>
+          <Play size={15} />
+          <span>Watch the demo</span>
+        </button>
+      </div>
+
+      <ul class="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ink-3">
+        <li class="inline-flex items-center gap-2"><BrandIcon brand="apple" /> macOS on Apple Silicon, notarized</li>
+        <li class="inline-flex items-center gap-2"><BrandIcon brand="linux" /> Linux amd64 as tarball, .deb and AUR</li>
+        <li class="inline-flex items-center gap-2"><BrandIcon brand="source" /> Windows from source</li>
+      </ul>
+    </div>
+
+    <div class="mt-16">
+      <HeroSlider />
+    </div>
+  </section>
+
+  <!-- Trust band -->
+  <section class="mx-auto max-w-6xl px-5 py-14">
+    <div class="rule-x mb-12"></div>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="sheet cap">
+        <h3><ShieldCheck size={18} /> Pure client</h3>
+        <p>
+          No agent, operator, CRD or sidecar. Klustr talks to the API server the same way kubectl does, and you see
+          exactly what your RBAC allows.
+        </p>
+      </div>
+      <div class="sheet cap">
+        <h3><Zap size={18} /> Live, never polled</h3>
+        <p>
+          client-go informers push every change as it lands. No refresh button and no polling loop against the API
+          server.
+        </p>
+      </div>
+      <div class="sheet cap">
+        <h3><KeyRound size={18} /> Just your kubeconfig</h3>
+        <p>
+          Exec plugins, aws-vault profiles and your login-shell environment keep working when Klustr is launched from
+          the Dock or Finder.
+        </p>
+      </div>
+      <div class="sheet cap">
+        <h3><Scale size={18} /> Open source, MIT</h3>
+        <p>No account, no activation, no paid tier. The source is on GitHub and every release is built by CI.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Proof sections -->
+  <div id="features" class="scroll-mt-20">
+    {
+      proofs.map((proof, i) => (
+        <section id={proof.id} class="border-t border-rule py-16 scroll-mt-20">
+          <div class="mx-auto grid max-w-6xl items-center gap-10 px-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14">
+            <div class:list={[{ 'lg:order-2': i % 2 === 1 }]}>
+              <p class="eyebrow">{proof.eyebrow}</p>
+              <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">{proof.heading}</h2>
+              <p class="lede mt-5">{proof.body}</p>
+              <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                {proof.chips.map((chip) => (
+                  <div class="sheet chip">
+                    <div class="chip-value">{chip.value}</div>
+                    <div class="chip-label">{chip.label}</div>
+                  </div>
+                ))}
+              </div>
+              <a href={proof.link.href} class="mt-6 inline-block text-sm font-medium text-accent">
+                {proof.link.label}
+              </a>
+            </div>
+            <figure class:list={['sheet overflow-hidden', { 'lg:order-1': i % 2 === 1 }]}>
+              <Picture
+                src={proof.shot.image}
+                alt={`Klustr ${proof.shot.title} view in the ${proof.shot.theme} theme. ${proof.shot.caption}`}
+                widths={[640, 1024, 1400]}
+                sizes="(max-width: 1024px) 100vw, 660px"
+                formats={['avif']}
+                fallbackFormat="webp"
+                loading="lazy"
+                decoding="async"
+                class="block h-auto w-full"
+              />
+              <figcaption class="flex items-center justify-between gap-3 border-t border-rule px-4 py-2 text-xs text-ink-3">
+                <span>{proof.shot.title}</span>
+                <span class="font-mono">{proof.shot.theme}</span>
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+      ))
+    }
+  </div>
+
+  <!-- Stats -->
+  <section class="border-y border-rule py-16">
+    <div class="mx-auto max-w-6xl px-5">
+      <div class="max-w-2xl">
+        <p class="eyebrow">by the numbers</p>
+        <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">Counted from the source.</h2>
+      </div>
+      <div class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          stats.map((stat) => (
+            <div class="sheet stat ticks">
+              <div class="stat-value">{stat.value}</div>
+              <div class="stat-label">{stat.label}</div>
+            </div>
+          ))
+        }
+      </div>
+      <p class="mt-5 text-right font-mono text-sm text-ink-3">
+        Counts from the repository and the latest release, not benchmark claims.
+      </p>
+    </div>
+  </section>
+
+  <!-- Capabilities -->
+  <section class="mx-auto max-w-6xl px-5 py-16">
+    <div class="max-w-2xl">
+      <p class="eyebrow">everything else</p>
+      <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">Built for the whole cluster, not a demo namespace.</h2>
+      <p class="lede mt-5">
+        Sixty-two resource kinds, the complete RBAC set and every CRD on the cluster, with the same list, detail, YAML
+        and action surface for each.
+      </p>
+    </div>
+    <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        capabilities.map(({ icon: Icon, title, body }) => (
+          <div class="sheet cap">
+            <h3>
+              <Icon size={18} /> {title}
+            </h3>
+            <p>{body}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Compare -->
+  <section id="compare" class="border-t border-rule py-16 scroll-mt-20">
+    <div class="mx-auto max-w-6xl px-5">
+      <div class="max-w-2xl">
+        <p class="eyebrow">compare</p>
+        <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">Klustr next to Lens, k9s and Headlamp.</h2>
+        <p class="lede mt-5">
+          Each of these is a good tool with a different shape. The table keeps to facts you can check in their
+          documentation; the linked pages go row by row and say where each one is the better pick.
+        </p>
+      </div>
+      <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {
+          landingTools.map((id) => {
+            const tool = TOOLS[id]
+            const page = COMPARE_PAGES.find((p) => p.tool === id)
+            return (
+              <div class:list={['sheet cap', { 'border-accent bg-accent-soft': id === 'klustr' }]}>
+                <h3>{tool.name}</h3>
+                <p>{tool.summary}</p>
+                {page && (
+                  <a href={`/compare/${page.slug}/`} class="mt-3 inline-block text-sm font-medium text-accent">
+                    Full comparison
+                  </a>
+                )}
+              </div>
+            )
+          })
+        }
+      </div>
+      <CompareTable tools={[...landingTools]} class="mt-6" />
+      <p class="mt-4 text-sm text-ink-3">
+        Reviewed {REVIEWED_ON}. <a href="/compare/" class="text-accent">All comparisons</a>, including Kubernetes
+        Dashboard.
+      </p>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section id="install" class="border-t border-rule py-16 scroll-mt-20">
+    <div class="mx-auto max-w-6xl px-5">
+      <div class="mx-auto max-w-2xl text-center">
+        <p class="eyebrow">install</p>
+        <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">Install. Connect. Browse.</h2>
+        <p class="lede mt-5">If kubectl works on your machine, Klustr works. No sign-up and nothing to deploy.</p>
+      </div>
+
+      <InstallTabs group="install" version={version} class="mx-auto mt-9 max-w-2xl" />
+
+      <ol class="mt-8 grid gap-4 sm:grid-cols-3">
+        <li class="sheet cap">
+          <h3><span class="text-accent">1</span> Install</h3>
+          <p>Homebrew on macOS, paru or apt on Linux, or the tarball. The macOS build is signed and notarized.</p>
+        </li>
+        <li class="sheet cap">
+          <h3><span class="text-accent">2</span> Connect</h3>
+          <p>Klustr reads ~/.kube/config and lists every context. Pick one, or check several to aggregate them.</p>
+        </li>
+        <li class="sheet cap">
+          <h3><span class="text-accent">3</span> Browse</h3>
+          <p>The sidebar shows what your RBAC allows. ⌘K opens the command palette and ⌘P finds a pod by name.</p>
+        </li>
+      </ol>
+
+      <div class="mt-12 grid gap-5 lg:grid-cols-2">
+        <div class="sheet p-6">
+          <div class="mb-4 flex items-center gap-3">
+            <span class="icon-btn pointer-events-none"><BrandIcon brand="apple" size="1.2rem" /></span>
+            <div>
+              <h3 class="font-mono font-semibold">macOS</h3>
+              <p class="text-xs text-ink-3">Apple Silicon, signed and notarized</p>
+            </div>
+          </div>
+          <p class="eyebrow mb-2">homebrew</p>
+          <CommandBlock html={macTab.html} />
+          <p class="eyebrow mb-2 mt-5">manual</p>
+          <CommandBlock html={MAC_MANUAL} />
+        </div>
+
+        <div class="sheet p-6">
+          <div class="mb-4 flex items-center gap-3">
+            <span class="icon-btn pointer-events-none"><BrandIcon brand="archlinux" size="1.2rem" /></span>
+            <div>
+              <h3 class="font-mono font-semibold">Arch, CachyOS, Manjaro</h3>
+              <p class="text-xs text-ink-3">AUR package klustr-bin</p>
+            </div>
+          </div>
+          <p class="eyebrow mb-2">aur helper</p>
+          <CommandBlock html={ARCH_HELPERS} />
+          <p class="mt-5 text-sm leading-relaxed text-ink-2">
+            Built from the prebuilt release tarball, so the install completes in seconds and paru -Syu keeps it
+            current.
+          </p>
+        </div>
+
+        <div class="sheet p-6">
+          <div class="mb-4 flex items-center gap-3">
+            <span class="icon-btn pointer-events-none"><BrandIcon brand="ubuntu" size="1.2rem" /></span>
+            <div>
+              <h3 class="font-mono font-semibold">Debian, Ubuntu</h3>
+              <p class="text-xs text-ink-3">amd64 .deb</p>
+            </div>
+          </div>
+          <CommandBlock html={debTab.html} />
+          <p class="mt-4 text-sm leading-relaxed text-ink-2">
+            Pulls in webkit2gtk-4.1 and gtk-3 automatically and registers a desktop entry.
+          </p>
+        </div>
+
+        <div class="sheet p-6">
+          <div class="mb-4 flex items-center gap-3">
+            <span class="icon-btn pointer-events-none"><BrandIcon brand="linux" size="1.25rem" /></span>
+            <div>
+              <h3 class="font-mono font-semibold">Linux tarball and source</h3>
+              <p class="text-xs text-ink-3">amd64, and the Windows path today</p>
+            </div>
+          </div>
+          <p class="eyebrow mb-2">tarball</p>
+          <CommandBlock html={LINUX_TARBALL} />
+          <p class="eyebrow mb-2 mt-5">from source</p>
+          <CommandBlock html={FROM_SOURCE} />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final call -->
+  <section class="border-t border-rule py-20">
+    <div class="mx-auto max-w-2xl px-5 text-center">
+      <h2 class="display text-3xl sm:text-4xl lg:text-[2.75rem]">Point it at a context.</h2>
+      <p class="lede mt-5">One binary on your machine. Nothing in the cluster. Every context in your kubeconfig.</p>
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <a href={LATEST_RELEASE_URL} class="btn btn-primary" target="_blank" rel="noreferrer">
+          <Download size={15} />
+          <span>Download <span data-version-inline>{version}</span></span>
+        </a>
+        <a href={REPO_URL} class="btn btn-ghost" target="_blank" rel="noreferrer">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo video -->
+  <dialog id="demo" class="m-auto w-[min(96vw,1100px)] rounded-(--radius-sheet) border border-rule-strong bg-paper p-0 backdrop:bg-paper/90 backdrop:backdrop-blur-sm">
+    <div class="flex items-center justify-between gap-3 border-b border-rule px-4 py-2">
+      <span class="font-mono text-sm text-ink-2">Live view across two contexts, captured from real clusters</span>
+      <button class="icon-btn" type="button" data-demo-close aria-label="Close">
+        <X size={16} />
+      </button>
+    </div>
+    <video class="block w-full" controls preload="none" playsinline poster={poster.src} data-demo-video>
+      <source src="/hero.mp4" type="video/mp4" />
+    </video>
+  </dialog>
+
+  <script>
+    const dialog = document.getElementById('demo') as HTMLDialogElement | null
+    const video = dialog?.querySelector<HTMLVideoElement>('[data-demo-video]')
+    document.querySelector('[data-demo-open]')?.addEventListener('click', () => {
+      dialog?.showModal()
+      void video?.play().catch(() => {})
+    })
+    dialog?.querySelector('[data-demo-close]')?.addEventListener('click', () => dialog.close())
+    dialog?.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close()
+    })
+    dialog?.addEventListener('close', () => video?.pause())
+  </script>
+</BaseLayout>
