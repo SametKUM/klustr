@@ -2,7 +2,8 @@
 import { Download } from '@lucide/astro'
 import CompareTable from '../../components/CompareTable.astro'
 import DocsLayout from '../../layouts/DocsLayout.astro'
-import { COMPARE_PAGES, TOOLS, comparePage } from '../../data/compare'
+import { COMPARE_PAGES, REVIEWED_ON, TOOLS, comparePage } from '../../data/compare'
+import { firstCommitDate } from '../../lib/git'
 import { renderFragment } from '../../lib/markdown'
 import { articleLd, breadcrumbLd, graph } from '../../lib/seo'
 import { LATEST_RELEASE_URL } from '../../lib/site'
@@ -24,7 +25,14 @@ const headings = [
 ]
 
 const jsonLd = graph([
-  articleLd({ type: 'Article', headline: page.title, description: page.description, path }),
+  articleLd({
+    type: 'Article',
+    headline: page.title,
+    description: page.description,
+    path,
+    datePublished: firstCommitDate('site/src/data/compare.ts'),
+    dateModified: REVIEWED_ON,
+  }),
   breadcrumbLd([
     { name: 'Home', path: '/' },
     { name: 'Compare', path: '/compare/' },
@@ -35,6 +43,7 @@ const jsonLd = graph([
 
 <DocsLayout
   title={page.title}
+  bareTitle
   eyebrow={`compare / ${tool.name.toLowerCase()}`}
   description={page.description}
   path={path}

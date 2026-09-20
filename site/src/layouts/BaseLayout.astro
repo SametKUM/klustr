@@ -3,7 +3,7 @@ import '../styles/global.css'
 import { ArrowUp } from '@lucide/astro'
 import Nav from '../components/Nav.astro'
 import Footer from '../components/Footer.astro'
-import { SITE, absoluteUrl } from '../lib/site'
+import { SITE, absoluteUrl, clampDescription } from '../lib/site'
 import type { JsonLd } from '../lib/seo'
 
 interface Props {
@@ -15,21 +15,27 @@ interface Props {
   bareTitle?: boolean
   ogImage?: string
   ogImageAlt?: string
+  robots?: string
 }
 
 const {
   title,
-  description,
+  description: rawDescription,
   path,
   ogType = 'website',
   jsonLd,
   bareTitle = false,
   ogImage = '/og.png',
   ogImageAlt = `${SITE.name}: ${SITE.tagline}`,
+  robots = 'index, follow',
 } = Astro.props
 
 const canonical = absoluteUrl(path)
-const pageTitle = bareTitle ? title : `${title} · ${SITE.name}`
+// Search results show about 60 characters of a title; the brand suffix is
+// dropped when it would push a page past that.
+const suffixed = `${title} · ${SITE.name}`
+const pageTitle = bareTitle || suffixed.length > 60 ? title : suffixed
+const description = clampDescription(rawDescription)
 const ogImageUrl = absoluteUrl(ogImage)
 const ldBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
 ---
@@ -42,7 +48,7 @@ const ldBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content={robots} />
     <meta name="theme-color" content="#f6f3ed" data-theme-color />
     <meta name="generator" content={Astro.generator} />
     <meta name="author" content={SITE.author} />

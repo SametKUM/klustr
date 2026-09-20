@@ -15,9 +15,20 @@ interface Props {
   headings?: Heading[]
   jsonLd?: JsonLd | JsonLd[]
   ogType?: 'website' | 'article'
+  bareTitle?: boolean
 }
 
-const { title, description, path, eyebrow, lede, headings = [], jsonLd, ogType = 'article' } = Astro.props
+const {
+  title,
+  description,
+  path,
+  eyebrow,
+  lede,
+  headings = [],
+  jsonLd,
+  ogType = 'article',
+  bareTitle = false,
+} = Astro.props
 
 const groups = await Promise.all(
   GUIDE_GROUPS.map(async (group) => ({
@@ -48,7 +59,7 @@ const current = Astro.url.pathname
 const tocHeadings = headings.filter((h) => h.depth <= 3)
 ---
 
-<BaseLayout title={title} description={description} path={path} jsonLd={jsonLd} ogType={ogType}>
+<BaseLayout title={title} description={description} path={path} jsonLd={jsonLd} ogType={ogType} bareTitle={bareTitle}>
   <div class="mx-auto max-w-6xl px-5 pb-20 pt-8 lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[210px_minmax(0,1fr)_190px]">
     <aside class="hidden lg:block">
       <nav class="sticky top-24 flex flex-col gap-6" aria-label="Documentation">
