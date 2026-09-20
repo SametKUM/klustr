@@ -6,6 +6,13 @@ export const PERSON_ID = `${SITE.url}/#author`
 export const WEBSITE_ID = `${SITE.url}/#website`
 export const APP_ID = `${SITE.url}/#app`
 
+function dated(datePublished?: string, dateModified?: string): JsonLd {
+  return {
+    ...(datePublished ? { datePublished } : {}),
+    ...(dateModified ? { dateModified } : {}),
+  }
+}
+
 export function personLd(): JsonLd {
   return {
     '@type': 'Person',
@@ -27,11 +34,18 @@ export function websiteLd(): JsonLd {
   }
 }
 
-export function softwareLd(opts: { version?: string; screenshots: string[]; features: string[] }): JsonLd {
+export function softwareLd(opts: {
+  version?: string
+  screenshots: string[]
+  features: string[]
+  datePublished?: string
+  dateModified?: string
+}): JsonLd {
   return {
     '@type': 'SoftwareApplication',
     '@id': APP_ID,
     name: SITE.name,
+    alternateName: 'Klustr Kubernetes desktop client',
     applicationCategory: 'DeveloperApplication',
     applicationSubCategory: 'Kubernetes desktop client',
     operatingSystem: 'macOS, Linux',
@@ -46,6 +60,7 @@ export function softwareLd(opts: { version?: string; screenshots: string[]; feat
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     author: { '@id': PERSON_ID },
     ...(opts.version ? { softwareVersion: opts.version.replace(/^v/, '') } : {}),
+    ...dated(opts.datePublished, opts.dateModified),
     screenshot: opts.screenshots,
     featureList: opts.features,
     sameAs: [REPO_URL],
@@ -83,6 +98,7 @@ export function articleLd(opts: {
   headline: string
   description: string
   path: string
+  datePublished?: string
   dateModified?: string
 }): JsonLd {
   return {
@@ -95,7 +111,7 @@ export function articleLd(opts: {
     author: { '@id': PERSON_ID },
     publisher: { '@id': PERSON_ID },
     about: { '@id': APP_ID },
-    ...(opts.dateModified ? { dateModified: opts.dateModified } : {}),
+    ...dated(opts.datePublished, opts.dateModified),
   }
 }
 
