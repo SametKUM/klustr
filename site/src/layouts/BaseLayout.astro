@@ -1,0 +1,139 @@
+---
+import '../styles/global.css'
+import { ArrowUp } from '@lucide/astro'
+import Nav from '../components/Nav.astro'
+import Footer from '../components/Footer.astro'
+import { SITE, absoluteUrl } from '../lib/site'
+import type { JsonLd } from '../lib/seo'
+
+interface Props {
+  title: string
+  description: string
+  path: string
+  ogType?: 'website' | 'article'
+  jsonLd?: JsonLd | JsonLd[]
+  bareTitle?: boolean
+  ogImage?: string
+  ogImageAlt?: string
+}
+
+const {
+  title,
+  description,
+  path,
+  ogType = 'website',
+  jsonLd,
+  bareTitle = false,
+  ogImage = '/og.png',
+  ogImageAlt = `${SITE.name}: ${SITE.tagline}`,
+} = Astro.props
+
+const canonical = absoluteUrl(path)
+const pageTitle = bareTitle ? title : `${title} · ${SITE.name}`
+const ogImageUrl = absoluteUrl(ogImage)
+const ldBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#f6f3ed" data-theme-color />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="author" content={SITE.author} />
+
+    <link rel="icon" type="image/png" href="/appicon.png" />
+    <link rel="apple-touch-icon" href="/appicon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={ogImageAlt} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
+
+    <!-- Runs before first paint so a dark-mode visitor never sees the paper flash. -->
+    <script is:inline>
+      ;(() => {
+        try {
+          if (localStorage.getItem('klustr-theme') === 'dark') {
+            document.documentElement.dataset.theme = 'dark'
+            const m = document.querySelector('meta[data-theme-color]')
+            if (m) m.setAttribute('content', '#15171f')
+          }
+        } catch {}
+      })()
+    </script>
+
+    {ldBlocks.map((block) => <script type="application/ld+json" set:html={JSON.stringify(block)} />)}
+  </head>
+  <body>
+    <Nav />
+    <main id="top" class="pt-16">
+      <slot />
+    </main>
+    <Footer />
+
+    <button id="to-top" class="icon-btn" aria-label="Back to top" title="Back to top">
+      <ArrowUp size={16} />
+    </button>
+
+    <script>
+      import * as Swetrix from 'swetrix'
+
+      Swetrix.init('DaI17c1xdlkD', { respectDNT: true })
+      Swetrix.trackViews()
+
+      const nav = document.getElementById('nav')
+      const toTop = document.getElementById('to-top')
+      const onScroll = () => {
+        const y = window.scrollY
+        nav?.classList.toggle('nav-scrolled', y > 8)
+        toTop?.classList.toggle('show', y > 600)
+      }
+      window.addEventListener('scroll', onScroll, { passive: true })
+      onScroll()
+
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      toTop?.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
+      })
+
+      // The build bakes in the version and star count; this refreshes them so a
+      // page deployed before a release still shows the current tag.
+      async function hydrateFromGitHub() {
+        const repo = 'SametKUM/klustr'
+        const [release, meta] = await Promise.allSettled([
+          fetch(`https://api.github.com/repos/${repo}/releases/latest`).then((r) => (r.ok ? r.json() : Promise.reject())),
+          fetch(`https://api.github.com/repos/${repo}`).then((r) => (r.ok ? r.json() : Promise.reject())),
+        ])
+        if (release.status === 'fulfilled' && typeof release.value?.tag_name === 'string') {
+          const tag = release.value.tag_name as string
+          document.querySelectorAll('[data-version], [data-version-inline]').forEach((el) => (el.textContent = tag))
+        }
+        if (meta.status === 'fulfilled' && typeof meta.value?.stargazers_count === 'number') {
+          const stars = meta.value.stargazers_count as number
+          const text = stars >= 1000 ? `${(stars / 1000).toFixed(1)}k` : String(stars)
+          document.querySelectorAll('[data-stars]').forEach((el) => (el.textContent = text))
+        }
+      }
+      void hydrateFromGitHub()
+    </script>
+  </body>
+</html>

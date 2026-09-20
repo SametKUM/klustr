@@ -1,0 +1,106 @@
+---
+import { Download, Menu, Moon, Sun, X } from '@lucide/astro'
+import { LATEST_RELEASE_URL, NAV, REPO_URL } from '../lib/site'
+import { fetchRepoStats, formatStars } from '../lib/github'
+
+const stats = await fetchRepoStats()
+const stars = stats ? formatStars(stats.stars) : ''
+const current = Astro.url.pathname
+
+function isCurrent(href: string): boolean {
+  if (href.startsWith('/#')) return false
+  return current === href || current.startsWith(href)
+}
+---
+
+<header id="nav" class="fixed inset-x-0 top-0 z-50">
+  <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
+    <a href="/" class="flex items-center gap-2.5 no-underline" aria-label="Klustr home">
+      <img src="/appicon.png" alt="" width="28" height="28" class="rounded-md" />
+      <span class="font-mono text-[1.05rem] font-bold tracking-tight">Klustr</span>
+    </a>
+
+    <nav class="hidden items-center gap-6 md:flex" aria-label="Primary">
+      {
+        NAV.map((item) => (
+          <a href={item.href} class="nav-link" aria-current={isCurrent(item.href) ? 'page' : undefined}>
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <button class="icon-btn" type="button" data-theme-toggle aria-label="Switch color theme" title="Switch color theme">
+        <Moon class="theme-light-icon" size={16} />
+        <Sun class="theme-dark-icon" size={16} />
+      </button>
+      <a href={REPO_URL} class="btn btn-ghost btn-sm hidden sm:inline-flex" target="_blank" rel="noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" width="1em" height="1em">
+          <path
+            d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.2 3.44 9.6 8.21 11.16.6.11.82-.25.82-.57 0-.28-.01-1.02-.02-2-3.34.71-4.04-1.58-4.04-1.58-.55-1.37-1.34-1.74-1.34-1.74-1.09-.73.08-.72.08-.72 1.2.08 1.84 1.21 1.84 1.21 1.07 1.8 2.81 1.28 3.5.98.11-.76.42-1.28.76-1.58-2.67-.3-5.47-1.3-5.47-5.79 0-1.28.47-2.33 1.24-3.15-.13-.3-.54-1.5.12-3.13 0 0 1.01-.32 3.3 1.2.96-.26 1.98-.39 3-.4 1.02 0 2.04.14 3 .4 2.28-1.52 3.29-1.2 3.29-1.2.66 1.63.25 2.83.12 3.13.77.82 1.24 1.87 1.24 3.15 0 4.5-2.81 5.48-5.49 5.77.43.36.81 1.08.81 2.18 0 1.58-.01 2.85-.01 3.24 0 .32.21.69.83.57C20.57 21.88 24 17.48 24 12.29 24 5.78 18.63.5 12 .5z"
+          />
+        </svg>
+        <span>GitHub</span>
+        <span data-stars class="text-ink-3">{stars}</span>
+      </a>
+      <a href={LATEST_RELEASE_URL} class="btn btn-primary btn-sm" target="_blank" rel="noreferrer">
+        <Download size={14} />
+        <span>Download</span>
+      </a>
+      <button
+        class="icon-btn md:hidden"
+        type="button"
+        data-menu-toggle
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+      >
+        <Menu class="menu-open-icon" size={18} />
+        <X class="menu-close-icon hidden" size={18} />
+      </button>
+    </div>
+  </div>
+
+  <div id="mobile-menu" class="border-t border-rule bg-paper px-5 py-3 md:hidden" hidden>
+    <nav class="flex flex-col gap-1" aria-label="Primary mobile">
+      {
+        NAV.map((item) => (
+          <a href={item.href} class="side-link" aria-current={isCurrent(item.href) ? 'page' : undefined}>
+            {item.label}
+          </a>
+        ))
+      }
+      <a href={REPO_URL} class="side-link" target="_blank" rel="noreferrer">
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const root = document.documentElement
+  const themeColor = document.querySelector<HTMLMetaElement>('meta[data-theme-color]')
+
+  document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
+    const dark = root.dataset.theme !== 'dark'
+    if (dark) root.dataset.theme = 'dark'
+    else delete root.dataset.theme
+    themeColor?.setAttribute('content', dark ? '#15171f' : '#f6f3ed')
+    try {
+      localStorage.setItem('klustr-theme', dark ? 'dark' : 'light')
+    } catch {}
+  })
+
+  const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]')
+  const menu = document.getElementById('mobile-menu')
+  toggle?.addEventListener('click', () => {
+    const open = menu ? menu.hidden !== false : true
+    if (menu) menu.hidden = !open
+    toggle.setAttribute('aria-expanded', String(open))
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu')
+    toggle.querySelector('.menu-open-icon')?.classList.toggle('hidden', open)
+    toggle.querySelector('.menu-close-icon')?.classList.toggle('hidden', !open)
+  })
+  menu?.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => toggle?.click()))
+</script>
