@@ -77,24 +77,26 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 
 ## Screenshots
 
-Every shot is captured live from real clusters. Each is rendered in a different theme so the pack doubles as a tour of Klustr's themes — see [`docs/screenshots/`](docs/screenshots) for the full set including light variants.
+Every shot is captured from two kind clusters seeded with realistic workloads and deliberate failures. Each is rendered in a different theme so the pack doubles as a tour of Klustr's themes — see [`docs/screenshots/`](docs/screenshots) for the full set.
 
 |   |   |
 |---|---|
-| ![Aggregated pods — Dracula](docs/screenshots/02-pods-aggregated-dracula.png) | ![Cluster overview — Nord](docs/screenshots/03-cluster-overview-nord.png) |
-| **Aggregated pods** — two clusters in one table, `Context` column, status pill variety | **Cluster overview** — CPU / memory / pod donuts, live warnings feed |
-| ![Nodes usage — One Dark](docs/screenshots/04-nodes-usage-one-dark.png) | ![KEDA HPA — Nord](docs/screenshots/13-keda-hpa-nord.png) |
-| **Node usage** — CPU / memory bars and pressure conditions per node | **KEDA HPA** — autoscaler detail with the cron trigger humanized |
-| ![Helm Upgrade — Tokyo Night Day](docs/screenshots/05-helm-upgrade-tokyo-night-day.png) | ![YAML diff — Default Dark](docs/screenshots/15-yaml-diff-default-dark.png) |
-| **Helm Upgrade** — values editor, Wait / Atomic options, dry-run preview | **YAML edit** — Monaco editor with a server-side diff before apply |
-| ![Argo CD Applications — One Light](docs/screenshots/06-argo-applications-one-light.png) | ![Flux Kustomization — Monokai](docs/screenshots/07-flux-kustomization-monokai.png) |
-| **Argo CD** — Sync / Health pills, per-row Sync & Refresh without `argocd` CLI | **Flux CD** — Kustomization conditions, source & applied revision, Reconcile / Suspend |
-| ![cert-manager chain — Nord Light](docs/screenshots/08-certmanager-chain-nord-light.png) | ![HTTPRoutes — Tokyo Night](docs/screenshots/09-gateway-httproutes-tokyo-night.png) |
-| **cert-manager** — certificate readiness, issuer, SANs and the issuance chain | **Gateway API** — HTTPRoutes with parents, hostnames, accepted pills |
-| ![Pod diagnosis — Default Light](docs/screenshots/10-pod-diagnosis-default-light.png) | ![Logs streaming — Dracula Light](docs/screenshots/11-logs-stream-dracula-light.png) |
-| **Pod diagnosis** — a card explaining *why* a pod is unhealthy (CrashLoopBackOff, OOMKilled…) | **Aggregated logs** — multi-pod stream, per-pod colors, level highlighting |
-| ![Read-only mode — Tokyo Night](docs/screenshots/14-read-only-tokyo-night.png) | ![Terminal drawer — One Dark](docs/screenshots/16-terminal-drawer-one-dark.png) |
-| **Read-only mode** — a per-context safety switch that blocks every mutation | **Terminal** — embedded shell drawer wired to the active context |
+| ![Aggregated pods — Dracula](docs/screenshots/01-pods-aggregated-dracula.png) | ![Connections — Default Dark](docs/screenshots/02-connections-default-dark.png) |
+| **Aggregated pods** — two clusters and three namespaces in one table; failing pods sit next to the healthy rows | **Connections** — contexts grouped by tag, two checked for an aggregated session, a saved group for one-click reconnect |
+| ![Pod diagnosis — Default Light](docs/screenshots/03-pod-diagnosis-default-light.png) | ![Multi-pod logs — Dracula Light](docs/screenshots/04-logs-stream-dracula-light.png) |
+| **Pod diagnosis** — a card that says *why* the pod is unhealthy and what to check next | **Multi-pod logs** — one stream across a Deployment, a color per pod, live regex filter |
+| ![Debug container — One Dark](docs/screenshots/05-debug-container-one-dark.png) | ![Helm upgrade — Tokyo Night Day](docs/screenshots/06-helm-upgrade-diff-tokyo-night-day.png) |
+| **Debug container** — netshoot injected into a shell-less pod, `ps` / `curl` / `dig` against the target | **Helm upgrade** — values on the left, the dry-run rendered manifest on the right, apply only after reading it |
+| ![Argo CD — One Light](docs/screenshots/07-argo-applications-one-light.png) | ![Flux Kustomization — Monokai](docs/screenshots/08-flux-kustomization-monokai.png) |
+| **Argo CD** — Sync / Health pills, per-row Refresh, Suspend and Sync through the Kubernetes API | **Flux CD** — a failed Kustomization with its status message, source and path readable without YAML |
+| ![Gateway API — Tokyo Night](docs/screenshots/09-gateway-httproute-tokyo-night.png) | ![cert-manager chain — Nord Light](docs/screenshots/10-certmanager-chain-nord-light.png) |
+| **Gateway API** — rule matrix plus `RouteParentStatus`: Accepted, but `ResolvedRefs=False` with `RefNotPermitted` | **cert-manager** — Certificate → CertificateRequest → Order → Challenge, with the ACME self-check error |
+| ![Access Review — Nord](docs/screenshots/11-access-review-nord.png) | ![YAML diff — Default Dark](docs/screenshots/12-yaml-diff-default-dark.png) |
+| **Access Review** — a ServiceAccount's effective permissions as a resource × verb matrix per scope, wildcard rules flagged | **YAML edit** — Monaco editor with the server-side dry-run diff before apply |
+| ![Rollout history — Monokai Light](docs/screenshots/13-rollout-history-monokai-light.png) | ![Node drain — Dracula](docs/screenshots/14-node-drain-dracula.png) |
+| **Rollout history** — revision diff with change causes and one-click rollback | **Node drain** — Eviction API progress, the PDB-blocked pod called out and retried |
+| ![Terminal drawer — One Dark](docs/screenshots/15-terminal-drawer-one-dark.png) | ![Cluster overview — Nord](docs/screenshots/17-cluster-overview-nord.png) |
+| **Terminal** — a local shell pinned to a context under the table, `KUBECONFIG` already set | **Cluster overview** — CPU / memory / pod capacity per cluster and a live warnings feed |
 
 ## Install
 
