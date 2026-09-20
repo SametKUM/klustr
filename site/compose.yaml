@@ -1,0 +1,43 @@
+name: klustr-site
+
+services:
+  # Production-shaped image: the static build served by static-web-server on
+  # http://127.0.0.1:8080. `docker compose up --build` after a change.
+  site:
+    build:
+      context: ..
+      dockerfile: site/Dockerfile
+      secrets:
+        - github_token
+    image: klustr-site:local
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  # Hot-reload dev server without Node on the host, on http://127.0.0.1:4321.
+  # node_modules and .astro live in named volumes: the container's musl
+  # binaries never mix with a host install, and the root-owned files the dev
+  # server writes never land in the checkout. `docker compose --profile dev up dev`.
+  dev:
+    profiles: [dev]
+    image: node:24-alpine
+    working_dir: /repo/site
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 4321"
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    ports:
+      - "127.0.0.1:4321:4321"
+    volumes:
+      - ./:/repo/site
+      - ../docs/guide:/repo/docs/guide:ro
+      - node_modules:/repo/site/node_modules
+      - astro_cache:/repo/site/.astro
+
+secrets:
+  # Read from the shell environment at build time; an unset variable yields an
+  # empty secret, which the Dockerfile treats as "no token".
+  github_token:
+    environment: GITHUB_TOKEN
+
+volumes:
+  node_modules:
+  astro_cache:
