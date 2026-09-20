@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="Page not found" description="That page does not exist on klustr.dev." path="/404/">
+  <section class="mx-auto max-w-2xl px-5 py-32 text-center">
+    <p class="eyebrow">404</p>
+    <h1 class="display mt-4 text-4xl sm:text-5xl">No such page.</h1>
+    <p class="lede mt-5">The link may be old, or the guide moved. Everything on this site is one click from here.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/" class="btn btn-primary">Home</a>
+      <a href="/docs/" class="btn btn-ghost">Documentation</a>
+    </div>
+  </section>
+</BaseLayout>
