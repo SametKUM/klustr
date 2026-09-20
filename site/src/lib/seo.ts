@@ -38,7 +38,7 @@ export function softwareLd(opts: { version?: string; screenshots: string[]; feat
     description: SITE.description,
     url: `${SITE.url}/`,
     downloadUrl: LATEST_RELEASE_URL,
-    installUrl: `${SITE.url}/#install`,
+    installUrl: `${SITE.url}/install/`,
     softwareHelp: `${SITE.url}/docs/`,
     releaseNotes: `${SITE.url}/changelog/`,
     license: LICENSE_URL,
