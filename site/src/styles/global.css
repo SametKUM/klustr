@@ -542,51 +542,100 @@
     font-weight: 600;
     white-space: nowrap;
   }
+  .slider-caption {
+    color: var(--ink-2);
+    font-size: 0.875rem;
+  }
   .slider-theme {
     color: var(--ink-3);
     font-family: var(--font-mono);
     font-size: 0.8rem;
     white-space: nowrap;
   }
-  .slider-dots {
+
+  /* ── Trust strip and feature tabs ─────────────────────────────────── */
+
+  .strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 0.75rem 2rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+  .strip-item {
     display: flex;
-    align-items: center;
-    gap: 5px;
+    align-items: flex-start;
+    gap: 0.6rem;
   }
-  .slider-dot {
-    width: 8px;
-    height: 8px;
-    padding: 0;
-    border-radius: 9999px;
-    border: 1px solid var(--rule-strong);
-    background: var(--paper-2);
-    cursor: pointer;
-    transition:
-      background-color 0.12s ease,
-      border-color 0.12s ease;
+  .strip-item svg {
+    flex: none;
+    margin-top: 0.2rem;
+    color: var(--accent);
   }
-  .slider-dot.is-active,
-  .slider-dot:hover {
-    background: var(--accent);
+  .strip-item b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .ftab {
+    transition: border-color 0.12s ease;
+  }
+  .ftab[data-active] {
     border-color: var(--accent);
+  }
+  .ftab-head {
+    margin: 0;
+  }
+  .ftab-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-sheet);
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ftab[data-active] .ftab-btn {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .ftab-title {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+  .ftab-body {
+    padding: 0 1rem 1rem;
+  }
+  .ftab-body > p {
+    color: var(--ink-2);
+    font-size: 0.95rem;
+    line-height: 1.6;
   }
 
   /* ── Stats, chips, capability cards ───────────────────────────────── */
 
   .stat {
-    padding: 1.25rem 1.15rem 1.15rem;
+    padding: 1rem 1rem 0.9rem;
   }
   .stat-value {
     font-family: var(--font-mono);
     font-weight: 800;
-    font-size: clamp(2rem, 3.4vw, 2.9rem);
+    font-size: clamp(1.7rem, 2.3vw, 2.4rem);
     letter-spacing: -0.05em;
     line-height: 1;
     color: var(--ink);
   }
   .stat-label {
-    margin-top: 0.55rem;
-    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
     color: var(--ink-2);
   }
 
