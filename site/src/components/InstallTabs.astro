@@ -1,0 +1,81 @@
+---
+import BrandIcon from './BrandIcon.astro'
+import CommandBlock from './CommandBlock.astro'
+import { INSTALL_TABS } from '../data/install'
+
+interface Props {
+  group: string
+  version?: string
+  detectOs?: boolean
+  class?: string
+}
+
+const { group, version, detectOs = false, class: className = '' } = Astro.props
+---
+
+<div class:list={['terminal', className]} data-tabs={group} data-detect-os={detectOs ? '' : undefined}>
+  <div class="flex items-center gap-1 overflow-x-auto border-b border-rule px-2" role="tablist">
+    {
+      INSTALL_TABS.map((tab, i) => (
+        <button
+          class="tab"
+          type="button"
+          role="tab"
+          id={`${group}-tab-${tab.id}`}
+          data-tab={tab.id}
+          aria-selected={i === 0 ? 'true' : 'false'}
+          aria-controls={`${group}-panel-${tab.id}`}
+        >
+          <span data-brand>
+            <BrandIcon brand={tab.brand} size="0.95em" />
+          </span>
+          {tab.label}
+        </button>
+      ))
+    }
+    <span class="ml-auto hidden items-center gap-1.5 pr-3 font-mono text-xs text-ink-3 sm:flex">
+      <span class="live-dot h-1.5 w-1.5 rounded-full bg-ok"></span>
+      <span data-version>{version ?? 'latest'}</span>
+    </span>
+  </div>
+  {
+    INSTALL_TABS.map((tab, i) => (
+      <div
+        class="panel px-3 py-3 sm:px-4"
+        role="tabpanel"
+        id={`${group}-panel-${tab.id}`}
+        aria-labelledby={`${group}-tab-${tab.id}`}
+        data-panel={tab.id}
+        hidden={i !== 0}
+      >
+        <CommandBlock html={tab.html} class="border-0 bg-transparent p-0" />
+      </div>
+    ))
+  }
+</div>
+
+<script>
+  function selectTab(group: HTMLElement, name: string) {
+    group.querySelectorAll<HTMLElement>('[data-tab]').forEach((t) => {
+      t.setAttribute('aria-selected', String(t.dataset.tab === name))
+    })
+    group.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => {
+      p.hidden = p.dataset.panel !== name
+    })
+  }
+
+  function detectTab(): string {
+    const ua = navigator.userAgent
+    if (/Macintosh|Mac OS X/.test(ua)) return 'mac'
+    if (/Windows/.test(ua)) return 'build'
+    if (/Linux|X11|CrOS/.test(ua)) return 'deb'
+    return 'mac'
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-tabs]').forEach((group) => {
+    group.querySelectorAll<HTMLElement>('[data-tab]').forEach((tab) => {
+      tab.addEventListener('click', () => selectTab(group, tab.dataset.tab ?? ''))
+    })
+    if ('detectOs' in group.dataset) selectTab(group, detectTab())
+  })
+</script>
