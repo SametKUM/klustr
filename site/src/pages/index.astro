@@ -300,38 +300,6 @@ const compareRows = [
     </div>
   </section>
 
-  <!-- Install -->
-  <section id="install" class="scroll-mt-20 border-t border-rule py-14">
-    <div class="mx-auto max-w-6xl px-5">
-      <div class="mx-auto max-w-2xl text-center">
-        <p class="eyebrow">install</p>
-        <h2 class="display mt-3 text-3xl sm:text-4xl">Install. Connect. Browse.</h2>
-        <p class="lede mt-4">If kubectl works on your machine, Klustr works. No sign-up and nothing to deploy.</p>
-      </div>
-
-      <InstallTabs group="install" version={version} class="mx-auto mt-8 max-w-2xl" />
-
-      <ol class="mt-6 grid gap-4 sm:grid-cols-3">
-        <li class="sheet cap">
-          <h3><span class="text-accent">1</span> Install</h3>
-          <p>Homebrew on macOS, paru or apt on Linux, or the tarball. The macOS build is signed and notarized.</p>
-        </li>
-        <li class="sheet cap">
-          <h3><span class="text-accent">2</span> Connect</h3>
-          <p>Klustr reads ~/.kube/config and lists every context. Pick one, or check several to aggregate them.</p>
-        </li>
-        <li class="sheet cap">
-          <h3><span class="text-accent">3</span> Browse</h3>
-          <p>The sidebar shows what your RBAC allows. ⌘K opens the command palette and ⌘P finds a pod by name.</p>
-        </li>
-      </ol>
-
-      <p class="mt-6 text-center text-sm text-ink-3">
-        Manual tarballs, the .deb, building from source and checksum verification are on the <a href="/install/" class="text-accent">install page</a>.
-      </p>
-    </div>
-  </section>
-
   <!-- Final call -->
   <section class="border-t border-rule py-16">
     <div class="mx-auto max-w-2xl px-5 text-center">
