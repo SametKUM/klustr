@@ -1,0 +1,118 @@
+---
+import { Picture } from 'astro:assets'
+import type { Shot } from '../data/shots'
+
+export type Feature = {
+  id: string
+  eyebrow: string
+  heading: string
+  body: string
+  chips: { value: string; label: string }[]
+  shot: Shot
+  link: { href: string; label: string }
+}
+
+interface Props {
+  features: Feature[]
+}
+
+const { features } = Astro.props
+---
+
+<div class="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start" data-feature-tabs>
+  <div class="flex flex-col gap-2">
+    {
+      features.map((f, i) => (
+        <div class="ftab sheet" data-ftab={f.id} data-active={i === 0 ? '' : undefined}>
+          <h3 class="ftab-head">
+            <button
+              type="button"
+              class="ftab-btn"
+              id={`ftab-btn-${f.id}`}
+              aria-expanded={i === 0 ? 'true' : 'false'}
+              aria-controls={`ftab-panel-${f.id}`}
+            >
+              <span class="eyebrow">{f.eyebrow}</span>
+              <span class="ftab-title">{f.heading}</span>
+            </button>
+          </h3>
+          <div class="ftab-body" id={`ftab-panel-${f.id}`} role="region" aria-labelledby={`ftab-btn-${f.id}`} hidden={i !== 0}>
+            <p>{f.body}</p>
+            <div class="mt-4 grid grid-cols-3 gap-2">
+              {f.chips.map((chip) => (
+                <div class="sheet chip">
+                  <div class="chip-value">{chip.value}</div>
+                  <div class="chip-label">{chip.label}</div>
+                </div>
+              ))}
+            </div>
+            <a href={f.link.href} class="mt-4 inline-block text-sm font-medium text-accent">
+              {f.link.label}
+            </a>
+            <figure class="sheet mt-4 overflow-hidden lg:hidden">
+              <Picture
+                src={f.shot.image}
+                alt={`Klustr ${f.shot.title} view in the ${f.shot.theme} theme. ${f.shot.caption}`}
+                widths={[640, 1024]}
+                sizes="100vw"
+                formats={['avif']}
+                fallbackFormat="webp"
+                loading="lazy"
+                decoding="async"
+                class="block h-auto w-full"
+              />
+            </figure>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="hidden lg:block lg:sticky lg:top-24">
+    {
+      features.map((f, i) => (
+        <figure class="sheet overflow-hidden" data-ftab-figure={f.id} hidden={i !== 0}>
+          <Picture
+            src={f.shot.image}
+            alt={`Klustr ${f.shot.title} view in the ${f.shot.theme} theme. ${f.shot.caption}`}
+            widths={[640, 1024, 1400]}
+            sizes="(max-width: 1024px) 100vw, 660px"
+            formats={['avif']}
+            fallbackFormat="webp"
+            loading="lazy"
+            decoding="async"
+            class="block h-auto w-full"
+          />
+          <figcaption class="flex items-center justify-between gap-3 border-t border-rule px-4 py-2 text-xs text-ink-3">
+            <span>{f.shot.title}</span>
+            <span class="font-mono">{f.shot.theme}</span>
+          </figcaption>
+        </figure>
+      ))
+    }
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-feature-tabs]').forEach((root) => {
+    const items = [...root.querySelectorAll<HTMLElement>('[data-ftab]')]
+    const figures = [...root.querySelectorAll<HTMLElement>('[data-ftab-figure]')]
+
+    function activate(id: string) {
+      items.forEach((item) => {
+        const on = item.dataset.ftab === id
+        item.toggleAttribute('data-active', on)
+        item.querySelector('.ftab-btn')?.setAttribute('aria-expanded', String(on))
+        const body = item.querySelector<HTMLElement>('.ftab-body')
+        if (body) body.hidden = !on
+      })
+      figures.forEach((fig) => {
+        fig.hidden = fig.dataset.ftabFigure !== id
+      })
+    }
+
+    items.forEach((item) => {
+      item.querySelector('.ftab-btn')?.addEventListener('click', () => activate(item.dataset.ftab ?? ''))
+    })
+  })
+</script>

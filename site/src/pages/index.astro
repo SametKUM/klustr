@@ -1,5 +1,5 @@
 ---
-import { Picture, getImage } from 'astro:assets'
+import { getImage } from 'astro:assets'
 import {
   Blocks,
   Boxes,
@@ -19,14 +19,13 @@ import {
 } from '@lucide/astro'
 import BaseLayout from '../layouts/BaseLayout.astro'
 import BrandIcon from '../components/BrandIcon.astro'
-import CommandBlock from '../components/CommandBlock.astro'
 import CompareTable from '../components/CompareTable.astro'
+import FeatureTabs, { type Feature } from '../components/FeatureTabs.astro'
 import HeroSlider from '../components/HeroSlider.astro'
 import InstallTabs from '../components/InstallTabs.astro'
 import heroPoster from '../assets/hero-poster.png'
-import { COMPARE_PAGES, REVIEWED_ON, TOOLS } from '../data/compare'
+import { REVIEWED_ON } from '../data/compare'
 import { FEATURE_LIST } from '../data/features'
-import { ARCH_HELPERS, FROM_SOURCE, INSTALL_TABS, LINUX_TARBALL, MAC_MANUAL } from '../data/install'
 import { SHOTS, shotBySlug } from '../data/shots'
 import { latestRelease } from '../lib/github'
 import { graph, personLd, softwareLd, sourceCodeLd, websiteLd } from '../lib/seo'
@@ -47,10 +46,7 @@ const jsonLd = graph([
   sourceCodeLd(),
 ])
 
-const macTab = INSTALL_TABS.find((t) => t.id === 'mac')!
-const debTab = INSTALL_TABS.find((t) => t.id === 'deb')!
-
-const proofs = [
+const features: Feature[] = [
   {
     id: 'multi-context',
     eyebrow: 'multi-context',
@@ -120,7 +116,7 @@ const proofs = [
 
 const stats = [
   { value: '62', label: 'resource kinds with YAML edit, delete and scale' },
-  { value: '8', label: 'platform integrations with typed views and actions' },
+  { value: '8', label: 'platform integrations with typed views' },
   { value: '12', label: 'themes, six light and six dark' },
   { value: '0', label: 'components installed in the cluster' },
   { value: '22 MB', label: 'macOS download, signed and notarized' },
@@ -170,7 +166,16 @@ const capabilities = [
   },
 ]
 
-const landingTools = ['klustr', 'lens', 'k9s', 'headlamp'] as const
+const compareRows = [
+  'License and price',
+  'Installed in the cluster',
+  'Account or sign-in',
+  'Several clusters at once',
+  'RBAC',
+  'Helm',
+  'Argo CD and Flux',
+  'Gateway API',
+]
 ---
 
 <BaseLayout
@@ -181,22 +186,22 @@ const landingTools = ['klustr', 'lens', 'k9s', 'headlamp'] as const
   jsonLd={jsonLd}
 >
   <!-- Hero -->
-  <section class="mx-auto max-w-6xl px-5 pb-12 pt-12 md:pt-20">
+  <section class="mx-auto max-w-6xl px-5 pb-10 pt-10 md:pt-14">
     <div class="mx-auto max-w-5xl text-center">
       <p class="eyebrow rise">kubernetes desktop client for macOS and Linux</p>
-      <h1 class="display rise rise-2 mt-5 text-[2.25rem] sm:text-5xl lg:text-[3.75rem]">
+      <h1 class="display rise rise-2 mt-4 text-[2.25rem] sm:text-5xl lg:text-[3.75rem]">
         Your clusters, live.<br />
         <span class="marker">Nothing installed in them.</span>
       </h1>
-      <p class="lede rise rise-3 mx-auto mt-7 max-w-2xl">
+      <p class="lede rise rise-3 mx-auto mt-5 max-w-2xl">
         Klustr reads the kubeconfig you already have and drives the Kubernetes API the way kubectl does. Live
         resources, RBAC review, Helm, Argo CD, Flux, Gateway API and cert-manager in one window. Free and open
         source under MIT.
       </p>
 
-      <InstallTabs group="hero" version={version} detectOs class="rise rise-4 mx-auto mt-9 max-w-2xl" />
+      <InstallTabs group="hero" version={version} detectOs class="rise rise-4 mx-auto mt-7 max-w-2xl" />
 
-      <div class="rise rise-4 mt-6 flex flex-wrap items-center justify-center gap-3">
+      <div class="rise rise-4 mt-5 flex flex-wrap items-center justify-center gap-3">
         <a href={LATEST_RELEASE_URL} class="btn btn-primary" target="_blank" rel="noreferrer">
           <Download size={15} />
           <span>Download <span data-version-inline>{version}</span></span>
@@ -205,105 +210,46 @@ const landingTools = ['klustr', 'lens', 'k9s', 'headlamp'] as const
           <Play size={15} />
           <span>Watch the demo</span>
         </button>
+        <a href="/install/" class="btn btn-ghost">All install options</a>
       </div>
-
-      <ul class="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ink-3">
-        <li class="inline-flex items-center gap-2"><BrandIcon brand="apple" /> macOS on Apple Silicon, notarized</li>
-        <li class="inline-flex items-center gap-2"><BrandIcon brand="linux" /> Linux amd64 as tarball, .deb and AUR</li>
-        <li class="inline-flex items-center gap-2"><BrandIcon brand="source" /> Windows from source</li>
-      </ul>
     </div>
 
-    <div class="mt-16">
+    <div class="mt-10">
       <HeroSlider />
     </div>
   </section>
 
-  <!-- Trust band -->
-  <section class="mx-auto max-w-6xl px-5 py-14">
-    <div class="rule-x mb-12"></div>
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="sheet cap">
-        <h3><ShieldCheck size={18} /> Pure client</h3>
-        <p>
-          No agent, operator, CRD or sidecar. Klustr talks to the API server the same way kubectl does, and you see
-          exactly what your RBAC allows.
-        </p>
+  <!-- Trust strip -->
+  <section class="border-y border-rule py-5">
+    <div class="strip mx-auto max-w-6xl px-5">
+      <div class="strip-item"><ShieldCheck size={16} /><span><b>Pure client.</b> No agent, operator, CRD or sidecar in the cluster.</span></div>
+      <div class="strip-item"><Zap size={16} /><span><b>Live, never polled.</b> client-go informers push every change as it lands.</span></div>
+      <div class="strip-item"><KeyRound size={16} /><span><b>Just your kubeconfig.</b> Exec plugins and aws-vault work from the Dock.</span></div>
+      <div class="strip-item"><Scale size={16} /><span><b>Open source, MIT.</b> No account, no activation, no paid tier.</span></div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="scroll-mt-20 py-14">
+    <div class="mx-auto max-w-6xl px-5">
+      <div class="max-w-2xl">
+        <p class="eyebrow">five workflows</p>
+        <h2 class="display mt-3 text-3xl sm:text-4xl">The jobs kubectl makes you stitch together.</h2>
       </div>
-      <div class="sheet cap">
-        <h3><Zap size={18} /> Live, never polled</h3>
-        <p>
-          client-go informers push every change as it lands. No refresh button and no polling loop against the API
-          server.
-        </p>
-      </div>
-      <div class="sheet cap">
-        <h3><KeyRound size={18} /> Just your kubeconfig</h3>
-        <p>
-          Exec plugins, aws-vault profiles and your login-shell environment keep working when Klustr is launched from
-          the Dock or Finder.
-        </p>
-      </div>
-      <div class="sheet cap">
-        <h3><Scale size={18} /> Open source, MIT</h3>
-        <p>No account, no activation, no paid tier. The source is on GitHub and every release is built by CI.</p>
+      <div class="mt-8">
+        <FeatureTabs features={features} />
       </div>
     </div>
   </section>
 
-  <!-- Proof sections -->
-  <div id="features" class="scroll-mt-20">
-    {
-      proofs.map((proof, i) => (
-        <section id={proof.id} class="border-t border-rule py-16 scroll-mt-20">
-          <div class="mx-auto grid max-w-6xl items-center gap-10 px-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14">
-            <div class:list={[{ 'lg:order-2': i % 2 === 1 }]}>
-              <p class="eyebrow">{proof.eyebrow}</p>
-              <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">{proof.heading}</h2>
-              <p class="lede mt-5">{proof.body}</p>
-              <div class="mt-6 grid gap-3 sm:grid-cols-3">
-                {proof.chips.map((chip) => (
-                  <div class="sheet chip">
-                    <div class="chip-value">{chip.value}</div>
-                    <div class="chip-label">{chip.label}</div>
-                  </div>
-                ))}
-              </div>
-              <a href={proof.link.href} class="mt-6 inline-block text-sm font-medium text-accent">
-                {proof.link.label}
-              </a>
-            </div>
-            <figure class:list={['sheet overflow-hidden', { 'lg:order-1': i % 2 === 1 }]}>
-              <Picture
-                src={proof.shot.image}
-                alt={`Klustr ${proof.shot.title} view in the ${proof.shot.theme} theme. ${proof.shot.caption}`}
-                widths={[640, 1024, 1400]}
-                sizes="(max-width: 1024px) 100vw, 660px"
-                formats={['avif']}
-                fallbackFormat="webp"
-                loading="lazy"
-                decoding="async"
-                class="block h-auto w-full"
-              />
-              <figcaption class="flex items-center justify-between gap-3 border-t border-rule px-4 py-2 text-xs text-ink-3">
-                <span>{proof.shot.title}</span>
-                <span class="font-mono">{proof.shot.theme}</span>
-              </figcaption>
-            </figure>
-          </div>
-        </section>
-      ))
-    }
-  </div>
-
   <!-- Stats -->
-  <section class="border-y border-rule py-16">
+  <section class="border-y border-rule py-12">
     <div class="mx-auto max-w-6xl px-5">
-      <div class="max-w-2xl">
-        <p class="eyebrow">by the numbers</p>
-        <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">Counted from the source.</h2>
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+        <h2 class="display text-2xl">Counted from the source.</h2>
+        <p class="font-mono text-sm text-ink-3">Counts from the repository and the latest release, not benchmark claims.</p>
       </div>
-      <div class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {
           stats.map((stat) => (
             <div class="sheet stat ticks">
@@ -313,23 +259,16 @@ const landingTools = ['klustr', 'lens', 'k9s', 'headlamp'] as const
           ))
         }
       </div>
-      <p class="mt-5 text-right font-mono text-sm text-ink-3">
-        Counts from the repository and the latest release, not benchmark claims.
-      </p>
     </div>
   </section>
 
   <!-- Capabilities -->
-  <section class="mx-auto max-w-6xl px-5 py-16">
+  <section class="mx-auto max-w-6xl px-5 py-14">
     <div class="max-w-2xl">
       <p class="eyebrow">everything else</p>
-      <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">Built for the whole cluster, not a demo namespace.</h2>
-      <p class="lede mt-5">
-        Sixty-two resource kinds, the complete RBAC set and every CRD on the cluster, with the same list, detail, YAML
-        and action surface for each.
-      </p>
+      <h2 class="display mt-3 text-3xl sm:text-4xl">Built for the whole cluster, not a demo namespace.</h2>
     </div>
-    <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {
         capabilities.map(({ icon: Icon, title, body }) => (
           <div class="sheet cap">
@@ -344,55 +283,35 @@ const landingTools = ['klustr', 'lens', 'k9s', 'headlamp'] as const
   </section>
 
   <!-- Compare -->
-  <section id="compare" class="border-t border-rule py-16 scroll-mt-20">
+  <section id="compare" class="scroll-mt-20 border-t border-rule py-14">
     <div class="mx-auto max-w-6xl px-5">
-      <div class="max-w-2xl">
-        <p class="eyebrow">compare</p>
-        <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">Klustr next to Lens, k9s and Headlamp.</h2>
-        <p class="lede mt-5">
-          Each of these is a good tool with a different shape. The table keeps to facts you can check in their
-          documentation; the linked pages go row by row and say where each one is the better pick.
-        </p>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div class="max-w-2xl">
+          <p class="eyebrow">compare</p>
+          <h2 class="display mt-3 text-3xl sm:text-4xl">Klustr next to Lens, k9s and Headlamp.</h2>
+        </div>
+        <a href="/compare/" class="btn btn-ghost btn-sm shrink-0">All 14 rows and Kubernetes Dashboard</a>
       </div>
-      <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {
-          landingTools.map((id) => {
-            const tool = TOOLS[id]
-            const page = COMPARE_PAGES.find((p) => p.tool === id)
-            return (
-              <div class:list={['sheet cap', { 'border-accent bg-accent-soft': id === 'klustr' }]}>
-                <h3>{tool.name}</h3>
-                <p>{tool.summary}</p>
-                {page && (
-                  <a href={`/compare/${page.slug}/`} class="mt-3 inline-block text-sm font-medium text-accent">
-                    Full comparison
-                  </a>
-                )}
-              </div>
-            )
-          })
-        }
-      </div>
-      <CompareTable tools={[...landingTools]} class="mt-6" />
-      <p class="mt-4 text-sm text-ink-3">
-        Reviewed {REVIEWED_ON}. <a href="/compare/" class="text-accent">All comparisons</a>, including Kubernetes
-        Dashboard.
+      <CompareTable tools={['klustr', 'lens', 'k9s', 'headlamp']} rows={compareRows} class="mt-8" />
+      <p class="mt-3 text-sm text-ink-3">
+        Facts checked against each tool’s documentation on {REVIEWED_ON}. Each of these is a good tool with a different
+        shape; the <a href="/compare/" class="text-accent">comparison pages</a> say where each one is the better pick.
       </p>
     </div>
   </section>
 
   <!-- Install -->
-  <section id="install" class="border-t border-rule py-16 scroll-mt-20">
+  <section id="install" class="scroll-mt-20 border-t border-rule py-14">
     <div class="mx-auto max-w-6xl px-5">
       <div class="mx-auto max-w-2xl text-center">
         <p class="eyebrow">install</p>
-        <h2 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">Install. Connect. Browse.</h2>
-        <p class="lede mt-5">If kubectl works on your machine, Klustr works. No sign-up and nothing to deploy.</p>
+        <h2 class="display mt-3 text-3xl sm:text-4xl">Install. Connect. Browse.</h2>
+        <p class="lede mt-4">If kubectl works on your machine, Klustr works. No sign-up and nothing to deploy.</p>
       </div>
 
-      <InstallTabs group="install" version={version} class="mx-auto mt-9 max-w-2xl" />
+      <InstallTabs group="install" version={version} class="mx-auto mt-8 max-w-2xl" />
 
-      <ol class="mt-8 grid gap-4 sm:grid-cols-3">
+      <ol class="mt-6 grid gap-4 sm:grid-cols-3">
         <li class="sheet cap">
           <h3><span class="text-accent">1</span> Install</h3>
           <p>Homebrew on macOS, paru or apt on Linux, or the tarball. The macOS build is signed and notarized.</p>
@@ -407,80 +326,29 @@ const landingTools = ['klustr', 'lens', 'k9s', 'headlamp'] as const
         </li>
       </ol>
 
-      <div class="mt-12 grid gap-5 lg:grid-cols-2">
-        <div class="sheet p-6">
-          <div class="mb-4 flex items-center gap-3">
-            <span class="icon-btn pointer-events-none"><BrandIcon brand="apple" size="1.2rem" /></span>
-            <div>
-              <h3 class="font-mono font-semibold">macOS</h3>
-              <p class="text-xs text-ink-3">Apple Silicon, signed and notarized</p>
-            </div>
-          </div>
-          <p class="eyebrow mb-2">homebrew</p>
-          <CommandBlock html={macTab.html} />
-          <p class="eyebrow mb-2 mt-5">manual</p>
-          <CommandBlock html={MAC_MANUAL} />
-        </div>
-
-        <div class="sheet p-6">
-          <div class="mb-4 flex items-center gap-3">
-            <span class="icon-btn pointer-events-none"><BrandIcon brand="archlinux" size="1.2rem" /></span>
-            <div>
-              <h3 class="font-mono font-semibold">Arch, CachyOS, Manjaro</h3>
-              <p class="text-xs text-ink-3">AUR package klustr-bin</p>
-            </div>
-          </div>
-          <p class="eyebrow mb-2">aur helper</p>
-          <CommandBlock html={ARCH_HELPERS} />
-          <p class="mt-5 text-sm leading-relaxed text-ink-2">
-            Built from the prebuilt release tarball, so the install completes in seconds and paru -Syu keeps it
-            current.
-          </p>
-        </div>
-
-        <div class="sheet p-6">
-          <div class="mb-4 flex items-center gap-3">
-            <span class="icon-btn pointer-events-none"><BrandIcon brand="ubuntu" size="1.2rem" /></span>
-            <div>
-              <h3 class="font-mono font-semibold">Debian, Ubuntu</h3>
-              <p class="text-xs text-ink-3">amd64 .deb</p>
-            </div>
-          </div>
-          <CommandBlock html={debTab.html} />
-          <p class="mt-4 text-sm leading-relaxed text-ink-2">
-            Pulls in webkit2gtk-4.1 and gtk-3 automatically and registers a desktop entry.
-          </p>
-        </div>
-
-        <div class="sheet p-6">
-          <div class="mb-4 flex items-center gap-3">
-            <span class="icon-btn pointer-events-none"><BrandIcon brand="linux" size="1.25rem" /></span>
-            <div>
-              <h3 class="font-mono font-semibold">Linux tarball and source</h3>
-              <p class="text-xs text-ink-3">amd64, and the Windows path today</p>
-            </div>
-          </div>
-          <p class="eyebrow mb-2">tarball</p>
-          <CommandBlock html={LINUX_TARBALL} />
-          <p class="eyebrow mb-2 mt-5">from source</p>
-          <CommandBlock html={FROM_SOURCE} />
-        </div>
-      </div>
+      <p class="mt-6 text-center text-sm text-ink-3">
+        Manual tarballs, the .deb, building from source and checksum verification are on the <a href="/install/" class="text-accent">install page</a>.
+      </p>
     </div>
   </section>
 
   <!-- Final call -->
-  <section class="border-t border-rule py-20">
+  <section class="border-t border-rule py-16">
     <div class="mx-auto max-w-2xl px-5 text-center">
-      <h2 class="display text-3xl sm:text-4xl lg:text-[2.75rem]">Point it at a context.</h2>
-      <p class="lede mt-5">One binary on your machine. Nothing in the cluster. Every context in your kubeconfig.</p>
-      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <h2 class="display text-3xl sm:text-4xl">Point it at a context.</h2>
+      <p class="lede mt-4">One binary on your machine. Nothing in the cluster. Every context in your kubeconfig.</p>
+      <div class="mt-7 flex flex-wrap items-center justify-center gap-3">
         <a href={LATEST_RELEASE_URL} class="btn btn-primary" target="_blank" rel="noreferrer">
           <Download size={15} />
           <span>Download <span data-version-inline>{version}</span></span>
         </a>
         <a href={REPO_URL} class="btn btn-ghost" target="_blank" rel="noreferrer">View on GitHub</a>
       </div>
+      <ul class="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ink-3">
+        <li class="inline-flex items-center gap-2"><BrandIcon brand="apple" /> macOS on Apple Silicon, notarized</li>
+        <li class="inline-flex items-center gap-2"><BrandIcon brand="linux" /> Linux amd64 as tarball, .deb and AUR</li>
+        <li class="inline-flex items-center gap-2"><BrandIcon brand="source" /> Windows from source</li>
+      </ul>
     </div>
   </section>
 

@@ -3,11 +3,13 @@ import { ROWS, TOOLS, type ToolId } from '../data/compare'
 
 interface Props {
   tools: ToolId[]
+  rows?: string[]
   compact?: boolean
   class?: string
 }
 
-const { tools, compact = false, class: className = '' } = Astro.props
+const { tools, rows: rowLabels, compact = false, class: className = '' } = Astro.props
+const rows = rowLabels ? ROWS.filter((r) => rowLabels.includes(r.label)) : ROWS
 ---
 
 <div class:list={['cmp-wrap', { 'cmp-compact': compact }, className]}>
@@ -26,7 +28,7 @@ const { tools, compact = false, class: className = '' } = Astro.props
     </thead>
     <tbody>
       {
-        ROWS.map((row) => (
+        rows.map((row) => (
           <tr>
             <th scope="row">{row.label}</th>
             {tools.map((id) => {
