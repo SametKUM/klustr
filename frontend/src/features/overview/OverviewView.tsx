@@ -341,26 +341,31 @@ function ClusterSection({
         </div>
       )}
 
-      <div className="grid gap-4 px-6 py-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4">
-        <ResourceCard
-          title="CPU"
-          metric={overview?.cpu ?? null}
-          format={formatCores}
-          unit="cores"
-        />
-        <ResourceCard
-          title="Memory"
-          metric={overview?.memory ?? null}
-          format={formatBytes}
-          unit=""
-        />
-        <PodsCard pods={overview?.pods ?? null} />
-        <ClusterIdentityCard
-          contextName={contextName}
-          context={state.contextInfo}
-          version={state.serverVersion}
-          error={state.identityError}
-        />
+      {/* Column count follows the pane, not the viewport: with the sidebar
+          expanded, four cards at a 1280px window leave no room for the legend
+          values. Four columns need roughly 1152px of pane width. */}
+      <div className="@container">
+        <div className="grid gap-4 px-6 py-4 @2xl:grid-cols-2 @6xl:grid-cols-4">
+          <ResourceCard
+            title="CPU"
+            metric={overview?.cpu ?? null}
+            format={formatCores}
+            unit="cores"
+          />
+          <ResourceCard
+            title="Memory"
+            metric={overview?.memory ?? null}
+            format={formatBytes}
+            unit=""
+          />
+          <PodsCard pods={overview?.pods ?? null} />
+          <ClusterIdentityCard
+            contextName={contextName}
+            context={state.contextInfo}
+            version={state.serverVersion}
+            error={state.identityError}
+          />
+        </div>
       </div>
 
       {showWarnings && (
@@ -575,14 +580,18 @@ function PodsCard({ pods }: { pods: ClusterPods | null }) {
   )
 }
 
+// The value is the number the card exists for, so it never shrinks or wraps;
+// a tight card truncates the label instead.
 function Row({ color, label, value }: { color: string; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-2 tabular-nums">
-      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+      <span className="inline-flex min-w-0 items-center gap-1.5 text-muted-foreground">
         <span className={`size-2 shrink-0 rounded-full ${color}`} aria-hidden />
-        {label}
+        <span className="truncate" title={label}>
+          {label}
+        </span>
       </span>
-      <span className="font-mono text-[11px] text-foreground">{value}</span>
+      <span className="shrink-0 whitespace-nowrap font-mono text-[11px] text-foreground">{value}</span>
     </div>
   )
 }
