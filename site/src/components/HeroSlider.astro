@@ -6,7 +6,7 @@ import { SHOTS } from '../data/shots'
 const slides = await Promise.all(
   SHOTS.map(async (shot) => ({
     ...shot,
-    full: await getImage({ src: shot.image, width: 1920, format: 'webp' }),
+    full: await getImage({ src: shot.image, width: 2560, format: 'webp' }),
   })),
 )
 const first = slides[0]
@@ -23,13 +23,15 @@ const total = String(slides.length).padStart(2, '0')
           data-shot-title={shot.title}
           data-shot-theme={shot.theme}
           data-shot-caption={shot.caption}
+          data-shot-guide-href={shot.guide.href}
+          data-shot-guide-label={shot.guide.label}
           data-full={shot.full.src}
           aria-hidden={i === 0 ? 'false' : 'true'}
         >
           <Picture
             src={shot.image}
             alt={`Klustr ${shot.title} view in the ${shot.theme} theme. ${shot.caption}`}
-            widths={[640, 1200, 1800]}
+            widths={[640, 1200, 1800, 2560]}
             sizes="(max-width: 1200px) 100vw, 1152px"
             formats={['avif']}
             fallbackFormat="webp"
@@ -44,13 +46,18 @@ const total = String(slides.length).padStart(2, '0')
   </div>
 
   <div class="slider-bar sheet">
-    <div class="slider-copy">
-      <span class="slider-count" data-bar-count>01 / {total}</span>
-      <span class="slider-title" data-bar-title>{first.title}</span>
-      <span class="slider-caption" data-bar-caption>{first.caption}</span>
+    <div class="min-w-0 flex-1">
+      <div class="slider-copy">
+        <span class="slider-count" data-bar-count>01 / {total}</span>
+        <span class="slider-title" data-bar-title>{first.title}</span>
+        <span class="slider-theme" data-bar-theme>{first.theme}</span>
+      </div>
+      <p class="slider-caption">
+        <span data-bar-caption>{first.caption}</span>
+        <a class="slider-guide" href={first.guide.href} data-bar-guide>{first.guide.label}</a>
+      </p>
     </div>
-    <div class="flex flex-none items-center gap-3">
-      <span class="slider-theme hidden sm:inline" data-bar-theme>{first.theme}</span>
+    <div class="flex flex-none items-center gap-2 self-start">
       <button class="icon-btn" type="button" data-prev aria-label="Previous screenshot">
         <ChevronLeft size={16} />
       </button>
@@ -78,9 +85,9 @@ const total = String(slides.length).padStart(2, '0')
   <button class="icon-btn absolute right-3 top-1/2 -translate-y-1/2 sm:right-6" type="button" data-lb-next aria-label="Next">
     <ChevronRight size={18} />
   </button>
-  <figure class="max-h-[90vh] w-full max-w-6xl">
-    <img data-lb-img src="" alt="" class="mx-auto max-h-[82vh] w-auto rounded-(--radius-sheet) border border-rule-strong" />
-    <figcaption data-lb-caption class="mt-4 text-center font-mono text-sm text-ink-2"></figcaption>
+  <figure class="max-h-[92vh] w-full max-w-7xl">
+    <img data-lb-img src="" alt="" class="mx-auto max-h-[80vh] w-auto rounded-(--radius-sheet) border border-rule-strong" />
+    <figcaption data-lb-caption class="mx-auto mt-4 max-w-3xl text-center text-sm text-ink-2"></figcaption>
   </figure>
 </div>
 
@@ -93,6 +100,7 @@ const total = String(slides.length).padStart(2, '0')
     const title = root.querySelector<HTMLElement>('[data-bar-title]')
     const caption = root.querySelector<HTMLElement>('[data-bar-caption]')
     const theme = root.querySelector<HTMLElement>('[data-bar-theme]')
+    const guide = root.querySelector<HTMLAnchorElement>('[data-bar-guide]')
     const lbImg = lb.querySelector<HTMLImageElement>('[data-lb-img]')
     const lbCap = lb.querySelector<HTMLElement>('[data-lb-caption]')
     const total = slides.length
@@ -110,6 +118,10 @@ const total = String(slides.length).padStart(2, '0')
       if (title) title.textContent = s.dataset.shotTitle ?? ''
       if (caption) caption.textContent = s.dataset.shotCaption ?? ''
       if (theme) theme.textContent = s.dataset.shotTheme ?? ''
+      if (guide) {
+        guide.href = s.dataset.shotGuideHref ?? '/docs/'
+        guide.textContent = s.dataset.shotGuideLabel ?? 'Guide'
+      }
     }
 
     root.querySelector('[data-prev]')?.addEventListener('click', () => show(index - 1))
