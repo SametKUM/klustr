@@ -61,17 +61,17 @@ const features: Feature[] = [
     link: { href: '/docs/multi-context/', label: 'Multi-context guide' },
   },
   {
-    id: 'gitops',
-    eyebrow: 'argo cd and flux',
-    heading: 'Sync, reconcile, suspend. No vendor CLI.',
-    body: 'Argo CD Applications and Flux reconcilers appear as soon as their CRDs are detected. Sync is the same PATCH that argocd app sync sends, Refresh flips the annotation, and Flux Reconcile and Suspend set the standard annotations. The only requirement is that your kubeconfig user may update those resources.',
+    id: 'debugging',
+    eyebrow: 'debugging',
+    heading: 'Logs, exec, debug containers, node shell.',
+    body: 'Stream logs across every pod of a workload with a color per pod, follow, regex and save. Open a shell in any container, or inject an ephemeral debug container when the image has no shell. From a node, open a root shell through a temporary nsenter pod that is removed when you close it, then cordon and drain with live progress.',
     chips: [
-      { value: 'Argo CD', label: 'Sync, Refresh, Rollback' },
-      { value: 'Flux', label: '9 toolkit kinds' },
-      { value: '0', label: 'CLIs or extra logins' },
+      { value: 'Multi-pod', label: 'one stream, one color each' },
+      { value: 'kubectl debug', label: 'built in' },
+      { value: 'Drain', label: 'PDB-aware, live progress' },
     ],
-    shot: shotBySlug('argo-applications'),
-    link: { href: '/docs/gitops/', label: 'GitOps guide' },
+    shot: shotBySlug('logs-stream'),
+    link: { href: '/docs/workloads-and-debugging/', label: 'Workloads and debugging guide' },
   },
   {
     id: 'helm',
@@ -87,30 +87,95 @@ const features: Feature[] = [
     link: { href: '/docs/helm/', label: 'Helm guide' },
   },
   {
-    id: 'debugging',
-    eyebrow: 'debugging',
-    heading: 'Logs, exec, debug containers, node shell.',
-    body: 'Stream logs across every pod of a workload with a color per pod, follow, regex and save. Open a shell in any container, or inject an ephemeral debug container when the image has no shell. From a node, open a root shell through a temporary nsenter pod that is removed when you close it, then cordon and drain with live progress.',
+    id: 'argocd',
+    eyebrow: 'argo cd',
+    heading: 'Sync and refresh through the API.',
+    body: 'Applications appear as soon as the Argo CD CRDs are detected, with Sync and Health pills, revision and repo on every row. Sync sends the same PATCH that argocd app sync does, Refresh flips the annotation, and Rollback and cascade-aware Delete are one click. The Resources tab lists every managed object and deep-links into it. No argocd-server ingress, no Argo login, no CLI.',
     chips: [
-      { value: 'Multi-pod', label: 'one stream, one color each' },
-      { value: 'kubectl debug', label: 'built in' },
-      { value: 'Drain', label: 'PDB-aware, live progress' },
+      { value: 'Sync', label: 'the argocd app sync payload' },
+      { value: 'Resources', label: 'every managed object, linked' },
+      { value: '0', label: 'logins or CLIs' },
     ],
-    shot: shotBySlug('logs-stream'),
-    link: { href: '/docs/workloads-and-debugging/', label: 'Workloads and debugging guide' },
+    shot: shotBySlug('argo-applications'),
+    link: { href: '/docs/gitops/', label: 'GitOps guide' },
+  },
+  {
+    id: 'flux',
+    eyebrow: 'flux cd',
+    heading: 'Reconcile and suspend. Nine kinds.',
+    body: 'Kustomizations, HelmReleases, Git, Helm and OCI repositories, Buckets, Providers, Alerts and Receivers, each with conditions, source and applied revision up front. Reconcile and Suspend set the standard Flux annotations, so a failed Kustomization is fixed from the same screen that shows why it failed.',
+    chips: [
+      { value: '9', label: 'toolkit kinds' },
+      { value: 'Reconcile', label: 'the standard annotation' },
+      { value: 'Suspend', label: 'and resume' },
+    ],
+    shot: shotBySlug('flux-kustomization'),
+    link: { href: '/docs/gitops/', label: 'GitOps guide' },
   },
   {
     id: 'gateway',
     eyebrow: 'gateway api',
-    heading: 'Status you can read without opening YAML.',
-    body: 'Gateway API routes render as a per-rule match, backend and weight matrix with the RouteParentStatus beside it, so a parent that has not accepted a route or a RefNotPermitted backend is one click away. cert-manager Certificates drill through the issuance chain, CertificateRequest to Order to Challenge, with a one-click Renew.',
+    heading: 'Route status you can read.',
+    body: 'Gateways, HTTP, GRPC, TLS, TCP and UDP routes, ListenerSets and BackendTLSPolicies through typed informers. A route renders as a per-rule match, backend and weight matrix with the RouteParentStatus beside it, so a parent that has not accepted a route or a RefNotPermitted backend is one click away. Vendor-neutral: Envoy Gateway, Cilium, Istio, Contour or NGINX Gateway Fabric.',
     chips: [
       { value: 'RouteParentStatus', label: 'per parent, per controller' },
-      { value: 'Chain', label: 'Certificate to Challenge' },
-      { value: 'Renew', label: 'one click, no cmctl' },
+      { value: '10', label: 'Gateway API kinds' },
+      { value: 'Envoy', label: 'or any conformant implementation' },
     ],
     shot: shotBySlug('gateway-httproutes'),
     link: { href: '/docs/gateway-api/', label: 'Gateway API guide' },
+  },
+  {
+    id: 'cert-manager',
+    eyebrow: 'cert-manager',
+    heading: 'The issuance chain, one tab away.',
+    body: 'Certificates with ready state and expiry, Issuers and ClusterIssuers with their type collapsed into one column, and a drill-down from Certificate through CertificateRequest and Order to the Challenge, with the ACME error that explains a stuck issuance. Renew is one click, with no cmctl on your PATH.',
+    chips: [
+      { value: 'Chain', label: 'Certificate to Challenge' },
+      { value: 'Renew', label: 'one click, no cmctl' },
+      { value: 'Expiry', label: 'and renewal time' },
+    ],
+    shot: shotBySlug('certmanager-chain'),
+    link: { href: '/docs/integrations/', label: 'Platform integrations' },
+  },
+  {
+    id: 'istio',
+    eyebrow: 'istio',
+    heading: 'Traffic splits without the YAML.',
+    body: 'VirtualServices show their hosts, gateways and every HTTP rule as a match with weighted destinations. DestinationRules show TLS mode, load balancer and subsets; PeerAuthentications show the mTLS mode and selector. The served API version comes from the discovered CRD, so the views follow whatever Istio the cluster runs.',
+    chips: [
+      { value: '90 / 10', label: 'canary split, readable' },
+      { value: 'mTLS', label: 'STRICT, PERMISSIVE, DISABLE' },
+      { value: '3', label: 'kinds, watch-backed' },
+    ],
+    shot: shotBySlug('istio-virtualservice'),
+    link: { href: '/docs/integrations/', label: 'Platform integrations' },
+  },
+  {
+    id: 'karpenter',
+    eyebrow: 'karpenter',
+    heading: 'Node pools and claims, live.',
+    body: 'NodePools with weight, node class, consolidation policy and CPU and memory against their limits. NodeClaims with node, instance type, capacity type, zone and the Launched, Registered and Initialized steps, so a claim stuck before registration stands out. The group appears when the karpenter.sh CRDs are present.',
+    chips: [
+      { value: 'Limits', label: 'CPU and memory against used' },
+      { value: 'Lifecycle', label: 'Launched to Initialized' },
+      { value: 'Spot', label: 'or on-demand, per claim' },
+    ],
+    shot: shotBySlug('karpenter-nodeclaims'),
+    link: { href: '/docs/integrations/', label: 'Platform integrations' },
+  },
+  {
+    id: 'keda',
+    eyebrow: 'keda',
+    heading: 'Triggers instead of s0-prometheus.',
+    body: 'A KEDA-managed HPA is a plain autoscaler whose metrics are all External and named s0, s1 and so on. Klustr maps each back to its ScaledObject trigger and shows the type with the metadata that predicts scaling: the cron schedule and timezone, the Prometheus query and threshold, the Kafka topic and lag.',
+    chips: [
+      { value: 'cron', label: 'schedule, timezone, replicas' },
+      { value: 'Prometheus', label: 'query and threshold' },
+      { value: 'HPA', label: 'stays a plain HPA' },
+    ],
+    shot: shotBySlug('keda-hpa'),
+    link: { href: '/docs/integrations/', label: 'Platform integrations' },
   },
 ]
 
@@ -233,7 +298,7 @@ const compareRows = [
   <section id="features" class="scroll-mt-20 py-14">
     <div class="mx-auto max-w-6xl px-5">
       <div class="max-w-2xl">
-        <p class="eyebrow">five workflows</p>
+        <p class="eyebrow">ten workflows</p>
         <h2 class="display mt-3 text-3xl sm:text-4xl">The jobs kubectl makes you stitch together.</h2>
       </div>
       <div class="mt-8">
