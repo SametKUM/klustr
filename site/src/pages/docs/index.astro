@@ -1,0 +1,51 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro'
+import { GUIDE_GROUPS, assertGuidesIndexed, loadGuide } from '../../lib/guides'
+import { breadcrumbLd, graph } from '../../lib/seo'
+import { REPO_URL } from '../../lib/site'
+
+await assertGuidesIndexed()
+
+const groups = await Promise.all(
+  GUIDE_GROUPS.map(async (group) => ({
+    name: group.name,
+    guides: await Promise.all(group.guides.map(async (g) => ({ ...g, ...(await loadGuide(g.slug)) }))),
+  })),
+)
+
+const description =
+  'Task-focused guides for Klustr: connecting to contexts, multi-cluster aggregated mode, credential helpers, debugging workloads, Helm, Argo CD and Flux, Gateway API, cert-manager and custom resources.'
+---
+
+<DocsLayout
+  title="Documentation"
+  eyebrow="docs"
+  lede="These guides cover how to use Klustr day to day. They are rendered from the markdown in the repository, so the GitHub copy and this site never drift apart."
+  description={description}
+  path="/docs/"
+  ogType="website"
+  jsonLd={graph([breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Docs', path: '/docs/' }])])}
+>
+  <div class="flex flex-col gap-12">
+    {
+      groups.map((group) => (
+        <section>
+          <p class="side-group mb-3 px-0">{group.name}</p>
+          <div class="grid gap-4 sm:grid-cols-2">
+            {group.guides.map((guide) => (
+              <a href={`/docs/${guide.slug}/`} class="sheet cap block no-underline hover:border-ink">
+                <h3>{guide.title}</h3>
+                <p>{guide.summary}</p>
+              </a>
+            ))}
+          </div>
+        </section>
+      ))
+    }
+    <p class="text-sm text-ink-3">
+      Found a mistake? The guides live under <code class="inline-code">docs/guide</code> in the
+      <a href={REPO_URL} class="text-accent" target="_blank" rel="noreferrer">repository</a>; a pull request fixes both
+      copies at once.
+    </p>
+  </div>
+</DocsLayout>
