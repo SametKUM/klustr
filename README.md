@@ -97,6 +97,10 @@ Every shot is captured from two kind clusters seeded with realistic workloads an
 | **Rollout history** — revision diff with change causes and one-click rollback | **Node drain** — Eviction API progress, the PDB-blocked pod called out and retried |
 | ![Terminal drawer — One Dark](docs/screenshots/15-terminal-drawer-one-dark.png) | ![Cluster overview — Nord](docs/screenshots/17-cluster-overview-nord.png) |
 | **Terminal** — a local shell pinned to a context under the table, `KUBECONFIG` already set | **Cluster overview** — CPU / memory / pod capacity per cluster and a live warnings feed |
+| ![Istio VirtualService — One Light](docs/screenshots/18-istio-virtualservice-one-light.png) | ![Karpenter NodeClaims — Tokyo Night](docs/screenshots/19-karpenter-nodeclaims-tokyo-night.png) |
+| **Istio** — a VirtualService's weighted canary and header match as a rule table | **Karpenter** — NodeClaims with node, pool, instance, zone and the Launched / Registered / Initialized steps |
+| ![KEDA HPA — Nord Light](docs/screenshots/20-keda-hpa-nord-light.png) | |
+| **KEDA** — a KEDA-managed HPA with its external metrics mapped back to the cron and CPU triggers | |
 
 ## Install
 
