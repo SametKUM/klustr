@@ -155,7 +155,12 @@ klustr/
 │   ├── perf-testing.md             performance testing protocol (microbenchmarks
 │   │                               + benchstat + on-cluster profiling)
 │   └── screenshots/                numbered themed pack `01-*.png` …
-│                                   `16-*.png` for README grid + press / blog
+│                                   `17-*.png` for the README grid and the site
+│                                   tour; 2560×1600 (the 1280×800 default window
+│                                   at 2x), each in a different theme, captured
+│                                   by Playwright against two kind fixture
+│                                   clusters from the user's local
+│                                   hack/screenshots/ (not committed)
 ├── site/                         klustr.dev landing + docs site (Astro 7, Tailwind v4,
 │   │                             static output deployed to GitHub Pages by pages.yml)
 │   ├── astro.config.mjs            site URL, sitemap integration, Tailwind vite plugin
