@@ -10,6 +10,7 @@ const slides = await Promise.all(
   })),
 )
 const first = slides[0]
+const total = String(slides.length).padStart(2, '0')
 ---
 
 <div class="slider" data-slider>
@@ -19,9 +20,9 @@ const first = slides[0]
         <figure
           class:list={['slide', { 'is-active': i === 0 }]}
           data-slide
-          data-title={shot.title}
-          data-theme={shot.theme}
-          data-caption={shot.caption}
+          data-shot-title={shot.title}
+          data-shot-theme={shot.theme}
+          data-shot-caption={shot.caption}
           data-full={shot.full.src}
           aria-hidden={i === 0 ? 'false' : 'true'}
         >
@@ -35,7 +36,6 @@ const first = slides[0]
             loading={i === 0 ? 'eager' : 'lazy'}
             fetchpriority={i === 0 ? 'high' : 'auto'}
             decoding="async"
-            data-lightbox
           />
           <figcaption class="sr-only">{shot.caption}</figcaption>
         </figure>
@@ -45,23 +45,12 @@ const first = slides[0]
 
   <div class="slider-bar sheet">
     <div class="slider-copy">
-      <span class="slider-count" data-count>01 / {String(slides.length).padStart(2, '0')}</span>
-      <span class="slider-title" data-title>{first.title}</span>
-      <span class="slider-theme" data-theme>{first.theme} theme</span>
+      <span class="slider-count" data-bar-count>01 / {total}</span>
+      <span class="slider-title" data-bar-title>{first.title}</span>
+      <span class="slider-caption" data-bar-caption>{first.caption}</span>
     </div>
     <div class="flex flex-none items-center gap-3">
-      <div class="slider-dots hidden sm:flex" data-dots>
-        {
-          slides.map((shot, i) => (
-            <button
-              class:list={['slider-dot', { 'is-active': i === 0 }]}
-              type="button"
-              data-goto={i}
-              aria-label={`Show ${shot.title}`}
-            />
-          ))
-        }
-      </div>
+      <span class="slider-theme hidden sm:inline" data-bar-theme>{first.theme}</span>
       <button class="icon-btn" type="button" data-prev aria-label="Previous screenshot">
         <ChevronLeft size={16} />
       </button>
@@ -70,7 +59,6 @@ const first = slides[0]
       </button>
     </div>
   </div>
-  <p class="mt-3 text-center text-sm text-ink-2" data-caption>{first.caption}</p>
 </div>
 
 <div
@@ -101,11 +89,10 @@ const first = slides[0]
   const lb = document.getElementById('lightbox')
   if (root && lb) {
     const slides = [...root.querySelectorAll<HTMLElement>('[data-slide]')]
-    const dots = [...root.querySelectorAll<HTMLElement>('[data-goto]')]
-    const count = root.querySelector<HTMLElement>('[data-count]')
-    const title = root.querySelector<HTMLElement>('[data-title]')
-    const theme = root.querySelector<HTMLElement>('[data-theme]')
-    const caption = root.querySelector<HTMLElement>('[data-caption]')
+    const count = root.querySelector<HTMLElement>('[data-bar-count]')
+    const title = root.querySelector<HTMLElement>('[data-bar-title]')
+    const caption = root.querySelector<HTMLElement>('[data-bar-caption]')
+    const theme = root.querySelector<HTMLElement>('[data-bar-theme]')
     const lbImg = lb.querySelector<HTMLImageElement>('[data-lb-img]')
     const lbCap = lb.querySelector<HTMLElement>('[data-lb-caption]')
     const total = slides.length
@@ -118,24 +105,22 @@ const first = slides[0]
         s.classList.toggle('is-active', active)
         s.setAttribute('aria-hidden', String(!active))
       })
-      dots.forEach((d, n) => d.classList.toggle('is-active', n === index))
       const s = slides[index]
       if (count) count.textContent = `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`
-      if (title) title.textContent = s.dataset.title ?? ''
-      if (theme) theme.textContent = `${s.dataset.theme ?? ''} theme`
-      if (caption) caption.textContent = s.dataset.caption ?? ''
+      if (title) title.textContent = s.dataset.shotTitle ?? ''
+      if (caption) caption.textContent = s.dataset.shotCaption ?? ''
+      if (theme) theme.textContent = s.dataset.shotTheme ?? ''
     }
 
     root.querySelector('[data-prev]')?.addEventListener('click', () => show(index - 1))
     root.querySelector('[data-next]')?.addEventListener('click', () => show(index + 1))
-    dots.forEach((d) => d.addEventListener('click', () => show(Number(d.dataset.goto))))
 
     function renderLightbox() {
       const s = slides[index]
       if (!lbImg || !lbCap) return
       lbImg.src = s.dataset.full ?? ''
-      lbImg.alt = `${s.dataset.title} view in the ${s.dataset.theme} theme`
-      lbCap.textContent = `${s.dataset.title}. ${s.dataset.caption}`
+      lbImg.alt = `${s.dataset.shotTitle} view in the ${s.dataset.shotTheme} theme`
+      lbCap.textContent = `${s.dataset.shotTitle}. ${s.dataset.shotCaption}`
     }
     function openLightbox() {
       renderLightbox()
