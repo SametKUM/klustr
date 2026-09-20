@@ -34,8 +34,13 @@ jobs:
       # that tsc rejects.
       - run: npm run typecheck
         working-directory: site
+      # The changelog page and the version label are rendered from the GitHub
+      # Releases API at build time; the workflow token lifts the anonymous
+      # rate limit so a busy runner IP cannot leave the page empty.
       - run: npm run build
         working-directory: site
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site/dist
