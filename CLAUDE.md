@@ -156,6 +156,22 @@ klustr/
 │   │                               + benchstat + on-cluster profiling)
 │   └── screenshots/                numbered themed pack `01-*.png` …
 │                                   `16-*.png` for README grid + press / blog
+├── site/                         klustr.dev landing + docs site (Astro 7, Tailwind v4,
+│   │                             static output deployed to GitHub Pages by pages.yml)
+│   ├── astro.config.mjs            site URL, sitemap integration, Tailwind vite plugin
+│   ├── og-template.html            source for public/og.png (render with Playwright)
+│   ├── public/                     CNAME, robots.txt, appicon.png, og.png, hero.mp4
+│   └── src/
+│       ├── styles/global.css         paper / blueprint tokens + the components layer
+│       ├── layouts/                  BaseLayout (SEO head, theme boot, analytics) and
+│       │                             DocsLayout (sidebar + on-this-page)
+│       ├── components/               Nav, Footer, InstallTabs, CommandBlock, HeroSlider,
+│       │                             CompareTable, BrandIcon
+│       ├── data/                     screenshots, install commands, comparison rows and
+│       │                             pages, FAQ, structured-data featureList
+│       ├── lib/                      site constants, JSON-LD builders, GitHub fetch,
+│       │                             marked-based markdown, guide loader (../docs/guide)
+│       └── pages/                    index, docs/, compare/, faq, changelog, 404
 ├── hack/                         user's local fixtures (NEVER commit anything under hack/)
 └── .github/
     ├── actions/linux-build-deps/  composite action: GTK + WebKit headers
@@ -338,6 +354,18 @@ For CRs Klustr **already lists generically** via the CRD watcher with a YAML-onl
 - Hide the CR behind the generic CRD sidebar entry by default; promote it only when a resource-group item and `visibleResourceGroups.ts` `CRD_REQUIREMENTS` entry gate the dedicated view on the served API.
 - Mutations should go through the K8s API (PATCH / annotation flip), not by shelling out to a vendor CLI.
 
+## Landing site (`site/`)
+
+klustr.dev is a static Astro build, independent of the app. It ships from `main` through `pages.yml`; `site.yml` runs the same checks on pull requests.
+
+- **Docs pages are the repository guides.** `/docs/<slug>/` renders `docs/guide/<slug>.md` at build time through `marked` (`src/lib/guides.ts`), so there is one source of truth. Adding a guide means adding its card to `GUIDE_GROUPS` too; the build fails if a guide is missing from the index. `guide.md#anchor` links are rewritten to site routes and headings get GitHub-style ids.
+- **Comparison content is data.** `src/data/compare.ts` holds the table rows and the per-tool pages, with a `REVIEWED_ON` date. Cells state capabilities, not judgements, and cite nothing that has not been checked in the other tool's documentation. No memory or speed numbers unless measured side by side.
+- **Numbers on the landing page are counts, not benchmarks** (resource kinds, integrations, themes, archive size). Do not add RAM or start-up claims without a measurement to back them.
+- **Two exposures of one theme.** Paper (light) is the default; `data-theme="dark"` on `<html>` flips to the app's default-dark palette. Components read only the CSS variables in `global.css`, and component classes live in `@layer components` so Tailwind utilities keep winning.
+- **GitHub data at build time.** The changelog page and the version label come from the Releases API (`src/lib/github.ts`); a failed fetch degrades to a GitHub link instead of failing the build. CI passes `GITHUB_TOKEN` to lift the anonymous rate limit.
+- `npm run typecheck` is `astro check`; TypeScript stays on 6.x until `@astrojs/check` accepts 7 (Dependabot ignores that major).
+- The social card is rendered from `og-template.html`; regenerate `public/og.png` after changing the hero copy.
+
 ## Coding Conventions
 
 ### Comments
@@ -448,6 +476,11 @@ npm run lint                  # ESLint
 npm run check:api             # generated Wails API facade drift
 npm run typecheck             # tsc --noEmit
 npm run build                 # production bundle
+
+# Landing site (inside site/)
+npm run dev                   # astro dev server
+npm run typecheck             # astro check
+npm run build                 # static build to site/dist (GITHUB_TOKEN optional)
 ```
 
 Docker is **not** required — local dev uses native toolchains; CI builds use GitHub-hosted runners directly.
