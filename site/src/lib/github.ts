@@ -51,28 +51,43 @@ type ApiRelease = {
 
 let releasesPromise: Promise<Release[]> | undefined
 
-// Build-time snapshot of published releases. A failed fetch (offline, rate
-// limited) degrades to an empty list so the site still builds; the pages that
-// consume it fall back to linking GitHub directly.
+// Build-time snapshot of every published release, newest first. The API
+// pages at 100, so keep going until a short page. A failed fetch (offline,
+// rate limited) degrades to whatever was collected so the site still builds;
+// the pages that consume it fall back to linking GitHub directly.
+async function collectReleases(): Promise<Release[]> {
+  const all: ApiRelease[] = []
+  for (let page = 1; page <= 10; page++) {
+    const list = await getJson<ApiRelease[]>(`/releases?per_page=100&page=${page}`)
+    if (!list) break
+    all.push(...list)
+    if (list.length < 100) break
+  }
+  return all
+    .filter((r) => !r.draft)
+    .map((r) => ({
+      tag: r.tag_name,
+      name: r.name?.trim() || r.tag_name,
+      publishedAt: r.published_at,
+      url: r.html_url,
+      body: r.body ?? '',
+      prerelease: r.prerelease,
+    }))
+}
+
 export function fetchReleases(): Promise<Release[]> {
-  releasesPromise ??= getJson<ApiRelease[]>('/releases?per_page=100').then((list) =>
-    (list ?? [])
-      .filter((r) => !r.draft)
-      .map((r) => ({
-        tag: r.tag_name,
-        name: r.name?.trim() || r.tag_name,
-        publishedAt: r.published_at,
-        url: r.html_url,
-        body: r.body ?? '',
-        prerelease: r.prerelease,
-      })),
-  )
+  releasesPromise ??= collectReleases()
   return releasesPromise
 }
 
 export async function latestRelease(): Promise<Release | undefined> {
   const releases = await fetchReleases()
   return releases.find((r) => !r.prerelease) ?? releases[0]
+}
+
+export async function firstRelease(): Promise<Release | undefined> {
+  const releases = await fetchReleases()
+  return releases[releases.length - 1]
 }
 
 let statsPromise: Promise<RepoStats | undefined> | undefined

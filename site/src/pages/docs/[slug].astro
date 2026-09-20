@@ -1,5 +1,6 @@
 ---
 import DocsLayout from '../../layouts/DocsLayout.astro'
+import { firstCommitDate, lastCommitDate } from '../../lib/git'
 import { GUIDES, loadGuide } from '../../lib/guides'
 import { articleLd, breadcrumbLd, graph } from '../../lib/seo'
 import { REPO_URL } from '../../lib/site'
@@ -16,8 +17,15 @@ const prev = index > 0 ? await loadGuide(GUIDES[index - 1].slug) : undefined
 const next = index < GUIDES.length - 1 ? await loadGuide(GUIDES[index + 1].slug) : undefined
 const sourceUrl = `${REPO_URL}/blob/main/docs/guide/${slug}.md`
 
+const source = `docs/guide/${slug}.md`
 const jsonLd = graph([
-  articleLd({ headline: guide.title, description: guide.description, path }),
+  articleLd({
+    headline: guide.title,
+    description: guide.description,
+    path,
+    datePublished: firstCommitDate(source),
+    dateModified: lastCommitDate(source),
+  }),
   breadcrumbLd([
     { name: 'Home', path: '/' },
     { name: 'Docs', path: '/docs/' },
