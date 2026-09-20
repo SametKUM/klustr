@@ -1,0 +1,61 @@
+---
+import CompareTable from '../../components/CompareTable.astro'
+import DocsLayout from '../../layouts/DocsLayout.astro'
+import { COMPARE_PAGES, REVIEWED_ON, TOOLS, type ToolId } from '../../data/compare'
+import { breadcrumbLd, graph } from '../../lib/seo'
+import { ISSUES_URL } from '../../lib/site'
+
+const description =
+  'Klustr compared with Lens, k9s, Headlamp and Kubernetes Dashboard on license, sign-in, what runs in the cluster, several clusters at once, RBAC review, Helm, Argo CD and Flux, Gateway API, logs and terminals.'
+
+const allTools: ToolId[] = ['klustr', 'lens', 'k9s', 'headlamp', 'dashboard']
+const headings = [
+  { depth: 2, id: 'at-a-glance', text: 'At a glance' },
+  { depth: 2, id: 'pages', text: 'Head-to-head pages' },
+  { depth: 2, id: 'method', text: 'How this table is kept honest' },
+]
+---
+
+<DocsLayout
+  title="Klustr compared with other Kubernetes UIs"
+  eyebrow="compare"
+  lede="Lens, k9s, Headlamp and Kubernetes Dashboard are all good tools with different shapes. This page puts them next to Klustr on the questions people ask before switching, and links to a page for each."
+  description={description}
+  path="/compare/"
+  headings={headings}
+  ogType="website"
+  jsonLd={graph([breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Compare', path: '/compare/' }])])}
+>
+  <section>
+    <h2 id="at-a-glance" class="display scroll-mt-24 text-2xl">At a glance</h2>
+    <CompareTable tools={allTools} class="mt-5" />
+  </section>
+
+  <section class="mt-14">
+    <h2 id="pages" class="display scroll-mt-24 text-2xl">Head-to-head pages</h2>
+    <div class="mt-5 grid gap-4 sm:grid-cols-2">
+      {
+        COMPARE_PAGES.map((page) => (
+          <a href={`/compare/${page.slug}/`} class="sheet cap block no-underline hover:border-ink">
+            <h3>{page.heading}</h3>
+            <p>{TOOLS[page.tool].summary}</p>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="prose mt-14">
+    <h2 id="method">How this table is kept honest</h2>
+    <p>
+      Every cell about another tool comes from that tool’s public documentation, README or release notes, and the
+      table was last reviewed on {REVIEWED_ON}. Cells are worded as capabilities, not judgements, and where a feature
+      exists only through plugins or extensions the cell says so. There are no memory or speed numbers here because
+      none have been measured side by side.
+    </p>
+    <p>
+      If a row is wrong or out of date, <a href={ISSUES_URL}>open an issue</a> with a link to the source and it will be
+      corrected.
+    </p>
+  </section>
+</DocsLayout>
