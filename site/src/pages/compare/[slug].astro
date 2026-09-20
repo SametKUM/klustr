@@ -1,7 +1,7 @@
 ---
 import { Download } from '@lucide/astro'
 import CompareTable from '../../components/CompareTable.astro'
-import DocsLayout from '../../layouts/DocsLayout.astro'
+import CompareLayout from '../../layouts/CompareLayout.astro'
 import { COMPARE_PAGES, REVIEWED_ON, TOOLS, comparePage } from '../../data/compare'
 import { firstCommitDate } from '../../lib/git'
 import { renderFragment } from '../../lib/markdown'
@@ -17,12 +17,6 @@ const page = comparePage(slug)
 const tool = TOOLS[page.tool]
 const path = `/compare/${slug}/`
 
-const headings = [
-  { depth: 2, id: 'at-a-glance', text: 'At a glance' },
-  { depth: 2, id: 'different', text: 'Where Klustr is different' },
-  { depth: 2, id: 'stronger', text: `Where ${tool.name} is stronger` },
-  { depth: 2, id: 'which', text: 'Which one to pick' },
-]
 
 const jsonLd = graph([
   articleLd({
@@ -41,22 +35,21 @@ const jsonLd = graph([
 ])
 ---
 
-<DocsLayout
+<CompareLayout
   title={page.title}
   bareTitle
   eyebrow={`compare / ${tool.name.toLowerCase()}`}
   description={page.description}
   path={path}
-  headings={headings}
   jsonLd={jsonLd}
 >
-  <div class="prose">
+  <div class="prose mt-10">
     {page.intro.map((p) => <Fragment set:html={renderFragment(p)} />)}
   </div>
 
   <section class="mt-12">
     <h2 id="at-a-glance" class="display scroll-mt-24 text-2xl">At a glance</h2>
-    <CompareTable tools={['klustr', page.tool]} compact class="mt-5" />
+    <CompareTable tools={['klustr', page.tool]} class="mt-5" />
     <p class="mt-3 text-sm text-ink-3">
       <a href={tool.url} class="text-accent" target="_blank" rel="noreferrer">{tool.name} website</a>
     </p>
@@ -94,4 +87,4 @@ const jsonLd = graph([
       <a href="/docs/getting-started/" class="btn btn-ghost btn-sm">Getting started</a>
     </div>
   </div>
-</DocsLayout>
+</CompareLayout>
