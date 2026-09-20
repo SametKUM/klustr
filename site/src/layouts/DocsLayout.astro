@@ -1,0 +1,123 @@
+---
+import BaseLayout from './BaseLayout.astro'
+import { GUIDE_GROUPS, loadGuide } from '../lib/guides'
+import { COMPARE_PAGES } from '../data/compare'
+import { REPO_URL } from '../lib/site'
+import type { Heading } from '../lib/markdown'
+import type { JsonLd } from '../lib/seo'
+
+interface Props {
+  title: string
+  description: string
+  path: string
+  eyebrow?: string
+  lede?: string
+  headings?: Heading[]
+  jsonLd?: JsonLd | JsonLd[]
+  ogType?: 'website' | 'article'
+}
+
+const { title, description, path, eyebrow, lede, headings = [], jsonLd, ogType = 'article' } = Astro.props
+
+const groups = await Promise.all(
+  GUIDE_GROUPS.map(async (group) => ({
+    name: group.name,
+    links: await Promise.all(
+      group.guides.map(async (g) => ({ href: `/docs/${g.slug}/`, label: (await loadGuide(g.slug)).title })),
+    ),
+  })),
+)
+groups.push({
+  name: 'compare',
+  links: [
+    { href: '/compare/', label: 'All comparisons' },
+    ...COMPARE_PAGES.map((p) => ({ href: `/compare/${p.slug}/`, label: p.heading })),
+  ],
+})
+groups.push({
+  name: 'project',
+  links: [
+    { href: '/faq/', label: 'FAQ' },
+    { href: '/changelog/', label: 'Changelog' },
+    { href: REPO_URL, label: 'GitHub' },
+  ],
+})
+
+const current = Astro.url.pathname
+const tocHeadings = headings.filter((h) => h.depth <= 3)
+---
+
+<BaseLayout title={title} description={description} path={path} jsonLd={jsonLd} ogType={ogType}>
+  <div class="mx-auto max-w-6xl px-5 pb-20 pt-8 lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[210px_minmax(0,1fr)_190px]">
+    <aside class="hidden lg:block">
+      <nav class="sticky top-24 flex flex-col gap-6" aria-label="Documentation">
+        {
+          groups.map((group) => (
+            <div>
+              <p class="side-group">{group.name}</p>
+              <ul class="flex flex-col gap-0.5">
+                {group.links.map((link) => (
+                  <li>
+                    <a href={link.href} class="side-link" aria-current={current === link.href ? 'page' : undefined}>
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </nav>
+    </aside>
+
+    <details class="sheet mb-8 lg:hidden">
+      <summary class="cursor-pointer px-4 py-3 font-mono text-sm">Documentation menu</summary>
+      <nav class="flex flex-col gap-5 border-t border-rule px-3 py-4" aria-label="Documentation mobile">
+        {
+          groups.map((group) => (
+            <div>
+              <p class="side-group">{group.name}</p>
+              <ul class="flex flex-col gap-0.5">
+                {group.links.map((link) => (
+                  <li>
+                    <a href={link.href} class="side-link" aria-current={current === link.href ? 'page' : undefined}>
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </nav>
+    </details>
+
+    <article class="min-w-0">
+      <header class="mb-10 border-b border-rule pb-8">
+        {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+        <h1 class="display mt-3 text-3xl sm:text-4xl lg:text-[2.75rem]">{title}</h1>
+        {lede && <p class="lede mt-5 max-w-[68ch]">{lede}</p>}
+      </header>
+      <slot />
+    </article>
+
+    {
+      tocHeadings.length > 0 && (
+        <aside class="hidden xl:block">
+          <nav class="sticky top-24" aria-label="On this page">
+            <p class="side-group">on this page</p>
+            <ul class="flex flex-col border-l border-rule pl-3">
+              {tocHeadings.map((h) => (
+                <li>
+                  <a href={`#${h.id}`} class:list={['toc-link', `depth-${h.depth}`]}>
+                    {h.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </aside>
+      )
+    }
+  </div>
+</BaseLayout>

@@ -1,0 +1,62 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro'
+import { GUIDES, loadGuide } from '../../lib/guides'
+import { articleLd, breadcrumbLd, graph } from '../../lib/seo'
+import { REPO_URL } from '../../lib/site'
+
+export async function getStaticPaths() {
+  return GUIDES.map((g) => ({ params: { slug: g.slug } }))
+}
+
+const { slug } = Astro.params
+const guide = await loadGuide(slug)
+const path = `/docs/${slug}/`
+const index = GUIDES.findIndex((g) => g.slug === slug)
+const prev = index > 0 ? await loadGuide(GUIDES[index - 1].slug) : undefined
+const next = index < GUIDES.length - 1 ? await loadGuide(GUIDES[index + 1].slug) : undefined
+const sourceUrl = `${REPO_URL}/blob/main/docs/guide/${slug}.md`
+
+const jsonLd = graph([
+  articleLd({ headline: guide.title, description: guide.description, path }),
+  breadcrumbLd([
+    { name: 'Home', path: '/' },
+    { name: 'Docs', path: '/docs/' },
+    { name: guide.title, path },
+  ]),
+])
+---
+
+<DocsLayout
+  title={guide.title}
+  eyebrow={`docs / ${guide.group}`}
+  description={guide.description}
+  path={path}
+  headings={guide.headings}
+  jsonLd={jsonLd}
+>
+  <div class="prose" set:html={guide.html} />
+
+  <footer class="mt-14 border-t border-rule pt-6">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div class="text-sm">
+        {
+          prev && (
+            <p class="text-ink-3">
+              Previous: <a href={`/docs/${prev.slug}/`} class="text-accent">{prev.title}</a>
+            </p>
+          )
+        }
+        {
+          next && (
+            <p class="mt-1 text-ink-3">
+              Next: <a href={`/docs/${next.slug}/`} class="text-accent">{next.title}</a>
+            </p>
+          )
+        }
+      </div>
+      <a href={sourceUrl} class="text-sm text-ink-3 hover:text-ink" target="_blank" rel="noreferrer">
+        Edit this page on GitHub
+      </a>
+    </div>
+  </footer>
+</DocsLayout>
