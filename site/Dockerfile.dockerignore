@@ -1,0 +1,9 @@
+# BuildKit reads this file because it sits next to site/Dockerfile. The build
+# context is the repository root, so everything is excluded first and only the
+# two directories the image needs are let back in.
+*
+!site
+!docs/guide
+site/node_modules
+site/dist
+site/.astro
