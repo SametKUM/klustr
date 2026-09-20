@@ -16,6 +16,9 @@ import nodeDrain from '../assets/screenshots/14-node-drain-dracula.png'
 import terminalDrawer from '../assets/screenshots/15-terminal-drawer-one-dark.png'
 import themePicker from '../assets/screenshots/16-theme-picker-default-light.png'
 import clusterOverview from '../assets/screenshots/17-cluster-overview-nord.png'
+import istioVirtualService from '../assets/screenshots/18-istio-virtualservice-one-light.png'
+import karpenterNodeClaims from '../assets/screenshots/19-karpenter-nodeclaims-tokyo-night.png'
+import kedaHpa from '../assets/screenshots/20-keda-hpa-nord-light.png'
 
 export type Shot = {
   id: string
@@ -182,6 +185,33 @@ export const SHOTS: Shot[] = [
     caption:
       'CPU, memory and pod capacity per cluster, usage against requests and limits, and a live feed of warning events from both contexts.',
     guide: { href: '/docs/overview/', label: 'Overviews guide' },
+  },
+  {
+    id: 'istio-virtualservice',
+    image: istioVirtualService,
+    title: 'Istio VirtualService',
+    theme: 'One Light',
+    caption:
+      'A weighted canary read straight from the rule table: 90 percent of traffic to the stable subset, 10 percent to canary, and a header match that pins x-canary requests to the new version.',
+    guide: { href: '/docs/integrations/', label: 'Platform integrations' },
+  },
+  {
+    id: 'karpenter-nodeclaims',
+    image: karpenterNodeClaims,
+    title: 'Karpenter NodeClaims',
+    theme: 'Tokyo Night',
+    caption:
+      'Every claim with its node, pool, instance type, capacity type and zone, plus the Launched, Registered and Initialized steps. The GPU claim is still waiting for its node to register.',
+    guide: { href: '/docs/integrations/', label: 'Platform integrations' },
+  },
+  {
+    id: 'keda-hpa',
+    image: kedaHpa,
+    title: 'KEDA-driven HPA',
+    theme: 'Nord Light',
+    caption:
+      'A KEDA-managed autoscaler whose external metrics are mapped back to their ScaledObject triggers: a weekday 09:00 to 18:00 cron for three replicas and a CPU target, instead of opaque s0 and s1 rows.',
+    guide: { href: '/docs/integrations/', label: 'Platform integrations' },
   },
 ]
 
