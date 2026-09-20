@@ -1,5 +1,6 @@
 ---
 import { Picture } from 'astro:assets'
+import { ArrowRight } from '@lucide/astro'
 import type { Shot } from '../data/shots'
 
 export type Feature = {
@@ -19,26 +20,43 @@ interface Props {
 const { features } = Astro.props
 ---
 
-<div class="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start" data-feature-tabs>
-  <div class="flex flex-col gap-2">
+<div class="wf" data-feature-tabs>
+  <div class="wf-tabs" role="tablist" aria-label="Workflows">
     {
       features.map((f, i) => (
-        <div class="ftab sheet" data-ftab={f.id} data-active={i === 0 ? '' : undefined}>
-          <h3 class="ftab-head">
-            <button
-              type="button"
-              class="ftab-btn"
-              id={`ftab-btn-${f.id}`}
-              aria-expanded={i === 0 ? 'true' : 'false'}
-              aria-controls={`ftab-panel-${f.id}`}
-            >
-              <span class="eyebrow">{f.eyebrow}</span>
-              <span class="ftab-title">{f.heading}</span>
-            </button>
-          </h3>
-          <div class="ftab-body" id={`ftab-panel-${f.id}`} role="region" aria-labelledby={`ftab-btn-${f.id}`} hidden={i !== 0}>
-            <p>{f.body}</p>
-            <div class="mt-4 grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          role="tab"
+          class="wf-tab"
+          id={`wf-tab-${f.id}`}
+          aria-selected={i === 0 ? 'true' : 'false'}
+          aria-controls={`wf-panel-${f.id}`}
+          tabindex={i === 0 ? 0 : -1}
+          data-wf-tab={f.id}
+        >
+          {f.eyebrow}
+        </button>
+      ))
+    }
+  </div>
+
+  {
+    features.map((f, i) => (
+      <div
+        class="wf-panel"
+        role="tabpanel"
+        id={`wf-panel-${f.id}`}
+        aria-labelledby={`wf-tab-${f.id}`}
+        data-wf-panel={f.id}
+        hidden={i !== 0}
+      >
+        <div class="wf-head">
+          <div class="wf-copy">
+            <h3 class="display text-2xl sm:text-[1.75rem]">{f.heading}</h3>
+            <p class="lede mt-3">{f.body}</p>
+          </div>
+          <div class="wf-facts">
+            <div class="wf-chips">
               {f.chips.map((chip) => (
                 <div class="sheet chip">
                   <div class="chip-value">{chip.value}</div>
@@ -46,73 +64,60 @@ const { features } = Astro.props
                 </div>
               ))}
             </div>
-            <a href={f.link.href} class="mt-4 inline-block text-sm font-medium text-accent">
+            <a href={f.link.href} class="wf-link">
               {f.link.label}
+              <ArrowRight size={14} />
             </a>
-            <figure class="sheet mt-4 overflow-hidden lg:hidden">
-              <Picture
-                src={f.shot.image}
-                alt={`Klustr ${f.shot.title} view in the ${f.shot.theme} theme. ${f.shot.caption}`}
-                widths={[640, 1024]}
-                sizes="100vw"
-                formats={['avif']}
-                fallbackFormat="webp"
-                loading="lazy"
-                decoding="async"
-                class="block h-auto w-full"
-              />
-            </figure>
           </div>
         </div>
-      ))
-    }
-  </div>
-
-  <div class="hidden lg:block lg:sticky lg:top-24">
-    {
-      features.map((f, i) => (
-        <figure class="sheet overflow-hidden" data-ftab-figure={f.id} hidden={i !== 0}>
+        <figure class="wf-shot sheet ticks">
           <Picture
             src={f.shot.image}
             alt={`Klustr ${f.shot.title} view in the ${f.shot.theme} theme. ${f.shot.caption}`}
-            widths={[640, 1024, 1400]}
-            sizes="(max-width: 1024px) 100vw, 660px"
+            widths={[640, 1200, 1800, 2560]}
+            sizes="(max-width: 1200px) 100vw, 1152px"
             formats={['avif']}
             fallbackFormat="webp"
             loading="lazy"
             decoding="async"
             class="block h-auto w-full"
           />
-          <figcaption class="flex items-center justify-between gap-3 border-t border-rule px-4 py-2 text-xs text-ink-3">
+          <figcaption class="wf-caption">
             <span>{f.shot.title}</span>
             <span class="font-mono">{f.shot.theme}</span>
           </figcaption>
         </figure>
-      ))
-    }
-  </div>
+      </div>
+    ))
+  }
 </div>
 
 <script>
   document.querySelectorAll<HTMLElement>('[data-feature-tabs]').forEach((root) => {
-    const items = [...root.querySelectorAll<HTMLElement>('[data-ftab]')]
-    const figures = [...root.querySelectorAll<HTMLElement>('[data-ftab-figure]')]
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-wf-tab]')]
+    const panels = [...root.querySelectorAll<HTMLElement>('[data-wf-panel]')]
 
-    function activate(id: string) {
-      items.forEach((item) => {
-        const on = item.dataset.ftab === id
-        item.toggleAttribute('data-active', on)
-        item.querySelector('.ftab-btn')?.setAttribute('aria-expanded', String(on))
-        const body = item.querySelector<HTMLElement>('.ftab-body')
-        if (body) body.hidden = !on
+    function activate(id: string, focus = false) {
+      tabs.forEach((tab) => {
+        const on = tab.dataset.wfTab === id
+        tab.setAttribute('aria-selected', String(on))
+        tab.tabIndex = on ? 0 : -1
+        if (on && focus) tab.focus()
       })
-      figures.forEach((fig) => {
-        fig.hidden = fig.dataset.ftabFigure !== id
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.wfPanel !== id
       })
     }
 
-    items.forEach((item) => {
-      item.querySelector('.ftab-btn')?.addEventListener('click', () => activate(item.dataset.ftab ?? ''))
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => activate(tab.dataset.wfTab ?? ''))
+      tab.addEventListener('keydown', (e) => {
+        const delta = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+        if (!delta) return
+        e.preventDefault()
+        const next = tabs[(i + delta + tabs.length) % tabs.length]
+        activate(next.dataset.wfTab ?? '', true)
+      })
     })
   })
 </script>
