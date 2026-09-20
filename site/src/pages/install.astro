@@ -1,0 +1,178 @@
+---
+import BrandIcon from '../components/BrandIcon.astro'
+import CommandBlock from '../components/CommandBlock.astro'
+import DocsLayout from '../layouts/DocsLayout.astro'
+import {
+  ARCH_HELPERS,
+  AUR_UPGRADE,
+  BREW_UPGRADE,
+  BUILD_RELEASE,
+  INSTALL_TABS,
+  LINUX_TARBALL,
+  MAC_MANUAL,
+  VERIFY_DOWNLOAD,
+} from '../data/install'
+import { latestRelease } from '../lib/github'
+import { articleLd, breadcrumbLd, graph } from '../lib/seo'
+import { LATEST_RELEASE_URL, RELEASES_URL } from '../lib/site'
+
+const release = await latestRelease()
+const version = release?.tag
+const macTab = INSTALL_TABS.find((t) => t.id === 'mac')!
+const debTab = INSTALL_TABS.find((t) => t.id === 'deb')!
+
+const description =
+  'Install Klustr on macOS with Homebrew or the notarized app bundle, on Arch from the AUR, on Debian and Ubuntu from the .deb, or on any Linux from the tarball. Build from source on Windows. Verify downloads with SHA256SUMS and build provenance.'
+
+const headings = [
+  { depth: 2, id: 'macos', text: 'macOS' },
+  { depth: 2, id: 'arch', text: 'Arch, CachyOS, Manjaro' },
+  { depth: 2, id: 'debian', text: 'Debian, Ubuntu' },
+  { depth: 2, id: 'linux', text: 'Linux tarball' },
+  { depth: 2, id: 'source', text: 'Build from source and Windows' },
+  { depth: 2, id: 'update', text: 'Updating' },
+  { depth: 2, id: 'verify', text: 'Verify a download' },
+  { depth: 2, id: 'requirements', text: 'Requirements' },
+]
+
+const jsonLd = graph([
+  articleLd({ headline: 'Install Klustr', description, path: '/install/' }),
+  breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Install', path: '/install/' }]),
+])
+---
+
+<DocsLayout
+  title="Install Klustr"
+  eyebrow="install"
+  lede={`Every release is built by CI from a tagged commit and published on GitHub Releases${version ? `; the current version is ${version}` : ''}. Pick your platform, then point Klustr at a kubeconfig context.`}
+  description={description}
+  path="/install/"
+  headings={headings}
+  jsonLd={jsonLd}
+>
+  <div class="flex flex-col gap-12">
+    <section id="macos" class="scroll-mt-24">
+      <div class="mb-4 flex items-center gap-3">
+        <span class="icon-btn pointer-events-none"><BrandIcon brand="apple" size="1.2rem" /></span>
+        <div>
+          <h2 class="display text-2xl">macOS</h2>
+          <p class="text-sm text-ink-3">Apple Silicon. Signed with a Developer ID certificate and notarized by Apple.</p>
+        </div>
+      </div>
+      <p class="eyebrow mb-2">homebrew</p>
+      <CommandBlock html={macTab.html} />
+      <p class="mt-3 text-sm text-ink-2">
+        After the initial tap, <code class="inline-code">brew search klustr</code> and <code class="inline-code">brew info klustr</code> find it like any other formula.
+      </p>
+      <p class="eyebrow mb-2 mt-5">manual</p>
+      <p class="mb-2 text-sm text-ink-2">
+        Download the darwin-arm64 tarball from the <a href={LATEST_RELEASE_URL} class="text-accent">latest release</a>, then:
+      </p>
+      <CommandBlock html={MAC_MANUAL} />
+      <p class="mt-3 text-sm text-ink-2">Gatekeeper opens the notarized bundle directly, even offline.</p>
+    </section>
+
+    <section id="arch" class="scroll-mt-24">
+      <div class="mb-4 flex items-center gap-3">
+        <span class="icon-btn pointer-events-none"><BrandIcon brand="archlinux" size="1.2rem" /></span>
+        <div>
+          <h2 class="display text-2xl">Arch, CachyOS, Manjaro</h2>
+          <p class="text-sm text-ink-3">AUR package klustr-bin, bumped automatically on every release.</p>
+        </div>
+      </div>
+      <CommandBlock html={ARCH_HELPERS} />
+      <p class="mt-3 text-sm text-ink-2">
+        The PKGBUILD uses the prebuilt release tarball, so the install completes in seconds.
+      </p>
+    </section>
+
+    <section id="debian" class="scroll-mt-24">
+      <div class="mb-4 flex items-center gap-3">
+        <span class="icon-btn pointer-events-none"><BrandIcon brand="ubuntu" size="1.2rem" /></span>
+        <div>
+          <h2 class="display text-2xl">Debian, Ubuntu</h2>
+          <p class="text-sm text-ink-3">amd64 .deb attached to every release.</p>
+        </div>
+      </div>
+      <CommandBlock html={debTab.html} />
+      <p class="mt-3 text-sm text-ink-2">
+        The package pulls in webkit2gtk-4.1 and gtk-3 automatically and registers a desktop entry. Run the three
+        commands one at a time; the first one resolves the latest tag.
+      </p>
+    </section>
+
+    <section id="linux" class="scroll-mt-24">
+      <div class="mb-4 flex items-center gap-3">
+        <span class="icon-btn pointer-events-none"><BrandIcon brand="linux" size="1.25rem" /></span>
+        <div>
+          <h2 class="display text-2xl">Linux tarball</h2>
+          <p class="text-sm text-ink-3">amd64, for any distribution that ships the runtime libraries.</p>
+        </div>
+      </div>
+      <p class="mb-2 text-sm text-ink-2">
+        Download the linux-amd64 tarball from the <a href={LATEST_RELEASE_URL} class="text-accent">latest release</a>, then:
+      </p>
+      <CommandBlock html={LINUX_TARBALL} />
+    </section>
+
+    <section id="source" class="scroll-mt-24">
+      <div class="mb-4 flex items-center gap-3">
+        <span class="icon-btn pointer-events-none"><BrandIcon brand="source" size="1.1rem" /></span>
+        <div>
+          <h2 class="display text-2xl">Build from source and Windows</h2>
+          <p class="text-sm text-ink-3">mise pins Go, Node and the Wails CLI; one command installs all three.</p>
+        </div>
+      </div>
+      <CommandBlock html={BUILD_RELEASE} />
+      <p class="mt-3 text-sm text-ink-2">
+        Windows builds will be attached to releases once they have been validated per platform. Until then this is
+        the Windows path.
+      </p>
+    </section>
+
+    <section id="update" class="scroll-mt-24">
+      <h2 class="display text-2xl">Updating</h2>
+      <p class="mt-2 text-sm text-ink-2">
+        Klustr checks GitHub Releases for a newer version and tells you when one exists; it never replaces itself.
+      </p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p class="eyebrow mb-2">homebrew</p>
+          <CommandBlock html={BREW_UPGRADE} />
+        </div>
+        <div>
+          <p class="eyebrow mb-2">aur</p>
+          <CommandBlock html={AUR_UPGRADE} />
+        </div>
+      </div>
+      <p class="mt-3 text-sm text-ink-2">The .deb and the tarballs are replaced by downloading the new release.</p>
+    </section>
+
+    <section id="verify" class="scroll-mt-24">
+      <h2 class="display text-2xl">Verify a download</h2>
+      <p class="mt-2 text-sm text-ink-2">
+        Every release ships a SHA256SUMS file, and each asset carries build provenance that ties it to the commit
+        and workflow run that produced it. Swap the asset name for the one you downloaded.
+      </p>
+      <div class="mt-4">
+        <CommandBlock html={VERIFY_DOWNLOAD} />
+      </div>
+    </section>
+
+    <section id="requirements" class="scroll-mt-24">
+      <h2 class="display text-2xl">Requirements</h2>
+      <ul class="prose mt-3 list-disc pl-5 text-sm">
+        <li>A kubeconfig. Klustr reads <code>~/.kube/config</code> and honors <code>KUBECONFIG</code>; if kubectl works, Klustr works.</li>
+        <li>macOS on Apple Silicon.</li>
+        <li>
+          Linux amd64 with <code>webkit2gtk-4.1</code> and <code>gtk-3</code>. Ubuntu 24.04+, Fedora 39+ and Arch ship them; Ubuntu
+          22.04 needs <code>libwebkit2gtk-4.1-0 libgtk-3-0</code> first.
+        </li>
+        <li>Nothing in the cluster. Klustr installs no agent, operator or CRD.</li>
+      </ul>
+      <p class="mt-4 text-sm text-ink-3">
+        All assets, including older versions, are on <a href={RELEASES_URL} class="text-accent">GitHub Releases</a>.
+      </p>
+    </section>
+  </div>
+</DocsLayout>

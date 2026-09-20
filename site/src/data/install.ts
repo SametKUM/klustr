@@ -58,3 +58,16 @@ ${P}install -Dm755 klustr ~/.local/bin/klustr`
 
 export const FROM_SOURCE = `${P}mise install
 ${P}wails dev`
+
+export const BUILD_RELEASE = `${P}mise install
+${P}wails build -trimpath -clean`
+
+export const BREW_UPGRADE = `${P}brew upgrade klustr`
+
+export const AUR_UPGRADE = `${P}paru -Syu`
+
+export const VERIFY_DOWNLOAD = `${P}V=$(curl -fsSL https://api.github.com/repos/${SITE.repo}/releases/latest \\
+    | grep -oP '"tag_name":\\s*"\\K[^"]+')
+${P}curl -LO https://github.com/${SITE.repo}/releases/download/$V/SHA256SUMS
+${P}sha256sum -c --ignore-missing SHA256SUMS   ${C('# macOS: shasum -a 256 -c --ignore-missing SHA256SUMS')}
+${P}gh attestation verify klustr-$V-linux-amd64.tar.gz --repo ${SITE.repo}`
