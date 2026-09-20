@@ -1,0 +1,76 @@
+---
+import DocsLayout from '../layouts/DocsLayout.astro'
+import { fetchReleases } from '../lib/github'
+import { renderFragment, slugify } from '../lib/markdown'
+import { breadcrumbLd, graph } from '../lib/seo'
+import { RELEASES_URL } from '../lib/site'
+
+const releases = (await fetchReleases()).slice(0, 20)
+
+// Every release ends with the same Install and Verify blocks; the landing
+// page already covers those, so the changelog keeps only what changed.
+function stripInstallBlock(markdown: string): string {
+  const at = markdown.search(/^## Install\b/m)
+  return at === -1 ? markdown : markdown.slice(0, at).trimEnd()
+}
+
+// Release notes carry their own headings ("What's changed"); push them below
+// the per-release H2 so the page outline stays one level per release.
+function demote(markdown: string): string {
+  return markdown.replace(/^(#{1,4})\s/gm, '$1## ')
+}
+
+const entries = releases.map((r) => ({
+  ...r,
+  id: slugify(r.tag),
+  date: new Date(r.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+  html: renderFragment(demote(stripInstallBlock(r.body))),
+}))
+
+const headings = entries.map((e) => ({ depth: 2, id: e.id, text: e.tag }))
+const latest = entries[0]
+const description = latest
+  ? `Release notes for Klustr. Latest: ${latest.tag}, published ${latest.date}. Every change to the Kubernetes desktop client, version by version.`
+  : 'Release notes for Klustr, the Kubernetes desktop client, version by version.'
+---
+
+<DocsLayout
+  title="Changelog"
+  eyebrow="releases"
+  lede="Every tagged release, newest first, as published on GitHub. Homebrew, the AUR package and the .deb follow each tag automatically."
+  description={description}
+  path="/changelog/"
+  headings={headings}
+  jsonLd={graph([breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Changelog', path: '/changelog/' }])])}
+>
+  {
+    entries.length === 0 ? (
+      <div class="prose">
+        <p>
+          The release list could not be fetched while this page was built. The full history is on
+          <a href={RELEASES_URL}>GitHub Releases</a>.
+        </p>
+      </div>
+    ) : (
+      <div class="flex flex-col gap-12">
+        {entries.map((e) => (
+          <section class="prose" id={e.id}>
+            <div class="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 class="mt-0!">
+                {e.tag}
+                {e.prerelease && <span class="ml-2 align-middle font-sans text-xs font-normal text-warn">pre-release</span>}
+              </h2>
+              <a href={e.url} class="font-mono text-xs no-underline" target="_blank" rel="noreferrer">
+                {e.date}. Assets and install steps on GitHub
+              </a>
+            </div>
+            <Fragment set:html={e.html} />
+          </section>
+        ))}
+        <p class="text-sm text-ink-3">
+          Older releases are on <a href={RELEASES_URL} class="text-accent">GitHub</a>.
+        </p>
+      </div>
+    )
+  }
+</DocsLayout>
