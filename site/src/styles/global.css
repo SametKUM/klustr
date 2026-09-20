@@ -780,6 +780,9 @@
 
   /* ── Comparison table ─────────────────────────────────────────────── */
 
+  .cmp-figure {
+    margin: 0;
+  }
   .cmp-wrap {
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-sheet);
@@ -787,31 +790,49 @@
     -webkit-overflow-scrolling: touch;
     background: var(--paper-2);
   }
-  .cmp {
-    border-collapse: collapse;
-    width: 100%;
-    min-width: 760px;
+  /* A head-to-head table has two tool columns; left at full width its cells
+     would be far wider than the text they hold. */
+  .cmp-duo {
+    max-width: 52rem;
   }
-  .cmp-compact .cmp {
-    min-width: 0;
+  .cmp {
+    /* Fixed layout keeps every tool column the same width, so no single long
+       cell can starve the others; --cmp-tools holds the tool count. Borders
+       are separate because Chromium ignores position:sticky on cells of a
+       collapsed table, and the criterion column has to stay pinned while the
+       tool columns scroll. Every cell draws only a bottom edge, so nothing
+       doubles up. */
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    min-width: calc(11.5rem + var(--cmp-tools, 4) * 11rem);
+  }
+  .cmp-col-label {
+    width: 11.5rem;
   }
   .cmp th,
   .cmp td {
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid var(--rule);
-    padding: 0.85rem 1rem;
+    padding: 0.8rem 1rem;
     font-size: 0.88rem;
     line-height: 1.5;
+    overflow-wrap: break-word;
   }
-  .cmp th {
+  .cmp thead th {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 0.8rem;
-    color: var(--ink-2);
+    font-size: 0.85rem;
+    color: var(--ink);
     background: var(--paper-3);
+    border-bottom: 1px solid var(--rule-strong);
   }
-  .cmp th.hl,
+  .cmp thead th.hl {
+    background: var(--accent-soft);
+    box-shadow: inset 0 3px 0 var(--accent);
+  }
   .cmp td.hl {
     background: var(--accent-soft);
   }
@@ -822,17 +843,79 @@
   .cmp-tool:hover {
     text-decoration: underline;
   }
+
+  /* The criterion column stays in place while the tool columns scroll. */
+  .cmp tbody th,
+  .cmp thead th:first-child,
+  .cmp .cmp-group th {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--paper-2);
+  }
+  .cmp thead th:first-child {
+    z-index: 2;
+    background: var(--paper-3);
+  }
   .cmp tbody th {
-    background: transparent;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 0.85rem;
     color: var(--ink);
-    white-space: nowrap;
+    box-shadow: inset -1px 0 0 var(--rule);
   }
-  .cmp-compact .cmp tbody th {
-    white-space: normal;
+  .cmp-group th,
+  .cmp-group td {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-3);
+    background: var(--paper-3);
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--rule-strong);
+    border-bottom: 1px solid var(--rule-strong);
   }
-  .cmp tbody tr:last-child th,
-  .cmp tbody tr:last-child td {
+  .cmp-group th {
+    box-shadow: none;
+    color: var(--ink-2);
+  }
+  .cmp-group th::before {
+    content: "// ";
+    color: var(--accent);
+  }
+  .cmp-group td.hl {
+    color: var(--ink);
+    background: var(--accent-soft);
+  }
+  .cmp tbody:first-of-type .cmp-group th,
+  .cmp tbody:first-of-type .cmp-group td {
+    border-top: 0;
+  }
+  .cmp tbody:last-of-type tr:last-child th,
+  .cmp tbody:last-of-type tr:last-child td {
     border-bottom: none;
+  }
+
+  .cmp-value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+  .cmp-dot {
+    flex: none;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 9999px;
+    transform: translateY(-0.1em);
+  }
+  .cmp-dot.yes {
+    background: var(--ok);
+  }
+  .cmp-dot.no {
+    background: var(--bad);
+  }
+  .cmp-dot.mid {
+    background: var(--warn);
   }
   .cmp .yes {
     color: var(--ok);
@@ -846,9 +929,60 @@
   }
   .cmp .sub {
     display: block;
-    margin-top: 0.2rem;
+    margin-top: 0.25rem;
     font-size: 0.78rem;
+    line-height: 1.45;
     color: var(--ink-3);
+  }
+  /* Shown only where the table is actually wider than its wrapper: the
+     thresholds match the min-width the tool count produces. */
+  .cmp-hint {
+    display: none;
+    margin-top: 0.6rem;
+    font-size: 0.8rem;
+    color: var(--ink-3);
+  }
+  @media (max-width: 1140px) {
+    .cmp-figure:not(.cmp-figure-duo) .cmp-hint {
+      display: block;
+    }
+  }
+  @media (max-width: 600px) {
+    .cmp-figure-duo .cmp-hint {
+      display: block;
+    }
+  }
+
+  /* ── Comparison section nav ───────────────────────────────────────── */
+
+  .cmp-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .cmp-nav a {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sheet);
+    background: var(--paper-2);
+    color: var(--ink-2);
+    text-decoration: none;
+    transition:
+      color 0.12s ease,
+      border-color 0.12s ease,
+      background-color 0.12s ease;
+  }
+  .cmp-nav a:hover {
+    color: var(--ink);
+    border-color: var(--rule-strong);
+  }
+  .cmp-nav a[aria-current="page"] {
+    color: var(--ink);
+    background: var(--accent-soft);
+    border-color: var(--accent);
   }
 
   /* ── Long-form prose (docs, compare, faq, changelog) ──────────────── */
