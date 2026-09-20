@@ -1,58 +1,91 @@
 ---
-import { COMPARE_PAGES, ROWS, TOOLS, type ToolId } from '../data/compare'
+import { COMPARE_PAGES, ROWS, ROW_GROUPS, TOOLS, type ToolId } from '../data/compare'
 
 interface Props {
   tools: ToolId[]
   rows?: string[]
-  compact?: boolean
+  // A teaser that shows only a few rows reads better without section headers.
+  grouped?: boolean
   class?: string
 }
 
-const { tools, rows: rowLabels, compact = false, class: className = '' } = Astro.props
+const { tools, rows: rowLabels, grouped = true, class: className = '' } = Astro.props
 const rows = rowLabels ? ROWS.filter((r) => rowLabels.includes(r.label)) : ROWS
+const groups = grouped
+  ? ROW_GROUPS.map((group) => ({
+      label: group.label,
+      rows: rows.filter((row) => row.group === group.id),
+    })).filter((group) => group.rows.length > 0)
+  : [{ label: null, rows }]
 const pageFor = (id: ToolId) => COMPARE_PAGES.find((p) => p.tool === id)
 ---
 
-<div class:list={['cmp-wrap', { 'cmp-compact': compact }, className]}>
-  <table class="cmp">
-    <thead>
-      <tr>
-        <th scope="col"><span class="sr-only">Criterion</span></th>
-        {
-          tools.map((id) => {
-            const page = pageFor(id)
-            return (
-              <th scope="col" class:list={{ hl: id === 'klustr' }}>
-                {page ? (
-                  <a href={`/compare/${page.slug}/`} class="cmp-tool" title={`Klustr vs ${TOOLS[id].name}`}>
-                    {TOOLS[id].name}
-                  </a>
-                ) : (
-                  TOOLS[id].name
-                )}
-              </th>
-            )
-          })
-        }
-      </tr>
-    </thead>
-    <tbody>
-      {
-        rows.map((row) => (
-          <tr>
-            <th scope="row">{row.label}</th>
-            {tools.map((id) => {
-              const cell = row.cells[id]
+<figure class:list={['cmp-figure', { 'cmp-figure-duo': tools.length <= 2 }, className]}>
+  <div class:list={['cmp-wrap', { 'cmp-duo': tools.length <= 2 }]} style={`--cmp-tools:${tools.length}`}>
+    <table class="cmp">
+      <colgroup>
+        <col class="cmp-col-label" />
+        {tools.map(() => <col />)}
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col"><span class="sr-only">Criterion</span></th>
+          {
+            tools.map((id) => {
+              const page = pageFor(id)
               return (
-                <td class:list={{ hl: id === 'klustr' }}>
-                  <span class:list={[cell.tone]}>{cell.text}</span>
-                  {cell.sub && <span class="sub">{cell.sub}</span>}
-                </td>
+                <th scope="col" class:list={{ hl: id === 'klustr' }}>
+                  {page ? (
+                    <a href={`/compare/${page.slug}/`} class="cmp-tool" title={`Klustr vs ${TOOLS[id].name}`}>
+                      {TOOLS[id].name}
+                    </a>
+                  ) : (
+                    TOOLS[id].name
+                  )}
+                </th>
               )
-            })}
-          </tr>
+            })
+          }
+        </tr>
+      </thead>
+      {
+        groups.map((group) => (
+          <tbody>
+            {group.label && (
+              <tr class="cmp-group">
+                <th scope="row">{group.label}</th>
+                {/* The tool names repeat per section: the header cannot stick
+                    to the viewport from inside a horizontally scrolling
+                    wrapper, and a reader deep in the table still needs to know
+                    which column is which. */}
+                {tools.map((id) => (
+                  <td class:list={{ hl: id === 'klustr' }} aria-hidden="true">
+                    {TOOLS[id].name}
+                  </td>
+                ))}
+              </tr>
+            )}
+            {group.rows.map((row) => (
+              <tr>
+                <th scope="row">{row.label}</th>
+                {tools.map((id) => {
+                  const cell = row.cells[id]
+                  return (
+                    <td class:list={{ hl: id === 'klustr' }}>
+                      <span class="cmp-value">
+                        {cell.tone && <span class:list={['cmp-dot', cell.tone]} aria-hidden="true" />}
+                        <span class:list={[cell.tone]}>{cell.text}</span>
+                      </span>
+                      {cell.sub && <span class="sub">{cell.sub}</span>}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
         ))
       }
-    </tbody>
-  </table>
-</div>
+    </table>
+  </div>
+  <figcaption class="cmp-hint">Scroll the table sideways for the remaining columns.</figcaption>
+</figure>

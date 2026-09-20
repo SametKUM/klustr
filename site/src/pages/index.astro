@@ -367,7 +367,7 @@ const compareRows = [
         </div>
         <a href="/compare/" class="btn btn-ghost btn-sm shrink-0">All 14 rows and Kubernetes Dashboard</a>
       </div>
-      <CompareTable tools={['klustr', 'lens', 'k9s', 'headlamp']} rows={compareRows} class="mt-8" />
+      <CompareTable tools={['klustr', 'lens', 'k9s', 'headlamp']} rows={compareRows} grouped={false} class="mt-8" />
       <p class="mt-3 text-sm text-ink-3">
         Facts checked against each tool’s documentation on {REVIEWED_ON}. Full pages:
         <a href="/compare/lens/" class="text-accent">Klustr vs Lens</a>,
