@@ -219,12 +219,13 @@ export const COMPARE_PAGES: ComparePage[] = [
   {
     slug: 'lens',
     tool: 'lens',
-    title: 'Klustr vs Lens: an open-source Lens alternative that installs nothing',
+    title: 'Klustr vs Lens: open-source Lens and OpenLens alternative',
     heading: 'Klustr vs Lens',
     description:
-      'How Klustr compares with Lens Desktop: license and sign-in, Electron versus a native webview, several clusters at once, Helm, Argo CD and Flux, Gateway API and RBAC review.',
+      'Klustr compared with Lens Desktop, for OpenLens and Freelens users too: license and sign-in, Electron vs native webview, multi-cluster, Helm, Argo CD, Flux, Gateway API and RBAC.',
     intro: [
       'Lens is the best-known Kubernetes desktop IDE: a mature, cross-platform Electron app with an extension marketplace, team features and paid plans. Klustr is a smaller, MIT-licensed desktop client for macOS and Linux that trades the marketplace and the team layer for a direct workflow with no account: your kubeconfig, the Kubernetes API, and typed views for the platform tooling most clusters already run.',
+      'If you arrived here looking for an OpenLens alternative or a Freelens alternative: OpenLens was the community build of Lens’s open-source core and has not been maintained for over two years, and Freelens is the community fork started in 2024 that carries it on. Both keep Lens’s Electron architecture and one-cluster-per-view model, so most rows below apply to them as well. Freelens, like Klustr, needs no account.',
       `Facts about Lens come from its public documentation and were reviewed on ${REVIEWED_ON}. If something is out of date, [open an issue](https://github.com/SametKUM/klustr/issues) and it will be corrected.`,
     ],
     different: [
@@ -302,7 +303,7 @@ export const COMPARE_PAGES: ComparePage[] = [
   {
     slug: 'kubernetes-dashboard',
     tool: 'dashboard',
-    title: 'Klustr vs Kubernetes Dashboard: a desktop alternative to the in-cluster UI',
+    title: 'Klustr vs Kubernetes Dashboard: a desktop alternative',
     heading: 'Klustr vs Kubernetes Dashboard',
     description:
       'Why a desktop client can replace the in-cluster Kubernetes Dashboard for day-to-day work: nothing to deploy or expose, every cluster in one app, Helm, GitOps, Gateway API and RBAC review.',
