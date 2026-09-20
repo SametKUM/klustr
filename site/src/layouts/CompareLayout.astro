@@ -1,0 +1,49 @@
+---
+import BaseLayout from './BaseLayout.astro'
+import { COMPARE_PAGES, TOOLS } from '../data/compare'
+import type { JsonLd } from '../lib/seo'
+
+// Comparison pages carry a five-column table, which does not fit the docs
+// layout's narrow middle column. They get the full container width and a
+// horizontal section nav instead of the docs sidebar and on-this-page rail.
+interface Props {
+  title: string
+  description: string
+  path: string
+  eyebrow?: string
+  lede?: string
+  jsonLd?: JsonLd | JsonLd[]
+  ogType?: 'website' | 'article'
+  bareTitle?: boolean
+}
+
+const { title, description, path, eyebrow, lede, jsonLd, ogType = 'article', bareTitle = false } = Astro.props
+
+const links = [
+  { href: '/compare/', label: 'All comparisons' },
+  ...COMPARE_PAGES.map((p) => ({ href: `/compare/${p.slug}/`, label: `vs ${TOOLS[p.tool].name}` })),
+]
+const current = Astro.url.pathname
+---
+
+<BaseLayout title={title} description={description} path={path} jsonLd={jsonLd} ogType={ogType} bareTitle={bareTitle}>
+  <div class="mx-auto max-w-6xl px-5 pb-20 pt-8">
+    <nav class="cmp-nav" aria-label="Comparisons">
+      {
+        links.map((link) => (
+          <a href={link.href} aria-current={current === link.href ? 'page' : undefined}>
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <header class="mt-8 border-b border-rule pb-8">
+      {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+      <h1 class="display mt-3 max-w-4xl text-3xl sm:text-4xl lg:text-[2.75rem]">{title}</h1>
+      {lede && <p class="lede mt-5 max-w-[68ch]">{lede}</p>}
+    </header>
+
+    <slot />
+  </div>
+</BaseLayout>
