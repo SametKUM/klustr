@@ -38,6 +38,13 @@ updates:
       # range; a TypeScript 7 bump fails `npm ci` until that range widens.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # sharp is pinned exactly because its libvips binaries are LGPL and the
+      # licence scan can only be cleared per version on this plan; every bump
+      # would re-flag fourteen packages. It runs on a runner over our own
+      # committed screenshots, never untrusted input, so a frozen version
+      # carries no meaningful exposure. Bump it deliberately, then re-clear
+      # the scan — see the landing-site section of CLAUDE.md.
+      - dependency-name: "sharp"
 
   - package-ecosystem: docker
     directory: "/site"
