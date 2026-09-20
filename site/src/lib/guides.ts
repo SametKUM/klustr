@@ -92,10 +92,14 @@ export const GUIDES: GuideMeta[] = GUIDE_GROUPS.flatMap((g) => g.guides)
 
 export type Guide = GuideMeta & Rendered
 
+export function loadGuideMarkdown(slug: string): Promise<string> {
+  return readFile(path.join(GUIDE_DIR, `${slug}.md`), 'utf8')
+}
+
 export async function loadGuide(slug: string): Promise<Guide> {
   const meta = GUIDES.find((g) => g.slug === slug)
   if (!meta) throw new Error(`guide "${slug}" is not listed in GUIDE_GROUPS`)
-  const markdown = await readFile(path.join(GUIDE_DIR, `${slug}.md`), 'utf8')
+  const markdown = await loadGuideMarkdown(slug)
   const rendered = renderDocument(markdown)
   if (!rendered.title) throw new Error(`guide "${slug}" has no H1 title`)
   return { ...meta, ...rendered }
