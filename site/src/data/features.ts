@@ -1,0 +1,26 @@
+// The featureList in the SoftwareApplication structured data. Kept as plain
+// sentences so search engines and the capabilities grid read the same facts.
+export const FEATURE_LIST = [
+  'Pure client: nothing installed in the cluster, drives the Kubernetes API from your kubeconfig',
+  'Live resource lists through client-go informers, never polled',
+  'Multi-context aggregated mode with named context groups and color tags',
+  'Every built-in resource kind including the full RBAC set',
+  'Access Review: subject to effective-permission matrix with the binding and role chain',
+  'Custom Resource Definitions auto-discovered and grouped by API group',
+  'Helm v3 install, upgrade, rollback and uninstall with a dry-run diff first',
+  'Argo CD sync, refresh, rollback and delete through the Kubernetes API',
+  'Flux CD reconcile, suspend and resume for Kustomizations, HelmReleases and sources',
+  'Gateway API typed views with listener tables, rule matrices and RouteParentStatus',
+  'cert-manager certificates with the full issuance chain and one-click renew',
+  'Istio, Karpenter and KEDA views that appear when their CRDs are present',
+  'Multi-pod log streaming with per-pod colors, follow, regex and save',
+  'In-app exec, ephemeral debug containers and a root node shell',
+  'Cordon, uncordon and PDB-aware drain with live progress',
+  'YAML editing with a server-side dry-run diff before apply',
+  'Scale, rolling restart, pause and resume, in-place pod resize',
+  'Rollout history with revision diff and one-click rollback',
+  'Port-forwarding with suggested ports and a header indicator',
+  'Built-in terminal drawer bound to the active context',
+  'Per-context read-only mode',
+  'Twelve themes and a command palette',
+]
