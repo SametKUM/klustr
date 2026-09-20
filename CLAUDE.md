@@ -157,7 +157,7 @@ klustr/
 │   ├── perf-testing.md             performance testing protocol (microbenchmarks
 │   │                               + benchstat + on-cluster profiling)
 │   └── screenshots/                numbered themed pack `01-*.png` …
-│                                   `17-*.png` for the README grid and the site
+│                                   `20-*.png` for the README grid and the site
 │                                   tour; 2560×1600 (the 1280×800 default window
 │                                   at 2x), each in a different theme, captured
 │                                   by Playwright against two kind fixture
