@@ -15,10 +15,22 @@ export type Cell = {
   sub?: string
 }
 
+export type RowGroup = 'project' | 'access' | 'clusters' | 'platform' | 'operations'
+
 export type Row = {
+  group: RowGroup
   label: string
   cells: Record<ToolId, Cell>
 }
+
+// Rendered in this order, each as its own table section.
+export const ROW_GROUPS: { id: RowGroup; label: string }[] = [
+  { id: 'project', label: 'The project' },
+  { id: 'access', label: 'What it needs from your cluster' },
+  { id: 'clusters', label: 'Working across clusters' },
+  { id: 'platform', label: 'Platform tooling' },
+  { id: 'operations', label: 'Day-to-day operations' },
+]
 
 export const REVIEWED_ON = '2026-09-20'
 
@@ -62,6 +74,7 @@ export const TOOLS: Record<ToolId, Tool> = {
 
 export const ROWS: Row[] = [
   {
+    group: 'project',
     label: 'License and price',
     cells: {
       klustr: { text: 'MIT, free', tone: 'yes' },
@@ -72,6 +85,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'project',
     label: 'Runtime',
     cells: {
       klustr: { text: 'Go + OS webview', sub: 'Wails, no bundled browser' },
@@ -82,6 +96,18 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'project',
+    label: 'Platforms',
+    cells: {
+      klustr: { text: 'macOS, Linux', sub: 'Windows from source' },
+      lens: { text: 'macOS, Windows, Linux' },
+      k9s: { text: 'macOS, Linux, Windows' },
+      headlamp: { text: 'macOS, Windows, Linux, browser' },
+      dashboard: { text: 'Browser' },
+    },
+  },
+  {
+    group: 'access',
     label: 'Installed in the cluster',
     cells: {
       klustr: { text: 'Nothing', tone: 'yes', sub: 'Optional one-click metrics-server, removable from Klustr' },
@@ -92,6 +118,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'access',
     label: 'Account or sign-in',
     cells: {
       klustr: { text: 'None', tone: 'yes', sub: 'Your kubeconfig is the only credential' },
@@ -102,6 +129,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'clusters',
     label: 'Several clusters at once',
     cells: {
       klustr: { text: 'Aggregated table', tone: 'yes', sub: 'Two or more contexts in one list, named groups, color tags' },
@@ -112,6 +140,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'clusters',
     label: 'RBAC',
     cells: {
       klustr: { text: 'Access Review matrix', tone: 'yes', sub: 'Subject to effective permissions with the binding chain' },
@@ -122,6 +151,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'platform',
     label: 'Helm',
     cells: {
       klustr: { text: 'Built in', tone: 'yes', sub: 'Install, upgrade, rollback, uninstall with a dry-run diff; repo search' },
@@ -132,6 +162,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'platform',
     label: 'Argo CD and Flux',
     cells: {
       klustr: { text: 'Built in, through the API', tone: 'yes', sub: 'Sync, refresh, reconcile, suspend; no CLIs' },
@@ -142,6 +173,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'platform',
     label: 'Gateway API',
     cells: {
       klustr: { text: 'Typed views', tone: 'yes', sub: 'Listeners, rule matrix, RouteParentStatus' },
@@ -152,6 +184,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'platform',
     label: 'cert-manager',
     cells: {
       klustr: { text: 'Typed views', tone: 'yes', sub: 'Issuance chain and one-click renew' },
@@ -162,6 +195,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'operations',
     label: 'Logs',
     cells: {
       klustr: { text: 'Multi-pod stream', tone: 'yes', sub: 'Per-pod colors, follow, regex, save' },
@@ -172,6 +206,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'operations',
     label: 'Shell access',
     cells: {
       klustr: { text: 'Exec, debug container, node shell', tone: 'yes' },
@@ -182,6 +217,7 @@ export const ROWS: Row[] = [
     },
   },
   {
+    group: 'operations',
     label: 'Local terminal',
     cells: {
       klustr: { text: 'Drawer per context', tone: 'yes', sub: 'KUBECONFIG preset to the active context' },
@@ -189,16 +225,6 @@ export const ROWS: Row[] = [
       k9s: { text: 'Is the terminal', tone: 'yes' },
       headlamp: { text: 'None', tone: 'no' },
       dashboard: { text: 'None', tone: 'no' },
-    },
-  },
-  {
-    label: 'Platforms',
-    cells: {
-      klustr: { text: 'macOS, Linux', sub: 'Windows from source' },
-      lens: { text: 'macOS, Windows, Linux' },
-      k9s: { text: 'macOS, Linux, Windows' },
-      headlamp: { text: 'macOS, Windows, Linux, browser' },
-      dashboard: { text: 'Browser' },
     },
   },
 ]
