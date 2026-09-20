@@ -1,0 +1,88 @@
+---
+import { Download } from '@lucide/astro'
+import CompareTable from '../../components/CompareTable.astro'
+import DocsLayout from '../../layouts/DocsLayout.astro'
+import { COMPARE_PAGES, TOOLS, comparePage } from '../../data/compare'
+import { renderFragment } from '../../lib/markdown'
+import { articleLd, breadcrumbLd, graph } from '../../lib/seo'
+import { LATEST_RELEASE_URL } from '../../lib/site'
+
+export async function getStaticPaths() {
+  return COMPARE_PAGES.map((p) => ({ params: { slug: p.slug } }))
+}
+
+const { slug } = Astro.params
+const page = comparePage(slug)
+const tool = TOOLS[page.tool]
+const path = `/compare/${slug}/`
+
+const headings = [
+  { depth: 2, id: 'at-a-glance', text: 'At a glance' },
+  { depth: 2, id: 'different', text: 'Where Klustr is different' },
+  { depth: 2, id: 'stronger', text: `Where ${tool.name} is stronger` },
+  { depth: 2, id: 'which', text: 'Which one to pick' },
+]
+
+const jsonLd = graph([
+  articleLd({ type: 'Article', headline: page.title, description: page.description, path }),
+  breadcrumbLd([
+    { name: 'Home', path: '/' },
+    { name: 'Compare', path: '/compare/' },
+    { name: page.heading, path },
+  ]),
+])
+---
+
+<DocsLayout
+  title={page.title}
+  eyebrow={`compare / ${tool.name.toLowerCase()}`}
+  description={page.description}
+  path={path}
+  headings={headings}
+  jsonLd={jsonLd}
+>
+  <div class="prose">
+    {page.intro.map((p) => <Fragment set:html={renderFragment(p)} />)}
+  </div>
+
+  <section class="mt-12">
+    <h2 id="at-a-glance" class="display scroll-mt-24 text-2xl">At a glance</h2>
+    <CompareTable tools={['klustr', page.tool]} compact class="mt-5" />
+    <p class="mt-3 text-sm text-ink-3">
+      <a href={tool.url} class="text-accent" target="_blank" rel="noreferrer">{tool.name} website</a>
+    </p>
+  </section>
+
+  <section class="prose mt-12">
+    <h2 id="different">Where Klustr is different</h2>
+    <ul>
+      {page.different.map((item) => <li set:html={renderFragment(item).replace(/^<p>|<\/p>\s*$/g, '')} />)}
+    </ul>
+  </section>
+
+  <section class="prose mt-12">
+    <h2 id="stronger">Where {tool.name} is stronger</h2>
+    <ul>
+      {page.stronger.map((item) => <li set:html={renderFragment(item).replace(/^<p>|<\/p>\s*$/g, '')} />)}
+    </ul>
+  </section>
+
+  <section class="prose mt-12">
+    <h2 id="which">Which one to pick</h2>
+    <p>{page.verdict}</p>
+  </section>
+
+  <div class="sheet mt-12 flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center">
+    <div>
+      <p class="font-mono font-semibold">Try Klustr with your own kubeconfig</p>
+      <p class="mt-1 text-sm text-ink-2">Free, MIT-licensed, nothing installed in the cluster.</p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <a href={LATEST_RELEASE_URL} class="btn btn-primary btn-sm" target="_blank" rel="noreferrer">
+        <Download size={14} />
+        <span>Download</span>
+      </a>
+      <a href="/docs/getting-started/" class="btn btn-ghost btn-sm">Getting started</a>
+    </div>
+  </div>
+</DocsLayout>
