@@ -1,5 +1,5 @@
 ---
-import { ROWS, TOOLS, type ToolId } from '../data/compare'
+import { COMPARE_PAGES, ROWS, TOOLS, type ToolId } from '../data/compare'
 
 interface Props {
   tools: ToolId[]
@@ -10,6 +10,7 @@ interface Props {
 
 const { tools, rows: rowLabels, compact = false, class: className = '' } = Astro.props
 const rows = rowLabels ? ROWS.filter((r) => rowLabels.includes(r.label)) : ROWS
+const pageFor = (id: ToolId) => COMPARE_PAGES.find((p) => p.tool === id)
 ---
 
 <div class:list={['cmp-wrap', { 'cmp-compact': compact }, className]}>
@@ -18,11 +19,20 @@ const rows = rowLabels ? ROWS.filter((r) => rowLabels.includes(r.label)) : ROWS
       <tr>
         <th scope="col"><span class="sr-only">Criterion</span></th>
         {
-          tools.map((id) => (
-            <th scope="col" class:list={{ hl: id === 'klustr' }}>
-              {TOOLS[id].name}
-            </th>
-          ))
+          tools.map((id) => {
+            const page = pageFor(id)
+            return (
+              <th scope="col" class:list={{ hl: id === 'klustr' }}>
+                {page ? (
+                  <a href={`/compare/${page.slug}/`} class="cmp-tool" title={`Klustr vs ${TOOLS[id].name}`}>
+                    {TOOLS[id].name}
+                  </a>
+                ) : (
+                  TOOLS[id].name
+                )}
+              </th>
+            )
+          })
         }
       </tr>
     </thead>

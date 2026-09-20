@@ -815,6 +815,13 @@
   .cmp td.hl {
     background: var(--accent-soft);
   }
+  .cmp-tool {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .cmp-tool:hover {
+    text-decoration: underline;
+  }
   .cmp tbody th {
     background: transparent;
     color: var(--ink);
