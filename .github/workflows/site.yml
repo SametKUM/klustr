@@ -43,5 +43,10 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # The changelog page and the version label are rendered from the GitHub
+      # Releases API at build time; the workflow token lifts the anonymous
+      # rate limit so a busy runner IP cannot leave the page empty.
       - name: Build
         run: npm run build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
