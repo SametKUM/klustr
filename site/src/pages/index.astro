@@ -27,11 +27,12 @@ import heroPoster from '../assets/hero-poster.png'
 import { REVIEWED_ON } from '../data/compare'
 import { FEATURE_LIST } from '../data/features'
 import { SHOTS, shotBySlug } from '../data/shots'
-import { latestRelease } from '../lib/github'
+import { firstRelease, latestRelease } from '../lib/github'
 import { graph, personLd, softwareLd, sourceCodeLd, websiteLd } from '../lib/seo'
 import { LATEST_RELEASE_URL, REPO_URL, SITE, absoluteUrl } from '../lib/site'
 
 const release = await latestRelease()
+const first = await firstRelease()
 const version = release?.tag
 
 const screenshotUrls = await Promise.all(
@@ -42,7 +43,13 @@ const poster = await getImage({ src: heroPoster, width: 1280, format: 'webp' })
 const jsonLd = graph([
   personLd(),
   websiteLd(),
-  softwareLd({ version, screenshots: screenshotUrls, features: FEATURE_LIST }),
+  softwareLd({
+    version,
+    screenshots: screenshotUrls,
+    features: FEATURE_LIST,
+    datePublished: first?.publishedAt,
+    dateModified: release?.publishedAt,
+  }),
   sourceCodeLd(),
 ])
 
@@ -50,7 +57,7 @@ const features: Feature[] = [
   {
     id: 'multi-context',
     eyebrow: 'multi-context',
-    heading: 'Two clusters. One table.',
+    heading: 'Multi-cluster: two clusters, one table.',
     body: 'Check two or more contexts on the Connections screen and every list fans out across them with a Context column. Save the selection as a named group, tag production with a color, and the top bar paints a stripe so you always know which environment you are touching. Per-context read-only mode blocks every mutation when you only mean to look.',
     chips: [
       { value: '2+', label: 'contexts in one list' },
@@ -63,7 +70,7 @@ const features: Feature[] = [
   {
     id: 'debugging',
     eyebrow: 'debugging',
-    heading: 'Logs, exec, debug containers, node shell.',
+    heading: 'Debugging: logs, exec, debug containers, node shell.',
     body: 'Stream logs across every pod of a workload with a color per pod, follow, regex and save. Open a shell in any container, or inject an ephemeral debug container when the image has no shell. From a node, open a root shell through a temporary nsenter pod that is removed when you close it, then cordon and drain with live progress.',
     chips: [
       { value: 'Multi-pod', label: 'one stream, one color each' },
@@ -76,7 +83,7 @@ const features: Feature[] = [
   {
     id: 'helm',
     eyebrow: 'helm',
-    heading: 'Dry-run first. Then apply.',
+    heading: 'Helm: dry-run first, then apply.',
     body: 'Helm v3 runs inside Klustr through the upstream library, with no helm binary on your PATH. Every install and upgrade renders as a dry-run diff you confirm before anything changes. Releases are read from the Secret informer that is already open, so the list stays live without extra polling.',
     chips: [
       { value: 'Diff', label: 'before every apply' },
@@ -89,7 +96,7 @@ const features: Feature[] = [
   {
     id: 'argocd',
     eyebrow: 'argo cd',
-    heading: 'Sync and refresh through the API.',
+    heading: 'Argo CD: sync and refresh through the API.',
     body: 'Applications appear as soon as the Argo CD CRDs are detected, with Sync and Health pills, revision and repo on every row. Sync sends the same PATCH that argocd app sync does, Refresh flips the annotation, and Rollback and cascade-aware Delete are one click. The Resources tab lists every managed object and deep-links into it. No argocd-server ingress, no Argo login, no CLI.',
     chips: [
       { value: 'Sync', label: 'the argocd app sync payload' },
@@ -102,7 +109,7 @@ const features: Feature[] = [
   {
     id: 'flux',
     eyebrow: 'flux cd',
-    heading: 'Reconcile and suspend. Nine kinds.',
+    heading: 'Flux CD: reconcile and suspend, nine kinds.',
     body: 'Kustomizations, HelmReleases, Git, Helm and OCI repositories, Buckets, Providers, Alerts and Receivers, each with conditions, source and applied revision up front. Reconcile and Suspend set the standard Flux annotations, so a failed Kustomization is fixed from the same screen that shows why it failed.',
     chips: [
       { value: '9', label: 'toolkit kinds' },
@@ -115,7 +122,7 @@ const features: Feature[] = [
   {
     id: 'gateway',
     eyebrow: 'gateway api',
-    heading: 'Route status you can read.',
+    heading: 'Gateway API: route status you can read.',
     body: 'Gateways, HTTP, GRPC, TLS, TCP and UDP routes, ListenerSets and BackendTLSPolicies through typed informers. A route renders as a per-rule match, backend and weight matrix with the RouteParentStatus beside it, so a parent that has not accepted a route or a RefNotPermitted backend is one click away. Vendor-neutral: Envoy Gateway, Cilium, Istio, Contour or NGINX Gateway Fabric.',
     chips: [
       { value: 'RouteParentStatus', label: 'per parent, per controller' },
@@ -128,7 +135,7 @@ const features: Feature[] = [
   {
     id: 'cert-manager',
     eyebrow: 'cert-manager',
-    heading: 'The issuance chain, one tab away.',
+    heading: 'cert-manager: the issuance chain, one tab away.',
     body: 'Certificates with ready state and expiry, Issuers and ClusterIssuers with their type collapsed into one column, and a drill-down from Certificate through CertificateRequest and Order to the Challenge, with the ACME error that explains a stuck issuance. Renew is one click, with no cmctl on your PATH.',
     chips: [
       { value: 'Chain', label: 'Certificate to Challenge' },
@@ -141,7 +148,7 @@ const features: Feature[] = [
   {
     id: 'istio',
     eyebrow: 'istio',
-    heading: 'Traffic splits without the YAML.',
+    heading: 'Istio: traffic splits without the YAML.',
     body: 'VirtualServices show their hosts, gateways and every HTTP rule as a match with weighted destinations. DestinationRules show TLS mode, load balancer and subsets; PeerAuthentications show the mTLS mode and selector. The served API version comes from the discovered CRD, so the views follow whatever Istio the cluster runs.',
     chips: [
       { value: '90 / 10', label: 'canary split, readable' },
@@ -154,7 +161,7 @@ const features: Feature[] = [
   {
     id: 'karpenter',
     eyebrow: 'karpenter',
-    heading: 'Node pools and claims, live.',
+    heading: 'Karpenter: node pools and claims, live.',
     body: 'NodePools with weight, node class, consolidation policy and CPU and memory against their limits. NodeClaims with node, instance type, capacity type, zone and the Launched, Registered and Initialized steps, so a claim stuck before registration stands out. The group appears when the karpenter.sh CRDs are present.',
     chips: [
       { value: 'Limits', label: 'CPU and memory against used' },
@@ -167,7 +174,7 @@ const features: Feature[] = [
   {
     id: 'keda',
     eyebrow: 'keda',
-    heading: 'Triggers instead of s0-prometheus.',
+    heading: 'KEDA: triggers instead of s0-prometheus.',
     body: 'A KEDA-managed HPA is a plain autoscaler whose metrics are all External and named s0, s1 and so on. Klustr maps each back to its ScaledObject trigger and shows the type with the metadata that predicts scaling: the cron schedule and timezone, the Prometheus query and threshold, the Kafka topic and lag.',
     chips: [
       { value: 'cron', label: 'schedule, timezone, replicas' },
@@ -243,25 +250,19 @@ const compareRows = [
 ]
 ---
 
-<BaseLayout
-  title={`${SITE.name}: ${SITE.tagline}`}
-  bareTitle
-  description={SITE.description}
-  path="/"
-  jsonLd={jsonLd}
->
+<BaseLayout title={SITE.title} bareTitle description={SITE.metaDescription} path="/" jsonLd={jsonLd}>
   <!-- Hero -->
   <section class="mx-auto max-w-6xl px-5 pb-10 pt-10 md:pt-14">
     <div class="mx-auto max-w-5xl text-center">
-      <p class="eyebrow rise">kubernetes desktop client for macOS and Linux</p>
-      <h1 class="display rise rise-2 mt-4 text-[2.25rem] sm:text-5xl lg:text-[3.75rem]">
-        Your clusters, live.<br />
+      <p class="eyebrow rise">kubernetes desktop gui for macOS and Linux</p>
+      <h1 class="display rise rise-2 mt-4 text-[2.25rem] sm:text-5xl lg:text-[3.25rem]">
+        Your Kubernetes clusters, live.<br />
         <span class="marker">Nothing installed in them.</span>
       </h1>
       <p class="lede rise rise-3 mx-auto mt-5 max-w-2xl">
-        Klustr reads the kubeconfig you already have and drives the Kubernetes API the way kubectl does. Live
-        resources, RBAC review, Helm, Argo CD, Flux, Gateway API and cert-manager in one window. Free and open
-        source under MIT.
+        Klustr is a free, open-source Kubernetes desktop client for macOS and Linux. It reads the kubeconfig you
+        already have and drives the Kubernetes API the way kubectl does: live resources, RBAC review, Helm, Argo CD,
+        Flux, Gateway API and cert-manager in one window.
       </p>
 
       <InstallTabs group="hero" version={version} detectOs class="rise rise-4 mx-auto mt-7 max-w-2xl" />
@@ -300,6 +301,10 @@ const compareRows = [
       <div class="max-w-2xl">
         <p class="eyebrow">ten workflows</p>
         <h2 class="display mt-3 text-3xl sm:text-4xl">The jobs kubectl makes you stitch together.</h2>
+        <p class="lede mt-4">
+          One Kubernetes GUI for the day-to-day work and for the platform tooling around it. Each integration below
+          appears when its CRDs are found in a cluster and comes with its own status views and actions.
+        </p>
       </div>
       <div class="mt-8">
         <FeatureTabs features={features} />
@@ -353,14 +358,22 @@ const compareRows = [
       <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div class="max-w-2xl">
           <p class="eyebrow">compare</p>
-          <h2 class="display mt-3 text-3xl sm:text-4xl">Klustr next to Lens, k9s and Headlamp.</h2>
+          <h2 class="display mt-3 text-3xl sm:text-4xl">Klustr vs Lens, k9s and Headlamp.</h2>
+          <p class="lede mt-4">
+            Looking for a Lens alternative, or a way off the in-cluster Kubernetes Dashboard? Each of these is a good
+            tool with a different shape. The table keeps to facts you can check in their documentation, and the page
+            behind each name says where that tool is the better pick.
+          </p>
         </div>
         <a href="/compare/" class="btn btn-ghost btn-sm shrink-0">All 14 rows and Kubernetes Dashboard</a>
       </div>
       <CompareTable tools={['klustr', 'lens', 'k9s', 'headlamp']} rows={compareRows} class="mt-8" />
       <p class="mt-3 text-sm text-ink-3">
-        Facts checked against each tool’s documentation on {REVIEWED_ON}. Each of these is a good tool with a different
-        shape; the <a href="/compare/" class="text-accent">comparison pages</a> say where each one is the better pick.
+        Facts checked against each tool’s documentation on {REVIEWED_ON}. Full pages:
+        <a href="/compare/lens/" class="text-accent">Klustr vs Lens</a>,
+        <a href="/compare/k9s/" class="text-accent">Klustr vs k9s</a>,
+        <a href="/compare/headlamp/" class="text-accent">Klustr vs Headlamp</a> and
+        <a href="/compare/kubernetes-dashboard/" class="text-accent">Klustr vs Kubernetes Dashboard</a>.
       </p>
     </div>
   </section>
