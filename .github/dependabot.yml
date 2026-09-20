@@ -39,6 +39,16 @@ updates:
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
 
+  - package-ecosystem: docker
+    directory: "/site"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker-compose
+    directory: "/site"
+    schedule:
+      interval: weekly
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
