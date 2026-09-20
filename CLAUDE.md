@@ -159,6 +159,10 @@ klustr/
 ├── site/                         klustr.dev landing + docs site (Astro 7, Tailwind v4,
 │   │                             static output deployed to GitHub Pages by pages.yml)
 │   ├── astro.config.mjs            site URL, sitemap integration, Tailwind vite plugin
+│   ├── Dockerfile                  two-stage image: node build → static-web-server
+│   │   + Dockerfile.dockerignore   (context is the repo root, for docs/guide)
+│   ├── compose.yaml                `site` (built image on :8080) + `dev` profile
+│   │                               (hot-reload astro dev on :4321, no host Node)
 │   ├── og-template.html            source for public/og.png (render with Playwright)
 │   ├── public/                     CNAME, robots.txt, appicon.png, og.png, hero.mp4
 │   └── src/
@@ -365,6 +369,7 @@ klustr.dev is a static Astro build, independent of the app. It ships from `main`
 - **GitHub data at build time.** The changelog page and the version label come from the Releases API (`src/lib/github.ts`); a failed fetch degrades to a GitHub link instead of failing the build. CI passes `GITHUB_TOKEN` to lift the anonymous rate limit.
 - `npm run typecheck` is `astro check`; TypeScript stays on 6.x until `@astrojs/check` accepts 7 (Dependabot ignores that major).
 - The social card is rendered from `og-template.html`; regenerate `public/og.png` after changing the hero copy.
+- **Containers are optional and local.** `docker compose up --build` in `site/` builds the two-stage image (Node build, then `static-web-server` serving `dist/` as a non-root user with compression, cache headers, the 404 page and trailing-slash redirects) on `127.0.0.1:8080`; `docker compose --profile dev up dev` runs the hot-reload dev server on `127.0.0.1:4321` with `node_modules` in a named volume. The build context is the repository root because the guides live in `docs/guide`. Production stays GitHub Pages; the image is for local review and self-hosting.
 
 ## Coding Conventions
 
@@ -483,7 +488,7 @@ npm run typecheck             # astro check
 npm run build                 # static build to site/dist (GITHUB_TOKEN optional)
 ```
 
-Docker is **not** required — local dev uses native toolchains; CI builds use GitHub-hosted runners directly.
+Docker is **not** required — local dev uses native toolchains; CI builds use GitHub-hosted runners directly. The one optional container is the landing site's `site/compose.yaml`, for reviewing the built site or running its dev server without Node on the host.
 
 ## Release Process
 
