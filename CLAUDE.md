@@ -142,11 +142,13 @@ klustr/
 │                                 linux/ (nfpm.yaml + klustr.desktop for the .deb) +
 │                                 aur/PKGBUILD.tmpl (rendered each release by CI)
 ├── docs/
-│   ├── hero.mp4 / hero.gif         README hero — MP4 embedded inline via
-│   │                               github.com/user-attachments/assets URL
-│   │                               (only domain that github's README HTML
-│   │                               sanitizer allows in <video src>)
-│   ├── hero-poster.png             video poster + source-of-truth backup
+│   ├── hero.mp4 / hero.gif         demo clip: the README shows the GIF (first
+│   │                               scenes, ~8 MB) and links the MP4; the site
+│   │                               plays the MP4 in a dialog. Recorded by
+│   │                               Playwright against the same kind fixtures as
+│   │                               the screenshot pack (user's local
+│   │                               hack/screenshots/demo.mjs + render.sh)
+│   ├── hero-poster.png             video poster (aggregated pods frame)
 │   ├── guide/                      task-focused user guides (getting-started,
 │   │                               multi-context, credential-helpers, overview,
 │   │                               workloads-and-debugging, terminal, helm,
