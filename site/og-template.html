@@ -1,11 +1,9 @@
 <!doctype html>
 <!--
   Source template for public/og.png (1200×630 social card).
-  Regenerate after changing it:
-    cd site && npx playwright screenshot --viewport-size=1200,630 \
-      og-template.html public/og.png
-  (or render via the project's Playwright tooling). Keep the feature line in
-  sync with the site/README feature list.
+  Regenerate after changing it, from the site/ directory:
+    bunx playwright screenshot --viewport-size=1200,630 og-template.html public/og.png
+  Keep the headline and the feature line in sync with the landing hero.
 -->
 <html lang="en">
   <head>
@@ -13,17 +11,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;700;800&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        --background: oklch(0.19 0.02 264);
-        --foreground: oklch(0.96 0.008 256);
-        --muted: oklch(0.73 0.02 256);
-        --primary: oklch(0.7 0.17 256);
-        --ok: oklch(0.73 0.15 162);
-        --border: oklch(1 0 0 / 16%);
+        --paper: oklch(0.968 0.007 85);
+        --paper-2: oklch(0.986 0.005 85);
+        --ink: oklch(0.21 0.025 264);
+        --ink-2: oklch(0.42 0.02 264);
+        --ink-3: oklch(0.57 0.015 264);
+        --rule: oklch(0.21 0.025 264 / 0.3);
+        --grid: oklch(0.6 0.09 240 / 0.16);
+        --grid-major: oklch(0.6 0.09 240 / 0.3);
+        --accent: oklch(0.47 0.17 256);
+        --marker: oklch(0.8 0.12 256 / 0.55);
         --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
         --mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
       }
@@ -31,74 +33,74 @@
       html, body { width: 1200px; height: 630px; }
       body {
         position: relative;
-        background-color: var(--background);
-        color: var(--foreground);
+        background-color: var(--paper);
+        color: var(--ink);
         font-family: var(--sans);
         overflow: hidden;
         -webkit-font-smoothing: antialiased;
       }
-      .glow, .grid {
+      .grid {
         position: absolute;
         inset: 0;
-        z-index: 0;
-      }
-      .glow {
-        background:
-          radial-gradient(58% 60% at 50% -12%, oklch(0.7 0.17 256 / 0.24), transparent 72%),
-          radial-gradient(42% 40% at 90% 6%, oklch(0.7 0.2 304 / 0.12), transparent 70%);
-      }
-      .grid {
-        background-image: radial-gradient(circle at 1px 1px, oklch(1 0 0 / 0.05) 1px, transparent 0);
-        background-size: 30px 30px;
-        mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+        background-image:
+          linear-gradient(var(--grid-major) 1px, transparent 1px),
+          linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+          linear-gradient(var(--grid) 1px, transparent 1px),
+          linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+        background-size: 160px 160px, 160px 160px, 32px 32px, 32px 32px;
+        background-position: -1px -1px;
       }
       .frame {
         position: relative;
-        z-index: 1;
         height: 100%;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        padding: 72px;
+        padding: 64px 72px;
       }
       .brand { display: flex; align-items: center; gap: 16px; }
-      .brand img { width: 56px; height: 56px; border-radius: 14px; }
-      .brand span { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; }
-
+      .brand img { width: 56px; height: 56px; border-radius: 12px; }
+      .brand span { font-family: var(--mono); font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
+      .eyebrow { font-family: var(--mono); font-size: 22px; color: var(--ink-3); margin-bottom: 18px; }
+      .eyebrow::before { content: "// "; color: var(--accent); }
       h1 {
-        font-size: 78px;
-        font-weight: 600;
-        line-height: 1.04;
-        letter-spacing: -0.03em;
-      }
-      h1 .accent { color: var(--primary); }
-      .features {
-        margin-top: 30px;
         font-family: var(--mono);
-        font-size: 23px;
-        letter-spacing: -0.01em;
-        color: var(--muted);
+        font-size: 64px;
+        font-weight: 800;
+        line-height: 1.02;
+        letter-spacing: -0.045em;
       }
-      .features b { color: var(--foreground); font-weight: 500; }
-      .features .sep { color: oklch(1 0 0 / 28%); padding: 0 10px; }
-
+      h1 .marker {
+        padding: 0 0.06em;
+        background-image: linear-gradient(transparent 68%, var(--marker) 68%, var(--marker) 92%, transparent 92%);
+        -webkit-box-decoration-break: clone;
+        box-decoration-break: clone;
+      }
+      .features {
+        margin-top: 28px;
+        font-size: 24px;
+        line-height: 1.4;
+        color: var(--ink-2);
+        max-width: 980px;
+      }
+      .features b { color: var(--ink); font-weight: 600; }
       .footer { display: flex; align-items: center; justify-content: space-between; }
       .pill {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
-        border: 1px solid var(--border);
-        border-radius: 9999px;
-        padding: 12px 22px;
+        gap: 12px;
+        border: 1px solid var(--rule);
+        background: var(--paper-2);
+        border-radius: 6px;
+        padding: 12px 20px;
         font-family: var(--mono);
-        font-size: 21px;
+        font-size: 20px;
       }
-      .dot { width: 11px; height: 11px; border-radius: 9999px; background: var(--ok); }
-      .meta { font-family: var(--mono); font-size: 21px; color: var(--muted); }
+      .dot { width: 10px; height: 10px; border-radius: 9999px; background: oklch(0.52 0.14 160); }
+      .meta { font-family: var(--mono); font-size: 20px; color: var(--ink-3); }
     </style>
   </head>
   <body>
-    <div class="glow"></div>
     <div class="grid"></div>
     <div class="frame">
       <div class="brand">
@@ -107,15 +109,17 @@
       </div>
 
       <div>
-        <h1>A fast, lightweight<br /><span class="accent">Kubernetes desktop client.</span></h1>
-        <div class="features">
-          Live resources<span class="sep">·</span><b>RBAC</b><span class="sep">·</span><b>Helm</b><span class="sep">·</span><b>Argo&nbsp;CD</b><span class="sep">·</span><b>Flux</b><span class="sep">·</span><b>Gateway&nbsp;API</b><span class="sep">·</span><b>cert-manager</b>
-        </div>
+        <p class="eyebrow">kubernetes desktop client for macOS and Linux</p>
+        <h1>Your clusters, live.<br /><span class="marker">Nothing installed in them.</span></h1>
+        <p class="features">
+          Live resources, <b>RBAC review</b>, <b>Helm</b>, <b>Argo CD</b>, <b>Flux</b>, <b>Gateway API</b> and
+          <b>cert-manager</b> from the kubeconfig you already have.
+        </p>
       </div>
 
       <div class="footer">
-        <span class="pill"><span class="dot"></span>Open source · MIT</span>
-        <span class="meta">Native, built in Go · macOS &amp; Linux</span>
+        <span class="pill"><span class="dot"></span>Open source, MIT</span>
+        <span class="meta">klustr.dev</span>
       </div>
     </div>
   </body>
