@@ -50,7 +50,7 @@ describe('L4RouteOverview', () => {
     const rows = [...container.querySelectorAll('tr')]
     const disabled = rows.find((row) => row.textContent?.includes('db-disabled'))!
     expect(disabled.lastElementChild?.textContent).toBe('0')
-    const custom = rows.find((row) => row.textContent?.includes('custom.io'))!
+    const custom = rows.find((row) => row.textContent?.includes('custom'))!
     expect(custom.children[2].textContent).toBe('—')
     expect(custom.querySelector('button[title^="Open"]')).toBeNull()
     expect(container.textContent).toContain('RefNotPermitted')
