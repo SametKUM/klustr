@@ -50,11 +50,25 @@ updates:
     directory: "/site"
     schedule:
       interval: weekly
+    ignore:
+      # Odd-numbered Node lines never become LTS. Dependabot walks one major at
+      # a time, so it offered 25 — already end of life — while 26 was out. The
+      # node major moves on the October LTS cadence, in one commit across mise,
+      # the workflows and the site container so they stay in parity.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker-compose
     directory: "/site"
     schedule:
       interval: weekly
+    ignore:
+      # Odd-numbered Node lines never become LTS. Dependabot walks one major at
+      # a time, so it offered 25 — already end of life — while 26 was out. The
+      # node major moves on the October LTS cadence, in one commit across mise,
+      # the workflows and the site container so they stay in parity.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
