@@ -19,7 +19,7 @@ services:
   # server writes never land in the checkout. `docker compose --profile dev up dev`.
   dev:
     profiles: [dev]
-    image: node:24-alpine
+    image: node:26-alpine
     working_dir: /repo/site
     command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 4321"
     environment:

@@ -3,7 +3,7 @@
 # The build context is the repository root (see compose.yaml): the site renders
 # the user guides from docs/guide, which sits beside site/ in the checkout, so
 # the layout inside the image mirrors it and the guide loader needs no override.
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /repo/site
 
 COPY site/package.json site/package-lock.json ./
