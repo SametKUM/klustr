@@ -129,3 +129,10 @@ export function faqLd(items: { question: string; answerText: string }[]): JsonLd
 export function graph(nodes: JsonLd[]): JsonLd {
   return { '@context': 'https://schema.org', '@graph': nodes }
 }
+
+// A `</script>` inside any string would close the tag early. Escaping on
+// serialization covers every field at once, including the ones the build
+// fetches from the Releases API.
+export function serializeLd(node: JsonLd): string {
+  return JSON.stringify(node).replaceAll('<', '\\u003c')
+}

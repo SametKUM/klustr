@@ -4,7 +4,7 @@ import { ArrowUp } from '@lucide/astro'
 import Nav from '../components/Nav.astro'
 import Footer from '../components/Footer.astro'
 import { SITE, absoluteUrl, clampDescription } from '../lib/site'
-import type { JsonLd } from '../lib/seo'
+import { serializeLd, type JsonLd } from '../lib/seo'
 
 interface Props {
   title: string
@@ -87,7 +87,7 @@ const ldBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
       })()
     </script>
 
-    {ldBlocks.map((block) => <script type="application/ld+json" set:html={JSON.stringify(block)} />)}
+    {ldBlocks.map((block) => <script type="application/ld+json" set:html={serializeLd(block)} />)}
   </head>
   <body>
     <Nav />
