@@ -105,9 +105,12 @@ export function renderFragment(markdown: string): string {
   return createMarked([]).parse(markdown, { async: false })
 }
 
+// Reads the text off the markdown tokens instead of stripping tags from
+// rendered HTML: one regex pass can leave a `<script` behind, and the
+// round-trip would also carry escaped entities into what callers treat as
+// plain text.
 export function stripMarkdown(markdown: string): string {
-  return renderFragment(markdown)
-    .replace(/<[^>]+>/g, '')
+  return plainText(createMarked([]).lexer(markdown) as Tokens.Generic[])
     .replace(/\s+/g, ' ')
     .trim()
 }
