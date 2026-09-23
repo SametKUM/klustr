@@ -296,19 +296,28 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
           ariaLabel="Select container"
           minWidth={140}
         />
-        {canPrevious && (
+        {/* The title sits on a wrapper because a disabled button gets no
+            pointer events, so it would never show its own tooltip. */}
+        <span
+          className="inline-flex"
+          title={
+            canPrevious
+              ? 'Logs of the previous (terminated) container instance — kubectl logs --previous'
+              : 'No previous instance — this container has not restarted'
+          }
+        >
           <Button
             type="button"
             size="xs"
             variant={showPrevious ? 'default' : 'outline'}
             aria-pressed={showPrevious}
-            title="Logs of the previous (terminated) container instance — kubectl logs --previous"
+            disabled={!canPrevious}
             onClick={() => setPrevious((v) => !v)}
           >
             <History />
             Previous
           </Button>
-        )}
+        </span>
 
         <Button
           type="button"
