@@ -39,6 +39,7 @@ export const CONTEXT_TAGS_KEY = 'klustr-context-tags'
 export const CUSTOM_TAGS_KEY = 'klustr-custom-tags'
 export const CONTEXT_GROUPS_KEY = 'klustr-context-groups'
 export const LAST_SESSION_KEY = 'klustr-last-session'
+export const LOG_WRAP_KEY = 'klustr-log-wrap'
 
 const VALID_COLORS: ReadonlySet<TagColor> = new Set([
   'rose',
@@ -230,6 +231,15 @@ export function readGlobalReadOnly(): boolean {
 export function persistGlobalReadOnly(value: boolean) {
   if (value) localStorage.setItem(GLOBAL_READ_ONLY_KEY, 'true')
   else localStorage.removeItem(GLOBAL_READ_ONLY_KEY)
+}
+
+export function readLogWrap(): boolean {
+  return localStorage.getItem(LOG_WRAP_KEY) !== 'false'
+}
+
+export function persistLogWrap(value: boolean) {
+  if (value) localStorage.removeItem(LOG_WRAP_KEY)
+  else localStorage.setItem(LOG_WRAP_KEY, 'false')
 }
 
 export function persistNamespacesByContext(map: Record<string, string[]>) {
