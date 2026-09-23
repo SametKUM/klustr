@@ -1,17 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Terminal } from '@xterm/xterm'
-import { FitAddon } from '@xterm/addon-fit'
-import '@xterm/xterm/css/xterm.css'
-import { ArrowDownToLine, Download, Eraser, Filter, History, Pause, Play, Regex } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Download, Eraser, Filter, History, Pause, Play, Regex, TextWrap } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { api, type PodDetail } from '@/lib/api'
-import { xtermThemeFor } from '@/features/_shared/xtermTheme'
-import { installClipboardBindings } from '@/features/_shared/xtermClipboard'
-import { highlightLogContent } from '@/features/_shared/logHighlight'
 import { InlinePicker } from '@/features/_shared/InlinePicker'
-import { TerminalContextMenu } from '@/features/_shared/TerminalContextMenu'
+import { LogViewport } from '@/features/_shared/LogViewport'
+import type { LogLine } from '@/features/_shared/logView'
+import { useLogTerminal } from '@/features/_shared/useLogTerminal'
 import { useUIStore } from '@/store/ui'
 
 const TAIL_LINES = 200
@@ -26,7 +22,7 @@ type Props = {
 export function PodLogsTab({ detail, contextName, initialContainer, active }: Props) {
   const fallbackContext = useUIStore((s) => s.selectedContext)
   const selectedContext = contextName ?? fallbackContext
-  const themeId = useUIStore((s) => s.themeId)
+  const setLogWrap = useUIStore((s) => s.setLogWrap)
   const containerNames = useMemo(
     () => [...detail.initContainers.map((c) => c.name), ...detail.containers.map((c) => c.name)],
     [detail.initContainers, detail.containers],
@@ -42,41 +38,14 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
     return (c?.restartCount ?? 0) > 0
   }, [detail.containers, detail.initContainers, container])
   const showPrevious = previous && canPrevious
-  const [error, setError] = useState<string | null>(null)
+  // A start failure belongs to the stream that failed; switching container or
+  // mode leaves it behind instead of resetting it from the effect.
+  const streamKey = JSON.stringify([selectedContext, detail.namespace, detail.name, container, showPrevious])
+  const [failure, setFailure] = useState<{ key: string; message: string } | null>(null)
+  const error = failure?.key === streamKey ? failure.message : null
   const [streaming, setStreaming] = useState(false)
-  const [paused, setPaused] = useState(false)
-  const [atBottom, setAtBottom] = useState(true)
   const [filterValue, setFilterValue] = useState('')
   const [useRegex, setUseRegex] = useState(false)
-  const [bufferLength, setBufferLength] = useState(0)
-  const termHostRef = useRef<HTMLDivElement>(null)
-  const termRef = useRef<Terminal | null>(null)
-  const fitRef = useRef<FitAddon | null>(null)
-  const pausedRef = useRef(false)
-  const bufferRef = useRef<string[]>([])
-  const predicateRef = useRef<(line: string) => boolean>(() => true)
-  const rawLinesRef = useRef<string[]>([])
-
-  // Repaint the terminal from the retained raw buffer through the current
-  // predicate. The filter is a view over captured logs, not just a gate on
-  // incoming lines — without this, typing a filter does nothing to lines that
-  // already streamed in.
-  const rerender = useCallback(() => {
-    const term = termRef.current
-    if (!term) return
-    // While paused the view is frozen — repainting here would dump post-pause
-    // lines onto it and zero the buffered-line counter. Leave both intact; the
-    // new predicate applies on resume, which repaints the full buffer.
-    if (pausedRef.current) return
-    term.reset()
-    const styled: string[] = []
-    for (const line of rawLinesRef.current) {
-      if (predicateRef.current(line)) styled.push(highlightLogContent(line))
-    }
-    if (styled.length > 0) term.write(styled.join('\r\n') + '\r\n')
-    bufferRef.current = []
-    setBufferLength(0)
-  }, [])
 
   // Debounce the applied filter so a full-buffer rescan runs once per typing
   // pause, not per keystroke (mirrors ResourceTable's appliedFilter).
@@ -102,93 +71,21 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
   }, [appliedFilter, useRegex])
   const filterError = appliedPredicate.error
 
-  useEffect(() => {
-    predicateRef.current = appliedPredicate.predicate
-    rerender()
-  }, [appliedPredicate, rerender])
+  const view = useLogTerminal({ scrollback: 10_000, retain: 50_000, predicate: appliedPredicate.predicate })
+  const { append, appendMarker, reset, refit } = view
 
   useEffect(() => {
-    pausedRef.current = paused
-    // On resume, repaint the full buffer through the current predicate — this
-    // flushes lines that arrived during pause and applies any filter change
-    // made while paused, in one coalesced write.
-    if (!paused) rerender()
-  }, [paused, rerender])
-
-  useEffect(() => {
-    if (!termHostRef.current) return
-    const term = new Terminal({
-      convertEol: true,
-      fontFamily:
-        '"JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-      fontSize: 12,
-      scrollback: 10_000,
-      theme: xtermThemeFor(themeId),
-    })
-    const fit = new FitAddon()
-    term.loadAddon(fit)
-    term.open(termHostRef.current)
-    installClipboardBindings(term, { readOnly: true })
-    fit.fit()
-    termRef.current = term
-    fitRef.current = fit
-
-    const observer = new ResizeObserver(() => {
-      try {
-        fit.fit()
-      } catch {
-        // ignore: terminal may not be ready
-      }
-    })
-    observer.observe(termHostRef.current)
-
-    const scrollDisposable = term.onScroll(() => {
-      const buf = term.buffer.active
-      setAtBottom(buf.viewportY >= buf.baseY)
-    })
-
-    return () => {
-      observer.disconnect()
-      scrollDisposable.dispose()
-      term.dispose()
-      termRef.current = null
-      fitRef.current = null
-    }
-    // intentionally not depending on themeId: see effect below for live updates
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (termRef.current) {
-      termRef.current.options.theme = xtermThemeFor(themeId)
-    }
-  }, [themeId])
-
-  useEffect(() => {
-    if (!active) return
-    const fit = fitRef.current
-    if (!fit) return
-    requestAnimationFrame(() => {
-      try {
-        fit.fit()
-      } catch {
-        return
-      }
-    })
-  }, [active])
+    if (active) refit()
+  }, [active, refit])
 
   useEffect(() => {
     if (!selectedContext || !container) return
-    const term = termRef.current
-    if (!term) return
 
-    term.clear()
-    term.writeln(
+    reset(
       showPrevious
         ? `\x1b[2m# previous instance of ${container} (last ${TAIL_LINES} lines before termination)\x1b[0m`
         : `\x1b[2m# streaming ${container} (last ${TAIL_LINES} lines)\x1b[0m`,
     )
-    setError(null)
 
     let cancelled = false
     let sessionId: string | null = null
@@ -205,52 +102,16 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
         sessionId = id
         setStreaming(true)
         unsubLine = EventsOn(`pod:logs:line:${id}`, (lines: string[]) => {
-          const styledOut: string[] = []
-          for (const line of lines) {
-            // Retain every raw line (regardless of filter or pause) so the
-            // filter can repaint over the full buffer and Save reflects it.
-            rawLinesRef.current.push(line)
-            if (!predicateRef.current(line)) continue
-            styledOut.push(highlightLogContent(line))
-          }
-          // Amortized trim: one splice per batch, not an O(n) shift per line.
-          if (rawLinesRef.current.length > 50_000) {
-            rawLinesRef.current.splice(0, rawLinesRef.current.length - 50_000)
-          }
-          if (styledOut.length === 0) return
-          if (pausedRef.current) {
-            for (const s of styledOut) bufferRef.current.push(s)
-            if (bufferRef.current.length > 5_000) {
-              bufferRef.current.splice(0, bufferRef.current.length - 5_000)
-            }
-            setBufferLength(bufferRef.current.length)
-            return
-          }
-          // One coalesced write per batch instead of a writeln per line.
-          term.write(styledOut.join('\r\n') + '\r\n')
+          append(lines.map((line): LogLine => ({ text: line, body: line, prefix: '', prefixWidth: 0 })))
         })
         unsubClose = EventsOn(`pod:logs:close:${id}`, (msg: string) => {
           setStreaming(false)
-          const styled = msg
-            ? `\x1b[31m# stream closed: ${msg}\x1b[0m`
-            : `\x1b[2m# stream ended\x1b[0m`
-          // Route through the same pause buffer as live lines so the marker
-          // stays in chronological order instead of jumping ahead of buffered
-          // lines that preceded it.
-          if (pausedRef.current) {
-            bufferRef.current.push(styled)
-            if (bufferRef.current.length > 5_000) {
-              bufferRef.current.splice(0, bufferRef.current.length - 5_000)
-            }
-            setBufferLength(bufferRef.current.length)
-            return
-          }
-          term.writeln(styled)
+          appendMarker(msg ? `\x1b[31m# stream closed: ${msg}\x1b[0m` : `\x1b[2m# stream ended\x1b[0m`)
         })
       })
       .catch((e: unknown) => {
         if (cancelled) return
-        setError(String(e))
+        setFailure({ key: streamKey, message: String(e) })
         setStreaming(false)
       })
 
@@ -258,18 +119,15 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
       cancelled = true
       unsubLine?.()
       unsubClose?.()
-      bufferRef.current = []
-      rawLinesRef.current = []
-      setBufferLength(0)
       if (sessionId) {
         api.stopPodLogs(sessionId).catch(() => {})
         EventsOff(`pod:logs:line:${sessionId}`, `pod:logs:close:${sessionId}`)
       }
     }
-  }, [selectedContext, detail.namespace, detail.name, container, showPrevious])
+  }, [selectedContext, detail.namespace, detail.name, container, showPrevious, streamKey, append, appendMarker, reset])
 
   const saveLogs = () => {
-    const lines = rawLinesRef.current.filter((l) => predicateRef.current(l))
+    const lines = view.filteredText()
     if (lines.length === 0) {
       toast.info('No logs to save yet')
       return
@@ -323,32 +181,29 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
           type="button"
           size="xs"
           variant="outline"
-          onClick={() => setPaused((p) => !p)}
+          onClick={() => view.setPaused(!view.paused)}
         >
-          {paused ? <Play /> : <Pause />}
-          {paused ? `Resume${bufferLength > 0 ? ` (${bufferLength})` : ''}` : 'Pause'}
+          {view.paused ? <Play /> : <Pause />}
+          {view.paused ? `Resume${view.pending > 0 ? ` (${view.pending})` : ''}` : 'Pause'}
         </Button>
-        <Button
-          type="button"
-          size="xs"
-          variant="outline"
-          onClick={() => {
-            termRef.current?.clear()
-            bufferRef.current = []
-            rawLinesRef.current = []
-            setBufferLength(0)
-            // clear() leaves the (now empty) view bottom-anchored, but atBottom
-            // only updates on scroll, so reset it here or the "Jump to bottom"
-            // pill lingers over an empty terminal until the next scroll/write.
-            setAtBottom(true)
-          }}
-        >
+        <Button type="button" size="xs" variant="outline" onClick={() => view.reset()}>
           <Eraser />
           Clear
         </Button>
         <Button type="button" size="xs" variant="outline" onClick={saveLogs}>
           <Download />
           Save
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant={view.wrap ? 'default' : 'outline'}
+          aria-pressed={view.wrap}
+          title="Wrap long lines — turn off to keep each line on one row and scroll sideways (Shift+wheel)"
+          onClick={() => setLogWrap(!view.wrap)}
+        >
+          <TextWrap />
+          Wrap
         </Button>
         <div className="ml-auto flex items-center gap-1">
           <div className="relative w-44">
@@ -377,8 +232,8 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
           >
             <Regex />
           </Button>
-          <span className={paused ? 'text-amber-500' : streaming ? 'text-emerald-500' : 'text-muted-foreground'}>
-            {paused ? '❙❙ paused' : streaming ? '● live' : '○ idle'}
+          <span className={view.paused ? 'text-amber-500' : streaming ? 'text-emerald-500' : 'text-muted-foreground'}>
+            {view.paused ? '❙❙ paused' : streaming ? '● live' : '○ idle'}
           </span>
         </div>
       </div>
@@ -392,21 +247,7 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
           {error}
         </div>
       )}
-      <div className="relative min-h-0 flex-1">
-        <TerminalContextMenu terminal={() => termRef.current} readOnly>
-          <div ref={termHostRef} className="absolute inset-0 bg-background px-2 py-1" />
-        </TerminalContextMenu>
-        {!atBottom && (
-          <button
-            type="button"
-            onClick={() => termRef.current?.scrollToBottom()}
-            className="absolute bottom-3 right-4 inline-flex items-center gap-1 rounded-full border border-border bg-popover px-3 py-1 text-xs text-popover-foreground shadow-sm hover:bg-muted"
-          >
-            <ArrowDownToLine className="size-3" />
-            Jump to bottom
-          </button>
-        )}
-      </div>
+      <LogViewport view={view} />
     </div>
   )
 }

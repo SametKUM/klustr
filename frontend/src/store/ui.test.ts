@@ -35,6 +35,7 @@ function resetStore() {
     selectedNamespaces: [],
     namespacesByContext: {},
     globalReadOnly: false,
+    logWrap: true,
     selectedView: 'overview',
     selectedCRDKey: null,
     selectedResource: null,
@@ -166,6 +167,22 @@ describe('read-only mode', () => {
     useUIStore.getState().setGlobalReadOnly(false)
     expect(useUIStore.getState().globalReadOnly).toBe(false)
     expect(localStorage.getItem('klustr-read-only')).toBeNull()
+  })
+})
+
+describe('log line wrap', () => {
+  beforeEach(resetStore)
+
+  it('wraps by default and persists only the opt-out', () => {
+    expect(useUIStore.getState().logWrap).toBe(true)
+
+    useUIStore.getState().setLogWrap(false)
+    expect(useUIStore.getState().logWrap).toBe(false)
+    expect(localStorage.getItem('klustr-log-wrap')).toBe('false')
+
+    useUIStore.getState().setLogWrap(true)
+    expect(useUIStore.getState().logWrap).toBe(true)
+    expect(localStorage.getItem('klustr-log-wrap')).toBeNull()
   })
 })
 

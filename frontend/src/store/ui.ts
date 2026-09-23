@@ -36,6 +36,8 @@ import {
   persistNamespacesByContext,
   readGlobalReadOnly,
   persistGlobalReadOnly,
+  readLogWrap,
+  persistLogWrap,
   readCollapsedNavGroups,
   readContextGroups,
   readContextTags,
@@ -80,6 +82,7 @@ type UIState = {
   selectedNamespaces: string[]
   namespacesByContext: Record<string, string[]>
   globalReadOnly: boolean
+  logWrap: boolean
   selectedView: ResourceView
   selectedCRDKey: string | null
   selectedResource: SelectedResource | null
@@ -107,6 +110,7 @@ type UIState = {
   toggleSelectedNamespace: (name: string) => void
   clearSelectedNamespaces: () => void
   setGlobalReadOnly: (value: boolean) => void
+  setLogWrap: (value: boolean) => void
   setSelectedView: (view: ResourceView) => void
   setSelectedCRD: (key: string | null) => void
   setSelectedResource: (resource: SelectedResource | null) => void
@@ -258,6 +262,7 @@ export const useUIStore = create<UIState>((set) => {
     selectedNamespaces: namespacesByContext[namespaceKey(activeAtBoot)] ?? [],
     namespacesByContext,
     globalReadOnly: readGlobalReadOnly(),
+    logWrap: readLogWrap(),
     selectedView: 'overview',
     selectedCRDKey: null,
     selectedResource: null,
@@ -333,6 +338,10 @@ export const useUIStore = create<UIState>((set) => {
     setGlobalReadOnly: (value) => {
       persistGlobalReadOnly(value)
       set({ globalReadOnly: value })
+    },
+    setLogWrap: (value) => {
+      persistLogWrap(value)
+      set({ logWrap: value })
     },
     setSelectedView: (view) =>
       set({
