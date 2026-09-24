@@ -10,13 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// nestedSliceNoCopy / nestedMapNoCopy mirror unstructured.NestedSlice /
-// NestedMap but skip the deep copy those make (runtime.DeepCopyJSONValue of the
-// whole sub-tree). They are safe ONLY for read-only access: the returned value
-// aliases obj, so callers must not mutate it. The signature matches the
-// stdlib helpers (error is always nil; a present-but-wrong-typed field reads as
-// not-found, the same practical result the call sites already handle). Used by
-// the integration list/detail extractors, which run per row on every refresh.
+// nestedSliceNoCopy / nestedMapNoCopy are unstructured.NestedSlice / NestedMap
+// without the sub-tree deep copy, for the per-row integration extractors. The
+// result aliases obj, so it is read-only. A wrong-typed field reads as
+// not-found and error is always nil.
 func nestedSliceNoCopy(obj map[string]any, fields ...string) ([]any, bool, error) {
 	v, found, err := unstructured.NestedFieldNoCopy(obj, fields...)
 	if err != nil || !found {

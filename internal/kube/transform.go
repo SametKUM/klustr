@@ -6,16 +6,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// stripManagedFields is an informer TransformFunc that drops
-// metadata.managedFields from every object before it enters the shared cache
-// and replaces Secret values with same-length zero buffers.
-// managedFields is large (one entry per field-manager, each carrying a FieldsV1
-// set) and nothing in Klustr reads it: the lean list projections (podInfoFrom et
-// al.) never touch it, and the YAML detail view fetches live from the API and
-// strips managedFields itself (mutate.go sanitizeForYAML). Stripping it shrinks
-// every cached object. Secret key names and sizes remain available for list and
-// detail metadata, while Reveal fetches the value live from the API. Annotations
-// (including last-applied-configuration, which detail builders surface) remain.
+// stripManagedFields is an informer TransformFunc that drops the large
+// metadata.managedFields from every cached object and replaces Secret values
+// with same-length zero buffers. Nothing reads either from the cache: the YAML
+// view and Secret Reveal fetch live, and key names and sizes survive for the
+// list and detail views.
 func stripManagedFields(obj any) (any, error) {
 	// Tombstones arrive on delete; leave them untouched.
 	if _, ok := obj.(cache.DeletedFinalStateUnknown); ok {

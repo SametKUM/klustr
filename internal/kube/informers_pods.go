@@ -343,14 +343,11 @@ func (w *contextWatcher) envVarsFrom(pod *corev1.Pod, container *corev1.Containe
 	return out
 }
 
-// optionalEnvKeyAbsent reports whether an env var sourced from an optional
-// ConfigMap/Secret key references a key we can positively confirm is missing.
-// Kubernetes never sets such a var on the container, so listing it (and the
-// "key not found" error the frontend would render) is pure noise. We only
-// suppress when the backing object is readable from cache and the key is truly
-// absent — when access is denied or the object is uncached we keep the row so
-// nothing that may actually be set vanishes silently. Required (non-optional)
-// missing keys are a real CreateContainerConfigError and stay visible.
+// optionalEnvKeyAbsent reports whether an env var from an optional
+// ConfigMap/Secret key points at a key the cache confirms is missing; the
+// kubelet never sets such a var, so listing it is noise. Denied or uncached
+// objects return false so nothing that might be set vanishes. Missing required
+// keys are a real CreateContainerConfigError and stay visible.
 func (w *contextWatcher) optionalEnvKeyAbsent(namespace string, src *corev1.EnvVarSource) bool {
 	if src == nil {
 		return false
@@ -812,12 +809,10 @@ func isFailureReason(reason string) bool {
 	return false
 }
 
-// podResourceTotals computes a pod's effective cpu/mem requests and limits in
-// millicores and bytes, matching Kubernetes' scheduling semantics: regular
-// containers and restartable init containers (sidecars) sum, while ordinary
-// init containers run sequentially and only raise the total when one (plus the
-// sidecars started before it) exceeds the regular sum. A zero result means
-// unset for that dimension.
+// podResourceTotals returns a pod's effective cpu (millicores) and memory
+// (bytes) requests and limits per Kubernetes scheduling semantics: regular and
+// sidecar containers sum; an ordinary init container only raises the total
+// when it plus the sidecars started before it exceeds that sum. Zero is unset.
 func podResourceTotals(p *corev1.Pod) (cpuReq, cpuLim, memReq, memLim int64) {
 	type res struct{ cpuReq, cpuLim, memReq, memLim int64 }
 	get := func(c corev1.Container) res {

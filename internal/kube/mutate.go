@@ -98,16 +98,10 @@ func resourceForKind(kind string) (schema.GroupVersionResource, error) {
 	return gvr, nil
 }
 
-// resolveKind looks up a Kind first in the built-in table and then in the
-// per-context CRD cache. Apply/Delete/YAML paths use this so they work
-// uniformly for both core and custom resources.
-//
-// Klustr-internal kind aliases (e.g. "FluxKustomization") are checked in
-// fluxKindGVR before the CRD cache so a Delete on a Flux resource resolves
-// without the caller having to know about the real CR kind ("Kustomization").
-// The ResourceTable's table-prefs key for CR views also leaks through here
-// as "cr:<group>/<resource>" when the bulk-delete dialog reuses that key
-// as the kind label — splitting it into a GVR keeps the bulk path working.
+// resolveKind looks up a Kind in the built-in table, then Klustr's own aliases
+// ("FluxKustomization" in fluxKindGVR), then the per-context CRD cache. It
+// also accepts "cr:<group>/<resource>": the bulk-delete dialog passes a CR
+// view's table-prefs key as the kind.
 func (m *ClientManager) resolveKind(contextName, kind string) (schema.GroupVersionResource, error) {
 	if gvr, ok := kindToGVR[kind]; ok {
 		if gvr.Group == "gateway.networking.k8s.io" {
@@ -154,12 +148,10 @@ func (m *ClientManager) resolveGVK(contextName string, gvk schema.GroupVersionKi
 }
 
 func (m *ClientManager) dynamicClient(contextName string) (dynamic.Interface, error) {
-	// Reuse the active watch's dynamic client: it shares one HTTP/TLS transport
-	// and connection pool, and the watcher lifecycle already keeps it current
-	// across credential refreshes. Building fresh per call (as before) spun up a
-	// new transport and re-parsed the kubeconfig from disk on every mutation —
-	// N times over for a bulk-delete fan-out, none reusing a connection. A
-	// mutation without an active watch (rare) still builds a one-off client.
+	// Reuse the active watch's dynamic client: one shared transport and
+	// connection pool, kept current across credential refreshes. Building one
+	// per call re-reads the kubeconfig and opens new connections for every
+	// item of a bulk delete.
 	if w, ok := m.watcher(contextName); ok {
 		return w.dyn, nil
 	}
@@ -246,12 +238,9 @@ func (m *ClientManager) ApplyResourceYAML(ctx context.Context, contextName, yaml
 	return err
 }
 
-// MutationDiff is the before/after preview shown before a YAML apply is
-// committed. Before is the current live object ("" when the apply would
-// create it); After is what the server predicts the object becomes. Both come
-// from a server-side dry-run, so defaulting, admission and mutating webhooks
-// are already reflected — the same truthfulness Helm's --dry-run gives, unlike
-// a plain text diff of the user's edits.
+// MutationDiff is the preview shown before a YAML apply. Before is the live
+// object ("" on create); After comes from a server-side dry-run, so
+// defaulting and mutating webhooks are already reflected.
 type MutationDiff struct {
 	Kind   string `json:"kind"`
 	Name   string `json:"name"`
@@ -451,13 +440,10 @@ func (m *ClientManager) PatchHPAReplicas(ctx context.Context, contextName, names
 	return err
 }
 
-// ResizePodResources changes a running container's CPU/memory requests and
-// limits in place via the pods/resize subresource (KEP-1287, beta and on by
-// default since Kubernetes 1.33), so the pod keeps running instead of being
-// recreated. Each field is optional; an empty string leaves that quantity
-// untouched. Non-empty values are validated as resource.Quantity before any
-// request is issued. Whether a container actually restarts is governed by its
-// resizePolicy, not by Klustr.
+// ResizePodResources changes a running container's requests and limits in
+// place via the pods/resize subresource (KEP-1287, on by default since 1.33).
+// An empty value leaves that quantity untouched. Whether the container
+// restarts is up to its resizePolicy.
 func (m *ClientManager) ResizePodResources(ctx context.Context, contextName, namespace, podName, container, cpuRequest, cpuLimit, memRequest, memLimit string) error {
 	if err := m.assertWritable(contextName); err != nil {
 		return err

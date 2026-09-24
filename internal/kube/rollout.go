@@ -183,12 +183,10 @@ func (m *ClientManager) RollbackDeployment(ctx context.Context, contextName, nam
 	return rollbackDeploymentToRevision(ctx, cs, namespace, name, toRevision)
 }
 
-// rollbackDeploymentToRevision replaces the Deployment's pod template with the
-// target revision's template via a read-modify-write Update. A strategic-merge
-// patch would MERGE PodSpec lists (containers/initContainers/volumes and each
-// container's env/ports key on name), so containers and env a newer revision
-// added would survive the "rollback". Assigning Spec.Template replaces it
-// wholesale, matching what kubectl rollout undo does.
+// rollbackDeploymentToRevision replaces the pod template wholesale via a
+// read-modify-write Update, like kubectl rollout undo. A strategic-merge patch
+// would merge the name-keyed PodSpec lists, so containers and env a newer
+// revision added would survive the rollback.
 func rollbackDeploymentToRevision(ctx context.Context, cs kubernetes.Interface, namespace, name string, toRevision int32) error {
 	rsList, err := cs.AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {

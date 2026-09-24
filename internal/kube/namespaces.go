@@ -9,12 +9,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// The frontend encodes a multi-namespace selection as a comma-separated list
-// (namespace names cannot contain commas). Listing per selected namespace
-// keeps multi-namespace payloads proportional to the selection instead of the
-// whole cluster. Returns nil for the single-namespace (or all-namespaces)
-// case; sorted so concatenated per-namespace results keep the global
-// (namespace, name) ordering the listers produce.
+// splitNamespaces decodes the frontend's comma-separated multi-namespace
+// selection (names cannot contain commas), or returns nil for a single or
+// all-namespaces value. Sorted, so concatenated per-namespace results keep the
+// listers' (namespace, name) order.
 func splitNamespaces(namespace string) []string {
 	if !strings.Contains(namespace, ",") {
 		return nil

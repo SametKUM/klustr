@@ -35,13 +35,9 @@ func (m *ClientManager) IsMetricsServerKlustrManaged(ctx context.Context, contex
 	if err != nil {
 		return false, err
 	}
-	// Only the klustr/managed-by label (stamped on every document by the
-	// installer) proves Klustr installed metrics-server. A managedFields
-	// "klustr" manager only means Klustr wrote some field once — every
-	// scale/restart/apply does that — so a Helm/cloud-managed metrics-server the
-	// user merely scaled through Klustr must not be reported as ours, or the
-	// overview would offer to uninstall (and then delete) an install we didn't
-	// create.
+	// Only the installer's label proves the install is ours; anything looser
+	// would offer to uninstall a Helm/cloud metrics-server the user merely
+	// scaled through Klustr.
 	return metricsServerKlustrManaged(dep.Labels), nil
 }
 
@@ -57,14 +53,10 @@ func metricsServerKlustrManaged(labels map[string]string) bool {
 // metrics-server needs the --kubelet-insecure-tls flag to work.
 var kubeletInsecureProviders = []string{"kind://", "minikube://"}
 
-// RecommendInsecureKubeletTLS decides whether metrics-server should be
-// installed with `--kubelet-insecure-tls`. It first probes the apiserver →
-// kubelet proxy path (the exact route metrics-server uses); a TLS verification
-// error on that probe is the strongest possible signal. As a fallback it
-// inspects node providerIDs for kind/minikube prefixes, which ship a
-// self-signed kubelet serving certificate that the apiserver cannot verify.
-// Callers should still expose the choice to the user — this is a best-effort
-// recommendation, not a guarantee.
+// RecommendInsecureKubeletTLS guesses whether metrics-server needs
+// `--kubelet-insecure-tls`: a TLS verification error on the apiserver → kubelet
+// proxy path (metrics-server's own route) says yes, with kind/minikube
+// providerIDs as the fallback signal. Callers still let the user choose.
 func (m *ClientManager) RecommendInsecureKubeletTLS(ctx context.Context, contextName string) (bool, error) {
 	cs, err := m.Clientset(contextName)
 	if err != nil {
