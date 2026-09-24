@@ -43,7 +43,7 @@ updates:
       # would re-flag fourteen packages. It runs on a runner over our own
       # committed screenshots, never untrusted input, so a frozen version
       # carries no meaningful exposure. Bump it deliberately, then re-clear
-      # the scan — see the landing-site section of CLAUDE.md.
+      # the scan — see the landing-site section of AGENTS.md.
       - dependency-name: "sharp"
 
   - package-ecosystem: docker

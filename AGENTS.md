@@ -142,11 +142,13 @@ klustr/
 │                                 linux/ (nfpm.yaml + klustr.desktop for the .deb) +
 │                                 aur/PKGBUILD.tmpl (rendered each release by CI)
 ├── docs/
-│   ├── hero.mp4 / hero.gif         README hero — MP4 embedded inline via
-│   │                               github.com/user-attachments/assets URL
-│   │                               (only domain that github's README HTML
-│   │                               sanitizer allows in <video src>)
-│   ├── hero-poster.png             video poster + source-of-truth backup
+│   ├── hero.mp4 / hero.gif         demo clip: the README shows the GIF (first
+│   │                               scenes, ~8 MB) and links the MP4; the site
+│   │                               plays the MP4 in a dialog. Recorded by
+│   │                               Playwright against the same kind fixtures as
+│   │                               the screenshot pack (user's local
+│   │                               hack/screenshots/demo.mjs + render.sh)
+│   ├── hero-poster.png             video poster (aggregated pods frame)
 │   ├── guide/                      task-focused user guides (getting-started,
 │   │                               multi-context, credential-helpers, overview,
 │   │                               workloads-and-debugging, terminal, helm,
@@ -155,7 +157,32 @@ klustr/
 │   ├── perf-testing.md             performance testing protocol (microbenchmarks
 │   │                               + benchstat + on-cluster profiling)
 │   └── screenshots/                numbered themed pack `01-*.png` …
-│                                   `16-*.png` for README grid + press / blog
+│                                   `20-*.png` for the README grid and the site
+│                                   tour; 2560×1600 (the 1280×800 default window
+│                                   at 2x), each in a different theme, captured
+│                                   by Playwright against two kind fixture
+│                                   clusters from the user's local
+│                                   hack/screenshots/ (not committed)
+├── site/                         klustr.dev landing + docs site (Astro 7, Tailwind v4,
+│   │                             static output deployed to GitHub Pages by pages.yml)
+│   ├── astro.config.mjs            site URL, sitemap integration, Tailwind vite plugin
+│   ├── Dockerfile                  two-stage image: node build → static-web-server
+│   │   + Dockerfile.dockerignore   (context is the repo root, for docs/guide)
+│   ├── compose.yaml                `site` (built image on :8080) + `dev` profile
+│   │                               (hot-reload astro dev on :4321, no host Node)
+│   ├── og-template.html            source for public/og.png (render with Playwright)
+│   ├── public/                     CNAME, robots.txt, appicon.png, og.png, hero.mp4
+│   └── src/
+│       ├── styles/global.css         paper / blueprint tokens + the components layer
+│       ├── layouts/                  BaseLayout (SEO head, theme boot, analytics) and
+│       │                             DocsLayout (sidebar + on-this-page)
+│       ├── components/               Nav, Footer, InstallTabs, CommandBlock, HeroSlider,
+│       │                             CompareTable, BrandIcon
+│       ├── data/                     screenshots, install commands, comparison rows and
+│       │                             pages, FAQ, structured-data featureList
+│       ├── lib/                      site constants, JSON-LD builders, GitHub fetch,
+│       │                             marked-based markdown, guide loader (../docs/guide)
+│       └── pages/                    index, docs/, compare/, faq, changelog, 404
 ├── hack/                         user's local fixtures (NEVER commit anything under hack/)
 └── .github/
     ├── actions/linux-build-deps/  composite action: GTK + WebKit headers
@@ -338,6 +365,24 @@ For CRs Klustr **already lists generically** via the CRD watcher with a YAML-onl
 - Hide the CR behind the generic CRD sidebar entry by default; promote it only when a resource-group item and `visibleResourceGroups.ts` `CRD_REQUIREMENTS` entry gate the dedicated view on the served API.
 - Mutations should go through the K8s API (PATCH / annotation flip), not by shelling out to a vendor CLI.
 
+## Landing site (`site/`)
+
+klustr.dev is a static Astro build, independent of the app. It ships from `main` through `pages.yml`; `site.yml` runs the same checks on pull requests.
+
+- **Docs pages are the repository guides.** `/docs/<slug>/` renders `docs/guide/<slug>.md` at build time through `marked` (`src/lib/guides.ts`), so there is one source of truth. Adding a guide means adding its card to `GUIDE_GROUPS` too; the build fails if a guide is missing from the index. `guide.md#anchor` links are rewritten to site routes and headings get GitHub-style ids.
+- **Comparison content is data.** `src/data/compare.ts` holds the table rows and the per-tool pages, with a `REVIEWED_ON` date. Cells state capabilities, not judgements, and cite nothing that has not been checked in the other tool's documentation. No memory or speed numbers unless measured side by side.
+- **Numbers on the landing page are counts, not benchmarks** (resource kinds, integrations, themes, archive size). Do not add RAM or start-up claims without a measurement to back them.
+- **Two exposures of one theme.** Paper (light) is the default; `data-theme="dark"` on `<html>` flips to the app's default-dark palette. Components read only the CSS variables in `global.css`, and component classes live in `@layer components` so Tailwind utilities keep winning.
+- **GitHub data at build time.** The changelog page and the version label come from the Releases API (`src/lib/github.ts`); a failed fetch degrades to a GitHub link instead of failing the build. CI passes `GITHUB_TOKEN` to lift the anonymous rate limit.
+- **Search-result limits are enforced in one place.** `BaseLayout` clamps every meta description to about 158 characters (ending on a sentence when it can) and drops the `· Klustr` title suffix when it would push a title past 60. The home page uses `SITE.title` and `SITE.metaDescription`, written to those limits by hand; `SITE.description` is the long form for structured data only. Headings name the product or integration they describe (`Helm: dry-run first, then apply.`), and the H1 contains the word Kubernetes.
+- **`dependencies` is what the site redistributes.** The package is `private`, nothing is published to npm, and the deployed artifact is `dist/`. So `dependencies` holds only what actually reaches a visitor — the Geist fonts, the simple-icons paths and the Swetrix snippet — and every compiler, generator and asset pipeline lives in `devDependencies`, Astro and Tailwind included. That keeps the license scan's production tree an honest list of redistributed third-party material. It also keeps `sharp` out of it: libvips is LGPL and runs only during `astro build`, so it is never distributed. `npm ci` installs both sets, so the build is unaffected.
+- **`sharp` is exempted in the license scan, deliberately.** It pulls libvips, which is LGPL-3.0 in fourteen packaged forms, and FOSSA scans the whole npm graph rather than the production subtree, so the `devDependencies` split above does not clear it. The grounds are that libvips runs only while `astro build` optimizes images and never reaches `dist/`. Persistent ignore rules are a paid FOSSA feature, so the exemption is cleared per version instead, and `sharp` is therefore pinned to an exact version with a matching Dependabot ignore — otherwise each of its four-to-eight releases a year would re-flag all fourteen packages. Bumping `sharp` is a deliberate act: raise the pin, then clear the scan again for the new version. Keep any ignore scoped to this project; an organization-level rule would silently pass the next copyleft dependency anywhere in the repo.
+- **Machine-readable index.** `/llms.txt` is generated from the same data the pages use (guide headings and summaries, comparison pages, site constants), and `/llms-full.txt` concatenates every guide in full. Both are Astro endpoints, so a new guide appears in them without a second edit. Neither is in the sitemap.
+- **Dates come from git.** `src/lib/git.ts` reads first and last commit dates; docs pages put them in `datePublished` / `dateModified`, compare pages use `REVIEWED_ON` as `dateModified`, the home page uses the first and latest release, and `astro.config.mjs` sets sitemap `<lastmod>` from the same commit dates. The workflows check out with `fetch-depth: 0` so those dates are real, not the clone time.
+- `npm run typecheck` is `astro check`; TypeScript stays on 6.x until `@astrojs/check` accepts 7 (Dependabot ignores that major).
+- The social card is rendered from `og-template.html`; regenerate `public/og.png` after changing the hero copy.
+- **Containers are optional and local.** `docker compose up --build` in `site/` builds the two-stage image (Node build, then `static-web-server` serving `dist/` as a non-root user with compression, cache headers, the 404 page and trailing-slash redirects) on `127.0.0.1:8080`; `docker compose --profile dev up dev` runs the hot-reload dev server on `127.0.0.1:4321` with `node_modules` in a named volume. The build context is the repository root because the guides live in `docs/guide`. Production stays GitHub Pages; the image is for local review and self-hosting.
+
 ## Coding Conventions
 
 ### Comments
@@ -448,9 +493,14 @@ npm run lint                  # ESLint
 npm run check:api             # generated Wails API facade drift
 npm run typecheck             # tsc --noEmit
 npm run build                 # production bundle
+
+# Landing site (inside site/)
+npm run dev                   # astro dev server
+npm run typecheck             # astro check
+npm run build                 # static build to site/dist (GITHUB_TOKEN optional)
 ```
 
-Docker is **not** required — local dev uses native toolchains; CI builds use GitHub-hosted runners directly.
+Docker is **not** required — local dev uses native toolchains; CI builds use GitHub-hosted runners directly. The one optional container is the landing site's `site/compose.yaml`, for reviewing the built site or running its dev server without Node on the host.
 
 ## Release Process
 

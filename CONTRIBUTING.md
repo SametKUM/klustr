@@ -4,7 +4,7 @@ Bug reports and focused pull requests are welcome. Klustr is a desktop Kubernete
 
 ## Before you start
 
-- Read [`CLAUDE.md`](CLAUDE.md). It is the architecture + conventions contract: file layout, the informer pattern, the "add a new resource kind" recipe, and the release process all live there.
+- Read [`AGENTS.md`](AGENTS.md). It is the architecture + conventions contract: file layout, the informer pattern, the "add a new resource kind" recipe, and the release process all live there.
 - For larger changes, open an issue first so we can sanity-check direction. Small fixes can go straight to a PR.
 
 ## Build and run

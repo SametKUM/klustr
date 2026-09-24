@@ -2,7 +2,7 @@
 
 These guides cover how to *use* Klustr day to day. For the README's feature
 overview and install instructions, start at the [project README](../../README.md);
-for architecture and contributor conventions, see [`CLAUDE.md`](../../CLAUDE.md).
+for architecture and contributor conventions, see [`AGENTS.md`](../../AGENTS.md).
 
 This is a growing set — the guides below are written; more feature areas will be
 added over time.

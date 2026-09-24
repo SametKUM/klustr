@@ -206,7 +206,7 @@ wails build -trimpath -clean
 | Tables | TanStack Table |
 | Live data | `client-go` informers → Wails events → Zustand → React |
 
-Full design notes, conventions and the "add a new resource kind" recipe live in [`CLAUDE.md`](CLAUDE.md).
+Full design notes, conventions and the "add a new resource kind" recipe live in [`AGENTS.md`](AGENTS.md).
 
 ## Roadmap
 
@@ -233,7 +233,7 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 
 Bug reports and focused pull requests are welcome.
 
-- Read [`CLAUDE.md`](CLAUDE.md) first — it's the architecture + conventions contract.
+- Read [`AGENTS.md`](AGENTS.md) first — it's the architecture + conventions contract.
 - Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `refactor:` …) and prefer small, logically scoped commits.
 - Before opening a PR, run:
   ```bash
