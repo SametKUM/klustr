@@ -95,6 +95,6 @@ export const FAQ: Faq[] = [
     id: 'contribute',
     question: 'Can I contribute?',
     answer:
-      'Yes. Read [CONTRIBUTING.md](https://github.com/SametKUM/klustr/blob/main/CONTRIBUTING.md) and the architecture notes in [CLAUDE.md](https://github.com/SametKUM/klustr/blob/main/CLAUDE.md) first, use Conventional Commits, and include a screenshot or short clip for user-facing changes. Bug reports and focused pull requests are both welcome.',
+      'Yes. Read [CONTRIBUTING.md](https://github.com/SametKUM/klustr/blob/main/CONTRIBUTING.md) and the architecture notes in [AGENTS.md](https://github.com/SametKUM/klustr/blob/main/AGENTS.md) first, use Conventional Commits, and include a screenshot or short clip for user-facing changes. Bug reports and focused pull requests are both welcome.',
   },
 ]
