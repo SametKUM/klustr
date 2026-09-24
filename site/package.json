@@ -12,7 +12,7 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
-    "simple-icons": "^16.31.0",
+    "simple-icons": "^16.32.0",
     "swetrix": "^4.6.1"
   },
   "devDependencies": {
