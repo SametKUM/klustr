@@ -47,13 +47,11 @@ const (
 	DeltaRemove DeltaOp = "remove"
 )
 
-// KindDelta is the per-(context,kind) incremental change set emitted after a
-// debounce window. Upserts carry the freshly projected Info struct (PodInfo,
-// etc.); Removed carries only "namespace/name" keys. Gen is a per-(context,kind)
-// monotonic counter the frontend uses to detect a missed/out-of-order batch and
-// fall back to a full refetch. Reset means "I can't describe this incrementally,
-// just refetch" (a non-delta-enabled kind, an unprojectable tombstone, or a
-// synthetic touch).
+// KindDelta is one debounce window's incremental change set for a
+// (context, kind). Removed carries "namespace/name" keys. Gen is a monotonic
+// per-(context, kind) counter; a gap tells the frontend to refetch. Reset means
+// "refetch" too: a kind without a projector, an unprojectable tombstone or a
+// synthetic touch.
 type KindDelta struct {
 	Upserts []any    `json:"upserts"`
 	Removed []string `json:"removed"`
@@ -65,17 +63,13 @@ type ContextChange struct {
 	Context string
 	Kind    string
 	// Delta is nil for synthetic touches (_access, post-sync, denied kinds) and
-	// for kinds without a projector yet; a nil delta is today's "something
-	// changed, refetch" signal.
+	// for kinds without a projector; nil means "something changed, refetch".
 	Delta *KindDelta
 }
 
 // ClientManager is the application-facing handle to every per-context
-// resource subsystem: typed clientsets, the watcher pool, logs/exec
-// sessions, port-forwards, helm and the metrics cache. Per-kind forwarder
-// methods live in manager_<group>.go; this file keeps lifecycle, the
-// shared subsystems (logs/exec/portforward/CRD) and the package-private
-// watcher / restConfig helpers.
+// subsystem: clientsets, the watcher pool, logs/exec sessions, port-forwards,
+// helm and the metrics cache.
 type ClientManager struct {
 	mu          sync.Mutex
 	rules       *clientcmd.ClientConfigLoadingRules
@@ -140,8 +134,8 @@ func (m *ClientManager) ImportShellEnv() {
 }
 
 // contextsChangedKind is a synthetic kube:change kind (no associated context)
-// emitted when the kubeconfig loading rules change — today, after the shell-env
-// import updates the search precedence. The Welcome screen re-lists on it.
+// emitted when the kubeconfig loading rules change, e.g. after the shell-env
+// import. The Welcome screen re-lists contexts on it.
 const contextsChangedKind = "_contexts"
 
 func (m *ClientManager) emitContextsChanged() {
@@ -237,13 +231,9 @@ func (m *ClientManager) Clientset(contextName string) (*kubernetes.Clientset, er
 	if err != nil {
 		return nil, err
 	}
-	// Client-go defaults to QPS=5 / Burst=10, which throttles the 30+
-	// parallel SelfSubjectAccessReview calls discoverAccess fires on connect
-	// — some probes wait >1s and time out, getting recorded as AccessDenied
-	// even when the user does have access. Klustr is a single-user desktop
-	// client, so the conservative defaults are wrong; raise them so the
-	// access discovery completes in one round-trip and per-resource
-	// mutations don't queue behind each other either.
+	// client-go's QPS=5 / Burst=10 throttles the parallel SSARs discoverAccess
+	// fires on connect: probes time out and are recorded as denied even when
+	// the user has access. A single-user desktop client can afford far more.
 	cfg.QPS = 50
 	cfg.Burst = 100
 	cs, err := kubernetes.NewForConfig(cfg)
@@ -377,9 +367,8 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 		}
 	})
 	// The prior watcher's access map is immutable after its start(), so reusing
-	// it here lets start() skip discoverAccess. The new watcher still
-	// starts cold informers and the frontend re-LISTs open views on _access —
-	// avoiding that needs client-go informer-cache reuse, a bigger change.
+	// it lets start() skip discoverAccess. Informers still start cold, so the
+	// frontend re-LISTs open views on _access.
 	if reuseAccess && existing != nil {
 		w.access = existing.access
 		w.reuseGatewayAccess(existing)
@@ -400,25 +389,19 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 		existing.stop()
 	}
 
-	// A token-cold first connect can mis-probe access: the exec credential
-	// mint (aws eks get-token → STS) races the 40+ parallel SSARs, they
-	// exceed the probe timeout and every kind resolves to denied, so the
-	// cluster looks empty until a manual reconnect. If a credential-mapped
-	// context comes back with no cluster-wide access at all, the exec token
-	// is warm now — silently reconnect once so discovery reruns against the
-	// hot token. credRewatch guards against a loop (and against punishing a
-	// genuinely namespaced-only user with endless reconnects).
+	// A token-cold first connect can mis-probe access: minting the exec token
+	// (aws eks get-token → STS) races the parallel SSARs, they time out and
+	// every kind resolves to denied. If a credential-mapped context comes back
+	// with no cluster-wide access, reconnect once against the now-warm token;
+	// credRewatch keeps a genuinely namespaced-only user from looping.
 	if firstAttempt && !w.access.HasAnyClusterWide() && m.creds.hasMapping(contextName) {
 		m.mu.Lock()
 		m.credRewatch[contextName] = true
 		delete(m.cache, contextName)
 		m.mu.Unlock()
-		// The metrics and helm clients built during the cold-token window
-		// cached a failed exec authenticator too (their lazy first call hit
-		// the same 255), so they'd keep reporting metrics-server missing
-		// after the watch recovered. Drop them so the reconnect rebuilds
-		// every client against the now-warm token — the same scope StopWatch
-		// clears, minus the rewatch guard reset.
+		// Metrics and helm clients built in the cold-token window cached the
+		// failed exec authenticator too and would keep reporting metrics-server
+		// missing; drop them so the retry rebuilds every client.
 		m.metrics.invalidate(contextName)
 		m.helm.invalidate(contextName)
 		// Direct watchLocked call: the caller already holds this context's
@@ -426,22 +409,17 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 		// exists precisely because the cold-token probe under-reported it.
 		return m.watchLocked(ctx, contextName, false)
 	}
-	// Announce the attach now that the watcher is registered: a frontend list
-	// call that raced the watch hit no watcher, got an empty answer and
-	// started no informer for its kind — with lazy informer start nothing
-	// would ever re-trigger it. The frontend replays every open view's fetch
-	// on this event.
+	// A list call that raced the watch found no watcher and started no
+	// informer, and with lazy start nothing else would retrigger it. The
+	// frontend replays every open view's fetch on this event.
 	if cb != nil {
 		cb(ContextChange{Context: contextName, Kind: "_access"})
 	}
 	return nil
 }
 
-// Shutdown drains every live resource owned by the manager. Wails calls
-// it from the OnShutdown hook so port-forwards release their local
-// listeners, log streams cancel their apiserver watches, exec sessions
-// close their SPDY channels and every contextWatcher stops its informer
-// goroutines before the process actually exits.
+// Shutdown stops every port-forward, stream, session and watcher the manager
+// owns. Wails calls it from the OnShutdown hook.
 func (m *ClientManager) Shutdown() {
 	m.pf.stopAll()
 	m.logs.stopAll()
@@ -468,11 +446,9 @@ func (m *ClientManager) StopWatch(contextName string) {
 	if ok {
 		delete(m.watchers, contextName)
 	}
-	// Drop every per-context client cache too: each one holds a rest.Config
-	// snapshot taken when the context first connected, so if the underlying
-	// kubeconfig later changed (cluster recreated on a new port, token
-	// rotated, …) the next Watch() would otherwise hand back stale clients
-	// pointing at the old endpoint and every call would fail.
+	// Cached clients hold the rest.Config from first connect; drop them so a
+	// changed kubeconfig (new endpoint, rotated token) takes effect on the
+	// next Watch.
 	delete(m.cache, contextName)
 	delete(m.credRewatch, contextName)
 	m.mu.Unlock()
@@ -541,12 +517,10 @@ func (m *ClientManager) onCredentialsRefreshed(contextName string) {
 }
 
 // rewatchAfterRefresh rebuilds a context's clients after new credentials were
-// captured. A single bounded retry covers a transient blip at refresh time (a
-// VPN/apiserver hiccup exactly when a ~12h timer fires); if it still fails the
-// error is surfaced through the credential channel so the user gets a Retry —
-// otherwise the old watcher lingers with a stale exec env, its informers 401
-// once the old session expires, and updates freeze while the status dot (which
-// pings with fresh clients) stays green.
+// captured, retrying once to ride out a transient blip. A final failure goes
+// to the credential channel so the user gets a Retry; silently keeping the old
+// watcher would freeze updates once its session expires, while the status dot
+// (which pings with fresh clients) stays green.
 func (m *ClientManager) rewatchAfterRefresh(contextName string, allowRetry bool) {
 	// Helm builds its own rest.Config from a cached action.Configuration; drop
 	// it so the next Helm op rebuilds with the freshly captured credentials.
@@ -568,12 +542,9 @@ func (m *ClientManager) rewatchAfterRefresh(contextName string, allowRetry bool)
 	}
 }
 
-// rewatchIfActive rebuilds the watch under the per-context lock, re-checking
-// that the context is still attached — a StopWatch racing this refresh removes
-// the watcher, and rebuilding would silently re-attach a context the user just
-// disconnected. Returns nil (not an error) when the context is gone. watchLocked
-// is not reentrant, so it runs directly under the lock we hold rather than via
-// Watch; it announces the swap via "_access" so the frontend replays open views.
+// rewatchIfActive rebuilds the watch only if the context is still attached, so
+// a racing StopWatch is not undone; a detached context returns nil. It calls
+// watchLocked under the lock it holds because Watch would re-lock.
 func (m *ClientManager) rewatchIfActive(appCtx context.Context, contextName string) error {
 	l := m.watchLock(contextName)
 	l.Lock()

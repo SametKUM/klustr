@@ -69,18 +69,10 @@ type pendingKind struct {
 	touched bool
 }
 
-// contextWatcher owns up to two SharedInformerFactories — one all-namespaces
-// (`factory`) and one optional namespaced fallback (`scoped`) — plus the
-// Gateway-API factory, a debounce queue and the lifecycle context. The
-// access map decides which factory each kind belongs to so a restricted
-// user (e.g., the kubeconfig user only has list+watch in namespace `prod`)
-// still gets live data for the kinds they CAN see, without the all-ns
-// list call that would 403 and silently leave the cache empty.
-//
-// Per-kind type definitions and lister methods live in informers_<group>.go
-// files; the kind → informer routing table stays here in kindBindings so it
-// is auditable in one place. Informers start lazily on first use
-// (factoryFor → ensureKind); only Namespace and Pod start eagerly on attach.
+// contextWatcher owns one context's informers. The access map routes each kind
+// to the all-namespaces `factory` or the namespaced `scoped` fallback, so a
+// namespace-restricted user gets live data instead of a 403ing cluster-wide
+// LIST that leaves the cache silently empty.
 type contextWatcher struct {
 	factory        informers.SharedInformerFactory // cluster-wide; nil when user has no cluster-wide list at all
 	scoped         informers.SharedInformerFactory // namespaced fallback; nil when no kind needs it
@@ -134,13 +126,9 @@ func newContextWatcher(cs *kubernetes.Clientset, disco discovery.DiscoveryInterf
 	return w
 }
 
-// factoryFor returns the informer factory that owns the given kind, or nil
-// when the user has no access. Listers and detail Get paths call this so a
-// single helper carries the routing logic instead of every method making
-// the cluster-vs-scoped decision inline. It is also the lazy-start
-// chokepoint: the kind's informer is registered and started on first use,
-// so attach cost no longer includes a cluster-wide LIST for every kind the
-// user never opens.
+// factoryFor returns the informer factory that owns kind, or nil when the user
+// has no access. It is also the lazy-start chokepoint: a kind's informer only
+// starts, and pays its LIST, when something first asks for it.
 func (w *contextWatcher) factoryFor(kind string) informers.SharedInformerFactory {
 	w.ensureKind(kind)
 	return w.routedFactory(kind)
@@ -160,10 +148,8 @@ func (w *contextWatcher) routedFactory(kind string) informers.SharedInformerFact
 	}
 }
 
-// ensureKind registers and starts the informer backing a kind the first time
-// anything asks for it, then touches the kind once its cache has synced so
-// the frontend's skeleton/synced gate works exactly as it did with eager
-// informers.
+// ensureKind registers and starts a kind's informer on first request, then
+// touches the kind once its cache syncs so the frontend's synced gate flips.
 func (w *contextWatcher) ensureKind(kind string) {
 	w.startMu.Lock()
 	defer w.startMu.Unlock()
@@ -211,12 +197,10 @@ func (w *contextWatcher) ensureKind(kind string) {
 	}()
 }
 
-// handleInformerEvent is the delta/sidecar chokepoint for every informer event.
-// It drops events while the informer is still doing its initial LIST: client-go
-// replays the whole cache as Adds before HasSynced, and shipping those as delta
-// upserts only to Reset and full-refetch on the post-sync touch doubles the
-// attach payload on a large cluster. The post-sync touch (and onSynced) is the
-// authoritative first load; genuine post-sync events flow through normally.
+// handleInformerEvent drops events until the informer's initial LIST syncs:
+// client-go replays the whole cache as Adds first, and shipping them as
+// upserts ahead of the post-sync touch's full refetch would double the attach
+// payload. The post-sync touch is the authoritative first load.
 func (w *contextWatcher) handleInformerEvent(informer cache.SharedIndexInformer, kind string, b kindBinding, op DeltaOp, obj any) {
 	if !informer.HasSynced() {
 		return
@@ -278,11 +262,8 @@ func (w *contextWatcher) start(parent context.Context) error {
 		return err
 	}
 
-	// Only what every session needs immediately starts eagerly: the
-	// namespace selector and the default pods view. Every other kind's
-	// informer starts on first use (factoryFor → ensureKind), so attaching
-	// to a large cluster over a slow link no longer pays ~50 cluster-wide
-	// LISTs up front.
+	// Only the namespace selector and the default pods view start eagerly;
+	// every other kind starts on first use.
 	w.ensureKind("Namespace")
 	w.ensureKind("Pod")
 
@@ -304,9 +285,8 @@ type kindBinding struct {
 	onSynced func()
 
 	// project turns a cached object into its frontend Info struct plus a
-	// "namespace/name" key, for the delta-update protocol. nil ⇒ the kind has
-	// no delta support yet and its handler degrades to a bare touch (a Reset
-	// delta), so a partial rollout is safe.
+	// "namespace/name" key, for the delta-update protocol. nil ⇒ the kind's
+	// handler degrades to a bare touch (a Reset delta).
 	project func(obj any) (key string, info any, ok bool)
 }
 

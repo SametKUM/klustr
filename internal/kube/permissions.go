@@ -179,14 +179,10 @@ func watchedKinds() []kindGVR {
 
 const accessProbeTimeout = 8 * time.Second
 
-// discoverAccess walks every kind the watcher wants to follow and probes
-// SelfSubjectAccessReview to figure out where its informer should live.
-// candidateNS — usually the kubeconfig context's `namespace:` field — is
-// the fallback the probe falls back to when cluster-wide list is denied.
-//
-// All per-kind probes fan out concurrently via sync.WaitGroup so total
-// latency is one round-trip, not N. The rest.Config has been bumped to
-// QPS=50/Burst=100 so this burst doesn't trigger client-side throttling.
+// discoverAccess probes SelfSubjectAccessReview for every followed kind,
+// concurrently, to decide where its informer lives. candidateNS (usually the
+// kubeconfig context's namespace) is the fallback when cluster-wide list is
+// denied.
 func discoverAccess(parent context.Context, cs kubernetes.Interface, disco discovery.DiscoveryInterface, candidateNS string) *contextAccess {
 	out := &contextAccess{kinds: make(map[string]KindAccess, 40)}
 	served := servedResources(disco)
@@ -301,13 +297,11 @@ func canResourceVerb(ctx context.Context, cs kubernetes.Interface, gvr schema.Gr
 	return result.Status.Allowed, nil
 }
 
-// canListRetry probes list access with a bounded per-attempt timeout, retrying
-// once on a transport error so a transient hiccup — or a still-cold exec token,
-// the same case discoverAccess retries for — is not mistaken for a denial. A
-// gate that skipped on a blip would blank the CRD sidebar (and every CRD-gated
-// integration) for the watcher's whole lifetime. Returns false only on an
-// authoritative allowed=false or a persistent error, never blocking longer than
-// two accessProbeTimeout windows on a wedged connection.
+// canListRetry probes list access, retrying once on a transport error so a
+// blip or a still-cold exec token is not taken as a denial: a gate skipped on
+// a blip would blank the CRD sidebar for the watcher's lifetime. It returns
+// false only on allowed=false or a persistent error, within two
+// accessProbeTimeouts.
 func canListRetry(parent context.Context, cs kubernetes.Interface, gvr schema.GroupVersionResource) bool {
 	for attempt := 0; attempt < 2; attempt++ {
 		ctx, cancel := context.WithTimeout(parent, accessProbeTimeout)
