@@ -472,14 +472,10 @@ func listCachedCRs(m *ClientManager, contextName string, gvr schema.GroupVersion
 	return out
 }
 
-// ListCustomResources reads the cached CR list for the given GVR. If the
-// informer for this GVR has not been started yet, it returns an empty slice —
-// callers should call EnsureCRWatch first.
-//
-// When the CRD declares additionalPrinterColumns, each row's Cells map is
-// populated by evaluating those JSONPath expressions against the CR so the
-// frontend can render type-specific columns (Sync / Health / Ready / …)
-// without needing per-CRD knowledge in Klustr.
+// ListCustomResources reads the cached CR list for gvr; it is empty until
+// EnsureCRWatch has started the informer. Each row's Cells holds the CRD's
+// additionalPrinterColumns evaluated against the CR, so the frontend renders
+// type-specific columns without per-CRD knowledge.
 func (w *crdWatcher) ListCustomResources(gvr schema.GroupVersionResource, namespace string) []CustomResourceInfo {
 	w.crMu.Lock()
 	started := w.crWatches[gvr]
@@ -609,13 +605,10 @@ func (w *crdWatcher) GetCustomResource(ctx context.Context, gvr schema.GroupVers
 	return ri.Get(ctx, name, metav1.GetOptions{})
 }
 
-// getCROrLive returns the CR for the given GVR preferring the warm informer
-// cache, falling back to a live GET only when this GVR's informer has not been
-// started yet. Integration detail builders read only fields the list path
-// already caches, so the cache hit avoids both a fresh dynamic-client build and
-// an apiserver round-trip on every detail open. Unlike GetCustomResource (the
-// YAML tab, which always wants live server state), the cache is fresh enough
-// here — the watch keeps it within a debounce window of the server.
+// getCROrLive returns the CR from the informer cache, or a live GET when this
+// GVR's informer hasn't started. Integration detail builders tolerate the
+// cache's debounce-window lag; the YAML tab uses GetCustomResource instead
+// because it wants live server state.
 func (w *crdWatcher) getCROrLive(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string) (*unstructured.Unstructured, error) {
 	if obj, found := w.GetCachedCustomResource(gvr, namespace, name); found {
 		return obj, nil

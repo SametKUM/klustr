@@ -148,12 +148,9 @@ func kedaTriggerLabel(trigger map[string]any) (text, name string) {
 	return typ, name
 }
 
-// kedaTriggerMetaSummary returns a space-separated `key=value` listing of the
-// most useful trigger metadata fields per well-known KEDA trigger type. The
-// goal is to surface enough that a reader can predict how many replicas the
-// trigger will demand once it activates — for cron that means start + end +
-// desiredReplicas, for prometheus the metric name + threshold +
-// activationThreshold, and so on.
+// kedaTriggerMetaSummary returns space-separated `key=value` pairs of the
+// metadata that predicts how many replicas a well-known KEDA trigger will
+// demand (cron: start, end, desiredReplicas; prometheus: threshold, …).
 func kedaTriggerMetaSummary(triggerType string, meta map[string]any) string {
 	if len(meta) == 0 {
 		return ""

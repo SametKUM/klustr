@@ -244,12 +244,9 @@ func (g *restClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
 // --- read paths ---------------------------------------------------------
 
 // helmListStateMask widens the Helm SDK default of deployed|failed. List.Run
-// applies the mask *after* reducing to the latest revision per release, so under
-// that default a release whose newest revision is pending-install,
-// pending-upgrade, pending-rollback or uninstalling drops out of the list
-// entirely instead of showing its in-progress state — which is exactly when the
-// user needs to see it. Uninstalled leftovers (`helm uninstall --keep-history`)
-// stay hidden.
+// applies the mask after reducing to the latest revision, so the default drops
+// a release mid pending-*/uninstalling, exactly when the user needs to see it.
+// Uninstalled leftovers (`--keep-history`) stay hidden.
 const helmListStateMask = action.ListAll & ^action.ListUninstalled
 
 // ListReleases returns the latest revision of each release, optionally
@@ -674,12 +671,9 @@ func (h *helmManager) ChartVersions(repoName, chartName string) ([]string, error
 	return out, nil
 }
 
-// resolveChartRef accepts a user-typed chart reference and, if it is a bare
-// chart name (no slash, scheme, or filesystem path), tries to disambiguate it
-// to <repo>/<chart> by scanning every configured repo's cached index. This
-// matters because Helm releases only store the chart name, not the originating
-// repo — so a one-click "Upgrade" with a pre-filled chart name has no chance of
-// working without this lookup.
+// resolveChartRef expands a bare chart name to <repo>/<chart> by scanning the
+// configured repos' cached indexes. Releases store only the chart name, so a
+// one-click Upgrade needs this to find the repo.
 func (h *helmManager) resolveChartRef(ref string) (string, error) {
 	ref = strings.TrimSpace(ref)
 	if ref == "" {

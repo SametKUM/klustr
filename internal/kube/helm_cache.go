@@ -19,14 +19,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// Helm v3 release storage layout in core/v1 Secrets:
-//   Type   = "helm.sh/release.v1"
-//   Labels = owner=helm, name=<release>, version=<int>, status=<lowercase>
-//   Data["release"] = base64( gzip( JSON release ) )
-//
-// We rely on this format to decode releases directly from the Secret informer
-// cache instead of doing a fresh `helm list` API call every time the UI asks
-// for releases. The format has been stable across Helm 3.x.
+// Helm v3 stores each release revision as a Secret of this type, labelled
+// owner=helm, name, version and status, with Data["release"] =
+// base64(gzip(JSON)). Decoding that from the Secret informer cache replaces a
+// `helm list` call per UI read; the layout is stable across Helm 3.x.
 
 const helmReleaseSecretType = "helm.sh/release.v1"
 const helmReleaseSecretOwner = "helm"
@@ -84,12 +80,10 @@ func decodeHelmReleaseSecret(s *corev1.Secret) (*release.Release, error) {
 	return &rls, nil
 }
 
-// decodeHelmReleaseMeta decodes only the fields the list/history rows need
-// (name/namespace/version, Info, Chart.Metadata). Unmarshalling into a struct
-// that omits manifest and chart templates/files/values lets encoding/json skip
-// those fields entirely, avoiding the large string/[]byte allocations a full
-// decodeHelmReleaseSecret pays — which for a release set re-decoded on every
-// list refresh (and on any helm-secret change) dominated the cost.
+// decodeHelmReleaseMeta decodes only the fields list/history rows need. Leaving
+// the manifest and chart templates/files/values out of the target struct lets
+// encoding/json skip them, which dominated the cost of re-decoding every
+// release on each refresh.
 func decodeHelmReleaseMeta(s *corev1.Secret) (*release.Release, error) {
 	b, err := helmReleasePayload(s)
 	if err != nil {
@@ -288,12 +282,9 @@ func (w *contextWatcher) helmReleaseSecrets(namespace, name string) ([]*corev1.S
 // informer to sync, so a stalled watch can't hang the bridge call forever.
 const helmSyncWaitTimeout = 15 * time.Second
 
-// ensureSecretSynced blocks until the Secret informer's cache has synced (the
-// Helm views read releases from it). Without this, the first read during the
-// initial LIST returns a premature-empty list — the UI would flash "No
-// releases" and then pop in the real rows once the cache lands. The first Helm
-// read pays this once; later reads return immediately since the cache stays
-// synced. Bounded by helmSyncWaitTimeout and the watcher's stop channel.
+// ensureSecretSynced blocks until the Secret informer has synced, so the first
+// Helm read doesn't flash "No releases" from a half-filled cache. Bounded by
+// helmSyncWaitTimeout and the watcher's stop channel.
 func (w *contextWatcher) ensureSecretSynced() {
 	f := w.factoryFor("Secret")
 	if f == nil {

@@ -219,14 +219,10 @@ func buildArgoRollbackPatch(id int64, prune bool) map[string]any {
 	}
 }
 
-// SyncArgoApplication writes the operation.sync block, exactly the same
-// payload `argocd app sync` PUTs through argocd-server. Argo's
-// application-controller picks `operation` up, runs the sync, then clears
-// the field once the operation finishes.
-//
-// Revision="" defaults to "HEAD" (use spec.source.targetRevision).
-// Strategy="" defaults to "hook" — respects sync waves + pre/post-sync
-// hooks, which is what `argocd app sync` does by default.
+// SyncArgoApplication writes the operation.sync block, the same payload
+// `argocd app sync` sends; the application-controller runs the sync and then
+// clears the field. An empty Revision is sent as "HEAD" and an empty Strategy
+// as "hook" (sync waves and hooks honoured), matching the CLI defaults.
 func (m *ClientManager) SyncArgoApplication(ctx context.Context, contextName, namespace, name string, opts ArgoSyncOptions) error {
 	if err := m.assertWritable(contextName); err != nil {
 		return err
@@ -307,14 +303,11 @@ type ArgoApplicationCondition struct {
 	Message string `json:"message"`
 }
 
-// ArgoApplicationHealth is the app-level health summary the detail banner
-// renders. It surfaces what the Application CR itself carries — Argo's
-// aggregate health, any health message, sync/comparison conditions and the
-// destination — so a Degraded app explains itself instead of showing a red
-// badge over all-green rows. The per-resource degraded reason lives only in
-// argocd-server's resource tree, which Klustr (pure K8s API) does not read;
-// ResourceHealthPersisted tells the frontend whether Argo even wrote
-// per-resource health into the CR, so it can say so rather than imply a bug.
+// ArgoApplicationHealth is the app-level health the detail banner renders from
+// the Application CR alone, so a Degraded app explains itself. Per-resource
+// degraded reasons live only in argocd-server's resource tree, which Klustr
+// does not read; ResourceHealthPersisted says whether Argo wrote per-resource
+// health into the CR at all.
 type ArgoApplicationHealth struct {
 	Status                  string                     `json:"status"`
 	Message                 string                     `json:"message"`
@@ -373,27 +366,19 @@ func extractArgoHealth(obj *unstructured.Unstructured) ArgoApplicationHealth {
 	return out
 }
 
-// argoResourcesFinalizer is the finalizer Argo CD's application-controller
-// watches for. Its presence tells Argo to clean up every resource the
-// Application manages before allowing the Application CR itself to be
-// removed. Absence means a plain DELETE leaves the managed resources
-// orphaned — which is the same trap users hit in the Argo CD UI.
+// argoResourcesFinalizer makes Argo CD delete every managed resource before
+// the Application itself; without it a plain DELETE orphans them.
 const argoResourcesFinalizer = "resources-finalizer.argocd.argoproj.io"
 
-// DeleteArgoApplication deletes an Argo CD Application with the requested
-// cascade behaviour, matching what the Argo CD UI exposes.
+// DeleteArgoApplication deletes an Application with the cascade modes the
+// Argo CD UI offers:
 //
-//   - "foreground"    → add finalizer, DELETE with PropagationForeground
-//     (the DELETE returns immediately; the Application lingers with a
-//     deletionTimestamp until its managed resources are gone, then is
-//     removed — safest, and you can watch cleanup progress).
-//   - "background"    → add finalizer, DELETE with PropagationBackground
-//     (the Application is removed right away; Argo cleans up asynchronously).
-//   - "non-cascading" → strip the finalizer if present, DELETE with
-//     PropagationOrphan; the Application CR is removed, the managed
-//     resources stay in the cluster.
-//
-// Empty mode defaults to "foreground" — the safe choice.
+//   - "foreground" (default): add the finalizer, DELETE with foreground
+//     propagation; the Application lingers until its resources are gone.
+//   - "background": add the finalizer, DELETE with background propagation;
+//     the Application goes at once and Argo cleans up asynchronously.
+//   - "non-cascading": strip the finalizer, DELETE with orphan propagation;
+//     the managed resources stay.
 func (m *ClientManager) DeleteArgoApplication(ctx context.Context, contextName, namespace, name, cascade string) error {
 	if err := m.assertWritable(contextName); err != nil {
 		return err
@@ -652,19 +637,13 @@ func extractArgoOperationState(obj *unstructured.Unstructured) ArgoOperationStat
 	return out
 }
 
-// argoAutomationBackupAnnotation stashes the prior spec.syncPolicy.automated
-// block (as JSON) when the user suspends auto-sync from Klustr, so a later
-// Resume can restore the exact same flags (selfHeal / prune / etc.) rather
-// than guessing defaults.
+// argoAutomationBackupAnnotation holds the suspended spec.syncPolicy.automated
+// block as JSON, so resuming restores the exact flags instead of guessing.
 const argoAutomationBackupAnnotation = "klustr.io/argo-automation-suspended"
 
-// SetArgoApplicationAutomation toggles spec.syncPolicy.automated.
-//
-// enabled=false (suspend) → snapshots the current automated block into the
-// klustr.io/argo-automation-suspended annotation, then removes it from spec.
-// enabled=true (resume)   → restores the automated block from that
-// annotation (or sets an empty {} if there is no backup), clearing the
-// annotation on the way out.
+// SetArgoApplicationAutomation toggles spec.syncPolicy.automated. Suspending
+// moves the block into argoAutomationBackupAnnotation; resuming moves it back,
+// or sets {} when there is no backup.
 func (m *ClientManager) SetArgoApplicationAutomation(ctx context.Context, contextName, namespace, name string, enabled bool) error {
 	if err := m.assertWritable(contextName); err != nil {
 		return err

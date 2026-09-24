@@ -288,11 +288,8 @@ func (m *ClientManager) ListArgoApplicationSets(contextName, namespace string) [
 }
 
 // GetArgoApplicationSet reads one ApplicationSet for the detail panel.
-//
-// Falls back to listing Applications owned by this ApplicationSet (via
-// ownerReferences) when status.applicationStatus[] is empty — which is the
-// default unless the user explicitly opted into progressive sync. Without
-// that fallback the Generated Applications table would always be empty.
+// status.applicationStatus is only filled under progressive sync, so otherwise
+// the generated Applications are found through their ownerReferences.
 func (m *ClientManager) GetArgoApplicationSet(ctx context.Context, contextName, namespace, name string) (*ArgoApplicationSetDetail, error) {
 	obj, err := m.crForDetail(ctx, contextName, argoApplicationSetGVR, namespace, name)
 	if err != nil {
@@ -305,13 +302,10 @@ func (m *ClientManager) GetArgoApplicationSet(ctx context.Context, contextName, 
 	return &d, nil
 }
 
-// findArgoApplicationsOwnedBy lists every Application in `namespace` whose
-// ownerReferences contains an ApplicationSet pointing at `appSetName`, and
-// projects each into the same row shape progressive-sync reports. It reads from
-// the warm Application CR informer cache when it's running (the user has opened
-// the Applications view), and only falls back to a live List on a cold informer
-// — listCachedCRs returns nil there, so a bare cache read would otherwise
-// regress the table to empty.
+// findArgoApplicationsOwnedBy returns the Applications in namespace owned by
+// appSetName, in the row shape progressive sync reports. It reads the
+// Application informer cache when warm and lists live otherwise, since
+// listCachedCRs returns nil for a cold informer.
 func (m *ClientManager) findArgoApplicationsOwnedBy(
 	ctx context.Context,
 	contextName string,
