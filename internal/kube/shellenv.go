@@ -39,13 +39,10 @@ var shellEnvAllowlist = []string{
 	"KUBECONFIG",
 }
 
-// importShellEnv spawns the user's interactive login shell, dumps its
-// environment between sentinel markers and merges PATH plus the allowlist
-// into the process env. GUI launches (Finder, Dock, .desktop) skip the
-// shell rc entirely, so exec credential helpers configured there — extra
-// PATH entries, AWS_VAULT_BACKEND, proxies — are otherwise invisible to
-// klustr. Terminal launches (wails dev, a shell-started binary) already
-// have the full environment and are skipped via the TERM heuristic.
+// importShellEnv merges PATH and the allowlist from the user's interactive
+// login shell into the process env. GUI launches skip the shell rc, so what
+// exec credential helpers rely on there (PATH entries, AWS_VAULT_BACKEND,
+// proxies) is otherwise invisible. Terminal launches are skipped via TERM.
 func importShellEnv(timeout time.Duration) {
 	if runtime.GOOS == "windows" {
 		return

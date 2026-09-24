@@ -31,17 +31,13 @@ type DebugSession struct {
 }
 
 // debugEphemeralContainer builds the ephemeral container kubectl-debug injects.
-// The keep-alive command is a large fixed number, not `sleep infinity`, because
-// busybox/alpine `sleep` (netshoot, busybox, alpine images) reject the word
-// "infinity". TargetContainerName joins the target's PID namespace, which is
-// what makes its processes visible.
+// The keep-alive sleeps a fixed large number because busybox/alpine `sleep`
+// rejects "infinity".
 //
-// elevated adds CAP_SYS_PTRACE. Reading the target's filesystem through
-// /proc/<pid>/root needs ptrace permission, and the container runtime's default
-// capability set omits it — without this, that path is "Permission denied" even
-// as root. It stays opt-in because the PodSecurity baseline policy rejects any
-// added capability except NET_BIND_SERVICE, so defaulting it on would make
-// debugging impossible in exactly the hardened namespaces that need it.
+// elevated adds CAP_SYS_PTRACE, without which /proc/<pid>/root (the target's
+// filesystem) is "Permission denied" even as root. It is opt-in because the
+// PodSecurity baseline policy rejects added capabilities, which would block
+// debugging in exactly the hardened namespaces that need it.
 func debugEphemeralContainer(name, image, target string, elevated bool) corev1.EphemeralContainer {
 	ec := corev1.EphemeralContainer{
 		EphemeralContainerCommon: corev1.EphemeralContainerCommon{
@@ -65,11 +61,9 @@ func debugEphemeralContainer(name, image, target string, elevated bool) corev1.E
 }
 
 // runningEphemeralContainer reports whether the named ephemeral container is
-// Running; otherwise it returns the Waiting/Terminated reason (empty when the
-// container is not present in status yet). terminal is true for Terminated —
-// the kubelet never restarts an ephemeral container, so that state is
-// permanent the instant it's observed, unlike a Waiting reason which may
-// still resolve on its own.
+// Running, else its Waiting/Terminated reason ("" before it appears in
+// status). terminal is true for Terminated: the kubelet never restarts an
+// ephemeral container, while a Waiting reason may still resolve.
 func runningEphemeralContainer(status *corev1.PodStatus, name string) (running bool, reason string, terminal bool) {
 	for i := range status.EphemeralContainerStatuses {
 		cs := &status.EphemeralContainerStatuses[i]
@@ -131,11 +125,9 @@ func waitEphemeralRunning(ctx context.Context, cs kubernetes.Interface, namespac
 }
 
 // StartPodDebug injects an ephemeral debug container into a running pod and
-// execs a shell into it — the ephemeral-container mode of `kubectl debug`, for
-// pods whose own containers ship no shell. The container shares the target
-// container's process namespace. Ephemeral containers cannot be removed, so the
-// keep-alive container lingers until the pod restarts; reattach is a plain
-// StartExec into the returned container name, never a second injection.
+// execs a shell into it, like `kubectl debug` for shell-less images. Ephemeral
+// containers cannot be removed, so reattach is a plain StartExec into the
+// returned container, never a second injection.
 func (m *ClientManager) StartPodDebug(
 	parent context.Context,
 	contextName, namespace, podName, target, image, shell string,

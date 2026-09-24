@@ -6,13 +6,10 @@ import (
 	"strings"
 )
 
-// GUI launches on macOS (Finder, Dock, Spotlight, Raycast) start the
-// process with a minimal PATH that excludes Homebrew and other common
-// install prefixes. kubeconfig exec credential helpers — aws,
-// gke-gcloud-auth-plugin, kubelogin — therefore fail to resolve when
-// the app is opened outside a terminal. Augment PATH at import time
-// with the directories where these helpers typically live so the
-// behavior matches `wails dev` and a shell-launched binary.
+// GUI launches on macOS (Finder, Dock, Spotlight) get a minimal PATH without
+// Homebrew and similar prefixes, so exec credential helpers (aws,
+// gke-gcloud-auth-plugin, kubelogin) fail to resolve. Add their usual
+// directories at import time.
 func init() {
 	augmentExecPath()
 }

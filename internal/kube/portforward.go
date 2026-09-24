@@ -280,12 +280,9 @@ func (mgr *pfManager) list() []PortForwardInfo {
 	return out
 }
 
-// stopForContext closes and removes every active port-forward belonging to the
-// given context. Called from StopWatch so disconnecting a cluster releases its
-// local listeners and forwarder goroutines instead of leaking them, and the
-// change notification lets the frontend store drop the now-dead entries. A
-// healthy session's monitor goroutine wakes when its context is canceled, finds its
-// id already gone (the ok check in start's monitor guards this) and is a no-op.
+// stopForContext closes every port-forward of the given context, so a
+// disconnect releases its local listeners, and notifies the frontend. Each
+// session's monitor goroutine then finds its id gone and does nothing.
 func (mgr *pfManager) stopForContext(contextName string) {
 	mgr.mu.Lock()
 	closing := make([]*pfSession, 0)

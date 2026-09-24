@@ -21,22 +21,16 @@ const (
 )
 
 // nodeShellCommand returns the nsenter invocation for the node's host OS.
-//
-// nsenter options are the long form, not the short `-t 1 -m -u -i -n -p`
-// cluster: the helper image's busybox nsenter mis-parses the short
-// optional-arg form on some node runtimes, exec'ing the post-`--` program with
-// the wrong argv.
+// Options use the long form because the helper image's busybox nsenter
+// mis-parses the short optional-arg form on some runtimes.
 //
 // Normal hosts: enter every namespace including --mount, so the shell and `/`
-// are the host's. The `sh -c` probe prefers the host's bash and falls back to
-// sh — bash is not guaranteed (minimal node VMs such as OrbStack's ship none).
+// are the host's; bash is preferred but not guaranteed (OrbStack's node VM has
+// none).
 //
-// Bottlerocket: its host /bin/sh is `brush`, a sandboxed shell whose
-// allow-list refuses almost every program (even `ls`), so a --mount host shell
-// is unusable. Instead we skip --mount and run the helper image's own busybox
-// shell with the host's pid/net/ipc/uts namespaces, starting in /proc/1/root
-// (the live host filesystem). You still see every host process and the whole
-// host fs; only the shell binary and `/` come from the helper image.
+// Bottlerocket: its host /bin/sh is `brush`, a sandboxed shell that refuses
+// almost every program, so skip --mount and run the helper's busybox shell in
+// the host's pid/net/ipc/uts namespaces from /proc/1/root (the host fs).
 func nodeShellCommand(osImage string) []string {
 	if strings.Contains(strings.ToLower(osImage), "bottlerocket") {
 		return []string{
@@ -73,10 +67,9 @@ func (m *ClientManager) StartNodeShell(
 		return "", err
 	}
 
-	// OS image picks the right nsenter shell (Bottlerocket can't --mount). Read
-	// it from the warm Node informer cache first — the frontend already shows
-	// it, so it's cached — and only fall back to a live Get on a cache miss, so
-	// a transient Get failure no longer silently lands on the wrong shell.
+	// The OS image picks the nsenter shell (Bottlerocket can't --mount). Prefer
+	// the Node informer cache the frontend has already warmed, so a transient
+	// Get failure can't silently pick the wrong shell.
 	osImage := ""
 	if w, ok := m.watcher(contextName); ok {
 		osImage = w.nodeOSImage(nodeName)

@@ -218,18 +218,11 @@ func (mgr *terminalSessionManager) stopAll() {
 	}
 }
 
-// terminalEnv augments the inherited environment for the PTY shell. A
-// GUI-launched bundle (Finder/Dock on macOS, a .desktop entry on Linux)
-// starts with no controlling terminal, so the variables a shell normally
-// inherits from a real terminal are simply absent. Without TERM, tput
-// fails and zsh's line editor can't resolve terminfo — it redraws the
-// prompt by reprinting characters instead of repositioning the cursor, so
-// every keystroke appears several times. Without a UTF-8 locale, the
-// Nerd Font glyphs that modern prompts emit garble. We only fill in
-// defaults the user has not already exported. locale is the UTF-8 locale
-// to fall back to (see defaultUTF8Locale); it is empty when none could be
-// confirmed on this host, in which case we leave the locale untouched
-// rather than export one that triggers setlocale warnings.
+// terminalEnv fills in what a GUI-launched app lacks because it has no
+// controlling terminal, without overriding anything the user exported.
+// Without TERM, zsh's line editor can't resolve terminfo and echoes every
+// keystroke several times; without a UTF-8 locale, prompt glyphs garble. An
+// empty locale (none confirmed on this host) leaves the locale untouched.
 func terminalEnv(base []string, kubeconfigPath, contextName, locale string) []string {
 	env := append([]string{}, base...)
 	env = append(env,
@@ -250,14 +243,10 @@ func terminalEnv(base []string, kubeconfigPath, contextName, locale string) []st
 	return env
 }
 
-// defaultUTF8Locale returns a UTF-8 locale that actually exists on this
-// host, or "" if none can be confirmed. A GUI-launched shell inherits no
-// locale, and blindly exporting en_US.UTF-8 triggers setlocale warnings on
-// Linux boxes where that locale was never generated — so we pick from what
-// `locale -a` reports, preferring the portable C.UTF-8 (common on Linux)
-// and falling back to en_US.UTF-8 (always present on macOS). locale names
-// are compared case-insensitively and dash-insensitively because Linux
-// reports them lowercased and without the dash (en_US.utf8, C.utf8).
+// defaultUTF8Locale returns a UTF-8 locale that `locale -a` confirms exists,
+// preferring C.UTF-8 over en_US.UTF-8, or "". Exporting a locale that was
+// never generated triggers setlocale warnings on Linux. Names are compared
+// ignoring case and dashes because Linux reports en_US.utf8 / C.utf8.
 func defaultUTF8Locale() string {
 	out, err := exec.Command("locale", "-a").Output()
 	if err != nil {
@@ -316,13 +305,10 @@ func loginShellArgs(shell string) []string {
 	}
 }
 
-// writeContextKubeconfig writes a minified kubeconfig containing only
-// the named context, its cluster, and its auth user to a 0600 temp file.
-// The spawned shell loads it via KUBECONFIG=<path> so kubectl, helm,
-// stern, etc. target the right cluster without the user running
-// `kubectl config use-context` and without us touching their real
-// ~/.kube/config (which may have dozens of contexts they don't want
-// any single terminal tab to mutate).
+// writeContextKubeconfig writes a 0600 temp kubeconfig holding only the named
+// context, its cluster and user. The shell gets it via KUBECONFIG, so its
+// tools target that cluster without the tab touching the real kubeconfig's
+// current-context.
 func writeContextKubeconfig(rules *clientcmd.ClientConfigLoadingRules, contextName string) (string, error) {
 	raw, err := rules.Load()
 	if err != nil {

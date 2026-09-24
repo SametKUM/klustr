@@ -58,14 +58,9 @@ func (m *ClientManager) ListSystemTerminals() []SystemTerminal {
 	return []SystemTerminal{}
 }
 
-// OpenPodExecInSystemTerminal launches an external terminal app and
-// immediately `kubectl exec`s into the named pod/container. KUBECONFIG
-// is pointed at a minified single-context file so kubectl resolves to
-// the right cluster without touching the user's main config.
-//
-// shellPath is the command the pod runs (e.g. /bin/sh, /bin/bash); if
-// empty defaults to /bin/sh. container may be empty, in which case
-// kubectl picks the first one.
+// OpenPodExecInSystemTerminal opens an external terminal running `kubectl
+// exec` into the pod against a single-context KUBECONFIG. An empty shellPath
+// means /bin/sh; an empty container lets kubectl pick the first.
 func (m *ClientManager) OpenPodExecInSystemTerminal(
 	contextName, namespace, podName, container, shellPath, appID string,
 ) error {
@@ -149,16 +144,10 @@ kubectl exec -it -n %s %s%s -- %s
 	return path, nil
 }
 
-// OpenInSystemTerminal launches the user's external terminal emulator
-// with KUBECONFIG pre-set to a minified single-context copy of their
-// kubeconfig, then drops them into their normal login shell. The temp
-// kubeconfig and the launcher script self-delete after the shell exits
-// via an EXIT trap.
-//
-// appID picks a specific terminal app — values are the ids returned by
-// ListSystemTerminals. An empty appID means: defer to the OS default
-// handler for .command files on macOS, or walk the built-in priority
-// list on Linux.
+// OpenInSystemTerminal opens the user's login shell in an external terminal
+// with KUBECONFIG set to a single-context copy; an EXIT trap deletes the temp
+// kubeconfig and launcher script. appID is an id from ListSystemTerminals;
+// empty means the macOS .command handler or the Linux priority list.
 func (m *ClientManager) OpenInSystemTerminal(contextName, appID string) error {
 	if contextName == "" {
 		return fmt.Errorf("context name is required")

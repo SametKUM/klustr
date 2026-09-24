@@ -5,13 +5,10 @@ import (
 	"time"
 )
 
-// Raw stdout/PTY bytes are coalesced before crossing the Wails bridge: each
-// emit is a synchronous json.Marshal + JSEscape + main-thread ExecJS dispatch,
-// so emitting per SPDY frame / per PTY read lets a firehose (cat a big file,
-// tail -f, a verbose build) saturate the renderer and jank the UI. logs.go
-// solved this for line streams; this is the byte-stream equivalent. Flush on
-// whichever comes first. 16 ms (~one frame) stays well under perceptible
-// latency for interactive echo while collapsing a firehose to ~60 emits/s.
+// Exec/PTY bytes are coalesced before crossing the Wails bridge: every emit is
+// a synchronous marshal + main-thread ExecJS, so emitting per read lets output
+// like `cat` of a big file jank the UI. Flush on whichever limit hits first;
+// 16 ms (one frame) keeps interactive echo imperceptible.
 const (
 	streamFlushInterval = 16 * time.Millisecond
 	streamFlushMaxBytes = 64 * 1024
