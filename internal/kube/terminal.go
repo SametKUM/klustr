@@ -12,7 +12,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/creack/pty"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -20,11 +19,19 @@ import (
 type TerminalDataFunc func(data string)
 type TerminalCloseFunc func(err error)
 
+// ptyProcess is a child on a Unix pty or a Windows ConPTY.
+// Close and Kill are both safe to call more than once.
+type ptyProcess interface {
+	io.ReadWriteCloser
+	Resize(cols, rows uint16) error
+	Wait() error
+	Kill() error
+}
+
 type terminalSession struct {
 	id         string
 	context    string
-	cmd        *exec.Cmd
-	ptmx       *os.File
+	proc       ptyProcess
 	cancel     context.CancelFunc
 	kubeconfig string
 	once       sync.Once
@@ -33,11 +40,9 @@ type terminalSession struct {
 func (s *terminalSession) close() {
 	s.once.Do(func() {
 		s.cancel()
-		if s.ptmx != nil {
-			_ = s.ptmx.Close()
-		}
-		if s.cmd != nil && s.cmd.Process != nil {
-			_ = s.cmd.Process.Kill()
+		if s.proc != nil {
+			_ = s.proc.Close()
+			_ = s.proc.Kill()
 		}
 		if s.kubeconfig != "" {
 			_ = os.Remove(s.kubeconfig)
@@ -67,9 +72,6 @@ func (mgr *terminalSessionManager) start(
 	onData TerminalDataFunc,
 	onClose TerminalCloseFunc,
 ) (string, error) {
-	if runtime.GOOS == "windows" {
-		return "", fmt.Errorf("terminal sessions are not supported on Windows yet")
-	}
 	if contextName == "" {
 		return "", fmt.Errorf("context name is required")
 	}
@@ -80,22 +82,20 @@ func (mgr *terminalSessionManager) start(
 	}
 
 	ctx, cancel := context.WithCancel(parent)
-	shell := userShell()
-	cmd := exec.CommandContext(ctx, shell, loginShellArgs(shell)...)
-	cmd.Env = terminalEnv(os.Environ(), kubeconfigPath, contextName, defaultUTF8Locale())
+	shell, args := terminalShell()
+	env := terminalEnv(os.Environ(), kubeconfigPath, contextName, defaultUTF8Locale())
+	var dir string
 	if home, err := os.UserHomeDir(); err == nil {
-		cmd.Dir = home
+		dir = home
+	}
+	if cols == 0 {
+		cols = 80
+	}
+	if rows == 0 {
+		rows = 24
 	}
 
-	winsz := &pty.Winsize{Cols: cols, Rows: rows}
-	if winsz.Cols == 0 {
-		winsz.Cols = 80
-	}
-	if winsz.Rows == 0 {
-		winsz.Rows = 24
-	}
-
-	ptmx, err := pty.StartWithSize(cmd, winsz)
+	proc, err := startPTY(ctx, shell, args, env, dir, cols, rows)
 	if err != nil {
 		cancel()
 		_ = os.Remove(kubeconfigPath)
@@ -106,8 +106,7 @@ func (mgr *terminalSessionManager) start(
 	sess := &terminalSession{
 		id:         id,
 		context:    contextName,
-		cmd:        cmd,
-		ptmx:       ptmx,
+		proc:       proc,
 		cancel:     cancel,
 		kubeconfig: kubeconfigPath,
 	}
@@ -123,7 +122,7 @@ func (mgr *terminalSessionManager) start(
 		out := newByteCoalescer(onData)
 		buf := make([]byte, 4096)
 		for {
-			n, err := ptmx.Read(buf)
+			n, err := proc.Read(buf)
 			if n > 0 {
 				_, _ = out.Write(buf[:n])
 			}
@@ -132,7 +131,7 @@ func (mgr *terminalSessionManager) start(
 			}
 		}
 		out.close()
-		waitErr := cmd.Wait()
+		waitErr := proc.Wait()
 		mgr.mu.Lock()
 		delete(mgr.sessions, id)
 		mgr.mu.Unlock()
@@ -143,7 +142,7 @@ func (mgr *terminalSessionManager) start(
 			// not a session error. Only surface a real spawn/IO failure.
 			var exitErr *exec.ExitError
 			clean := waitErr == nil || errors.Is(waitErr, io.EOF) ||
-				ctx.Err() == context.Canceled || errors.As(waitErr, &exitErr)
+				errors.Is(ctx.Err(), context.Canceled) || errors.As(waitErr, &exitErr)
 			if clean {
 				onClose(nil)
 			} else {
@@ -162,7 +161,7 @@ func (mgr *terminalSessionManager) sendInput(id, data string) {
 	if sess == nil {
 		return
 	}
-	_, _ = sess.ptmx.Write([]byte(data))
+	_, _ = sess.proc.Write([]byte(data))
 }
 
 func (mgr *terminalSessionManager) resize(id string, cols, rows uint16) {
@@ -172,7 +171,7 @@ func (mgr *terminalSessionManager) resize(id string, cols, rows uint16) {
 	if sess == nil {
 		return
 	}
-	_ = pty.Setsize(sess.ptmx, &pty.Winsize{Cols: cols, Rows: rows})
+	_ = sess.proc.Resize(cols, rows)
 }
 
 func (mgr *terminalSessionManager) stop(id string) {
@@ -248,6 +247,9 @@ func terminalEnv(base []string, kubeconfigPath, contextName, locale string) []st
 // never generated triggers setlocale warnings on Linux. Names are compared
 // ignoring case and dashes because Linux reports en_US.utf8 / C.utf8.
 func defaultUTF8Locale() string {
+	if runtime.GOOS == "windows" {
+		return ""
+	}
 	out, err := exec.Command("locale", "-a").Output()
 	if err != nil {
 		if runtime.GOOS == "darwin" {
@@ -283,6 +285,31 @@ func hasEnvKey(env []string, key string) bool {
 	return false
 }
 
+func terminalShell() (string, []string) {
+	if runtime.GOOS == "windows" {
+		return windowsShell(os.Getenv, exec.LookPath)
+	}
+	shell := userShell()
+	return shell, loginShellArgs(shell)
+}
+
+// windowsShell passes -NoLogo to PowerShell to keep the banner out of a tab
+// that already shows the context.
+func windowsShell(getenv func(string) string, lookPath func(string) (string, error)) (string, []string) {
+	if s := getenv("SHELL"); s != "" {
+		return s, loginShellArgs(s)
+	}
+	for _, name := range []string{"pwsh.exe", "powershell.exe"} {
+		if path, err := lookPath(name); err == nil {
+			return path, []string{"-NoLogo"}
+		}
+	}
+	if s := getenv("COMSPEC"); s != "" {
+		return s, nil
+	}
+	return "cmd.exe", nil
+}
+
 func userShell() string {
 	if s := os.Getenv("SHELL"); s != "" {
 		return s
@@ -297,8 +324,9 @@ func userShell() string {
 // user's normal rc files (.zshrc / .bashrc / .profile) are sourced and
 // prompts, aliases and shell functions look like a regular Terminal tab.
 func loginShellArgs(shell string) []string {
-	switch {
-	case strings.HasSuffix(shell, "zsh"), strings.HasSuffix(shell, "bash"):
+	base := strings.TrimSuffix(strings.ToLower(shell[strings.LastIndexAny(shell, `/\`)+1:]), ".exe")
+	switch base {
+	case "zsh", "bash":
 		return []string{"-l"}
 	default:
 		return nil
