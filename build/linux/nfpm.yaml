@@ -29,3 +29,7 @@ contents:
     dst: /usr/share/icons/hicolor/512x512/apps/klustr.png
   - src: build/appicon.svg
     dst: /usr/share/icons/hicolor/scalable/apps/klustr.svg
+  - src: LICENSE
+    dst: /usr/share/doc/klustr/LICENSE
+  - src: NOTICE
+    dst: /usr/share/doc/klustr/NOTICE

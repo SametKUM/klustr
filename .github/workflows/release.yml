@@ -206,7 +206,10 @@ jobs:
           COPYFILE_DISABLE: "1"
         run: |
           cd build/bin
-          tar -czf "$ARTIFACT" klustr.app
+          # Beside the bundle, not inside it: the bundle is already signed and
+          # notarized, and any file added to it would break the seal.
+          cp ../../LICENSE ../../NOTICE .
+          tar -czf "$ARTIFACT" klustr.app LICENSE NOTICE
 
       # - name: Package Windows
       #   if: matrix.os == 'windows-latest'
@@ -222,7 +225,8 @@ jobs:
           ARTIFACT: ${{ steps.meta.outputs.name }}
         run: |
           cd build/bin
-          tar -czf "$ARTIFACT" klustr
+          cp ../../LICENSE ../../NOTICE .
+          tar -czf "$ARTIFACT" klustr LICENSE NOTICE
 
       - name: Build Linux .deb
         if: matrix.os == 'ubuntu-24.04'
@@ -251,10 +255,15 @@ jobs:
         run: |
           set -euo pipefail
           file build/bin/klustr | grep -q 'ELF 64-bit LSB.*x86-64'
-          tar -tzf "build/bin/${ARTIFACT}" | grep -qx klustr
+          # grep must drain tar and dpkg-deb output; -q closes the pipe early
+          # under pipefail.
+          tar -tzf "build/bin/${ARTIFACT}" | grep -x klustr >/dev/null
+          tar -tzf "build/bin/${ARTIFACT}" | grep -x LICENSE >/dev/null
+          tar -tzf "build/bin/${ARTIFACT}" | grep -x NOTICE >/dev/null
           dpkg-deb --info "build/bin/${DEB_NAME}"
-          # grep must drain dpkg-deb output; -q closes the pipe early under pipefail.
           dpkg-deb --contents "build/bin/${DEB_NAME}" | grep -F './usr/bin/klustr' >/dev/null
+          dpkg-deb --contents "build/bin/${DEB_NAME}" | grep -F './usr/share/doc/klustr/LICENSE' >/dev/null
+          dpkg-deb --contents "build/bin/${DEB_NAME}" | grep -F './usr/share/doc/klustr/NOTICE' >/dev/null
           # The filename and the control field must agree, and a prerelease
           # must sort below the release it precedes.
           PKG_VERSION=$(dpkg-deb --field "build/bin/${DEB_NAME}" Version)

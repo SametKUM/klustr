@@ -26,4 +26,7 @@ package() {
   install -Dm644 "${srcdir}/klustr-${pkgver}.desktop" "${pkgdir}/usr/share/applications/klustr.desktop"
   install -Dm644 "${srcdir}/klustr-${pkgver}.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/klustr.png"
   install -Dm644 "${srcdir}/klustr-${pkgver}.svg" "${pkgdir}/usr/share/icons/hicolor/scalable/apps/klustr.svg"
+  # Arch's licenses package already ships the Apache-2.0 text; only the NOTICE
+  # is specific to this project.
+  install -Dm644 "${srcdir}/NOTICE" "${pkgdir}/usr/share/licenses/${pkgname}/NOTICE"
 }
