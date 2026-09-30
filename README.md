@@ -246,7 +246,7 @@ Full guide: [`CONTRIBUTING.md`](CONTRIBUTING.md). Bug reports go through the [`b
 
 ## License
 
-Klustr is licensed under the [Apache License 2.0](LICENSE).
+Klustr is licensed under the [Apache License 2.0](LICENSE). The screenshots, demo video and other documentation under [`docs/`](docs) are licensed under [CC BY 4.0](docs/LICENSE).
 
 ## Acknowledgments
 

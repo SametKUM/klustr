@@ -141,7 +141,7 @@ klustr/
 ├── build/                        Wails build artifacts (icons, Info.plist) +
 │                                 linux/ (nfpm.yaml + klustr.desktop for the .deb) +
 │                                 aur/PKGBUILD.tmpl (rendered each release by CI)
-├── docs/
+├── docs/                         CC-BY-4.0 (docs/LICENSE); the code is Apache-2.0
 │   ├── hero.mp4 / hero.gif         demo clip: the README shows the GIF (first
 │   │                               scenes, ~8 MB) and links the MP4. Recorded by
 │   │                               Playwright against the same kind fixtures as
