@@ -246,7 +246,7 @@ Full guide: [`CONTRIBUTING.md`](CONTRIBUTING.md). Bug reports go through the [`b
 
 ## License
 
-[MIT](LICENSE) © Samet Kum
+Klustr is licensed under the [Apache License 2.0](LICENSE).
 
 ## Acknowledgments
 

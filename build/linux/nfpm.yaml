@@ -14,7 +14,7 @@ description: |
   Kubernetes API using the user's ~/.kube/config.
 vendor: Samet Kum
 homepage: https://github.com/SametKUM/klustr
-license: MIT
+license: Apache-2.0
 depends:
   - libwebkit2gtk-4.1-0
   - libgtk-3-0

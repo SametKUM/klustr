@@ -45,4 +45,4 @@ A few categories will be declined:
 
 ## License
 
-By submitting a contribution you agree it will be released under the [MIT License](LICENSE), the same as the rest of the project.
+Klustr is licensed under the [Apache License 2.0](LICENSE). By submitting a contribution you agree it is licensed under the same terms, as section 5 of the license describes.
