@@ -90,6 +90,7 @@ jobs:
 
       - name: Install Wails CLI
         if: steps.wails-cache.outputs.cache-hit != 'true'
+        shell: bash
         env:
           WAILS_VERSION: ${{ steps.wails.outputs.version }}
         run: go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
