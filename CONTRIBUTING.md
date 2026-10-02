@@ -43,6 +43,10 @@ A few categories will be declined:
 - Subprocess calls to `kubectl` / `helm` / `argocd`. We use the typed and dynamic Go clients directly.
 - Telemetry, analytics or any third-party binaries.
 
+## Code of conduct
+
+Everyone taking part in the project follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## License
 
 Klustr is licensed under the [Apache License 2.0](LICENSE). By submitting a contribution you agree it is licensed under the same terms, as section 5 of the license describes.
