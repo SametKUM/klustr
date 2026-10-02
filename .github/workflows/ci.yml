@@ -18,8 +18,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Docs-only changes skip the jobs below. A job skipped by its `if` reports
+  # success, so the required checks still pass, where a workflow-level paths
+  # filter would leave them unreported and the PR unmergeable. The jobs test
+  # !cancelled() so that a failure here runs them instead of skipping them
+  # into a pass.
+  changes:
+    name: Changes
+    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          # A pull_request run checks out the merge commit, whose first parent
+          # is the base branch tip, so HEAD^1..HEAD is the whole PR rather than
+          # its latest push.
+          fetch-depth: 2
+
+      - name: Diff against the base
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # Same set as paths-ignore in codeql.yml. No job builds, tests or
+          # lints anything in it.
+          docs_only='^(docs/|\.github/ISSUE_TEMPLATE/)|\.md$'
+          base=
+          if [[ $EVENT == pull_request ]]; then
+            base=HEAD^1
+          elif [[ $EVENT == push && $REF == refs/heads/main && ! $BEFORE =~ ^0*$ ]] &&
+            git fetch --no-tags --depth=1 origin "$BEFORE"; then
+            base=$BEFORE
+          fi
+          # Tags, the release.yml call, manual runs and anything that can't be
+          # diffed run everything.
+          code=true
+          changed=
+          if [[ -n $base ]] && changed=$(git diff --no-renames --name-only "$base" HEAD) &&
+            [[ -n $changed ]] && ! grep -qvE "$docs_only" <<<"$changed"; then
+            code=false
+          fi
+          printf '%s\n' "$changed"
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+
   backend:
     name: Backend (Go)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     steps:
@@ -59,6 +109,8 @@ jobs:
   # The ConPTY terminal is Windows-only code the Linux job never compiles.
   windows:
     name: Backend (Go, Windows)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     timeout-minutes: 20
     runs-on: windows-latest
     steps:
@@ -86,6 +138,8 @@ jobs:
 
   vulncheck:
     name: Vulnerabilities (Go)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     steps:
@@ -111,6 +165,8 @@ jobs:
 
   frontend:
     name: Frontend (TypeScript)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     timeout-minutes: 15
     runs-on: ubuntu-24.04
     defaults:
