@@ -117,6 +117,12 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "name=klustr-${VERSION}-${SUFFIX}" >> "$GITHUB_OUTPUT"
+          # The bundle and exe version fields hold numbers only: macOS wants
+          # three integers in CFBundleShortVersionString, and a Windows
+          # VERSIONINFO file version can't carry a prerelease suffix.
+          APP_VERSION="${VERSION#v}"
+          APP_VERSION="${APP_VERSION%%-*}"
+          echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
           # SemVer's '-' prerelease separator is Debian's *revision* separator,
           # so dpkg ranks 1.2.3-rc.1 above 1.2.3. '~' sorts before everything,
           # even end-of-string. nfpm already applies this to the control field;
@@ -126,6 +132,17 @@ jobs:
           DEB_VERSION="${DEB_VERSION/-/\~}"
           echo "deb_version=${DEB_VERSION}" >> "$GITHUB_OUTPUT"
           echo "deb_name=klustr_${DEB_VERSION}_amd64.deb" >> "$GITHUB_OUTPUT"
+
+      # wails.json holds a placeholder; Wails fills the macOS Info.plist and
+      # the Windows version resource from it.
+      - name: Stamp app version
+        shell: bash
+        env:
+          APP_VERSION: ${{ steps.meta.outputs.app_version }}
+        run: |
+          set -euo pipefail
+          jq --arg v "$APP_VERSION" '.info.productVersion = $v' wails.json > wails.json.tmp
+          mv wails.json.tmp wails.json
 
       - name: Build
         shell: bash

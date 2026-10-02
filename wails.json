@@ -10,5 +10,12 @@
   "author": {
     "name": "Samet Kum",
     "email": "51488105+SametKUM@users.noreply.github.com"
+  },
+  "info": {
+    "companyName": "Samet Kum",
+    "productName": "Klustr",
+    "productVersion": "0.0.0",
+    "copyright": "Copyright 2026 Samet Kum and the Klustr contributors",
+    "comments": "Kubernetes desktop client"
   }
 }
