@@ -1,10 +1,14 @@
 name: CodeQL
 
 on:
+  # Same docs-only set as the changes job in ci.yml. CodeQL is not a required
+  # check, so a workflow-level filter can't leave a PR unmergeable here.
   push:
     branches: ["main"]
+    paths-ignore: ["**.md", "docs/**", ".github/ISSUE_TEMPLATE/**"]
   pull_request:
     branches: ["main"]
+    paths-ignore: ["**.md", "docs/**", ".github/ISSUE_TEMPLATE/**"]
   schedule:
     - cron: "23 6 * * 1"
 
