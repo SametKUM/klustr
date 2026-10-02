@@ -27,10 +27,12 @@ cd frontend && npm test && npm run lint && npm run typecheck
 
 For UI work, also exercise the change in `wails dev` — type checks don't catch visual regressions.
 
+These checks must pass before a PR can merge.
+
 ## PR conventions
 
 - One topic per PR.
-- [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`).
+- [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`) for commit messages and the PR title. PRs are usually squash-merged, so the title becomes the commit on `main`; a check enforces its format.
 - Prefer many small commits over one monolith.
 - For UI changes, attach a screenshot or short clip in the PR description.
 - Don't edit `frontend/src/lib/wails/` (auto-generated).
@@ -42,6 +44,10 @@ A few categories will be declined:
 - In-cluster components (no operators, no controllers, no shipped helm charts). The metrics-server install action is the only exception, and it just applies upstream YAML the user opts into.
 - Subprocess calls to `kubectl` / `helm` / `argocd`. We use the typed and dynamic Go clients directly.
 - Telemetry, analytics or any third-party binaries.
+
+## Code of conduct
+
+Everyone taking part in the project follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 

@@ -1,0 +1,34 @@
+name: PR title
+
+on:
+  pull_request:
+    branches: ["main"]
+    # edited re-runs the check after a title fix; synchronize reports it on the
+    # new head commit, which is where the required check is looked up.
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  conventional:
+    name: PR title
+    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    steps:
+      # A squash merge takes the PR title as the commit subject on main. The
+      # title reaches the script through env, never inline, so it can't inject
+      # shell.
+      - name: Check Conventional Commits format
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/,-]+\))?!?: [^ ]'
+          if [[ ! $TITLE =~ $pattern ]]; then
+            printf 'Title: %s\n' "$TITLE"
+            echo "::error::The PR title must follow Conventional Commits, for example 'fix(logs): keep the scroll position on reconnect'."
+            exit 1
+          fi
