@@ -56,6 +56,34 @@ jobs:
         with:
           version: v2.12.2
 
+  # The ConPTY terminal is Windows-only code the Linux job never compiles.
+  windows:
+    name: Backend (Go, Windows)
+    timeout-minutes: 20
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: go vet
+        run: go vet ./internal/...
+
+      # Scoped to the terminal: the rest of the kube suite builds Unix
+      # ':'-separated PATH lists.
+      - name: go test (terminal)
+        run: go test -run "ConPTY|Terminal|WindowsShell|LoginShell|EnvKey|WindowsExec|WindowsLaunch|NewConsole|Sweep|WSLEnv" ./internal/kube/
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        with:
+          version: v2.12.2
+          args: ./internal/...
+
   vulncheck:
     name: Vulnerabilities (Go)
     timeout-minutes: 20
