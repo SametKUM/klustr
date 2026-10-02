@@ -164,7 +164,9 @@ klustr
 
 ### Windows
 
-Windows builds will be attached to releases once they've been validated. Until then, please build from source — see [Build from source](#build-from-source).
+Download the latest `windows-amd64` zip from the [Releases](https://github.com/SametKUM/klustr/releases/latest) page, extract it and run `klustr.exe`. Klustr is tested on Windows 11, which ships the WebView2 runtime it renders with.
+
+The Windows build is not code-signed yet. On first launch SmartScreen shows "Windows protected your PC": choose **More info**, then **Run anyway**. With Smart App Control on, Windows blocks unsigned apps outright.
 
 ## Quick start
 
@@ -227,7 +229,8 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] Multi-cluster aggregated mode + named context groups + per-context health ping
 - [x] Notarized macOS build — signed with a Developer ID Application certificate and notarized by Apple
 - [x] Linux (amd64) release distribution
-- [ ] Windows release distribution (after per-platform testing)
+- [x] Windows (amd64) release distribution
+- [ ] Code-signed Windows build
 
 ## Contributing
 

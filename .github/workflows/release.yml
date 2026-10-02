@@ -42,13 +42,12 @@ jobs:
             label: macOS (Apple Silicon)
             platform: darwin/arm64
             suffix: darwin-arm64.tar.gz
-          # Windows build disabled — no Windows asset is shipped yet, and the
-          # runner adds ~5 minutes per release. Re-enable when the v1 path
-          # picks up cross-platform distribution.
-          # - os: windows-latest
-          #   label: Windows (amd64)
-          #   platform: windows/amd64
-          #   suffix: windows-amd64.zip
+          # Not code-signed yet: SignPath's free signing for open source
+          # projects takes only a project that already ships the binary.
+          - os: windows-latest
+            label: Windows (amd64)
+            platform: windows/amd64
+            suffix: windows-amd64.zip
           - os: ubuntu-24.04
             label: Linux (amd64)
             platform: linux/amd64
@@ -84,11 +83,14 @@ jobs:
         id: wails-cache
         uses: actions/cache@v6
         with:
-          path: ~/go/bin/wails
+          path: |
+            ~/go/bin/wails
+            ~/go/bin/wails.exe
           key: wails-cli-${{ steps.wails.outputs.version }}-${{ runner.os }}-${{ runner.arch }}
 
       - name: Install Wails CLI
         if: steps.wails-cache.outputs.cache-hit != 'true'
+        shell: bash
         env:
           WAILS_VERSION: ${{ steps.wails.outputs.version }}
         run: go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
@@ -117,6 +119,12 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "name=klustr-${VERSION}-${SUFFIX}" >> "$GITHUB_OUTPUT"
+          # The bundle and exe version fields hold numbers only: macOS wants
+          # three integers in CFBundleShortVersionString, and a Windows
+          # VERSIONINFO file version can't carry a prerelease suffix.
+          APP_VERSION="${VERSION#v}"
+          APP_VERSION="${APP_VERSION%%-*}"
+          echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
           # SemVer's '-' prerelease separator is Debian's *revision* separator,
           # so dpkg ranks 1.2.3-rc.1 above 1.2.3. '~' sorts before everything,
           # even end-of-string. nfpm already applies this to the control field;
@@ -126,6 +134,17 @@ jobs:
           DEB_VERSION="${DEB_VERSION/-/\~}"
           echo "deb_version=${DEB_VERSION}" >> "$GITHUB_OUTPUT"
           echo "deb_name=klustr_${DEB_VERSION}_amd64.deb" >> "$GITHUB_OUTPUT"
+
+      # wails.json holds a placeholder; Wails fills the macOS Info.plist and
+      # the Windows version resource from it.
+      - name: Stamp app version
+        shell: bash
+        env:
+          APP_VERSION: ${{ steps.meta.outputs.app_version }}
+        run: |
+          set -euo pipefail
+          jq --arg v "$APP_VERSION" '.info.productVersion = $v' wails.json > wails.json.tmp
+          mv wails.json.tmp wails.json
 
       - name: Build
         shell: bash
@@ -211,12 +230,41 @@ jobs:
           cp ../../LICENSE ../../NOTICE .
           tar -czf "$ARTIFACT" klustr.app LICENSE NOTICE
 
-      # - name: Package Windows
-      #   if: matrix.os == 'windows-latest'
-      #   shell: pwsh
-      #   run: |
-      #     cd build/bin
-      #     Compress-Archive -Path klustr.exe -DestinationPath ${{ steps.meta.outputs.name }}
+      - name: Package Windows
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          ARTIFACT: ${{ steps.meta.outputs.name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location build/bin
+          Copy-Item ../../LICENSE, ../../NOTICE .
+          Compress-Archive -Path klustr.exe, LICENSE, NOTICE -DestinationPath $env:ARTIFACT
+
+      # A console-subsystem build would open a terminal window beside the
+      # app, and a missed stamp shows Wails' 1.0.0 in the file properties.
+      - name: Verify Windows package
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          ARTIFACT: ${{ steps.meta.outputs.name }}
+          APP_VERSION: ${{ steps.meta.outputs.app_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = [IO.File]::ReadAllBytes('build/bin/klustr.exe')
+          $pe = [BitConverter]::ToInt32($exe, 0x3C)
+          if ([Text.Encoding]::ASCII.GetString($exe, $pe, 4) -ne "PE`0`0") { throw 'klustr.exe is not a PE image' }
+          if ([BitConverter]::ToUInt16($exe, $pe + 4) -ne 0x8664) { throw 'klustr.exe is not x86-64' }
+          # Subsystem sits 68 bytes into the optional header; 2 is Windows GUI.
+          if ([BitConverter]::ToUInt16($exe, $pe + 24 + 68) -ne 2) { throw 'klustr.exe is not a GUI executable' }
+          $version = (Get-Item build/bin/klustr.exe).VersionInfo.ProductVersion
+          if ($version -ne $env:APP_VERSION) { throw "klustr.exe ProductVersion is '$version', want '$env:APP_VERSION'" }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [IO.Compression.ZipFile]::OpenRead("build/bin/$env:ARTIFACT")
+          try { $names = @($zip.Entries.FullName) } finally { $zip.Dispose() }
+          foreach ($want in 'klustr.exe', 'LICENSE', 'NOTICE') {
+            if ($names -notcontains $want) { throw "$env:ARTIFACT lacks $want" }
+          }
 
       - name: Package Linux
         if: matrix.os == 'ubuntu-24.04'
@@ -273,8 +321,8 @@ jobs:
             dpkg --compare-versions "$DEB_VERSION" lt "$BASE"
           fi
 
-      # A .tar.gz and a .deb are already compressed, and these only need to
-      # outlive a re-run of the release job.
+      # The archives and the .deb are already compressed, and these only need
+      # to outlive a re-run of the release job.
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.meta.outputs.name }}
@@ -313,7 +361,7 @@ jobs:
         run: |
           set -euo pipefail
           cd artifacts
-          sha256sum klustr-*.tar.gz klustr_*.deb > SHA256SUMS
+          sha256sum klustr-*.tar.gz klustr-*.zip klustr_*.deb > SHA256SUMS
           cat SHA256SUMS
 
       # Checksums catch a truncated download; provenance is what ties a binary
@@ -322,6 +370,7 @@ jobs:
         with:
           subject-path: |
             artifacts/klustr-*.tar.gz
+            artifacts/klustr-*.zip
             artifacts/klustr_*.deb
 
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
@@ -330,6 +379,7 @@ jobs:
             artifacts/klustr-*-darwin-arm64.tar.gz
             artifacts/klustr-*-linux-amd64.tar.gz
             artifacts/klustr_*_amd64.deb
+            artifacts/klustr-*-windows-amd64.zip
             artifacts/SHA256SUMS
           generate_release_notes: true
           body: |
@@ -380,6 +430,21 @@ jobs:
             klustr
             ```
 
+            ## Install (Windows amd64)
+
+            Tested on Windows 11, which ships the WebView2 runtime Klustr
+            renders with. The build is not code-signed yet: downloaded with a
+            browser, it gets a SmartScreen warning on first launch (choose
+            **More info**, then **Run anyway**), and Smart App Control, when
+            on, blocks it outright.
+
+            ```powershell
+            $zip = "klustr-${{ github.ref_name }}-windows-amd64.zip"
+            Invoke-WebRequest "https://github.com/SametKUM/klustr/releases/download/${{ github.ref_name }}/$zip" -OutFile $zip
+            Expand-Archive $zip "$env:LOCALAPPDATA\Programs\Klustr" -Force
+            & "$env:LOCALAPPDATA\Programs\Klustr\klustr.exe"
+            ```
+
             ## Verify a download
 
             Checksums for every asset:
@@ -387,6 +452,12 @@ jobs:
             ```bash
             curl -LO https://github.com/SametKUM/klustr/releases/download/${{ github.ref_name }}/SHA256SUMS
             sha256sum -c --ignore-missing SHA256SUMS   # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
+            ```
+
+            On Windows, compare this with the zip's line in SHA256SUMS:
+
+            ```powershell
+            (Get-FileHash klustr-${{ github.ref_name }}-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
             ```
 
             Each asset also carries build provenance, which ties it to the
