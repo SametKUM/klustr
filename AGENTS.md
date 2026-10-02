@@ -67,4 +67,4 @@ Run the checks for the side you changed. For UI work, also try the change in `wa
 
 - Conventional Commits, small and logically scoped.
 - Docs- or asset-only commits carry `[skip ci]` in the subject so they don't trigger the release workflow; commits that change runnable code leave it off.
-- Releases ship from `main` by tag. The full flow — bump, smoke gate, tag, notes, publish, Homebrew and AUR bumps — lives in `.claude/commands/release.md` (`/release`).
+- Releases ship from `main` by tag. A signed `vX.Y.Z` tag makes `release.yml` build and sign every platform into a draft release; publishing the draft runs `publish-packages.yml`, which bumps the Homebrew tap and the AUR package.
