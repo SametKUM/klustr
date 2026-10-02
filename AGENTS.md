@@ -65,6 +65,8 @@ Run the checks for the side you changed. For UI work, also try the change in `wa
 
 ## Commits and releases
 
-- Conventional Commits, small and logically scoped.
-- Docs- or asset-only commits carry `[skip ci]` in the subject so they don't trigger the release workflow; commits that change runnable code leave it off.
-- Releases ship from `main` by tag. A signed `vX.Y.Z` tag makes `release.yml` build and sign every platform into a draft release; publishing the draft runs `publish-packages.yml`, which bumps the Homebrew tap and the AUR package.
+- Every change reaches `main` through a pull request. The branch ruleset rejects direct pushes, admins included, and requires the `Backend (Go)`, `Backend (Go, Windows)`, `Frontend (TypeScript)` and `PR title` checks.
+- Conventional Commits, small and logically scoped. A squash merge takes the PR title as the commit subject, so the title follows the same format; `pr-title.yml` checks it.
+- Keep `[skip ci]` out of commit messages, body included: on a PR's head commit it keeps the required checks from ever reporting, and the PR can't merge.
+- Releases ship from `main` by tag. A signed `vX.Y.Z` tag makes `release.yml` build and sign every platform into a draft release; publishing the draft runs `publish-packages.yml`, which bumps the Homebrew tap and the AUR package. Only admins can push, move or delete `v*` tags.
+- Third-party actions are pinned to a full commit SHA and listed in the repository's allowed actions; a new one fails to start until it is added there. GitHub's own `actions/*` and `github/*` are always allowed.
