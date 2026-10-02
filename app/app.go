@@ -75,6 +75,7 @@ func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	kube.StartPprofServer() // no-op unless KLUSTR_PPROF is set
 	go a.clients.ImportShellEnv()
+	go a.clients.SweepStaleLaunchFiles()
 	a.clients.SetOnChange(func(c kube.ContextChange) {
 		if c.Delta != nil {
 			runtime.EventsEmit(ctx, eventKubeChange, c.Context, c.Kind, c.Delta)

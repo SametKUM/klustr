@@ -21,9 +21,10 @@ type Props = {
 }
 
 // Modal picker for "Open in system terminal". Listed apps come from the
-// backend's /Applications scan (macOS) or PATH lookup (Linux). Selecting
-// an app and clicking Open launches it for the requested context; the
-// "Set as default" checkbox is what makes a one-time choice sticky so
+// backend's /Applications scan (macOS) or PATH lookup (Linux); Windows lists
+// none and opens its default terminal app.
+// Selecting an app and clicking Open launches it for the requested context;
+// the "Set as default" checkbox is what makes a one-time choice sticky so
 // the next launch can either use it directly or just pre-select it.
 export function TerminalAppPickerDialog({ open, description, onClose, onLaunch }: Props) {
   const preferredAppId = useTerminalStore((s) => s.preferredAppId)
@@ -74,7 +75,11 @@ export function TerminalAppPickerDialog({ open, description, onClose, onLaunch }
           <AppOption
             appId=""
             label="System default"
-            description="Whatever app handles .command / shell scripts"
+            description={
+              typeof navigator !== 'undefined' && /Windows/i.test(navigator.userAgent)
+                ? 'The default terminal app in Windows settings'
+                : 'Whatever app handles .command / shell scripts'
+            }
             chosen={chosen}
             onChoose={setChosen}
           />
