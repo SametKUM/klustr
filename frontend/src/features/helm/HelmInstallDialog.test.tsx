@@ -32,7 +32,7 @@ vi.mock('@/components/ui/dialog', () => ({
   DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
 }))
 
-vi.mock('@monaco-editor/react', () => ({
+vi.mock('@/lib/monaco', () => ({
   Editor: ({ value }: { value: string }) => <pre data-testid="values-editor">{value}</pre>,
 }))
 

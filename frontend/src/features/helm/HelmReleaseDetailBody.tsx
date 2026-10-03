@@ -8,7 +8,7 @@ import { useThemeMode } from '@/features/_shared/useThemeMode'
 import { formatAge } from '@/lib/time'
 import { HelmStatusPill } from './HelmStatusPill'
 
-const Editor = lazy(() => import('@monaco-editor/react').then((m) => ({ default: m.Editor })))
+const Editor = lazy(() => import('@/lib/monaco').then((m) => ({ default: m.Editor })))
 
 type Tab = 'overview' | 'values' | 'manifest' | 'notes' | 'history'
 

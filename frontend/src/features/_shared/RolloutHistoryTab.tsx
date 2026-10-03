@@ -30,7 +30,7 @@ import { useThemeMode } from '@/features/_shared/useThemeMode'
 import { ContextBadge } from './ContextBadge'
 
 const DiffEditor = lazy(() =>
-  import('@monaco-editor/react').then((m) => ({ default: m.DiffEditor })),
+  import('@/lib/monaco').then((m) => ({ default: m.DiffEditor })),
 )
 
 type Kind = 'Deployment' | 'StatefulSet' | 'DaemonSet'

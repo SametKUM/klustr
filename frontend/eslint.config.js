@@ -40,6 +40,32 @@ export default tseslint.config(
     },
   },
   {
+    // A direct import of the Monaco wrapper falls back to its CDN loader; the
+    // editors come from src/lib/monaco.ts, which bundles Monaco.
+    files: ['**/*.{ts,tsx}'],
+    ignores: ['src/lib/monaco.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@monaco-editor/*', 'monaco-editor', 'monaco-editor/*'],
+              message: 'Import Editor and DiffEditor from @/lib/monaco.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression[source.value=/^(@monaco-editor\\/|monaco-editor)/]',
+          message: 'Import Editor and DiffEditor from @/lib/monaco.',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.test.{ts,tsx}'],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },

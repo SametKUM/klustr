@@ -18,9 +18,9 @@ import { useUIStore } from '@/store/ui'
 import { Spinner } from '@/components/ui/spinner'
 import { CopyButton } from './Copyable'
 
-const Editor = lazy(() => import('@monaco-editor/react').then((m) => ({ default: m.Editor })))
+const Editor = lazy(() => import('@/lib/monaco').then((m) => ({ default: m.Editor })))
 const DiffEditor = lazy(() =>
-  import('@monaco-editor/react').then((m) => ({ default: m.DiffEditor })),
+  import('@/lib/monaco').then((m) => ({ default: m.DiffEditor })),
 )
 
 import { useThemeMode } from './useThemeMode'
