@@ -222,21 +222,21 @@
 .theme-tokyo-night {
     --background: #1a1b26;
     --foreground: #c0caf5;
-    --card: #1f2335;
+    --card: #16161e;
     --card-foreground: #c0caf5;
-    --popover: #1f2335;
+    --popover: #16161e;
     --popover-foreground: #c0caf5;
     --primary: #7aa2f7;
-    --primary-foreground: #1a1b26;
-    --secondary: #232645;
+    --primary-foreground: #15161e;
+    --secondary: #292e42;
     --secondary-foreground: #c0caf5;
-    --muted: #2a2e48;
-    --muted-foreground: #7882b6;
-    --accent: #323862;
+    --muted: #292e42;
+    --muted-foreground: #737aa2;
+    --accent: #343a55;
     --accent-foreground: #c0caf5;
-    --destructive: #f7768e;
-    --border: rgba(192, 202, 245, 0.12);
-    --input: rgba(192, 202, 245, 0.18);
+    --destructive: #db4b4b;
+    --border: #3b4261;
+    --input: #3b4261;
     --ring: #7aa2f7;
     --chart-1: #f7768e;
     --chart-2: #9ece6a;
@@ -244,12 +244,12 @@
     --chart-4: #ff9e64;
     --chart-5: #bb9af7;
     --sidebar: #16161e;
-    --sidebar-foreground: #c0caf5;
+    --sidebar-foreground: #a9b1d6;
     --sidebar-primary: #7aa2f7;
-    --sidebar-primary-foreground: #1a1b26;
-    --sidebar-accent: #2a2e48;
+    --sidebar-primary-foreground: #15161e;
+    --sidebar-accent: #292e42;
     --sidebar-accent-foreground: #c0caf5;
-    --sidebar-border: rgba(192, 202, 245, 0.10);
+    --sidebar-border: #3b4261;
     --sidebar-ring: #7aa2f7;
 }
 

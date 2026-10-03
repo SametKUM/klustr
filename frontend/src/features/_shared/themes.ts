@@ -154,12 +154,12 @@ const tokyoNightXterm: ITheme = {
   cyan: '#7dcfff',
   white: '#a9b1d6',
   brightBlack: '#414868',
-  brightRed: '#f7768e',
-  brightGreen: '#9ece6a',
-  brightYellow: '#e0af68',
-  brightBlue: '#7aa2f7',
-  brightMagenta: '#bb9af7',
-  brightCyan: '#7dcfff',
+  brightRed: '#ff899d',
+  brightGreen: '#9fe044',
+  brightYellow: '#faba4a',
+  brightBlue: '#8db0ff',
+  brightMagenta: '#c7a9ff',
+  brightCyan: '#a4daff',
   brightWhite: '#c0caf5',
 }
 
@@ -409,7 +409,7 @@ export const THEMES: ThemeDefinition[] = [
     mode: 'dark',
     cssClass: 'theme-tokyo-night',
     xterm: tokyoNightXterm,
-    swatch: { background: '#1a1b26', primary: '#7aa2f7', accent: '#323862' },
+    swatch: { background: '#1a1b26', primary: '#7aa2f7', accent: '#343a55' },
   },
   {
     id: 'one-dark',
