@@ -1,18 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api, type ArgoApplicationHealth, type ArgoApplicationResource } from '@/lib/api'
-import { RESOURCE_GROUPS } from '@/features/_shared/resourceGroups'
 import { useCRDStore } from '@/store/crds'
-import { useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
-
-// Derive the clickable built-in kinds from the same static sidebar groups that
-// drive ResourceDetailPanel dispatch, so a kind with a detail view can never
-// drift out of this allow-list (CR-backed groups are handled via the crds
-// store below, not here).
-const BUILTIN_KINDS: ReadonlySet<ResourceKind> = new Set(
-  RESOURCE_GROUPS.flatMap((g) => g.items)
-    .map((i) => i.kind)
-    .filter((k): k is ResourceKind => k !== undefined),
-)
+import { useUIStore } from '@/store/ui'
+import { isArgoResourceClickable, resolveArgoResource } from './resolveArgoResource'
 
 type Props = {
   contextName: string | null
@@ -57,7 +47,7 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
 
   const onRowClick = (row: ArgoApplicationResource) => {
     if (!contextName) return
-    const next = resolveSelection(row, contextName, crds)
+    const next = resolveArgoResource(row, contextName, crds)
     if (next) openResource(next)
   }
 
@@ -94,7 +84,7 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
         </thead>
         <tbody>
           {rows.map((r, idx) => {
-            const clickable = isClickable(r, crds)
+            const clickable = isArgoResourceClickable(r, crds)
             return (
               <tr
                 key={`${r.group}/${r.kind}/${r.namespace}/${r.name}/${idx}`}
@@ -123,39 +113,6 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
       </table>
     </div>
   )
-}
-
-function resolveSelection(
-  row: ArgoApplicationResource,
-  contextName: string,
-  crds: ReturnType<typeof useCRDStore.getState>['crds'],
-): SelectedResource | null {
-  const kind = row.kind as ResourceKind
-  if (BUILTIN_KINDS.has(kind)) {
-    return {
-      kind,
-      namespace: row.namespace,
-      name: row.name,
-      context: contextName,
-    }
-  }
-  const crd = crds.find((c) => c.group === row.group && c.kind === row.kind)
-  if (!crd) return null
-  return {
-    kind: row.kind,
-    namespace: row.namespace,
-    name: row.name,
-    context: contextName,
-    gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-  }
-}
-
-function isClickable(
-  row: ArgoApplicationResource,
-  crds: ReturnType<typeof useCRDStore.getState>['crds'],
-): boolean {
-  if (BUILTIN_KINDS.has(row.kind as ResourceKind)) return true
-  return crds.some((c) => c.group === row.group && c.kind === row.kind)
 }
 
 function HealthBanner({
