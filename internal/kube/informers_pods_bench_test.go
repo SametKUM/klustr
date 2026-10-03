@@ -121,7 +121,7 @@ func newBenchPodWatcher(tb testing.TB, n int) *contextWatcher {
 		}
 	}
 	w := &contextWatcher{cs: cs, factory: f, started: map[string]bool{"Pod": true}}
-	w.bindings = kindBindings(w)
+	w.bindings = kindBindings()
 	return w
 }
 

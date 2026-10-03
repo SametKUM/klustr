@@ -613,9 +613,9 @@ export function ResourceTable<T>({
     // Fallback for kinds that never emit a sync event. Synced contexts are
     // already marked by the reload path (empty result + isKindSynced), so this
     // only decides when to give up on a context still syncing. Hold the skeleton
-    // while the kind is unsynced — a slow initial LIST (e.g. all Secrets behind
-    // the Helm view, or 10k pods) must not flash "No X" before the cache lands —
-    // and give up after a hard cap so a genuinely never-syncing kind still shows.
+    // while the kind is unsynced — a slow initial LIST (e.g. 10k pods) must not
+    // flash "No X" before the cache lands — and give up after a hard cap so a
+    // genuinely never-syncing kind still shows.
     let graceWaited = 0
     let graceTimer = window.setTimeout(function giveUp() {
       if (cancelled) return

@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -348,6 +349,10 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 	if err != nil {
 		return err
 	}
+	meta, err := metadata.NewForConfig(cfg)
+	if err != nil {
+		return err
+	}
 	discoCfg := *cfg
 	discoCfg.Timeout = discoveryTimeout
 	disco, err := discovery.NewDiscoveryClientForConfig(&discoCfg)
@@ -361,7 +366,7 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 	cb := m.onChange
 	m.mu.Unlock()
 
-	w := newContextWatcher(cs, disco, gw, dyn, defaultNS, func(kind string, delta *KindDelta) {
+	w := newContextWatcher(cs, disco, gw, dyn, meta, defaultNS, func(kind string, delta *KindDelta) {
 		if cb != nil {
 			cb(ContextChange{Context: contextName, Kind: kind, Delta: delta})
 		}

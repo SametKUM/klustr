@@ -30,7 +30,7 @@ func newLazyTestWatcher(t *testing.T) (*contextWatcher, *fake.Clientset, func(st
 			mu.Unlock()
 		},
 	}
-	w.bindings = kindBindings(w)
+	w.bindings = kindBindings()
 	wasTouched := func(kind string) bool {
 		mu.Lock()
 		defer mu.Unlock()
