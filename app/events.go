@@ -90,7 +90,7 @@ func escapeAstral(raw []byte) []byte {
 		return raw
 	}
 	const hex = "0123456789abcdef"
-	out := make([]byte, 0, len(raw)+len(raw)/4)
+	out := make([]byte, 0, len(raw))
 	out = append(out, raw[:start]...)
 	for i := start; i < len(raw); {
 		r, size := utf8.DecodeRune(raw[i:])
