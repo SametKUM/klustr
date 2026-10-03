@@ -288,9 +288,21 @@ export type SwatchColors = {
   accent: string
 }
 
+// A family is what the picker lists; the light/dark toggle picks its variant.
+export type ThemeFamily = 'default' | 'dracula' | 'monokai' | 'nord' | 'tokyo-night' | 'one'
+
+export const THEME_FAMILIES: readonly { id: ThemeFamily; label: string }[] = [
+  { id: 'default', label: 'Default' },
+  { id: 'dracula', label: 'Dracula' },
+  { id: 'monokai', label: 'Monokai' },
+  { id: 'nord', label: 'Nord' },
+  { id: 'tokyo-night', label: 'Tokyo Night' },
+  { id: 'one', label: 'One' },
+]
+
 export type ThemeDefinition = {
   id: ThemeId
-  label: string
+  family: ThemeFamily
   mode: ThemeMode
   cssClass: string | null
   xterm: ITheme
@@ -300,7 +312,7 @@ export type ThemeDefinition = {
 export const THEMES: ThemeDefinition[] = [
   {
     id: 'default-light',
-    label: 'Light',
+    family: 'default',
     mode: 'light',
     cssClass: null,
     xterm: lightXterm,
@@ -308,7 +320,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'dracula-light',
-    label: 'Dracula',
+    family: 'dracula',
     mode: 'light',
     cssClass: 'theme-dracula-light',
     xterm: draculaLightXterm,
@@ -316,7 +328,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'monokai-light',
-    label: 'Monokai',
+    family: 'monokai',
     mode: 'light',
     cssClass: 'theme-monokai-light',
     xterm: monokaiLightXterm,
@@ -324,7 +336,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'nord-light',
-    label: 'Nord',
+    family: 'nord',
     mode: 'light',
     cssClass: 'theme-nord-light',
     xterm: nordLightXterm,
@@ -332,7 +344,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'one-light',
-    label: 'One',
+    family: 'one',
     mode: 'light',
     cssClass: 'theme-one-light',
     xterm: oneLightXterm,
@@ -340,7 +352,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'default-dark',
-    label: 'Dark',
+    family: 'default',
     mode: 'dark',
     cssClass: null,
     xterm: darkXterm,
@@ -348,7 +360,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'dracula',
-    label: 'Dracula',
+    family: 'dracula',
     mode: 'dark',
     cssClass: 'theme-dracula',
     xterm: draculaXterm,
@@ -356,7 +368,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'monokai',
-    label: 'Monokai',
+    family: 'monokai',
     mode: 'dark',
     cssClass: 'theme-monokai',
     xterm: monokaiXterm,
@@ -364,7 +376,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'nord',
-    label: 'Nord',
+    family: 'nord',
     mode: 'dark',
     cssClass: 'theme-nord',
     xterm: nordXterm,
@@ -372,7 +384,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'tokyo-night',
-    label: 'Tokyo Night',
+    family: 'tokyo-night',
     mode: 'dark',
     cssClass: 'theme-tokyo-night',
     xterm: tokyoNightXterm,
@@ -380,7 +392,7 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'one-dark',
-    label: 'One Dark',
+    family: 'one',
     mode: 'dark',
     cssClass: 'theme-one-dark',
     xterm: oneDarkXterm,
@@ -398,4 +410,14 @@ export function getTheme(id: ThemeId): ThemeDefinition {
 
 export function isThemeId(value: unknown): value is ThemeId {
   return typeof value === 'string' && THEMES.some((t) => t.id === value)
+}
+
+export function familyTheme(family: ThemeFamily, mode: ThemeMode): ThemeDefinition | undefined {
+  return THEMES.find((t) => t.family === family && t.mode === mode)
+}
+
+// themeInMode is the toggle: the same family in the other mode, or that
+// mode's default theme for a family without one (Tokyo Night is dark only).
+export function themeInMode(id: ThemeId, mode: ThemeMode): ThemeId {
+  return familyTheme(getTheme(id).family, mode)?.id ?? (mode === 'light' ? DEFAULT_LIGHT : DEFAULT_DARK)
 }

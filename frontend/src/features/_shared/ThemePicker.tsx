@@ -1,16 +1,22 @@
-import { Check, Palette } from 'lucide-react'
+import { Check, Moon, Palette, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { THEMES, type ThemeDefinition } from './themes'
+import { THEME_FAMILIES, familyTheme, getTheme, themeInMode, type ThemeDefinition } from './themes'
 import { useUIStore } from '@/store/ui'
+
+const MODES = [
+  { mode: 'light', label: 'Light', icon: Sun },
+  { mode: 'dark', label: 'Dark', icon: Moon },
+] as const
 
 function Swatch({ theme }: { theme: ThemeDefinition }) {
   return (
@@ -26,10 +32,12 @@ function Swatch({ theme }: { theme: ThemeDefinition }) {
 }
 
 function ThemeRow({
+  label,
   theme,
   active,
   onSelect,
 }: {
+  label: string
   theme: ThemeDefinition
   active: boolean
   onSelect: () => void
@@ -37,7 +45,7 @@ function ThemeRow({
   return (
     <DropdownMenuItem onSelect={onSelect} className="gap-2">
       <Swatch theme={theme} />
-      <span className="flex-1 truncate text-sm">{theme.label}</span>
+      <span className="flex-1 truncate text-sm">{label}</span>
       {active && <Check className="size-3.5 text-muted-foreground" />}
     </DropdownMenuItem>
   )
@@ -46,9 +54,7 @@ function ThemeRow({
 export function ThemePicker() {
   const themeId = useUIStore((s) => s.themeId)
   const setTheme = useUIStore((s) => s.setTheme)
-
-  const lightThemes = THEMES.filter((t) => t.mode === 'light')
-  const darkThemes = THEMES.filter((t) => t.mode === 'dark')
+  const mode = getTheme(themeId).mode
 
   return (
     <DropdownMenu>
@@ -63,19 +69,40 @@ export function ThemePicker() {
         <TooltipContent side="bottom">Color theme</TooltipContent>
       </Tooltip>
       <DropdownMenuContent className="w-56" align="end">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          Light
-        </DropdownMenuLabel>
-        {lightThemes.map((t) => (
-          <ThemeRow key={t.id} theme={t} active={themeId === t.id} onSelect={() => setTheme(t.id)} />
-        ))}
+        <DropdownMenuRadioGroup
+          value={mode}
+          onValueChange={(next) => {
+            if (next === 'light' || next === 'dark') setTheme(themeInMode(themeId, next))
+          }}
+          className="flex gap-0.5 rounded-md bg-muted p-0.5"
+        >
+          {MODES.map(({ mode: value, label, icon: Icon }) => (
+            <DropdownMenuRadioItem
+              key={value}
+              value={value}
+              // Stay open so the list below can be seen switching modes.
+              onSelect={(e) => e.preventDefault()}
+              className="flex-1 justify-center pr-1.5 data-[state=checked]:bg-background data-[state=checked]:shadow-sm [&>[data-slot=dropdown-menu-radio-item-indicator]]:hidden"
+            >
+              <Icon />
+              {label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          Dark
-        </DropdownMenuLabel>
-        {darkThemes.map((t) => (
-          <ThemeRow key={t.id} theme={t} active={themeId === t.id} onSelect={() => setTheme(t.id)} />
-        ))}
+        {THEME_FAMILIES.map(({ id, label }) => {
+          const theme = familyTheme(id, mode)
+          if (!theme) return null
+          return (
+            <ThemeRow
+              key={id}
+              label={label}
+              theme={theme}
+              active={themeId === theme.id}
+              onSelect={() => setTheme(theme.id)}
+            />
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )
