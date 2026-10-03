@@ -47,7 +47,7 @@ vi.mock('@/store/ui', () => ({
     selector({ globalReadOnly: false }),
 }))
 
-vi.mock('@monaco-editor/react', () => ({
+vi.mock('@/lib/monaco', () => ({
   Editor: ({ value }: { value: string }) => <pre data-testid="editor">{value}</pre>,
   DiffEditor: () => null,
 }))

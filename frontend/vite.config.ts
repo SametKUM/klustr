@@ -11,7 +11,9 @@ export default defineConfig({
     },
   },
   build: {
-    chunkSizeWarningLimit: 1024,
+    // Sized for the bundled monaco chunk (~4 MB), which only loads with the
+    // first editor; every other chunk is well under 1 MB.
+    chunkSizeWarningLimit: 4096,
     rolldownOptions: {
       output: {
         manualChunks(id: string) {

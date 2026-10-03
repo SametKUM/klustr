@@ -14,7 +14,7 @@ import { api, type HelmDryRunResult, type HelmInstallOptions } from '@/lib/api'
 import { CopyButton } from '@/features/_shared/Copyable'
 import { useThemeMode } from '@/features/_shared/useThemeMode'
 
-const Editor = lazy(() => import('@monaco-editor/react').then((m) => ({ default: m.Editor })))
+const Editor = lazy(() => import('@/lib/monaco').then((m) => ({ default: m.Editor })))
 
 type Mode = 'install' | 'upgrade'
 

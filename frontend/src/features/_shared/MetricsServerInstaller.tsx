@@ -41,7 +41,7 @@ function injectManagedByLabel(doc: string): string {
   )
 }
 
-const Editor = lazy(() => import('@monaco-editor/react').then((m) => ({ default: m.Editor })))
+const Editor = lazy(() => import('@/lib/monaco').then((m) => ({ default: m.Editor })))
 
 type Props = {
   open: boolean
