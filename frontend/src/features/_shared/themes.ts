@@ -12,7 +12,6 @@ export type ThemeId =
   | 'nord'
   | 'nord-light'
   | 'tokyo-night'
-  | 'tokyo-night-day'
   | 'one-dark'
   | 'one-light'
 
@@ -259,30 +258,6 @@ const nordLightXterm: ITheme = {
   brightWhite: '#2e3440',
 }
 
-const tokyoNightDayXterm: ITheme = {
-  background: '#e1e2e7',
-  foreground: '#3760bf',
-  cursor: '#3760bf',
-  cursorAccent: '#e1e2e7',
-  selectionBackground: '#b7c1e3',
-  black: '#b7c1e3',
-  red: '#f52a65',
-  green: '#587539',
-  yellow: '#8c6c3e',
-  blue: '#2e7de9',
-  magenta: '#9854f1',
-  cyan: '#007197',
-  white: '#6172b0',
-  brightBlack: '#848cb5',
-  brightRed: '#f52a65',
-  brightGreen: '#587539',
-  brightYellow: '#b15c00',
-  brightBlue: '#2e7de9',
-  brightMagenta: '#65359d',
-  brightCyan: '#007197',
-  brightWhite: '#3760bf',
-}
-
 const oneLightXterm: ITheme = {
   background: '#fafafa',
   foreground: '#383a42',
@@ -354,14 +329,6 @@ export const THEMES: ThemeDefinition[] = [
     cssClass: 'theme-nord-light',
     xterm: nordLightXterm,
     swatch: { background: '#e5e9f0', primary: '#5e81ac', accent: '#d8dee9' },
-  },
-  {
-    id: 'tokyo-night-day',
-    label: 'Tokyo Night Day',
-    mode: 'light',
-    cssClass: 'theme-tokyo-night-day',
-    xterm: tokyoNightDayXterm,
-    swatch: { background: '#e1e2e7', primary: '#2e7de9', accent: '#b7c1e3' },
   },
   {
     id: 'one-light',
