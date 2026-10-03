@@ -78,16 +78,16 @@ func (a *App) Startup(ctx context.Context) {
 	go a.clients.SweepStaleLaunchFiles()
 	a.clients.SetOnChange(func(c kube.ContextChange) {
 		if c.Delta != nil {
-			runtime.EventsEmit(ctx, eventKubeChange, c.Context, c.Kind, c.Delta)
+			emit(ctx, eventKubeChange, c.Context, c.Kind, c.Delta)
 		} else {
-			runtime.EventsEmit(ctx, eventKubeChange, c.Context, c.Kind)
+			emit(ctx, eventKubeChange, c.Context, c.Kind)
 		}
 	})
 	a.clients.SetPFChangeCallback(func() {
-		runtime.EventsEmit(ctx, "pf:update")
+		emit(ctx, "pf:update")
 	})
 	a.clients.SetCredentialEventCallback(func(s kube.CredentialStatus) {
-		runtime.EventsEmit(ctx, eventCredsUpdate, s)
+		emit(ctx, eventCredsUpdate, s)
 	})
 }
 
@@ -413,7 +413,7 @@ func (a *App) StartPodLogs(contextName, namespace, podName, container string, fo
 		int64(tailLines),
 		func(lines []string) {
 			if id := gate.wait(); id != "" {
-				runtime.EventsEmit(a.ctx, "pod:logs:line:"+id, lines)
+				emit(a.ctx, "pod:logs:line:"+id, lines)
 			}
 		},
 		func(err error) {
@@ -425,7 +425,7 @@ func (a *App) StartPodLogs(contextName, namespace, podName, container string, fo
 			if err != nil {
 				msg = err.Error()
 			}
-			runtime.EventsEmit(a.ctx, "pod:logs:close:"+id, msg)
+			emit(a.ctx, "pod:logs:close:"+id, msg)
 		},
 	)
 	if err != nil {
@@ -446,7 +446,7 @@ func (a *App) StartExec(contextName, namespace, podName, container string, comma
 		a.ctx, contextName, namespace, podName, container, command,
 		func(data string) {
 			if id := gate.wait(); id != "" {
-				runtime.EventsEmit(a.ctx, "exec:out:"+id, data)
+				emit(a.ctx, "exec:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -458,7 +458,7 @@ func (a *App) StartExec(contextName, namespace, podName, container string, comma
 			if err != nil {
 				msg = err.Error()
 			}
-			runtime.EventsEmit(a.ctx, "exec:close:"+id, msg)
+			emit(a.ctx, "exec:close:"+id, msg)
 		},
 	)
 	if err != nil {
@@ -475,7 +475,7 @@ func (a *App) StartPodDebug(contextName, namespace, podName, target, image, shel
 		a.ctx, contextName, namespace, podName, target, image, shell, elevated,
 		func(data string) {
 			if id := gate.wait(); id != "" {
-				runtime.EventsEmit(a.ctx, "exec:out:"+id, data)
+				emit(a.ctx, "exec:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -487,7 +487,7 @@ func (a *App) StartPodDebug(contextName, namespace, podName, target, image, shel
 			if err != nil {
 				msg = err.Error()
 			}
-			runtime.EventsEmit(a.ctx, "exec:close:"+id, msg)
+			emit(a.ctx, "exec:close:"+id, msg)
 		},
 	)
 	if err != nil {
@@ -528,7 +528,7 @@ func (a *App) StartNodeShell(contextName, nodeName string) (string, error) {
 		a.ctx, contextName, nodeName,
 		func(data string) {
 			if id := gate.wait(); id != "" {
-				runtime.EventsEmit(a.ctx, "exec:out:"+id, data)
+				emit(a.ctx, "exec:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -540,7 +540,7 @@ func (a *App) StartNodeShell(contextName, nodeName string) (string, error) {
 			if err != nil {
 				msg = err.Error()
 			}
-			runtime.EventsEmit(a.ctx, "exec:close:"+id, msg)
+			emit(a.ctx, "exec:close:"+id, msg)
 		},
 	)
 	if err != nil {
@@ -563,10 +563,10 @@ func (a *App) DrainNode(contextName, nodeName string, force bool) {
 		ctx, cancel := context.WithTimeout(a.ctx, 15*time.Minute)
 		defer cancel()
 		err := a.clients.DrainNode(ctx, contextName, nodeName, force, func(p kube.NodeDrainProgress) {
-			runtime.EventsEmit(a.ctx, event, p)
+			emit(a.ctx, event, p)
 		})
 		if err != nil {
-			runtime.EventsEmit(a.ctx, event, kube.NodeDrainProgress{
+			emit(a.ctx, event, kube.NodeDrainProgress{
 				Node:    nodeName,
 				Phase:   "error",
 				Pending: []string{},
@@ -582,7 +582,7 @@ func (a *App) OpenLocalTerminal(contextName string, cols, rows int) (string, err
 		a.ctx, contextName, clampDim(cols), clampDim(rows),
 		func(data string) {
 			if id := gate.wait(); id != "" {
-				runtime.EventsEmit(a.ctx, "term:out:"+id, data)
+				emit(a.ctx, "term:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -594,7 +594,7 @@ func (a *App) OpenLocalTerminal(contextName string, cols, rows int) (string, err
 			if err != nil {
 				msg = err.Error()
 			}
-			runtime.EventsEmit(a.ctx, "term:close:"+id, msg)
+			emit(a.ctx, "term:close:"+id, msg)
 		},
 	)
 	if err != nil {

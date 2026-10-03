@@ -20,7 +20,12 @@ linters:
     - bodyclose
     - copyloopvar
     - prealloc
+    - forbidigo
   settings:
+    forbidigo:
+      forbid:
+        - pattern: ^runtime\.EventsEmit$
+          msg: use emit (app/events.go); Wails corrupts characters above U+FFFF in raw event payloads
     revive:
       rules:
         - name: var-naming
@@ -45,6 +50,9 @@ linters:
           - revive
           - staticcheck
           - unused
+      - path: app/events\.go
+        linters:
+          - forbidigo
 
 formatters:
   enable:
