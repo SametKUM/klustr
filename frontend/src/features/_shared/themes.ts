@@ -120,7 +120,7 @@ const nordXterm: ITheme = {
   foreground: '#d8dee9',
   cursor: '#d8dee9',
   cursorAccent: '#2e3440',
-  selectionBackground: '#434c5e',
+  selectionBackground: '#434c5ecc',
   black: '#3b4252',
   red: '#bf616a',
   green: '#a3be8c',
@@ -353,7 +353,7 @@ export const THEMES: ThemeDefinition[] = [
     mode: 'light',
     cssClass: 'theme-nord-light',
     xterm: nordLightXterm,
-    swatch: { background: '#e5e9f0', primary: '#5e81ac', accent: '#c8d0db' },
+    swatch: { background: '#e5e9f0', primary: '#5e81ac', accent: '#d8dee9' },
   },
   {
     id: 'tokyo-night-day',
@@ -401,7 +401,7 @@ export const THEMES: ThemeDefinition[] = [
     mode: 'dark',
     cssClass: 'theme-nord',
     xterm: nordXterm,
-    swatch: { background: '#2e3440', primary: '#88c0d0', accent: '#434c5e' },
+    swatch: { background: '#2e3440', primary: '#88c0d0', accent: '#3b4252' },
   },
   {
     id: 'tokyo-night',

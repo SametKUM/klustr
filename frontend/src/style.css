@@ -188,34 +188,34 @@
 .theme-nord {
     --background: #2e3440;
     --foreground: #d8dee9;
-    --card: #353b48;
-    --card-foreground: #eceff4;
-    --popover: #353b48;
-    --popover-foreground: #eceff4;
-    --primary: #88c0d0;
+    --card: #2e3440;
+    --card-foreground: #d8dee9;
+    --popover: #2e3440;
+    --popover-foreground: #d8dee9;
+    --primary: #88c0d0ee;
     --primary-foreground: #2e3440;
-    --secondary: #353c4b;
-    --secondary-foreground: #eceff4;
+    --secondary: #434c5e;
+    --secondary-foreground: #d8dee9;
     --muted: #3b4252;
-    --muted-foreground: #a3acbf;
-    --accent: #434c5e;
+    --muted-foreground: #d8dee9e6;
+    --accent: #3b4252;
     --accent-foreground: #eceff4;
     --destructive: #bf616a;
-    --border: rgba(216, 222, 233, 0.12);
-    --input: rgba(216, 222, 233, 0.18);
+    --border: #3b4252;
+    --input: #3b4252;
     --ring: #88c0d0;
     --chart-1: #bf616a;
     --chart-2: #a3be8c;
     --chart-3: #88c0d0;
     --chart-4: #d08770;
     --chart-5: #b48ead;
-    --sidebar: #292e39;
+    --sidebar: #2e3440;
     --sidebar-foreground: #d8dee9;
-    --sidebar-primary: #88c0d0;
+    --sidebar-primary: #88c0d0ee;
     --sidebar-primary-foreground: #2e3440;
-    --sidebar-accent: #434c5e;
+    --sidebar-accent: #3b4252;
     --sidebar-accent-foreground: #eceff4;
-    --sidebar-border: rgba(216, 222, 233, 0.10);
+    --sidebar-border: #3b4252;
     --sidebar-ring: #88c0d0;
 }
 
@@ -366,9 +366,9 @@
     --primary-foreground: #eceff4;
     --secondary: #d8dee9;
     --secondary-foreground: #2e3440;
-    --muted: #dde3eb;
+    --muted: #d8dee9;
     --muted-foreground: #4c566a;
-    --accent: #c8d0db;
+    --accent: #d8dee9;
     --accent-foreground: #2e3440;
     --destructive: #bf616a;
     --border: rgba(46, 52, 64, 0.10);
@@ -383,9 +383,9 @@
     --sidebar-foreground: #2e3440;
     --sidebar-primary: #5e81ac;
     --sidebar-primary-foreground: #eceff4;
-    --sidebar-accent: #c8d0db;
+    --sidebar-accent: #eceff4;
     --sidebar-accent-foreground: #2e3440;
-    --sidebar-border: rgba(46, 52, 64, 0.08);
+    --sidebar-border: rgba(46, 52, 64, 0.10);
     --sidebar-ring: #5e81ac;
 }
 
