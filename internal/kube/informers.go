@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/tools/cache"
 
 	gwclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -90,7 +91,9 @@ type contextWatcher struct {
 	apiSvcFactory  dynamicinformer.DynamicSharedInformerFactory
 	apiSvcInformer cache.SharedIndexInformer
 	dyn            dynamic.Interface
+	meta           metadata.Interface
 	crd            *crdWatcher
+	helm           *helmWatch
 	onChange       ChangeFunc
 	cancel         context.CancelFunc
 	stopCh         <-chan struct{}
@@ -106,16 +109,18 @@ type contextWatcher struct {
 	stopped bool
 }
 
-func newContextWatcher(cs *kubernetes.Clientset, disco discovery.DiscoveryInterface, gw gwclient.Interface, dyn dynamic.Interface, defaultNS string, onChange ChangeFunc) *contextWatcher {
+func newContextWatcher(cs *kubernetes.Clientset, disco discovery.DiscoveryInterface, gw gwclient.Interface, dyn dynamic.Interface, meta metadata.Interface, defaultNS string, onChange ChangeFunc) *contextWatcher {
 	w := &contextWatcher{
 		cs:        cs,
 		disco:     disco,
 		dyn:       dyn,
+		meta:      meta,
 		defaultNS: defaultNS,
 		onChange:  onChange,
 		pending:   make(map[string]*pendingKind),
 		gen:       make(map[string]uint64),
 	}
+	w.helm = newHelmWatch(w)
 	if gw != nil {
 		w.gwFactory = gwinformers.NewSharedInformerFactory(gw, 0)
 		if defaultNS != "" {
@@ -190,9 +195,6 @@ func (w *contextWatcher) ensureKind(kind string) {
 	go func() {
 		if cache.WaitForCacheSync(w.stopCh, informer.HasSynced) {
 			w.touch(kind)
-			if b.onSynced != nil {
-				b.onSynced()
-			}
 		}
 	}()
 }
@@ -206,7 +208,6 @@ func (w *contextWatcher) handleInformerEvent(informer cache.SharedIndexInformer,
 		return
 	}
 	w.record(kind, b, op, obj)
-	callIf(b.sidecar, obj)
 }
 
 func (w *contextWatcher) start(parent context.Context) error {
@@ -249,7 +250,7 @@ func (w *contextWatcher) start(parent context.Context) error {
 	}
 
 	w.stopCh = ctx.Done()
-	w.bindings = kindBindings(w)
+	w.bindings = kindBindings()
 	w.started = make(map[string]bool)
 
 	if err := w.startGatewayInformers(ctx); err != nil {
@@ -272,17 +273,10 @@ func (w *contextWatcher) start(parent context.Context) error {
 }
 
 // kindBinding describes how to obtain a kind's informer from its routed
-// factory, plus an optional per-event sidecar (currently Secret → Helm).
+// factory.
 type kindBinding struct {
 	pick     func(informers.SharedInformerFactory) cache.SharedIndexInformer
-	sidecar  func(obj any)
 	indexers cache.Indexers
-
-	// onSynced fires once, after this kind's informer cache has synced. Used to
-	// announce a derived kind as synced too (Secret → HelmRelease), so a view
-	// backed by another kind's cache can trust an empty result and stop showing
-	// a skeleton instead of waiting for the grace timer.
-	onSynced func()
 
 	// project turns a cached object into its frontend Info struct plus a
 	// "namespace/name" key, for the delta-update protocol. nil ⇒ the kind's
@@ -307,7 +301,7 @@ func projector[T metav1.Object, I any](from func(T) I) func(obj any) (string, an
 // kindBindings is the auditable routing table mapping every covered kind to
 // its informer constructor. Registration and start happen lazily per kind in
 // ensureKind; this table only declares what exists.
-func kindBindings(w *contextWatcher) map[string]kindBinding {
+func kindBindings() map[string]kindBinding {
 	type binding struct {
 		kind     string
 		informer func(informers.SharedInformerFactory) cache.SharedIndexInformer
@@ -327,6 +321,9 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 		}},
 		{"ConfigMap", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
 			return f.Core().V1().ConfigMaps().Informer()
+		}},
+		{"Secret", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
+			return f.Core().V1().Secrets().Informer()
 		}},
 		{"StatefulSet", func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
 			return f.Apps().V1().StatefulSets().Informer()
@@ -465,7 +462,7 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 		}},
 	}
 
-	out := make(map[string]kindBinding, len(bindings)+1)
+	out := make(map[string]kindBinding, len(bindings))
 	for _, b := range bindings {
 		out[b.kind] = kindBinding{pick: b.informer}
 	}
@@ -503,24 +500,8 @@ func kindBindings(w *contextWatcher) map[string]kindBinding {
 	setProject("NetworkPolicy", projector(networkPolicyInfoFrom))
 	setProject("Node", projector(nodeInfo))
 	setProject("Lease", projector(leaseInfoFrom))
-
-	// Secret carries a Helm-release piggyback so the Helm UI updates when a
-	// release Secret lands; that's why this binding sits outside the table.
-	out["Secret"] = kindBinding{
-		pick: func(f informers.SharedInformerFactory) cache.SharedIndexInformer {
-			return f.Core().V1().Secrets().Informer()
-		},
-		sidecar:  func(obj any) { maybeTouchHelm(obj, w) },
-		onSynced: func() { w.touch(HelmChangeKind) },
-		project:  projector(secretInfoFrom),
-	}
+	setProject("Secret", projector(secretInfoFrom))
 	return out
-}
-
-func callIf(fn func(obj any), obj any) {
-	if fn != nil {
-		fn(obj)
-	}
 }
 
 // errKindNoAccess is the canonical error returned by Get methods when the

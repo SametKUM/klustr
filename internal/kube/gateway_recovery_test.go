@@ -39,7 +39,7 @@ func TestGatewayDiscoveryRecoversWithoutReconnect(t *testing.T) {
 		}
 		var changes []string
 		var changesMu sync.Mutex
-		w := newContextWatcher(nil, d, gw, nil, "", func(kind string, _ *KindDelta) {
+		w := newContextWatcher(nil, d, gw, nil, nil, "", func(kind string, _ *KindDelta) {
 			changesMu.Lock()
 			defer changesMu.Unlock()
 			changes = append(changes, kind)
@@ -105,7 +105,7 @@ func TestGatewayDiscoveryStopsOnCancellationOrConfirmedAbsence(t *testing.T) {
 					d.failures = map[string][]error{"gateway.networking.k8s.io/v1": {errors.New("offline"), errors.New("offline")}}
 				}
 				gw := gwfake.NewClientset()
-				w := newContextWatcher(nil, d, gw, nil, "", func(string, *KindDelta) { t.Error("unexpected resource change") })
+				w := newContextWatcher(nil, d, gw, nil, nil, "", func(string, *KindDelta) { t.Error("unexpected resource change") })
 				w.cs = fake.NewClientset()
 				ctx, cancel := context.WithCancel(t.Context())
 				w.cancel = cancel
@@ -209,7 +209,7 @@ func TestGatewayAccessErrorIsRetriedWithoutRepeatingDiscovery(t *testing.T) {
 			}
 			return true, &authv1.SelfSubjectAccessReview{Status: authv1.SubjectAccessReviewStatus{Allowed: true}}, nil
 		})
-		w := newContextWatcher(nil, d, gwfake.NewClientset(), nil, "", func(string, *KindDelta) {})
+		w := newContextWatcher(nil, d, gwfake.NewClientset(), nil, nil, "", func(string, *KindDelta) {})
 		w.cs = cs
 		ctx, cancel := context.WithCancel(t.Context())
 		w.cancel = cancel

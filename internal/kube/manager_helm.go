@@ -6,6 +6,9 @@ import (
 )
 
 func (m *ClientManager) HelmReleases(contextName, namespace string) ([]HelmReleaseInfo, error) {
+	if w, ok := m.watcher(contextName); ok {
+		return listAcrossNamespacesErr(namespace, w.helm.Releases)
+	}
 	if m.helm == nil {
 		return nil, fmt.Errorf("helm subsystem unavailable")
 	}
