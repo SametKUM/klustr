@@ -79,7 +79,7 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 
 ## Screenshots
 
-Every shot is captured from two kind clusters seeded with realistic workloads and deliberate failures. Each is rendered in a different theme so the pack doubles as a tour of Klustr's themes — see [`docs/screenshots/`](docs/screenshots) for the full set.
+Every shot is captured from two kind clusters seeded with realistic workloads and deliberate failures. The shots cycle through Klustr's themes, so the pack doubles as a tour of them — see [`docs/screenshots/`](docs/screenshots) for the full set.
 
 |   |   |
 |---|---|
@@ -87,7 +87,7 @@ Every shot is captured from two kind clusters seeded with realistic workloads an
 | **Aggregated pods** — two clusters and three namespaces in one table; failing pods sit next to the healthy rows | **Connections** — contexts grouped by tag, two checked for an aggregated session, a saved group for one-click reconnect |
 | ![Pod diagnosis — Default Light](docs/screenshots/03-pod-diagnosis-default-light.png) | ![Multi-pod logs — Dracula Light](docs/screenshots/04-logs-stream-dracula-light.png) |
 | **Pod diagnosis** — a card that says *why* the pod is unhealthy and what to check next | **Multi-pod logs** — one stream across a Deployment, a color per pod, live regex filter |
-| ![Debug container — One Dark](docs/screenshots/05-debug-container-one-dark.png) | ![Helm upgrade — Tokyo Night Day](docs/screenshots/06-helm-upgrade-diff-tokyo-night-day.png) |
+| ![Debug container — One Dark](docs/screenshots/05-debug-container-one-dark.png) | ![Helm upgrade — Monokai Light](docs/screenshots/06-helm-upgrade-diff-monokai-light.png) |
 | **Debug container** — netshoot injected into a shell-less pod, `ps` / `curl` / `dig` against the target | **Helm upgrade** — values on the left, the dry-run rendered manifest on the right, apply only after reading it |
 | ![Argo CD — One Light](docs/screenshots/07-argo-applications-one-light.png) | ![Flux Kustomization — Monokai](docs/screenshots/08-flux-kustomization-monokai.png) |
 | **Argo CD** — Sync / Health pills, per-row Refresh, Suspend and Sync through the Kubernetes API | **Flux CD** — a failed Kustomization with its status message, source and path readable without YAML |
@@ -101,8 +101,10 @@ Every shot is captured from two kind clusters seeded with realistic workloads an
 | **Terminal** — a local shell pinned to a context under the table, `KUBECONFIG` already set | **Cluster overview** — CPU / memory / pod capacity per cluster and a live warnings feed |
 | ![Istio VirtualService — One Light](docs/screenshots/18-istio-virtualservice-one-light.png) | ![Karpenter NodeClaims — Tokyo Night](docs/screenshots/19-karpenter-nodeclaims-tokyo-night.png) |
 | **Istio** — a VirtualService's weighted canary and header match as a rule table | **Karpenter** — NodeClaims with node, pool, instance, zone and the Launched / Registered / Initialized steps |
-| ![KEDA HPA — Nord Light](docs/screenshots/20-keda-hpa-nord-light.png) | |
-| **KEDA** — a KEDA-managed HPA with its external metrics mapped back to the cron and CPU triggers | |
+| ![KEDA HPA — Nord Light](docs/screenshots/20-keda-hpa-nord-light.png) | ![Tekton PipelineRun — Dracula Light](docs/screenshots/21-tekton-pipelinerun-dracula-light.png) |
+| **KEDA** — a KEDA-managed HPA with its external metrics mapped back to the cron and CPU triggers | **Tekton** — a failed PipelineRun's task table: the failing test, the tasks it skipped, and the finally task that still ran |
+| ![Kyverno Policy tab — Monokai](docs/screenshots/22-kyverno-policy-tab-monokai.png) | |
+| **Kyverno** — a Deployment's own policy report on its Policy tab, the failing count on the tab label | |
 
 ## Install
 
