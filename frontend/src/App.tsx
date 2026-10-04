@@ -99,6 +99,10 @@ import { TektonPipelineRunsView } from '@/features/tekton/TektonPipelineRunsView
 import { TektonTaskRunsView } from '@/features/tekton/TektonTaskRunsView'
 import { TektonPipelinesView } from '@/features/tekton/TektonPipelinesView'
 import { TektonTasksView } from '@/features/tekton/TektonTasksView'
+import { KyvernoPoliciesView } from '@/features/kyverno/KyvernoPoliciesView'
+import { KyvernoValidatingPoliciesView } from '@/features/kyverno/KyvernoValidatingPoliciesView'
+import { KyvernoPolicyExceptionsView } from '@/features/kyverno/KyvernoPolicyExceptionsView'
+import { PolicyReportsView } from '@/features/kyverno/PolicyReportsView'
 import { IstioVirtualServicesView } from '@/features/istio/IstioVirtualServicesView'
 import { IstioDestinationRulesView } from '@/features/istio/IstioDestinationRulesView'
 import { IstioPeerAuthenticationsView } from '@/features/istio/IstioPeerAuthenticationsView'
@@ -339,6 +343,20 @@ function MainView() {
       return <TektonPipelinesView />
     case 'tektontasks':
       return <TektonTasksView />
+    case 'kyvernoclusterpolicies':
+      return <KyvernoPoliciesView key="cluster" cluster />
+    case 'kyvernopolicies':
+      return <KyvernoPoliciesView key="namespaced" cluster={false} />
+    case 'kyvernovalidatingpolicies':
+      return <KyvernoValidatingPoliciesView key="cluster" namespaced={false} />
+    case 'kyvernonamespacedvalidatingpolicies':
+      return <KyvernoValidatingPoliciesView key="namespaced" namespaced />
+    case 'kyvernopolicyexceptions':
+      return <KyvernoPolicyExceptionsView />
+    case 'policyreports':
+      return <PolicyReportsView key="namespaced" cluster={false} />
+    case 'clusterpolicyreports':
+      return <PolicyReportsView key="cluster" cluster />
     case 'istiovirtualservices':
       return <IstioVirtualServicesView />
     case 'istiodestinationrules':

@@ -141,7 +141,7 @@ func extractTektonPipelineRun(obj *unstructured.Unstructured) TektonPipelineRunI
 		StartTime:       start,
 		CompletionTime:  completion,
 		Duration:        tektonDuration(start, completion),
-		CreatedAt:       tektonCreatedAt(obj),
+		CreatedAt:       crCreatedAt(obj),
 	}
 }
 
@@ -492,7 +492,7 @@ func extractTektonTaskRun(obj *unstructured.Unstructured) TektonTaskRunInfo {
 		StartTime:      start,
 		CompletionTime: completion,
 		Duration:       tektonDuration(start, completion),
-		CreatedAt:      tektonCreatedAt(obj),
+		CreatedAt:      crCreatedAt(obj),
 	}
 }
 

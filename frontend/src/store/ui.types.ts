@@ -155,6 +155,13 @@ export type ResourceView =
   | 'tektontaskruns'
   | 'tektonpipelines'
   | 'tektontasks'
+  | 'kyvernoclusterpolicies'
+  | 'kyvernopolicies'
+  | 'kyvernovalidatingpolicies'
+  | 'kyvernonamespacedvalidatingpolicies'
+  | 'kyvernopolicyexceptions'
+  | 'policyreports'
+  | 'clusterpolicyreports'
 
 export type ResourceKind =
   | 'Pod'
@@ -242,7 +249,7 @@ export type SelectedResource = {
   logContainer?: string
 }
 
-export type DetailTab = 'overview' | 'logs' | 'exec' | 'shell' | 'events' | 'history' | 'yaml'
+export type DetailTab = 'overview' | 'logs' | 'exec' | 'shell' | 'events' | 'history' | 'policy' | 'yaml'
 
 export type PendingAction =
   | { kind: 'delete'; resource: SelectedResource }

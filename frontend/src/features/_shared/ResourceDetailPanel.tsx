@@ -113,6 +113,15 @@ import { TektonTaskDetailBody } from '@/features/tekton/TektonTaskDetailBody'
 import { TektonPipelineRunsTab } from '@/features/tekton/TektonPipelineRunsTab'
 import { TektonRunHeaderActions } from '@/features/tekton/TektonRunHeaderActions'
 import { tektonKindOf } from '@/features/tekton/tektonKinds'
+import { KyvernoPolicyDetailBody } from '@/features/kyverno/KyvernoPolicyDetailBody'
+import { KyvernoValidatingPolicyDetailBody } from '@/features/kyverno/KyvernoValidatingPolicyDetailBody'
+import { KyvernoPolicyExceptionDetailBody } from '@/features/kyverno/KyvernoPolicyExceptionDetailBody'
+import { PolicyReportDetailBody } from '@/features/kyverno/PolicyReportDetailBody'
+import { KyvernoPolicyViolationsTab } from '@/features/kyverno/KyvernoPolicyViolationsTab'
+import { PolicyTabLabel, ResourcePolicyTab } from '@/features/kyverno/ResourcePolicyTab'
+import { useResourcePolicyReport } from '@/features/kyverno/useResourcePolicyReport'
+import { kyvernoKindOf, POLICY_REPORT_GROUP, POLICYREPORT_RESOURCE } from '@/features/kyverno/kyvernoKinds'
+import { findCRD, useCRDStore } from '@/store/crds'
 import { IstioVirtualServiceDetailBody } from '@/features/istio/IstioVirtualServiceDetailBody'
 import { IstioDestinationRuleDetailBody } from '@/features/istio/IstioDestinationRuleDetailBody'
 import { IstioPeerAuthenticationDetailBody } from '@/features/istio/IstioPeerAuthenticationDetailBody'
@@ -480,6 +489,23 @@ function customResourceOverview(contextName: string | null, resource: SelectedRe
       return <TektonTaskDetailBody {...detailProps} />
   }
 
+  switch (kyvernoKindOf(resource)) {
+    case 'ClusterPolicy':
+      return <KyvernoPolicyDetailBody {...detailProps} cluster />
+    case 'Policy':
+      return <KyvernoPolicyDetailBody {...detailProps} cluster={false} />
+    case 'ValidatingPolicy':
+      return <KyvernoValidatingPolicyDetailBody {...detailProps} namespaced={false} />
+    case 'NamespacedValidatingPolicy':
+      return <KyvernoValidatingPolicyDetailBody {...detailProps} namespaced />
+    case 'PolicyException':
+      return <KyvernoPolicyExceptionDetailBody {...detailProps} />
+    case 'PolicyReport':
+      return <PolicyReportDetailBody {...detailProps} cluster={false} />
+    case 'ClusterPolicyReport':
+      return <PolicyReportDetailBody {...detailProps} cluster />
+  }
+
   switch (resource.kind) {
     case 'AppProject':
       return resource.gvr?.group === 'argoproj.io' ? (
@@ -580,9 +606,20 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
   const isTektonRun = tektonKind === 'PipelineRun' || tektonKind === 'TaskRun'
   const hasTektonLogs = tektonKind === 'TaskRun'
   const hasTektonRuns = tektonKind === 'Pipeline'
+  const kyvernoKind = kyvernoKindOf(resource)
+  const isClassicKyvernoPolicy = kyvernoKind === 'ClusterPolicy' || kyvernoKind === 'Policy'
+  const isKyvernoPolicy =
+    isClassicKyvernoPolicy || kyvernoKind === 'ValidatingPolicy' || kyvernoKind === 'NamespacedValidatingPolicy'
+  const reportsServed = useCRDStore((s) =>
+    contextName ? findCRD(s.byContext, contextName, POLICY_REPORT_GROUP, POLICYREPORT_RESOURCE) !== null : false,
+  )
+  const hasViolations = isKyvernoPolicy && reportsServed
+  // Reports name a namespaced policy "<namespace>/<name>".
+  const policyKey = resource.namespace ? `${resource.namespace}/${resource.name}` : resource.name
   const overview = customResourceOverview(contextName, resource)
   const hasOverview = overview !== null
-  const hasEvents = isFlux || isCertManager || isTektonRun
+  // Kyverno posts PolicyViolation events on the classic policy objects.
+  const hasEvents = isFlux || isCertManager || isTektonRun || isClassicKyvernoPolicy
   const initialTab = isArgoApp
     ? 'resources'
     : hasKarpenterNodes
@@ -600,6 +637,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
   if (isCertManagerOrder) allowedTabs.push('challenges')
   if (hasTektonLogs) allowedTabs.push('logs')
   if (hasTektonRuns) allowedTabs.push('runs')
+  if (hasViolations) allowedTabs.push('violations')
   if (hasEvents) allowedTabs.push('events')
   allowedTabs.push('yaml')
   const resolveTab = (req: string | null) => (req && allowedTabs.includes(req) ? req : initialTab)
@@ -625,6 +663,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
         {isCertManagerOrder && <TabsTrigger value="challenges">Challenges</TabsTrigger>}
         {hasTektonLogs && <TabsTrigger value="logs">Logs</TabsTrigger>}
         {hasTektonRuns && <TabsTrigger value="runs">Runs</TabsTrigger>}
+        {hasViolations && <TabsTrigger value="violations">Violations</TabsTrigger>}
         {hasEvents && <TabsTrigger value="events">Events</TabsTrigger>}
         <TabsTrigger value="yaml">YAML</TabsTrigger>
       </TabsList>
@@ -755,6 +794,11 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
           />
         </TabsContent>
       )}
+      {hasViolations && (
+        <TabsContent value="violations" className="flex min-h-0 flex-1 flex-col p-0">
+          <KyvernoPolicyViolationsTab contextName={contextName} policyKey={policyKey} />
+        </TabsContent>
+      )}
       {hasEvents && (
         <TabsContent value="events" className="min-h-0 flex-1 p-0">
           <EventsTab
@@ -786,12 +830,14 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
   // The node shell works through a temporary privileged pod, so it is a
   // mutation and stays hidden in read-only mode.
   const hasNodeShell = resource.kind === 'Node' && !readOnly
+  const policyReport = useResourcePolicyReport(contextName, resource.kind, resource.namespace, resource.name)
   const requestedTab = useUIStore((s) => s.requestedTab)
   const allowed: DetailTab[] = ['overview']
   if (hasAggregatedLogs) allowed.push('logs')
   if (hasNodeShell) allowed.push('shell')
   if (hasEvents) allowed.push('events')
   if (hasHistory) allowed.push('history')
+  if (policyReport) allowed.push('policy')
   allowed.push('yaml')
   const initialTab: DetailTab =
     requestedTab && allowed.includes(requestedTab) ? requestedTab : 'overview'
@@ -811,11 +857,21 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
         {hasNodeShell && <TabsTrigger value="shell">Shell</TabsTrigger>}
         {hasEvents && <TabsTrigger value="events">Events</TabsTrigger>}
         {hasHistory && <TabsTrigger value="history">History</TabsTrigger>}
+        {policyReport && (
+          <TabsTrigger value="policy">
+            <PolicyTabLabel report={policyReport} />
+          </TabsTrigger>
+        )}
         <TabsTrigger value="yaml">YAML</TabsTrigger>
       </TabsList>
       <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         <OverviewByKind contextName={contextName} resource={resource} />
       </TabsContent>
+      {policyReport && (
+        <TabsContent value="policy" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <ResourcePolicyTab contextName={contextName} report={policyReport} />
+        </TabsContent>
+      )}
       {hasAggregatedLogs && (
         <TabsContent value="logs" className="min-h-0 flex-1 p-0">
           <WorkloadLogs contextName={contextName} resource={resource} />
@@ -946,6 +1002,7 @@ function PodTabs({
     name,
     load,
   )
+  const policyReport = useResourcePolicyReport(contextName, 'Pod', namespace, name)
   const requestedTab = useUIStore((s) => s.requestedTab)
   const requestedContainer = useUIStore((s) => s.selectedResource?.logContainer)
   const [tabState, setTabState] = useState(() => ({
@@ -978,8 +1035,18 @@ function PodTabs({
         <TabsTrigger value="logs" disabled={!detail}>Logs</TabsTrigger>
         <TabsTrigger value="exec" disabled={!detail || detail.containers.length === 0}>Exec</TabsTrigger>
         <TabsTrigger value="events">Events</TabsTrigger>
+        {policyReport && (
+          <TabsTrigger value="policy">
+            <PolicyTabLabel report={policyReport} />
+          </TabsTrigger>
+        )}
         <TabsTrigger value="yaml">YAML</TabsTrigger>
       </TabsList>
+      {policyReport && (
+        <TabsContent value="policy" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <ResourcePolicyTab contextName={contextName} report={policyReport} />
+        </TabsContent>
+      )}
       <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         {error && (
           <div className="space-y-3">

@@ -637,6 +637,11 @@ func (m *ClientManager) crForDetail(ctx context.Context, contextName string, gvr
 	return resourceFor(dyn, gvr, namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// crCreatedAt is a CR's creation time in the RFC3339 form the frontend parses.
+func crCreatedAt(obj *unstructured.Unstructured) string {
+	return obj.GetCreationTimestamp().UTC().Format(time.RFC3339)
+}
+
 // servedGVR resolves the cluster's GVR for a group/resource pair from the
 // discovered CRD (its served storage version), or false when the CRD is absent.
 // Integrations whose CRDs serve different versions across installs use it

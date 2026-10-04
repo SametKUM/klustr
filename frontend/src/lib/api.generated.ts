@@ -176,6 +176,18 @@ export type JobInfo = kube.JobInfo
 export type KarpenterNodeClaimInfo = kube.KarpenterNodeClaimInfo
 export type KarpenterNodePoolInfo = kube.KarpenterNodePoolInfo
 export type Kubeconfig = kube.Kubeconfig
+export type KyvernoAutogenRule = kube.KyvernoAutogenRule
+export type KyvernoCELExpression = kube.KyvernoCELExpression
+export type KyvernoCELValidation = kube.KyvernoCELValidation
+export type KyvernoExceptionTarget = kube.KyvernoExceptionTarget
+export type KyvernoPolicyCondition = kube.KyvernoPolicyCondition
+export type KyvernoRule = kube.KyvernoRule
+export type KyvernoPolicyDetail = kube.KyvernoPolicyDetail
+export type KyvernoPolicyExceptionDetail = kube.KyvernoPolicyExceptionDetail
+export type KyvernoPolicyExceptionInfo = kube.KyvernoPolicyExceptionInfo
+export type KyvernoPolicyInfo = kube.KyvernoPolicyInfo
+export type KyvernoValidatingPolicyDetail = kube.KyvernoValidatingPolicyDetail
+export type KyvernoValidatingPolicyInfo = kube.KyvernoValidatingPolicyInfo
 export type L4RouteRuleDetail = kube.L4RouteRuleDetail
 export type LeaseDetail = kube.LeaseDetail
 export type LeaseInfo = kube.LeaseInfo
@@ -207,6 +219,11 @@ export type PodDisruptionBudgetInfo = kube.PodDisruptionBudgetInfo
 export type PodInfo = kube.PodInfo
 export type PodLogTarget = kube.PodLogTarget
 export type PodMetrics = kube.PodMetrics
+export type PolicyReportResource = kube.PolicyReportResource
+export type PolicyReportResult = kube.PolicyReportResult
+export type PolicyReportDetail = kube.PolicyReportDetail
+export type PolicyReportInfo = kube.PolicyReportInfo
+export type PolicyViolation = kube.PolicyViolation
 export type PortForwardInfo = kube.PortForwardInfo
 export type PriorityClassDetail = kube.PriorityClassDetail
 export type PriorityClassInfo = kube.PriorityClassInfo
@@ -323,6 +340,7 @@ export const generatedApi = {
   getCertManagerOrder: bindings.GetCertManagerOrder,
   getCertificateSigningRequest: bindings.GetCertificateSigningRequest,
   getClusterOverview: bindings.GetClusterOverview,
+  getClusterPolicyReport: bindings.GetClusterPolicyReport,
   getClusterRole: bindings.GetClusterRole,
   getClusterRoleBinding: bindings.GetClusterRoleBinding,
   getConfigMap: bindings.GetConfigMap,
@@ -356,6 +374,11 @@ export const generatedApi = {
   getIstioPeerAuthentication: bindings.GetIstioPeerAuthentication,
   getIstioVirtualService: bindings.GetIstioVirtualService,
   getJob: bindings.GetJob,
+  getKyvernoClusterPolicy: bindings.GetKyvernoClusterPolicy,
+  getKyvernoNamespacedValidatingPolicy: bindings.GetKyvernoNamespacedValidatingPolicy,
+  getKyvernoPolicy: bindings.GetKyvernoPolicy,
+  getKyvernoPolicyException: bindings.GetKyvernoPolicyException,
+  getKyvernoValidatingPolicy: bindings.GetKyvernoValidatingPolicy,
   getLease: bindings.GetLease,
   getLimitRange: bindings.GetLimitRange,
   getListenerSet: bindings.GetListenerSet,
@@ -369,6 +392,7 @@ export const generatedApi = {
   getPersistentVolumeClaim: bindings.GetPersistentVolumeClaim,
   getPod: bindings.GetPod,
   getPodDisruptionBudget: bindings.GetPodDisruptionBudget,
+  getPolicyReport: bindings.GetPolicyReport,
   getPriorityClass: bindings.GetPriorityClass,
   getPriorityLevelConfiguration: bindings.GetPriorityLevelConfiguration,
   getReferenceGrant: bindings.GetReferenceGrant,
@@ -423,6 +447,7 @@ export const generatedApi = {
   listCertManagerIssuers: bindings.ListCertManagerIssuers,
   listCertManagerOrders: bindings.ListCertManagerOrders,
   listCertificateSigningRequests: bindings.ListCertificateSigningRequests,
+  listClusterPolicyReports: bindings.ListClusterPolicyReports,
   listClusterRoleBindings: bindings.ListClusterRoleBindings,
   listClusterRoles: bindings.ListClusterRoles,
   listClusterWarningEvents: bindings.ListClusterWarningEvents,
@@ -468,6 +493,11 @@ export const generatedApi = {
   listJobs: bindings.ListJobs,
   listKarpenterNodeClaims: bindings.ListKarpenterNodeClaims,
   listKarpenterNodePools: bindings.ListKarpenterNodePools,
+  listKyvernoClusterPolicies: bindings.ListKyvernoClusterPolicies,
+  listKyvernoNamespacedValidatingPolicies: bindings.ListKyvernoNamespacedValidatingPolicies,
+  listKyvernoPolicies: bindings.ListKyvernoPolicies,
+  listKyvernoPolicyExceptions: bindings.ListKyvernoPolicyExceptions,
+  listKyvernoValidatingPolicies: bindings.ListKyvernoValidatingPolicies,
   listLeases: bindings.ListLeases,
   listLimitRanges: bindings.ListLimitRanges,
   listListenerSets: bindings.ListListenerSets,
@@ -485,6 +515,7 @@ export const generatedApi = {
   listPodDisruptionBudgets: bindings.ListPodDisruptionBudgets,
   listPodMetrics: bindings.ListPodMetrics,
   listPods: bindings.ListPods,
+  listPolicyReports: bindings.ListPolicyReports,
   listPortForwards: bindings.ListPortForwards,
   listPriorityClasses: bindings.ListPriorityClasses,
   listPriorityLevelConfigurations: bindings.ListPriorityLevelConfigurations,
@@ -525,6 +556,8 @@ export const generatedApi = {
   pingContext: bindings.PingContext,
   podLogTargets: bindings.PodLogTargets,
   podsForOwner: bindings.PodsForOwner,
+  policyReportForResource: bindings.PolicyReportForResource,
+  policyViolationsFor: bindings.PolicyViolationsFor,
   recommendInsecureKubeletTLS: bindings.RecommendInsecureKubeletTLS,
   reconcileFluxResource: bindings.ReconcileFluxResource,
   refreshArgoApplication: bindings.RefreshArgoApplication,
