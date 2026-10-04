@@ -14,6 +14,8 @@ export type ThemeId =
   | 'tokyo-night'
   | 'one-dark'
   | 'one-light'
+  | 'joker'
+  | 'joker-light'
 
 export const DEFAULT_LIGHT: ThemeId = 'default-light'
 export const DEFAULT_DARK: ThemeId = 'default-dark'
@@ -282,6 +284,54 @@ const oneLightXterm: ITheme = {
   brightWhite: '#ffffff',
 }
 
+const jokerXterm: ITheme = {
+  background: '#1c1626',
+  foreground: '#f4efe6',
+  cursor: '#8af26a',
+  cursorAccent: '#1c1626',
+  selectionBackground: '#3d3051',
+  black: '#16111e',
+  red: '#ff5266',
+  green: '#8af26a',
+  yellow: '#ffdc63',
+  blue: '#a685ff',
+  magenta: '#ff7ccf',
+  cyan: '#97b46e',
+  white: '#f4efe6',
+  brightBlack: '#9088a0',
+  brightRed: '#ff6b7a',
+  brightGreen: '#a5f78a',
+  brightYellow: '#ffe88f',
+  brightBlue: '#c0a6ff',
+  brightMagenta: '#ff9fdc',
+  brightCyan: '#b1cc8d',
+  brightWhite: '#ffffff',
+}
+
+const jokerLightXterm: ITheme = {
+  background: '#f4efe6',
+  foreground: '#1c1626',
+  cursor: '#057502',
+  cursorAccent: '#f4efe6',
+  selectionBackground: '#d8ceee',
+  black: '#ebe3db',
+  red: '#c7054c',
+  green: '#057502',
+  yellow: '#6d5901',
+  blue: '#601dd0',
+  magenta: '#9a0381',
+  cyan: '#234e14',
+  white: '#1c1626',
+  brightBlack: '#685e74',
+  brightRed: '#e43562',
+  brightGreen: '#2d8d28',
+  brightYellow: '#847025',
+  brightBlue: '#7540ec',
+  brightMagenta: '#b52e9a',
+  brightCyan: '#3b682e',
+  brightWhite: '#40394d',
+}
+
 export type SwatchColors = {
   background: string
   primary: string
@@ -289,7 +339,14 @@ export type SwatchColors = {
 }
 
 // A family is what the picker lists; the light/dark toggle picks its variant.
-export type ThemeFamily = 'default' | 'dracula' | 'monokai' | 'nord' | 'tokyo-night' | 'one'
+export type ThemeFamily =
+  | 'default'
+  | 'dracula'
+  | 'monokai'
+  | 'nord'
+  | 'tokyo-night'
+  | 'one'
+  | 'joker'
 
 export const THEME_FAMILIES: readonly { id: ThemeFamily; label: string }[] = [
   { id: 'default', label: 'Default' },
@@ -298,6 +355,7 @@ export const THEME_FAMILIES: readonly { id: ThemeFamily; label: string }[] = [
   { id: 'nord', label: 'Nord' },
   { id: 'tokyo-night', label: 'Tokyo Night' },
   { id: 'one', label: 'One' },
+  { id: 'joker', label: 'Joker' },
 ]
 
 export type ThemeDefinition = {
@@ -351,6 +409,14 @@ export const THEMES: ThemeDefinition[] = [
     swatch: { background: '#fafafa', primary: '#5871ef', accent: '#dbdbdc' },
   },
   {
+    id: 'joker-light',
+    family: 'joker',
+    mode: 'light',
+    cssClass: 'theme-joker-light',
+    xterm: jokerLightXterm,
+    swatch: { background: '#f4efe6', primary: '#234e14', accent: '#d8ceee' },
+  },
+  {
     id: 'default-dark',
     family: 'default',
     mode: 'dark',
@@ -397,6 +463,14 @@ export const THEMES: ThemeDefinition[] = [
     cssClass: 'theme-one-dark',
     xterm: oneDarkXterm,
     swatch: { background: '#282c34', primary: '#4d78cc', accent: '#2c313a' },
+  },
+  {
+    id: 'joker',
+    family: 'joker',
+    mode: 'dark',
+    cssClass: 'theme-joker',
+    xterm: jokerXterm,
+    swatch: { background: '#1c1626', primary: '#97b46e', accent: '#3d3051' },
   },
 ]
 
