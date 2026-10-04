@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import { resolveCRDsByContext, useCRDStore } from '@/store/crds'
 import { useActiveContexts } from '@/store/ui'
-import { ensureCustomResourceWatches } from './customResourceModel'
+import { ensureCustomResourceWatches, ensureWatchUntilSynced } from './customResourceModel'
 
 type WatchState = {
   key: string
@@ -38,7 +38,10 @@ export function useCustomResourceCapability(group: string, resource: string) {
     if (supportedContexts.length === 0) return
     let cancelled = false
     ensureCustomResourceWatches(crdsByContext, (contextName, crd) =>
-      api.ensureCustomResourceWatch(contextName, crd.group, crd.version, crd.resource),
+      ensureWatchUntilSynced(
+        () => api.ensureCustomResourceWatch(contextName, crd.group, crd.version, crd.resource),
+        () => cancelled,
+      ),
     ).then((result) => {
       if (cancelled) return
       setState({ key, pending: false, ...result })

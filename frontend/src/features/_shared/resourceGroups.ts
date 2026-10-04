@@ -10,6 +10,7 @@ import {
   Boxes,
   Briefcase,
   CalendarClock,
+  CirclePlay,
   CircuitBoard,
   Cog,
   ClipboardList,
@@ -37,6 +38,7 @@ import {
   Library,
   Link,
   Link2,
+  ListChecks,
   Lock,
   Network,
   Package,
@@ -53,13 +55,15 @@ import {
   ShieldCheck,
   Ship,
   Sprout,
+  SquareTerminal,
   Stamp,
   TrendingUp,
   User,
   Waypoints,
   Webhook,
+  Workflow,
 } from 'lucide-react'
-import { Karpenter, SiArgo, SiHelm, SiIstio } from './brandIcons'
+import { Karpenter, SiArgo, SiHelm, SiIstio, SiTekton } from './brandIcons'
 
 import type { ResourceKind, ResourceView } from '@/store/ui'
 
@@ -311,6 +315,19 @@ export const CERT_MANAGER_GROUP_NAV: ResourceGroup = {
   ],
 }
 
+// Tekton Pipelines CRs are watched via the dynamic CR informer like Flux. The
+// group is rendered conditionally when the tekton.dev CRDs are present.
+export const TEKTON_GROUP_NAV: ResourceGroup = {
+  label: 'Tekton',
+  icon: SiTekton,
+  items: [
+    { label: 'PipelineRuns', view: 'tektonpipelineruns', icon: CirclePlay },
+    { label: 'TaskRuns', view: 'tektontaskruns', icon: ListChecks },
+    { label: 'Pipelines', view: 'tektonpipelines', icon: Workflow },
+    { label: 'Tasks', view: 'tektontasks', icon: SquareTerminal },
+  ],
+}
+
 // Every group any sidebar can render, conditional or not. Persisted-entry
 // pruning and the hidden-items restore lookup must both run over this complete
 // list — a group missing from one of them makes its hidden items unrestorable.
@@ -321,6 +338,7 @@ export const ALL_SIDEBAR_GROUPS: readonly ResourceGroup[] = [
   GATEWAY_GROUP,
   KARPENTER_GROUP,
   FLUX_GROUP,
+  TEKTON_GROUP_NAV,
   ISTIO_GROUP,
   CERT_MANAGER_GROUP_NAV,
 ]

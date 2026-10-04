@@ -9,6 +9,10 @@ export function ApplyResourceYAML(arg1:string,arg2:string):Promise<void>;
 
 export function ApproveCertificateSigningRequest(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function CancelTektonPipelineRun(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function CancelTektonTaskRun(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function CaptureCredentials(arg1:string):Promise<void>;
 
 export function CertManagerCertificateRequestsFor(arg1:string,arg2:string,arg3:string):Promise<Array<kube.CertManagerCertificateRequestInfo>>;
@@ -204,6 +208,14 @@ export function GetSubjectAccess(arg1:string,arg2:string,arg3:string,arg4:string
 export function GetTCPRoute(arg1:string,arg2:string,arg3:string):Promise<kube.TCPRouteDetail>;
 
 export function GetTLSRoute(arg1:string,arg2:string,arg3:string):Promise<kube.TLSRouteDetail>;
+
+export function GetTektonPipeline(arg1:string,arg2:string,arg3:string):Promise<kube.TektonPipelineDetail>;
+
+export function GetTektonPipelineRun(arg1:string,arg2:string,arg3:string):Promise<kube.TektonPipelineRunDetail>;
+
+export function GetTektonTask(arg1:string,arg2:string,arg3:string):Promise<kube.TektonTaskDetail>;
+
+export function GetTektonTaskRun(arg1:string,arg2:string,arg3:string):Promise<kube.TektonTaskRunDetail>;
 
 export function GetUDPRoute(arg1:string,arg2:string,arg3:string):Promise<kube.UDPRouteDetail>;
 
@@ -431,6 +443,14 @@ export function ListTCPRoutes(arg1:string,arg2:string):Promise<Array<kube.TCPRou
 
 export function ListTLSRoutes(arg1:string,arg2:string):Promise<Array<kube.TLSRouteInfo>>;
 
+export function ListTektonPipelineRuns(arg1:string,arg2:string):Promise<Array<kube.TektonPipelineRunInfo>>;
+
+export function ListTektonPipelines(arg1:string,arg2:string):Promise<Array<kube.TektonPipelineInfo>>;
+
+export function ListTektonTaskRuns(arg1:string,arg2:string):Promise<Array<kube.TektonTaskRunInfo>>;
+
+export function ListTektonTasks(arg1:string,arg2:string):Promise<Array<kube.TektonTaskInfo>>;
+
 export function ListUDPRoutes(arg1:string,arg2:string):Promise<Array<kube.UDPRouteInfo>>;
 
 export function ListValidatingAdmissionPolicies(arg1:string):Promise<Array<kube.AdmissionPolicyInfo>>;
@@ -466,6 +486,8 @@ export function RefreshArgoApplication(arg1:string,arg2:string,arg3:string,arg4:
 export function RemoveHelmRepo(arg1:string):Promise<void>;
 
 export function RenewCertificate(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function RerunTektonPipelineRun(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function ResizeExec(arg1:string,arg2:number,arg3:number):Promise<void>;
 
@@ -528,6 +550,10 @@ export function StopPortForward(arg1:string):Promise<void>;
 export function StopWatch(arg1:string):Promise<void>;
 
 export function SyncArgoApplication(arg1:string,arg2:string,arg3:string,arg4:kube.ArgoSyncOptions):Promise<void>;
+
+export function TektonPipelineRunsForPipeline(arg1:string,arg2:string,arg3:string):Promise<Array<kube.TektonPipelineRunInfo>>;
+
+export function TektonRunState(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function UninstallHelmRelease(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<void>;
 

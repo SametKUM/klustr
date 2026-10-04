@@ -1,6 +1,31 @@
 import type { CRDInfo } from '@/lib/api'
 import type { SelectedResource } from '@/store/ui'
 
+// The backend waits ~5 s per call for a CR cache to sync and then reports
+// errCRSyncPending (crd.go) while the informer keeps listing. A large CR set
+// (thousands of Tekton TaskRuns) needs several waits, so a pending sync is
+// retried rather than shown as a failure.
+export const CR_SYNC_PENDING_MESSAGE = 'cache sync still in progress'
+const CR_SYNC_MAX_ATTEMPTS = 12
+
+export async function ensureWatchUntilSynced(
+  ensure: () => Promise<void>,
+  isCancelled: () => boolean,
+  maxAttempts = CR_SYNC_MAX_ATTEMPTS,
+): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await ensure()
+      return
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      if (!message.includes(CR_SYNC_PENDING_MESSAGE) || attempt >= maxAttempts || isCancelled()) {
+        throw e
+      }
+    }
+  }
+}
+
 export async function ensureCustomResourceWatches(
   crdsByContext: Record<string, CRDInfo>,
   ensure: (contextName: string, crd: CRDInfo) => Promise<void>,

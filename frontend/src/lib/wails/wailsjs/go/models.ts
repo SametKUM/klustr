@@ -7946,6 +7946,621 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class TektonParam {
+	    name: string;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonParam(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.value = source["value"];
+	    }
+	}
+	export class TektonParamSpec {
+	    name: string;
+	    type: string;
+	    default: string;
+	    hasDefault: boolean;
+	    description: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonParamSpec(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.default = source["default"];
+	        this.hasDefault = source["hasDefault"];
+	        this.description = source["description"];
+	    }
+	}
+	export class TektonPipelineTaskSpec {
+	    name: string;
+	    displayName: string;
+	    taskRef: string;
+	    taskRefName: string;
+	    runAfter: string[];
+	    when: number;
+	    finally: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonPipelineTaskSpec(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.displayName = source["displayName"];
+	        this.taskRef = source["taskRef"];
+	        this.taskRefName = source["taskRefName"];
+	        this.runAfter = source["runAfter"];
+	        this.when = source["when"];
+	        this.finally = source["finally"];
+	    }
+	}
+	export class TektonResultSpec {
+	    name: string;
+	    type: string;
+	    description: string;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonResultSpec(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.description = source["description"];
+	        this.value = source["value"];
+	    }
+	}
+	export class TektonWorkspaceSpec {
+	    name: string;
+	    description: string;
+	    optional: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonWorkspaceSpec(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.optional = source["optional"];
+	    }
+	}
+	export class TektonPipelineDetail {
+	    name: string;
+	    namespace: string;
+	    taskCount: number;
+	    finallyCount: number;
+	    paramCount: number;
+	    workspaceCount: number;
+	    createdAt: string;
+	    displayName: string;
+	    description: string;
+	    params: TektonParamSpec[];
+	    workspaces: TektonWorkspaceSpec[];
+	    results: TektonResultSpec[];
+	    pipelineTasks: TektonPipelineTaskSpec[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonPipelineDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.taskCount = source["taskCount"];
+	        this.finallyCount = source["finallyCount"];
+	        this.paramCount = source["paramCount"];
+	        this.workspaceCount = source["workspaceCount"];
+	        this.createdAt = source["createdAt"];
+	        this.displayName = source["displayName"];
+	        this.description = source["description"];
+	        this.params = this.convertValues(source["params"], TektonParamSpec);
+	        this.workspaces = this.convertValues(source["workspaces"], TektonWorkspaceSpec);
+	        this.results = this.convertValues(source["results"], TektonResultSpec);
+	        this.pipelineTasks = this.convertValues(source["pipelineTasks"], TektonPipelineTaskSpec);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonPipelineInfo {
+	    name: string;
+	    namespace: string;
+	    taskCount: number;
+	    finallyCount: number;
+	    paramCount: number;
+	    workspaceCount: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonPipelineInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.taskCount = source["taskCount"];
+	        this.finallyCount = source["finallyCount"];
+	        this.paramCount = source["paramCount"];
+	        this.workspaceCount = source["workspaceCount"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class TektonPipelineRunTask {
+	    name: string;
+	    displayName: string;
+	    taskRef: string;
+	    runAfter: string[];
+	    finally: boolean;
+	    taskRunName: string;
+	    state: string;
+	    reason: string;
+	    message: string;
+	    startTime: string;
+	    completionTime: string;
+	    duration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonPipelineRunTask(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.displayName = source["displayName"];
+	        this.taskRef = source["taskRef"];
+	        this.runAfter = source["runAfter"];
+	        this.finally = source["finally"];
+	        this.taskRunName = source["taskRunName"];
+	        this.state = source["state"];
+	        this.reason = source["reason"];
+	        this.message = source["message"];
+	        this.startTime = source["startTime"];
+	        this.completionTime = source["completionTime"];
+	        this.duration = source["duration"];
+	    }
+	}
+	export class TektonWorkspaceBinding {
+	    name: string;
+	    source: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonWorkspaceBinding(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.source = source["source"];
+	    }
+	}
+	export class TektonTaskCounts {
+	    known: boolean;
+	    completed: number;
+	    failed: number;
+	    cancelled: number;
+	    incomplete: number;
+	    skipped: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTaskCounts(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.known = source["known"];
+	        this.completed = source["completed"];
+	        this.failed = source["failed"];
+	        this.cancelled = source["cancelled"];
+	        this.incomplete = source["incomplete"];
+	        this.skipped = source["skipped"];
+	    }
+	}
+	export class TektonPipelineRunDetail {
+	    name: string;
+	    namespace: string;
+	    pipeline: string;
+	    pipelineRefName: string;
+	    state: string;
+	    reason: string;
+	    message: string;
+	    tasks: TektonTaskCounts;
+	    startTime: string;
+	    completionTime: string;
+	    duration: string;
+	    createdAt: string;
+	    params: TektonParam[];
+	    workspaces: TektonWorkspaceBinding[];
+	    results: TektonParam[];
+	    pipelineTasks: TektonPipelineRunTask[];
+	    serviceAccount: string;
+	    timeout: string;
+	    specStatus: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonPipelineRunDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.pipeline = source["pipeline"];
+	        this.pipelineRefName = source["pipelineRefName"];
+	        this.state = source["state"];
+	        this.reason = source["reason"];
+	        this.message = source["message"];
+	        this.tasks = this.convertValues(source["tasks"], TektonTaskCounts);
+	        this.startTime = source["startTime"];
+	        this.completionTime = source["completionTime"];
+	        this.duration = source["duration"];
+	        this.createdAt = source["createdAt"];
+	        this.params = this.convertValues(source["params"], TektonParam);
+	        this.workspaces = this.convertValues(source["workspaces"], TektonWorkspaceBinding);
+	        this.results = this.convertValues(source["results"], TektonParam);
+	        this.pipelineTasks = this.convertValues(source["pipelineTasks"], TektonPipelineRunTask);
+	        this.serviceAccount = source["serviceAccount"];
+	        this.timeout = source["timeout"];
+	        this.specStatus = source["specStatus"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonPipelineRunInfo {
+	    name: string;
+	    namespace: string;
+	    pipeline: string;
+	    pipelineRefName: string;
+	    state: string;
+	    reason: string;
+	    message: string;
+	    tasks: TektonTaskCounts;
+	    startTime: string;
+	    completionTime: string;
+	    duration: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonPipelineRunInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.pipeline = source["pipeline"];
+	        this.pipelineRefName = source["pipelineRefName"];
+	        this.state = source["state"];
+	        this.reason = source["reason"];
+	        this.message = source["message"];
+	        this.tasks = this.convertValues(source["tasks"], TektonTaskCounts);
+	        this.startTime = source["startTime"];
+	        this.completionTime = source["completionTime"];
+	        this.duration = source["duration"];
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	
+	export class TektonStep {
+	    name: string;
+	    container: string;
+	    image: string;
+	    state: string;
+	    reason: string;
+	    message: string;
+	    exitCode: number;
+	    startedAt: string;
+	    finishedAt: string;
+	    duration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonStep(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.container = source["container"];
+	        this.image = source["image"];
+	        this.state = source["state"];
+	        this.reason = source["reason"];
+	        this.message = source["message"];
+	        this.exitCode = source["exitCode"];
+	        this.startedAt = source["startedAt"];
+	        this.finishedAt = source["finishedAt"];
+	        this.duration = source["duration"];
+	    }
+	}
+	
+	export class TektonTaskStep {
+	    name: string;
+	    image: string;
+	    ref: string;
+	    script: string;
+	    command: string[];
+	    args: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTaskStep(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.image = source["image"];
+	        this.ref = source["ref"];
+	        this.script = source["script"];
+	        this.command = source["command"];
+	        this.args = source["args"];
+	    }
+	}
+	export class TektonTaskDetail {
+	    name: string;
+	    namespace: string;
+	    stepCount: number;
+	    paramCount: number;
+	    resultCount: number;
+	    workspaceCount: number;
+	    createdAt: string;
+	    displayName: string;
+	    description: string;
+	    params: TektonParamSpec[];
+	    workspaces: TektonWorkspaceSpec[];
+	    results: TektonResultSpec[];
+	    steps: TektonTaskStep[];
+	    sidecars: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTaskDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.stepCount = source["stepCount"];
+	        this.paramCount = source["paramCount"];
+	        this.resultCount = source["resultCount"];
+	        this.workspaceCount = source["workspaceCount"];
+	        this.createdAt = source["createdAt"];
+	        this.displayName = source["displayName"];
+	        this.description = source["description"];
+	        this.params = this.convertValues(source["params"], TektonParamSpec);
+	        this.workspaces = this.convertValues(source["workspaces"], TektonWorkspaceSpec);
+	        this.results = this.convertValues(source["results"], TektonResultSpec);
+	        this.steps = this.convertValues(source["steps"], TektonTaskStep);
+	        this.sidecars = source["sidecars"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonTaskInfo {
+	    name: string;
+	    namespace: string;
+	    stepCount: number;
+	    paramCount: number;
+	    resultCount: number;
+	    workspaceCount: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTaskInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.stepCount = source["stepCount"];
+	        this.paramCount = source["paramCount"];
+	        this.resultCount = source["resultCount"];
+	        this.workspaceCount = source["workspaceCount"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class TektonTaskRunDetail {
+	    name: string;
+	    namespace: string;
+	    task: string;
+	    taskRefName: string;
+	    pipelineRun: string;
+	    pipelineTask: string;
+	    state: string;
+	    reason: string;
+	    message: string;
+	    podName: string;
+	    stepsTotal: number;
+	    stepsDone: number;
+	    retries: number;
+	    startTime: string;
+	    completionTime: string;
+	    duration: string;
+	    createdAt: string;
+	    params: TektonParam[];
+	    workspaces: TektonWorkspaceBinding[];
+	    results: TektonParam[];
+	    steps: TektonStep[];
+	    serviceAccount: string;
+	    timeout: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTaskRunDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.task = source["task"];
+	        this.taskRefName = source["taskRefName"];
+	        this.pipelineRun = source["pipelineRun"];
+	        this.pipelineTask = source["pipelineTask"];
+	        this.state = source["state"];
+	        this.reason = source["reason"];
+	        this.message = source["message"];
+	        this.podName = source["podName"];
+	        this.stepsTotal = source["stepsTotal"];
+	        this.stepsDone = source["stepsDone"];
+	        this.retries = source["retries"];
+	        this.startTime = source["startTime"];
+	        this.completionTime = source["completionTime"];
+	        this.duration = source["duration"];
+	        this.createdAt = source["createdAt"];
+	        this.params = this.convertValues(source["params"], TektonParam);
+	        this.workspaces = this.convertValues(source["workspaces"], TektonWorkspaceBinding);
+	        this.results = this.convertValues(source["results"], TektonParam);
+	        this.steps = this.convertValues(source["steps"], TektonStep);
+	        this.serviceAccount = source["serviceAccount"];
+	        this.timeout = source["timeout"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonTaskRunInfo {
+	    name: string;
+	    namespace: string;
+	    task: string;
+	    taskRefName: string;
+	    pipelineRun: string;
+	    pipelineTask: string;
+	    state: string;
+	    reason: string;
+	    message: string;
+	    podName: string;
+	    stepsTotal: number;
+	    stepsDone: number;
+	    retries: number;
+	    startTime: string;
+	    completionTime: string;
+	    duration: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTaskRunInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.task = source["task"];
+	        this.taskRefName = source["taskRefName"];
+	        this.pipelineRun = source["pipelineRun"];
+	        this.pipelineTask = source["pipelineTask"];
+	        this.state = source["state"];
+	        this.reason = source["reason"];
+	        this.message = source["message"];
+	        this.podName = source["podName"];
+	        this.stepsTotal = source["stepsTotal"];
+	        this.stepsDone = source["stepsDone"];
+	        this.retries = source["retries"];
+	        this.startTime = source["startTime"];
+	        this.completionTime = source["completionTime"];
+	        this.duration = source["duration"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	
+	
 	export class UDPRouteDetail {
 	    name: string;
 	    namespace: string;

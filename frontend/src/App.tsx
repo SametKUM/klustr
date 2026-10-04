@@ -95,6 +95,10 @@ import { FluxBucketsView } from '@/features/flux/FluxBucketsView'
 import { FluxProvidersView } from '@/features/flux/FluxProvidersView'
 import { FluxAlertsView } from '@/features/flux/FluxAlertsView'
 import { FluxReceiversView } from '@/features/flux/FluxReceiversView'
+import { TektonPipelineRunsView } from '@/features/tekton/TektonPipelineRunsView'
+import { TektonTaskRunsView } from '@/features/tekton/TektonTaskRunsView'
+import { TektonPipelinesView } from '@/features/tekton/TektonPipelinesView'
+import { TektonTasksView } from '@/features/tekton/TektonTasksView'
 import { IstioVirtualServicesView } from '@/features/istio/IstioVirtualServicesView'
 import { IstioDestinationRulesView } from '@/features/istio/IstioDestinationRulesView'
 import { IstioPeerAuthenticationsView } from '@/features/istio/IstioPeerAuthenticationsView'
@@ -327,6 +331,14 @@ function MainView() {
       return <FluxAlertsView />
     case 'fluxreceivers':
       return <FluxReceiversView />
+    case 'tektonpipelineruns':
+      return <TektonPipelineRunsView />
+    case 'tektontaskruns':
+      return <TektonTaskRunsView />
+    case 'tektonpipelines':
+      return <TektonPipelinesView />
+    case 'tektontasks':
+      return <TektonTasksView />
     case 'istiovirtualservices':
       return <IstioVirtualServicesView />
     case 'istiodestinationrules':

@@ -103,4 +103,25 @@ describe('buildVisibleResourceGroups', () => {
     expect(views).toContain('argocdapplications')
     expect(views).not.toContain('argocdappprojects')
   })
+
+  it('shows the Tekton group per served tekton.dev CRD only', () => {
+    const input = {
+      activeContexts: ['ci'],
+      crdsByContext: {
+        ci: [
+          { group: 'tekton.dev', resource: 'pipelineruns' } as CRDInfo,
+          { group: 'tekton.dev', resource: 'pipelines' } as CRDInfo,
+          // A "tasks" CRD from another group must not light up Tekton Tasks.
+          { group: 'example.com', resource: 'tasks' } as CRDInfo,
+        ],
+      },
+      accessByContext: {},
+      hiddenItems: [],
+    }
+    const tekton = buildVisibleResourceGroups(input).find((group) => group.label === 'Tekton')
+    expect(tekton?.items.map((item) => item.view)).toEqual(['tektonpipelineruns', 'tektonpipelines'])
+
+    const without = buildVisibleResourceGroups({ ...input, crdsByContext: { ci: [] } })
+    expect(without.find((group) => group.label === 'Tekton')).toBeUndefined()
+  })
 })

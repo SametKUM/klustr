@@ -28,15 +28,7 @@ const (
 // istioGVR resolves the cluster's served GVR for a group/resource pair via the
 // discovered CRD, or false when Istio's CRDs are absent.
 func (m *ClientManager) istioGVR(contextName, group, resource string) (schema.GroupVersionResource, bool) {
-	w, ok := m.watcher(contextName)
-	if !ok || w.crd == nil {
-		return schema.GroupVersionResource{}, false
-	}
-	info, ok := w.crd.LookupCRDByGVR(schema.GroupVersionResource{Group: group, Resource: resource})
-	if !ok {
-		return schema.GroupVersionResource{}, false
-	}
-	return info.GVR(), true
+	return m.servedGVR(contextName, group, resource)
 }
 
 // ---------------------------------------------------------------------------

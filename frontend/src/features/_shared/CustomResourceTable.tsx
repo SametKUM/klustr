@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef, SortingState } from '@tanstack/react-table'
 import { ResourceTable } from './ResourceTable'
 import { useContextResourceData } from './useContextResourceData'
 import { useCustomResourceCapability } from './useCustomResourceCapability'
@@ -14,6 +14,7 @@ type Props<T> = {
   noun: { singular: string; plural: string }
   scope: 'namespaced' | 'cluster'
   columns: ColumnDef<T, unknown>[]
+  defaultSort?: SortingState
   fetch: (contextName: string, namespace: string) => Promise<T[]>
   identity: (row: T) => { namespace: string; name: string }
   extras?: (row: T) => Partial<SelectedResource>
@@ -27,6 +28,7 @@ export function CustomResourceTable<T>({
   noun,
   scope,
   columns,
+  defaultSort,
   fetch: fetchResource,
   identity,
   extras,
@@ -90,6 +92,7 @@ export function CustomResourceTable<T>({
         fetch={fetch}
         contexts={capability.supportedContexts}
         columns={columns}
+        defaultSort={defaultSort}
         rowResource={rowResource}
         onRowClick={(row, contextName) => setSelectedResource(rowResource(row, contextName))}
       />
