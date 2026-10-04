@@ -72,7 +72,9 @@ export function readSavedThemeId(): ThemeId | null {
   const saved = localStorage.getItem(THEME_STORAGE_KEY)
   if (isThemeId(saved)) return saved
   if (saved === 'dark') return DEFAULT_DARK
-  if (saved === 'light') return DEFAULT_LIGHT
+  // Tokyo Night Day was removed; keep its users on a light theme instead of
+  // falling back to the OS color scheme.
+  if (saved === 'light' || saved === 'tokyo-night-day') return DEFAULT_LIGHT
   return null
 }
 

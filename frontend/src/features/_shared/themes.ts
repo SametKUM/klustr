@@ -12,7 +12,6 @@ export type ThemeId =
   | 'nord'
   | 'nord-light'
   | 'tokyo-night'
-  | 'tokyo-night-day'
   | 'one-dark'
   | 'one-light'
 
@@ -93,26 +92,26 @@ const draculaXterm: ITheme = {
 
 const monokaiXterm: ITheme = {
   background: '#272822',
-  foreground: '#f8f8f2',
-  cursor: '#f8f8f2',
+  foreground: '#cccccc',
+  cursor: '#cccccc',
   cursorAccent: '#272822',
-  selectionBackground: '#49483e',
-  black: '#272822',
-  red: '#f92672',
-  green: '#a6e22e',
-  yellow: '#e6db74',
-  blue: '#66d9ef',
-  magenta: '#ae81ff',
-  cyan: '#a1efe4',
-  white: '#f8f8f2',
-  brightBlack: '#75715e',
+  selectionBackground: '#878b9180',
+  black: '#333333',
+  red: '#c4265e',
+  green: '#86b42b',
+  yellow: '#b3b42b',
+  blue: '#6a7ec8',
+  magenta: '#8c6bc8',
+  cyan: '#56adbc',
+  white: '#e3e3dd',
+  brightBlack: '#666666',
   brightRed: '#f92672',
   brightGreen: '#a6e22e',
-  brightYellow: '#e6db74',
-  brightBlue: '#66d9ef',
+  brightYellow: '#e2e22e',
+  brightBlue: '#819aff',
   brightMagenta: '#ae81ff',
-  brightCyan: '#a1efe4',
-  brightWhite: '#f9f8f5',
+  brightCyan: '#66d9ef',
+  brightWhite: '#f8f8f2',
 }
 
 const nordXterm: ITheme = {
@@ -120,7 +119,7 @@ const nordXterm: ITheme = {
   foreground: '#d8dee9',
   cursor: '#d8dee9',
   cursorAccent: '#2e3440',
-  selectionBackground: '#434c5e',
+  selectionBackground: '#434c5ecc',
   black: '#3b4252',
   red: '#bf616a',
   green: '#a3be8c',
@@ -154,19 +153,19 @@ const tokyoNightXterm: ITheme = {
   cyan: '#7dcfff',
   white: '#a9b1d6',
   brightBlack: '#414868',
-  brightRed: '#f7768e',
-  brightGreen: '#9ece6a',
-  brightYellow: '#e0af68',
-  brightBlue: '#7aa2f7',
-  brightMagenta: '#bb9af7',
-  brightCyan: '#7dcfff',
+  brightRed: '#ff899d',
+  brightGreen: '#9fe044',
+  brightYellow: '#faba4a',
+  brightBlue: '#8db0ff',
+  brightMagenta: '#c7a9ff',
+  brightCyan: '#a4daff',
   brightWhite: '#c0caf5',
 }
 
 const oneDarkXterm: ITheme = {
   background: '#282c34',
   foreground: '#abb2bf',
-  cursor: '#abb2bf',
+  cursor: '#528bff',
   cursorAccent: '#282c34',
   selectionBackground: '#3e4451',
   black: '#282c34',
@@ -177,38 +176,38 @@ const oneDarkXterm: ITheme = {
   magenta: '#c678dd',
   cyan: '#56b6c2',
   white: '#abb2bf',
-  brightBlack: '#5c6370',
-  brightRed: '#e06c75',
-  brightGreen: '#98c379',
-  brightYellow: '#e5c07b',
-  brightBlue: '#61afef',
-  brightMagenta: '#c678dd',
-  brightCyan: '#56b6c2',
-  brightWhite: '#ffffff',
+  brightBlack: '#636d83',
+  brightRed: '#ea858b',
+  brightGreen: '#aad581',
+  brightYellow: '#ffd885',
+  brightBlue: '#85c1ff',
+  brightMagenta: '#d398eb',
+  brightCyan: '#6ed5de',
+  brightWhite: '#fafafa',
 }
 
 const draculaLightXterm: ITheme = {
-  background: '#f8f8f2',
-  foreground: '#282a36',
-  cursor: '#282a36',
-  cursorAccent: '#f8f8f2',
-  selectionBackground: '#e2dff5',
-  black: '#282a36',
-  red: '#d61f6c',
-  green: '#2e9648',
-  yellow: '#b58a00',
-  blue: '#6f42c1',
-  magenta: '#c81f96',
-  cyan: '#0c83a6',
-  white: '#44475a',
-  brightBlack: '#6272a4',
-  brightRed: '#e84393',
-  brightGreen: '#3eb35a',
-  brightYellow: '#caa20a',
-  brightBlue: '#8155da',
-  brightMagenta: '#d83eaa',
-  brightCyan: '#1ba1c3',
-  brightWhite: '#21222c',
+  background: '#fffbeb',
+  foreground: '#1f1f1f',
+  cursor: '#1f1f1f',
+  cursorAccent: '#fffbeb',
+  selectionBackground: '#cfcfde',
+  black: '#fffbeb',
+  red: '#cb3a2a',
+  green: '#14710a',
+  yellow: '#846e15',
+  blue: '#644ac9',
+  magenta: '#a3144d',
+  cyan: '#036a96',
+  white: '#1f1f1f',
+  brightBlack: '#6c664b',
+  brightRed: '#d74c3d',
+  brightGreen: '#198d0c',
+  brightYellow: '#9e841a',
+  brightBlue: '#7862d0',
+  brightMagenta: '#bf185a',
+  brightCyan: '#047fb4',
+  brightWhite: '#2c2b31',
 }
 
 const monokaiLightXterm: ITheme = {
@@ -259,51 +258,27 @@ const nordLightXterm: ITheme = {
   brightWhite: '#2e3440',
 }
 
-const tokyoNightDayXterm: ITheme = {
-  background: '#e1e2e7',
-  foreground: '#3760bf',
-  cursor: '#3760bf',
-  cursorAccent: '#e1e2e7',
-  selectionBackground: '#b7c1e3',
-  black: '#b7c1e3',
-  red: '#f52a65',
-  green: '#587539',
-  yellow: '#8c6c3e',
-  blue: '#2e7de9',
-  magenta: '#9854f1',
-  cyan: '#007197',
-  white: '#6172b0',
-  brightBlack: '#848cb5',
-  brightRed: '#f52a65',
-  brightGreen: '#587539',
-  brightYellow: '#b15c00',
-  brightBlue: '#2e7de9',
-  brightMagenta: '#65359d',
-  brightCyan: '#007197',
-  brightWhite: '#3760bf',
-}
-
 const oneLightXterm: ITheme = {
   background: '#fafafa',
   foreground: '#383a42',
   cursor: '#526fff',
   cursorAccent: '#fafafa',
   selectionBackground: '#e5e5e6',
-  black: '#383a42',
-  red: '#e45649',
-  green: '#50a14f',
-  yellow: '#c18401',
-  blue: '#4078f2',
-  magenta: '#a626a4',
-  cyan: '#0184bc',
-  white: '#fafafa',
-  brightBlack: '#a0a1a7',
-  brightRed: '#e06c75',
-  brightGreen: '#98c379',
-  brightYellow: '#d19a66',
-  brightBlue: '#4078f2',
-  brightMagenta: '#a626a4',
-  brightCyan: '#0184bc',
+  black: '#000000',
+  red: '#de3e35',
+  green: '#3f953a',
+  yellow: '#d2b67c',
+  blue: '#2f5af3',
+  magenta: '#950095',
+  cyan: '#0997b3',
+  white: '#bbbbbb',
+  brightBlack: '#000000',
+  brightRed: '#de3e35',
+  brightGreen: '#3f953a',
+  brightYellow: '#d2b67c',
+  brightBlue: '#2f5af3',
+  brightMagenta: '#a00095',
+  brightCyan: '#0bbcd6',
   brightWhite: '#ffffff',
 }
 
@@ -313,9 +288,21 @@ export type SwatchColors = {
   accent: string
 }
 
+// A family is what the picker lists; the light/dark toggle picks its variant.
+export type ThemeFamily = 'default' | 'dracula' | 'monokai' | 'nord' | 'tokyo-night' | 'one'
+
+export const THEME_FAMILIES: readonly { id: ThemeFamily; label: string }[] = [
+  { id: 'default', label: 'Default' },
+  { id: 'dracula', label: 'Dracula' },
+  { id: 'monokai', label: 'Monokai' },
+  { id: 'nord', label: 'Nord' },
+  { id: 'tokyo-night', label: 'Tokyo Night' },
+  { id: 'one', label: 'One' },
+]
+
 export type ThemeDefinition = {
   id: ThemeId
-  label: string
+  family: ThemeFamily
   mode: ThemeMode
   cssClass: string | null
   xterm: ITheme
@@ -325,7 +312,7 @@ export type ThemeDefinition = {
 export const THEMES: ThemeDefinition[] = [
   {
     id: 'default-light',
-    label: 'Light',
+    family: 'default',
     mode: 'light',
     cssClass: null,
     xterm: lightXterm,
@@ -333,15 +320,15 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'dracula-light',
-    label: 'Dracula',
+    family: 'dracula',
     mode: 'light',
     cssClass: 'theme-dracula-light',
     xterm: draculaLightXterm,
-    swatch: { background: '#f8f8f2', primary: '#6f42c1', accent: '#ddd6f3' },
+    swatch: { background: '#fffbeb', primary: '#644ac9', accent: '#ece9df' },
   },
   {
     id: 'monokai-light',
-    label: 'Monokai',
+    family: 'monokai',
     mode: 'light',
     cssClass: 'theme-monokai-light',
     xterm: monokaiLightXterm,
@@ -349,31 +336,23 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'nord-light',
-    label: 'Nord',
+    family: 'nord',
     mode: 'light',
     cssClass: 'theme-nord-light',
     xterm: nordLightXterm,
-    swatch: { background: '#e5e9f0', primary: '#5e81ac', accent: '#c8d0db' },
-  },
-  {
-    id: 'tokyo-night-day',
-    label: 'Tokyo Night Day',
-    mode: 'light',
-    cssClass: 'theme-tokyo-night-day',
-    xterm: tokyoNightDayXterm,
-    swatch: { background: '#e1e2e7', primary: '#2e7de9', accent: '#b7c1e3' },
+    swatch: { background: '#e5e9f0', primary: '#5e81ac', accent: '#d8dee9' },
   },
   {
     id: 'one-light',
-    label: 'One',
+    family: 'one',
     mode: 'light',
     cssClass: 'theme-one-light',
     xterm: oneLightXterm,
-    swatch: { background: '#fafafa', primary: '#4078f2', accent: '#e5e5e6' },
+    swatch: { background: '#fafafa', primary: '#5871ef', accent: '#dbdbdc' },
   },
   {
     id: 'default-dark',
-    label: 'Dark',
+    family: 'default',
     mode: 'dark',
     cssClass: null,
     xterm: darkXterm,
@@ -381,43 +360,43 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: 'dracula',
-    label: 'Dracula',
+    family: 'dracula',
     mode: 'dark',
     cssClass: 'theme-dracula',
     xterm: draculaXterm,
-    swatch: { background: '#282a36', primary: '#bd93f9', accent: '#44475a' },
+    swatch: { background: '#282a36', primary: '#bd93f9', accent: '#323543' },
   },
   {
     id: 'monokai',
-    label: 'Monokai',
+    family: 'monokai',
     mode: 'dark',
     cssClass: 'theme-monokai',
     xterm: monokaiXterm,
-    swatch: { background: '#272822', primary: '#a6e22e', accent: '#49483e' },
+    swatch: { background: '#272822', primary: '#a6e22e', accent: '#3e3d32' },
   },
   {
     id: 'nord',
-    label: 'Nord',
+    family: 'nord',
     mode: 'dark',
     cssClass: 'theme-nord',
     xterm: nordXterm,
-    swatch: { background: '#2e3440', primary: '#88c0d0', accent: '#434c5e' },
+    swatch: { background: '#2e3440', primary: '#88c0d0', accent: '#3b4252' },
   },
   {
     id: 'tokyo-night',
-    label: 'Tokyo Night',
+    family: 'tokyo-night',
     mode: 'dark',
     cssClass: 'theme-tokyo-night',
     xterm: tokyoNightXterm,
-    swatch: { background: '#1a1b26', primary: '#7aa2f7', accent: '#323862' },
+    swatch: { background: '#1a1b26', primary: '#7aa2f7', accent: '#343a55' },
   },
   {
     id: 'one-dark',
-    label: 'One Dark',
+    family: 'one',
     mode: 'dark',
     cssClass: 'theme-one-dark',
     xterm: oneDarkXterm,
-    swatch: { background: '#282c34', primary: '#61afef', accent: '#3e4451' },
+    swatch: { background: '#282c34', primary: '#4d78cc', accent: '#2c313a' },
   },
 ]
 
@@ -431,4 +410,14 @@ export function getTheme(id: ThemeId): ThemeDefinition {
 
 export function isThemeId(value: unknown): value is ThemeId {
   return typeof value === 'string' && THEMES.some((t) => t.id === value)
+}
+
+export function familyTheme(family: ThemeFamily, mode: ThemeMode): ThemeDefinition | undefined {
+  return THEMES.find((t) => t.family === family && t.mode === mode)
+}
+
+// themeInMode is the toggle: the same family in the other mode, or that
+// mode's default theme for a family without one (Tokyo Night is dark only).
+export function themeInMode(id: ThemeId, mode: ThemeMode): ThemeId {
+  return familyTheme(getTheme(id).family, mode)?.id ?? (mode === 'light' ? DEFAULT_LIGHT : DEFAULT_DARK)
 }
