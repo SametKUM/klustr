@@ -199,7 +199,7 @@ func extractTektonPipeline(obj *unstructured.Unstructured) TektonPipelineInfo {
 		FinallyCount:   tektonSliceLen(spec, "finally"),
 		ParamCount:     tektonSliceLen(spec, "params"),
 		WorkspaceCount: tektonSliceLen(spec, "workspaces"),
-		CreatedAt:      tektonCreatedAt(obj),
+		CreatedAt:      crCreatedAt(obj),
 	}
 }
 
@@ -333,7 +333,7 @@ func extractTektonTask(obj *unstructured.Unstructured) TektonTaskInfo {
 		ParamCount:     tektonSliceLen(spec, "params"),
 		ResultCount:    tektonSliceLen(spec, "results"),
 		WorkspaceCount: tektonSliceLen(spec, "workspaces"),
-		CreatedAt:      tektonCreatedAt(obj),
+		CreatedAt:      crCreatedAt(obj),
 	}
 }
 

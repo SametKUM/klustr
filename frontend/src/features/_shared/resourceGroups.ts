@@ -13,6 +13,7 @@ import {
   CirclePlay,
   CircuitBoard,
   Cog,
+  ClipboardCheck,
   ClipboardList,
   Compass,
   Copy,
@@ -20,6 +21,7 @@ import {
   Cpu,
   Database,
   DoorOpen,
+  FileCheck,
   FileText,
   FolderTree,
   GitBranch,
@@ -53,6 +55,7 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  ShieldOff,
   Ship,
   Sprout,
   SquareTerminal,
@@ -63,7 +66,7 @@ import {
   Webhook,
   Workflow,
 } from 'lucide-react'
-import { Karpenter, SiArgo, SiHelm, SiIstio, SiTekton } from './brandIcons'
+import { Karpenter, Kyverno, SiArgo, SiHelm, SiIstio, SiTekton } from './brandIcons'
 
 import type { ResourceKind, ResourceView } from '@/store/ui'
 
@@ -328,6 +331,22 @@ export const TEKTON_GROUP_NAV: ResourceGroup = {
   ],
 }
 
+// Kyverno's policies and the wgpolicyk8s.io policy reports, which Kyverno
+// writes. Each item shows only where an active context serves its CRD.
+export const KYVERNO_GROUP_NAV: ResourceGroup = {
+  label: 'Kyverno',
+  icon: Kyverno,
+  items: [
+    { label: 'ClusterPolicies', view: 'kyvernoclusterpolicies', icon: ShieldCheck },
+    { label: 'Policies', view: 'kyvernopolicies', icon: Shield },
+    { label: 'ValidatingPolicies', view: 'kyvernovalidatingpolicies', icon: FileCheck },
+    { label: 'Namespaced ValidatingPolicies', view: 'kyvernonamespacedvalidatingpolicies', icon: FileCheck },
+    { label: 'PolicyExceptions', view: 'kyvernopolicyexceptions', icon: ShieldOff },
+    { label: 'PolicyReports', view: 'policyreports', icon: ClipboardCheck },
+    { label: 'ClusterPolicyReports', view: 'clusterpolicyreports', icon: ClipboardCheck },
+  ],
+}
+
 // Every group any sidebar can render, conditional or not. Persisted-entry
 // pruning and the hidden-items restore lookup must both run over this complete
 // list — a group missing from one of them makes its hidden items unrestorable.
@@ -341,6 +360,7 @@ export const ALL_SIDEBAR_GROUPS: readonly ResourceGroup[] = [
   TEKTON_GROUP_NAV,
   ISTIO_GROUP,
   CERT_MANAGER_GROUP_NAV,
+  KYVERNO_GROUP_NAV,
 ]
 
 // Every view id any sidebar group can surface. Used to prune persisted

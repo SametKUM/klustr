@@ -1293,6 +1293,74 @@ func (a *App) RerunTektonPipelineRun(contextName, namespace, name string) (strin
 }
 
 // ---------------------------------------------------------------------------
+// Kyverno and policy report bindings.
+// ---------------------------------------------------------------------------
+
+func (a *App) ListKyvernoClusterPolicies(contextName string) []kube.KyvernoPolicyInfo {
+	return a.clients.ListKyvernoClusterPolicies(contextName)
+}
+
+func (a *App) GetKyvernoClusterPolicy(contextName, name string) (*kube.KyvernoPolicyDetail, error) {
+	return a.clients.GetKyvernoClusterPolicy(a.ctx, contextName, name)
+}
+
+func (a *App) ListKyvernoPolicies(contextName, namespace string) []kube.KyvernoPolicyInfo {
+	return a.clients.ListKyvernoPolicies(contextName, namespace)
+}
+
+func (a *App) GetKyvernoPolicy(contextName, namespace, name string) (*kube.KyvernoPolicyDetail, error) {
+	return a.clients.GetKyvernoPolicy(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) ListKyvernoValidatingPolicies(contextName string) []kube.KyvernoValidatingPolicyInfo {
+	return a.clients.ListKyvernoValidatingPolicies(contextName)
+}
+
+func (a *App) GetKyvernoValidatingPolicy(contextName, name string) (*kube.KyvernoValidatingPolicyDetail, error) {
+	return a.clients.GetKyvernoValidatingPolicy(a.ctx, contextName, name)
+}
+
+func (a *App) ListKyvernoNamespacedValidatingPolicies(contextName, namespace string) []kube.KyvernoValidatingPolicyInfo {
+	return a.clients.ListKyvernoNamespacedValidatingPolicies(contextName, namespace)
+}
+
+func (a *App) GetKyvernoNamespacedValidatingPolicy(contextName, namespace, name string) (*kube.KyvernoValidatingPolicyDetail, error) {
+	return a.clients.GetKyvernoNamespacedValidatingPolicy(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) ListKyvernoPolicyExceptions(contextName, namespace string) []kube.KyvernoPolicyExceptionInfo {
+	return a.clients.ListKyvernoPolicyExceptions(contextName, namespace)
+}
+
+func (a *App) GetKyvernoPolicyException(contextName, namespace, name string) (*kube.KyvernoPolicyExceptionDetail, error) {
+	return a.clients.GetKyvernoPolicyException(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) ListPolicyReports(contextName, namespace string) []kube.PolicyReportInfo {
+	return a.clients.ListPolicyReports(contextName, namespace)
+}
+
+func (a *App) GetPolicyReport(contextName, namespace, name string) (*kube.PolicyReportDetail, error) {
+	return a.clients.GetPolicyReport(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) ListClusterPolicyReports(contextName string) []kube.PolicyReportInfo {
+	return a.clients.ListClusterPolicyReports(contextName)
+}
+
+func (a *App) GetClusterPolicyReport(contextName, name string) (*kube.PolicyReportDetail, error) {
+	return a.clients.GetClusterPolicyReport(a.ctx, contextName, name)
+}
+
+func (a *App) PolicyReportForResource(contextName, kind, namespace, name string) (*kube.PolicyReportDetail, error) {
+	return a.clients.PolicyReportForResource(a.ctx, contextName, kind, namespace, name)
+}
+
+func (a *App) PolicyViolationsFor(contextName, policyKey string) []kube.PolicyViolation {
+	return a.clients.PolicyViolationsFor(contextName, policyKey)
+}
+
+// ---------------------------------------------------------------------------
 // Istio bindings.
 // ---------------------------------------------------------------------------
 

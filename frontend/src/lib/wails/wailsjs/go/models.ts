@@ -5398,6 +5398,391 @@ export namespace kube {
 		    return a;
 		}
 	}
+	export class KyvernoAutogenRule {
+	    name: string;
+	    kinds: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoAutogenRule(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.kinds = source["kinds"];
+	    }
+	}
+	export class KyvernoCELExpression {
+	    name: string;
+	    expression: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoCELExpression(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.expression = source["expression"];
+	    }
+	}
+	export class KyvernoCELValidation {
+	    expression: string;
+	    message: string;
+	    messageExpression: string;
+	    reason: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoCELValidation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.expression = source["expression"];
+	        this.message = source["message"];
+	        this.messageExpression = source["messageExpression"];
+	        this.reason = source["reason"];
+	    }
+	}
+	export class KyvernoExceptionTarget {
+	    policyName: string;
+	    ruleNames: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoExceptionTarget(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.policyName = source["policyName"];
+	        this.ruleNames = source["ruleNames"];
+	    }
+	}
+	export class KyvernoPolicyCondition {
+	    type: string;
+	    status: string;
+	    reason: string;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoPolicyCondition(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.status = source["status"];
+	        this.reason = source["reason"];
+	        this.message = source["message"];
+	    }
+	}
+	export class KyvernoRule {
+	    name: string;
+	    type: string;
+	    subtype: string;
+	    failureAction: string;
+	    message: string;
+	    matchMode: string;
+	    match: string[];
+	    excludeMode: string;
+	    exclude: string[];
+	    preconditions: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoRule(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.subtype = source["subtype"];
+	        this.failureAction = source["failureAction"];
+	        this.message = source["message"];
+	        this.matchMode = source["matchMode"];
+	        this.match = source["match"];
+	        this.excludeMode = source["excludeMode"];
+	        this.exclude = source["exclude"];
+	        this.preconditions = source["preconditions"];
+	    }
+	}
+	export class KyvernoPolicyDetail {
+	    name: string;
+	    namespace: string;
+	    title: string;
+	    category: string;
+	    severity: string;
+	    action: string;
+	    background: boolean;
+	    admission: boolean;
+	    ready: string;
+	    message: string;
+	    validate: number;
+	    mutate: number;
+	    generate: number;
+	    verifyImages: number;
+	    createdAt: string;
+	    description: string;
+	    reportKey: string;
+	    rules: KyvernoRule[];
+	    autogenRules: KyvernoAutogenRule[];
+	    vapGenerated: boolean;
+	    vapMessage: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoPolicyDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.title = source["title"];
+	        this.category = source["category"];
+	        this.severity = source["severity"];
+	        this.action = source["action"];
+	        this.background = source["background"];
+	        this.admission = source["admission"];
+	        this.ready = source["ready"];
+	        this.message = source["message"];
+	        this.validate = source["validate"];
+	        this.mutate = source["mutate"];
+	        this.generate = source["generate"];
+	        this.verifyImages = source["verifyImages"];
+	        this.createdAt = source["createdAt"];
+	        this.description = source["description"];
+	        this.reportKey = source["reportKey"];
+	        this.rules = this.convertValues(source["rules"], KyvernoRule);
+	        this.autogenRules = this.convertValues(source["autogenRules"], KyvernoAutogenRule);
+	        this.vapGenerated = source["vapGenerated"];
+	        this.vapMessage = source["vapMessage"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KyvernoPolicyExceptionDetail {
+	    name: string;
+	    namespace: string;
+	    policies: string[];
+	    match: string[];
+	    createdAt: string;
+	    targets: KyvernoExceptionTarget[];
+	    matchMode: string;
+	    excludeMode: string;
+	    exclude: string[];
+	    background: boolean;
+	    conditions: boolean;
+	    podSecurity: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoPolicyExceptionDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.policies = source["policies"];
+	        this.match = source["match"];
+	        this.createdAt = source["createdAt"];
+	        this.targets = this.convertValues(source["targets"], KyvernoExceptionTarget);
+	        this.matchMode = source["matchMode"];
+	        this.excludeMode = source["excludeMode"];
+	        this.exclude = source["exclude"];
+	        this.background = source["background"];
+	        this.conditions = source["conditions"];
+	        this.podSecurity = source["podSecurity"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KyvernoPolicyExceptionInfo {
+	    name: string;
+	    namespace: string;
+	    policies: string[];
+	    match: string[];
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoPolicyExceptionInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.policies = source["policies"];
+	        this.match = source["match"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class KyvernoPolicyInfo {
+	    name: string;
+	    namespace: string;
+	    title: string;
+	    category: string;
+	    severity: string;
+	    action: string;
+	    background: boolean;
+	    admission: boolean;
+	    ready: string;
+	    message: string;
+	    validate: number;
+	    mutate: number;
+	    generate: number;
+	    verifyImages: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoPolicyInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.title = source["title"];
+	        this.category = source["category"];
+	        this.severity = source["severity"];
+	        this.action = source["action"];
+	        this.background = source["background"];
+	        this.admission = source["admission"];
+	        this.ready = source["ready"];
+	        this.message = source["message"];
+	        this.validate = source["validate"];
+	        this.mutate = source["mutate"];
+	        this.generate = source["generate"];
+	        this.verifyImages = source["verifyImages"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	export class KyvernoValidatingPolicyDetail {
+	    name: string;
+	    namespace: string;
+	    actions: string[];
+	    resources: string[];
+	    validations: number;
+	    admission: boolean;
+	    background: boolean;
+	    ready: string;
+	    createdAt: string;
+	    reportKey: string;
+	    failurePolicy: string;
+	    mode: string;
+	    namespaceSelector: string;
+	    objectSelector: string;
+	    matchConditions: KyvernoCELExpression[];
+	    variables: KyvernoCELExpression[];
+	    validationRules: KyvernoCELValidation[];
+	    auditAnnotations: KyvernoCELExpression[];
+	    conditions: KyvernoPolicyCondition[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoValidatingPolicyDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.actions = source["actions"];
+	        this.resources = source["resources"];
+	        this.validations = source["validations"];
+	        this.admission = source["admission"];
+	        this.background = source["background"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	        this.reportKey = source["reportKey"];
+	        this.failurePolicy = source["failurePolicy"];
+	        this.mode = source["mode"];
+	        this.namespaceSelector = source["namespaceSelector"];
+	        this.objectSelector = source["objectSelector"];
+	        this.matchConditions = this.convertValues(source["matchConditions"], KyvernoCELExpression);
+	        this.variables = this.convertValues(source["variables"], KyvernoCELExpression);
+	        this.validationRules = this.convertValues(source["validationRules"], KyvernoCELValidation);
+	        this.auditAnnotations = this.convertValues(source["auditAnnotations"], KyvernoCELExpression);
+	        this.conditions = this.convertValues(source["conditions"], KyvernoPolicyCondition);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KyvernoValidatingPolicyInfo {
+	    name: string;
+	    namespace: string;
+	    actions: string[];
+	    resources: string[];
+	    validations: number;
+	    admission: boolean;
+	    background: boolean;
+	    ready: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoValidatingPolicyInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.actions = source["actions"];
+	        this.resources = source["resources"];
+	        this.validations = source["validations"];
+	        this.admission = source["admission"];
+	        this.background = source["background"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class L4RouteRuleDetail {
 	    name: string;
 	    backends: BackendRefDetail[];
@@ -6374,7 +6759,193 @@ export namespace kube {
 	    }
 	}
 	
+	export class PolicyReportResource {
+	    apiVersion: string;
+	    kind: string;
+	    namespace: string;
+	    name: string;
 	
+	    static createFrom(source: any = {}) {
+	        return new PolicyReportResource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.apiVersion = source["apiVersion"];
+	        this.kind = source["kind"];
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	    }
+	}
+	export class PolicyReportResult {
+	    policy: string;
+	    rule: string;
+	    result: string;
+	    message: string;
+	    severity: string;
+	    category: string;
+	    source: string;
+	    timestamp: string;
+	    resources: PolicyReportResource[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PolicyReportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.policy = source["policy"];
+	        this.rule = source["rule"];
+	        this.result = source["result"];
+	        this.message = source["message"];
+	        this.severity = source["severity"];
+	        this.category = source["category"];
+	        this.source = source["source"];
+	        this.timestamp = source["timestamp"];
+	        this.resources = this.convertValues(source["resources"], PolicyReportResource);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class PolicyReportDetail {
+	    name: string;
+	    namespace: string;
+	    scopeApiVersion: string;
+	    scopeKind: string;
+	    scopeNamespace: string;
+	    scopeName: string;
+	    pass: number;
+	    fail: number;
+	    warn: number;
+	    error: number;
+	    skip: number;
+	    source: string;
+	    createdAt: string;
+	    results: PolicyReportResult[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PolicyReportDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.scopeApiVersion = source["scopeApiVersion"];
+	        this.scopeKind = source["scopeKind"];
+	        this.scopeNamespace = source["scopeNamespace"];
+	        this.scopeName = source["scopeName"];
+	        this.pass = source["pass"];
+	        this.fail = source["fail"];
+	        this.warn = source["warn"];
+	        this.error = source["error"];
+	        this.skip = source["skip"];
+	        this.source = source["source"];
+	        this.createdAt = source["createdAt"];
+	        this.results = this.convertValues(source["results"], PolicyReportResult);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class PolicyReportInfo {
+	    name: string;
+	    namespace: string;
+	    scopeApiVersion: string;
+	    scopeKind: string;
+	    scopeNamespace: string;
+	    scopeName: string;
+	    pass: number;
+	    fail: number;
+	    warn: number;
+	    error: number;
+	    skip: number;
+	    source: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PolicyReportInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.scopeApiVersion = source["scopeApiVersion"];
+	        this.scopeKind = source["scopeKind"];
+	        this.scopeNamespace = source["scopeNamespace"];
+	        this.scopeName = source["scopeName"];
+	        this.pass = source["pass"];
+	        this.fail = source["fail"];
+	        this.warn = source["warn"];
+	        this.error = source["error"];
+	        this.skip = source["skip"];
+	        this.source = source["source"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	
+	
+	export class PolicyViolation {
+	    apiVersion: string;
+	    kind: string;
+	    namespace: string;
+	    name: string;
+	    rule: string;
+	    result: string;
+	    message: string;
+	    severity: string;
+	    timestamp: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PolicyViolation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.apiVersion = source["apiVersion"];
+	        this.kind = source["kind"];
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	        this.rule = source["rule"];
+	        this.result = source["result"];
+	        this.message = source["message"];
+	        this.severity = source["severity"];
+	        this.timestamp = source["timestamp"];
+	    }
+	}
 	export class PortForwardInfo {
 	    id: string;
 	    context: string;

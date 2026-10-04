@@ -73,6 +73,8 @@ export function GetCertificateSigningRequest(arg1:string,arg2:string):Promise<ku
 
 export function GetClusterOverview(arg1:string):Promise<kube.ClusterOverview>;
 
+export function GetClusterPolicyReport(arg1:string,arg2:string):Promise<kube.PolicyReportDetail>;
+
 export function GetClusterRole(arg1:string,arg2:string):Promise<kube.ClusterRoleDetail>;
 
 export function GetClusterRoleBinding(arg1:string,arg2:string):Promise<kube.ClusterRoleBindingDetail>;
@@ -139,6 +141,16 @@ export function GetIstioVirtualService(arg1:string,arg2:string,arg3:string):Prom
 
 export function GetJob(arg1:string,arg2:string,arg3:string):Promise<kube.JobDetail>;
 
+export function GetKyvernoClusterPolicy(arg1:string,arg2:string):Promise<kube.KyvernoPolicyDetail>;
+
+export function GetKyvernoNamespacedValidatingPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.KyvernoValidatingPolicyDetail>;
+
+export function GetKyvernoPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.KyvernoPolicyDetail>;
+
+export function GetKyvernoPolicyException(arg1:string,arg2:string,arg3:string):Promise<kube.KyvernoPolicyExceptionDetail>;
+
+export function GetKyvernoValidatingPolicy(arg1:string,arg2:string):Promise<kube.KyvernoValidatingPolicyDetail>;
+
 export function GetLease(arg1:string,arg2:string,arg3:string):Promise<kube.LeaseDetail>;
 
 export function GetLimitRange(arg1:string,arg2:string,arg3:string):Promise<kube.LimitRangeDetail>;
@@ -164,6 +176,8 @@ export function GetPersistentVolumeClaim(arg1:string,arg2:string,arg3:string):Pr
 export function GetPod(arg1:string,arg2:string,arg3:string):Promise<kube.PodDetail>;
 
 export function GetPodDisruptionBudget(arg1:string,arg2:string,arg3:string):Promise<kube.PodDisruptionBudgetDetail>;
+
+export function GetPolicyReport(arg1:string,arg2:string,arg3:string):Promise<kube.PolicyReportDetail>;
 
 export function GetPriorityClass(arg1:string,arg2:string):Promise<kube.PriorityClassDetail>;
 
@@ -273,6 +287,8 @@ export function ListCertManagerOrders(arg1:string,arg2:string):Promise<Array<kub
 
 export function ListCertificateSigningRequests(arg1:string):Promise<Array<kube.CertificateSigningRequestInfo>>;
 
+export function ListClusterPolicyReports(arg1:string):Promise<Array<kube.PolicyReportInfo>>;
+
 export function ListClusterRoleBindings(arg1:string):Promise<Array<kube.ClusterRoleBindingInfo>>;
 
 export function ListClusterRoles(arg1:string):Promise<Array<kube.ClusterRoleInfo>>;
@@ -363,6 +379,16 @@ export function ListKarpenterNodeClaims(arg1:string):Promise<Array<kube.Karpente
 
 export function ListKarpenterNodePools(arg1:string):Promise<Array<kube.KarpenterNodePoolInfo>>;
 
+export function ListKyvernoClusterPolicies(arg1:string):Promise<Array<kube.KyvernoPolicyInfo>>;
+
+export function ListKyvernoNamespacedValidatingPolicies(arg1:string,arg2:string):Promise<Array<kube.KyvernoValidatingPolicyInfo>>;
+
+export function ListKyvernoPolicies(arg1:string,arg2:string):Promise<Array<kube.KyvernoPolicyInfo>>;
+
+export function ListKyvernoPolicyExceptions(arg1:string,arg2:string):Promise<Array<kube.KyvernoPolicyExceptionInfo>>;
+
+export function ListKyvernoValidatingPolicies(arg1:string):Promise<Array<kube.KyvernoValidatingPolicyInfo>>;
+
 export function ListLeases(arg1:string,arg2:string):Promise<Array<kube.LeaseInfo>>;
 
 export function ListLimitRanges(arg1:string,arg2:string):Promise<Array<kube.LimitRangeInfo>>;
@@ -396,6 +422,8 @@ export function ListPodDisruptionBudgets(arg1:string,arg2:string):Promise<Array<
 export function ListPodMetrics(arg1:string,arg2:string):Promise<Array<kube.PodMetrics>>;
 
 export function ListPods(arg1:string,arg2:string):Promise<Array<kube.PodInfo>>;
+
+export function ListPolicyReports(arg1:string,arg2:string):Promise<Array<kube.PolicyReportInfo>>;
 
 export function ListPortForwards():Promise<Array<kube.PortForwardInfo>>;
 
@@ -476,6 +504,10 @@ export function PingContext(arg1:string):Promise<kube.ServerVersion>;
 export function PodLogTargets(arg1:string,arg2:string,arg3:Record<string, string>):Promise<Array<kube.PodLogTarget>>;
 
 export function PodsForOwner(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Array<kube.PodInfo>>;
+
+export function PolicyReportForResource(arg1:string,arg2:string,arg3:string,arg4:string):Promise<kube.PolicyReportDetail>;
+
+export function PolicyViolationsFor(arg1:string,arg2:string):Promise<Array<kube.PolicyViolation>>;
 
 export function RecommendInsecureKubeletTLS(arg1:string):Promise<boolean>;
 

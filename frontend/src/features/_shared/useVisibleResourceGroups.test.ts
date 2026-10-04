@@ -124,4 +124,27 @@ describe('buildVisibleResourceGroups', () => {
     const without = buildVisibleResourceGroups({ ...input, crdsByContext: { ci: [] } })
     expect(without.find((group) => group.label === 'Tekton')).toBeUndefined()
   })
+
+  it('shows Kyverno policy and report items per served CRD', () => {
+    const groups = buildVisibleResourceGroups({
+      activeContexts: ['dev'],
+      crdsByContext: {
+        dev: [
+          { group: 'kyverno.io', resource: 'clusterpolicies' } as CRDInfo,
+          { group: 'kyverno.io', resource: 'policyexceptions' } as CRDInfo,
+          { group: 'wgpolicyk8s.io', resource: 'policyreports' } as CRDInfo,
+          // A "policies" resource in another group must not count.
+          { group: 'example.com', resource: 'policies' } as CRDInfo,
+        ],
+      },
+      accessByContext: {},
+      hiddenItems: [],
+    })
+    const kyverno = groups.find((group) => group.label === 'Kyverno')
+    expect(kyverno?.items.map((item) => item.view)).toEqual([
+      'kyvernoclusterpolicies',
+      'kyvernopolicyexceptions',
+      'policyreports',
+    ])
+  })
 })

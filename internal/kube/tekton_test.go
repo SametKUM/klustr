@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	k8stesting "k8s.io/client-go/testing"
-	"k8s.io/client-go/tools/cache"
 )
 
 var (
@@ -356,34 +355,10 @@ func TestErrCRSyncPendingIsWrapped(t *testing.T) {
 // Tekton run CRDs and talks to a fake dynamic client holding objs.
 func tektonTestManager(t *testing.T, objs ...runtime.Object) (*ClientManager, *dynamicfake.FakeDynamicClient) {
 	t.Helper()
-	crdInformer := cache.NewSharedIndexInformer(&cache.ListWatch{}, &unstructured.Unstructured{}, 0, cache.Indexers{})
-	for resource, kind := range map[string]string{tektonPipelineRunsResource: "PipelineRun", tektonTaskRunsResource: "TaskRun"} {
-		crd := &unstructured.Unstructured{Object: map[string]any{
-			"apiVersion": "apiextensions.k8s.io/v1",
-			"kind":       "CustomResourceDefinition",
-			"metadata":   map[string]any{"name": resource + "." + tektonGroup},
-			"spec": map[string]any{
-				"group": tektonGroup,
-				"scope": "Namespaced",
-				"names": map[string]any{"kind": kind, "plural": resource},
-				"versions": []any{
-					map[string]any{"name": "v1beta1", "served": true, "storage": false},
-					map[string]any{"name": "v1", "served": true, "storage": true},
-				},
-			},
-		}}
-		if err := crdInformer.GetStore().Add(crd); err != nil {
-			t.Fatal(err)
-		}
-	}
-	dyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
-		testPipelineRunGVR: "PipelineRunList",
-		testTaskRunGVR:     "TaskRunList",
+	return fakeCRDManager(t, []fakeCRD{
+		{gvr: testPipelineRunGVR, kind: "PipelineRun", namespaced: true},
+		{gvr: testTaskRunGVR, kind: "TaskRun", namespaced: true},
 	}, objs...)
-	m := &ClientManager{watchers: map[string]*contextWatcher{
-		"ctx": {dyn: dyn, crd: &crdWatcher{dyn: dyn, informer: crdInformer}},
-	}}
-	return m, dyn
 }
 
 func TestCancelTektonRunsPatchSpecStatus(t *testing.T) {

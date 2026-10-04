@@ -9,6 +9,7 @@ import {
   HELM_GROUP,
   ISTIO_GROUP,
   KARPENTER_GROUP,
+  KYVERNO_GROUP_NAV,
   RESOURCE_GROUPS,
   TEKTON_GROUP_NAV,
   type ResourceGroup,
@@ -107,6 +108,16 @@ const CRD_REQUIREMENTS: Partial<Record<ResourceView, { group: string; resource: 
   tektontaskruns: { group: 'tekton.dev', resource: 'taskruns' },
   tektonpipelines: { group: 'tekton.dev', resource: 'pipelines' },
   tektontasks: { group: 'tekton.dev', resource: 'tasks' },
+  kyvernoclusterpolicies: { group: 'kyverno.io', resource: 'clusterpolicies' },
+  kyvernopolicies: { group: 'kyverno.io', resource: 'policies' },
+  kyvernovalidatingpolicies: { group: 'policies.kyverno.io', resource: 'validatingpolicies' },
+  kyvernonamespacedvalidatingpolicies: {
+    group: 'policies.kyverno.io',
+    resource: 'namespacedvalidatingpolicies',
+  },
+  kyvernopolicyexceptions: { group: 'kyverno.io', resource: 'policyexceptions' },
+  policyreports: { group: 'wgpolicyk8s.io', resource: 'policyreports' },
+  clusterpolicyreports: { group: 'wgpolicyk8s.io', resource: 'clusterpolicyreports' },
 }
 
 export function buildVisibleResourceGroups({
@@ -120,6 +131,7 @@ export function buildVisibleResourceGroups({
     GATEWAY_GROUP,
     ISTIO_GROUP,
     CERT_MANAGER_GROUP_NAV,
+    KYVERNO_GROUP_NAV,
     ARGO_GROUP,
     KARPENTER_GROUP,
     FLUX_GROUP,

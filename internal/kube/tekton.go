@@ -267,10 +267,6 @@ func tektonRunFinished(state string) bool {
 	return state == tektonStateSucceeded || state == tektonStateFailed || state == tektonStateCancelled
 }
 
-func tektonCreatedAt(obj *unstructured.Unstructured) string {
-	return obj.GetCreationTimestamp().UTC().Format(time.RFC3339)
-}
-
 // sortTektonRunsNewestFirst orders run rows by creation time, newest first,
 // breaking ties by name so the order is stable.
 func sortTektonRunsNewestFirst[T any](rows []T, key func(T) (createdAt, name string)) {

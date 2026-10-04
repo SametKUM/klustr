@@ -142,6 +142,10 @@ export function GetClusterOverview(arg1) {
   return window['go']['app']['App']['GetClusterOverview'](arg1);
 }
 
+export function GetClusterPolicyReport(arg1, arg2) {
+  return window['go']['app']['App']['GetClusterPolicyReport'](arg1, arg2);
+}
+
 export function GetClusterRole(arg1, arg2) {
   return window['go']['app']['App']['GetClusterRole'](arg1, arg2);
 }
@@ -274,6 +278,26 @@ export function GetJob(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetJob'](arg1, arg2, arg3);
 }
 
+export function GetKyvernoClusterPolicy(arg1, arg2) {
+  return window['go']['app']['App']['GetKyvernoClusterPolicy'](arg1, arg2);
+}
+
+export function GetKyvernoNamespacedValidatingPolicy(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKyvernoNamespacedValidatingPolicy'](arg1, arg2, arg3);
+}
+
+export function GetKyvernoPolicy(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKyvernoPolicy'](arg1, arg2, arg3);
+}
+
+export function GetKyvernoPolicyException(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKyvernoPolicyException'](arg1, arg2, arg3);
+}
+
+export function GetKyvernoValidatingPolicy(arg1, arg2) {
+  return window['go']['app']['App']['GetKyvernoValidatingPolicy'](arg1, arg2);
+}
+
 export function GetLease(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetLease'](arg1, arg2, arg3);
 }
@@ -324,6 +348,10 @@ export function GetPod(arg1, arg2, arg3) {
 
 export function GetPodDisruptionBudget(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetPodDisruptionBudget'](arg1, arg2, arg3);
+}
+
+export function GetPolicyReport(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetPolicyReport'](arg1, arg2, arg3);
 }
 
 export function GetPriorityClass(arg1, arg2) {
@@ -542,6 +570,10 @@ export function ListCertificateSigningRequests(arg1) {
   return window['go']['app']['App']['ListCertificateSigningRequests'](arg1);
 }
 
+export function ListClusterPolicyReports(arg1) {
+  return window['go']['app']['App']['ListClusterPolicyReports'](arg1);
+}
+
 export function ListClusterRoleBindings(arg1) {
   return window['go']['app']['App']['ListClusterRoleBindings'](arg1);
 }
@@ -722,6 +754,26 @@ export function ListKarpenterNodePools(arg1) {
   return window['go']['app']['App']['ListKarpenterNodePools'](arg1);
 }
 
+export function ListKyvernoClusterPolicies(arg1) {
+  return window['go']['app']['App']['ListKyvernoClusterPolicies'](arg1);
+}
+
+export function ListKyvernoNamespacedValidatingPolicies(arg1, arg2) {
+  return window['go']['app']['App']['ListKyvernoNamespacedValidatingPolicies'](arg1, arg2);
+}
+
+export function ListKyvernoPolicies(arg1, arg2) {
+  return window['go']['app']['App']['ListKyvernoPolicies'](arg1, arg2);
+}
+
+export function ListKyvernoPolicyExceptions(arg1, arg2) {
+  return window['go']['app']['App']['ListKyvernoPolicyExceptions'](arg1, arg2);
+}
+
+export function ListKyvernoValidatingPolicies(arg1) {
+  return window['go']['app']['App']['ListKyvernoValidatingPolicies'](arg1);
+}
+
 export function ListLeases(arg1, arg2) {
   return window['go']['app']['App']['ListLeases'](arg1, arg2);
 }
@@ -788,6 +840,10 @@ export function ListPodMetrics(arg1, arg2) {
 
 export function ListPods(arg1, arg2) {
   return window['go']['app']['App']['ListPods'](arg1, arg2);
+}
+
+export function ListPolicyReports(arg1, arg2) {
+  return window['go']['app']['App']['ListPolicyReports'](arg1, arg2);
 }
 
 export function ListPortForwards() {
@@ -948,6 +1004,14 @@ export function PodLogTargets(arg1, arg2, arg3) {
 
 export function PodsForOwner(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['PodsForOwner'](arg1, arg2, arg3, arg4);
+}
+
+export function PolicyReportForResource(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['PolicyReportForResource'](arg1, arg2, arg3, arg4);
+}
+
+export function PolicyViolationsFor(arg1, arg2) {
+  return window['go']['app']['App']['PolicyViolationsFor'](arg1, arg2);
 }
 
 export function RecommendInsecureKubeletTLS(arg1) {
