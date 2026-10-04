@@ -106,6 +106,13 @@ import { FluxBucketDetailBody } from '@/features/flux/FluxBucketDetailBody'
 import { FluxProviderDetailBody } from '@/features/flux/FluxProviderDetailBody'
 import { FluxAlertDetailBody } from '@/features/flux/FluxAlertDetailBody'
 import { FluxReceiverDetailBody } from '@/features/flux/FluxReceiverDetailBody'
+import { TektonPipelineRunDetailBody } from '@/features/tekton/TektonPipelineRunDetailBody'
+import { TektonTaskRunDetailBody } from '@/features/tekton/TektonTaskRunDetailBody'
+import { TektonPipelineDetailBody } from '@/features/tekton/TektonPipelineDetailBody'
+import { TektonTaskDetailBody } from '@/features/tekton/TektonTaskDetailBody'
+import { TektonPipelineRunsTab } from '@/features/tekton/TektonPipelineRunsTab'
+import { TektonRunHeaderActions } from '@/features/tekton/TektonRunHeaderActions'
+import { tektonKindOf } from '@/features/tekton/tektonKinds'
 import { IstioVirtualServiceDetailBody } from '@/features/istio/IstioVirtualServiceDetailBody'
 import { IstioDestinationRuleDetailBody } from '@/features/istio/IstioDestinationRuleDetailBody'
 import { IstioPeerAuthenticationDetailBody } from '@/features/istio/IstioPeerAuthenticationDetailBody'
@@ -149,6 +156,9 @@ const MultiPodLogsTab = lazy(() =>
 )
 const NodeShellTab = lazy(() =>
   import('@/features/nodes/NodeShellTab').then((m) => ({ default: m.NodeShellTab })),
+)
+const TektonTaskRunLogsTab = lazy(() =>
+  import('@/features/tekton/TektonTaskRunLogsTab').then((m) => ({ default: m.TektonTaskRunLogsTab })),
 )
 
 function TerminalFallback() {
@@ -276,6 +286,15 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
                   name={resource.name}
                 />
               )}
+              {!readOnly &&
+                (tektonKindOf(resource) === 'PipelineRun' || tektonKindOf(resource) === 'TaskRun') && (
+                  <TektonRunHeaderActions
+                    contextName={contextName}
+                    kind={resource.kind as 'PipelineRun' | 'TaskRun'}
+                    namespace={resource.namespace}
+                    name={resource.name}
+                  />
+                )}
               {!readOnly &&
                 (isArgoApplication(resource) ? (
                   <DeleteArgoApplicationButton contextName={contextName} resource={resource} />
@@ -450,6 +469,17 @@ function customResourceOverview(contextName: string | null, resource: SelectedRe
     name: resource.name,
   }
 
+  switch (tektonKindOf(resource)) {
+    case 'PipelineRun':
+      return <TektonPipelineRunDetailBody {...detailProps} />
+    case 'TaskRun':
+      return <TektonTaskRunDetailBody {...detailProps} />
+    case 'Pipeline':
+      return <TektonPipelineDetailBody {...detailProps} />
+    case 'Task':
+      return <TektonTaskDetailBody {...detailProps} />
+  }
+
   switch (resource.kind) {
     case 'AppProject':
       return resource.gvr?.group === 'argoproj.io' ? (
@@ -546,9 +576,13 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
     isCertManagerRequest ||
     isCertManagerOrder ||
     isCertManagerChallenge
+  const tektonKind = tektonKindOf(resource)
+  const isTektonRun = tektonKind === 'PipelineRun' || tektonKind === 'TaskRun'
+  const hasTektonLogs = tektonKind === 'TaskRun'
+  const hasTektonRuns = tektonKind === 'Pipeline'
   const overview = customResourceOverview(contextName, resource)
   const hasOverview = overview !== null
-  const hasEvents = isFlux || isCertManager
+  const hasEvents = isFlux || isCertManager || isTektonRun
   const initialTab = isArgoApp
     ? 'resources'
     : hasKarpenterNodes
@@ -564,6 +598,8 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
   if (isCertManagerCert) allowedTabs.push('requests')
   if (isCertManagerRequest) allowedTabs.push('orders')
   if (isCertManagerOrder) allowedTabs.push('challenges')
+  if (hasTektonLogs) allowedTabs.push('logs')
+  if (hasTektonRuns) allowedTabs.push('runs')
   if (hasEvents) allowedTabs.push('events')
   allowedTabs.push('yaml')
   const resolveTab = (req: string | null) => (req && allowedTabs.includes(req) ? req : initialTab)
@@ -587,6 +623,8 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
         {isCertManagerCert && <TabsTrigger value="requests">Requests</TabsTrigger>}
         {isCertManagerRequest && <TabsTrigger value="orders">Orders</TabsTrigger>}
         {isCertManagerOrder && <TabsTrigger value="challenges">Challenges</TabsTrigger>}
+        {hasTektonLogs && <TabsTrigger value="logs">Logs</TabsTrigger>}
+        {hasTektonRuns && <TabsTrigger value="runs">Runs</TabsTrigger>}
         {hasEvents && <TabsTrigger value="events">Events</TabsTrigger>}
         <TabsTrigger value="yaml">YAML</TabsTrigger>
       </TabsList>
@@ -694,6 +732,26 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
                 ? 'This NodeClaim has not registered a node yet.'
                 : 'No nodes are currently provisioned by this NodePool.'
             }
+          />
+        </TabsContent>
+      )}
+      {hasTektonLogs && (
+        <TabsContent value="logs" className="min-h-0 flex-1 p-0">
+          <Suspense fallback={<TerminalFallback />}>
+            <TektonTaskRunLogsTab
+              contextName={contextName}
+              namespace={resource.namespace}
+              name={resource.name}
+            />
+          </Suspense>
+        </TabsContent>
+      )}
+      {hasTektonRuns && (
+        <TabsContent value="runs" className="flex min-h-0 flex-1 flex-col p-0">
+          <TektonPipelineRunsTab
+            contextName={contextName}
+            namespace={resource.namespace}
+            pipeline={resource.name}
           />
         </TabsContent>
       )}

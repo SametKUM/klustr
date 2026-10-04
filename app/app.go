@@ -1237,6 +1237,62 @@ func (a *App) SetFluxResourceSuspended(contextName, kind, namespace, name string
 }
 
 // ---------------------------------------------------------------------------
+// Tekton bindings.
+// ---------------------------------------------------------------------------
+
+func (a *App) ListTektonPipelineRuns(contextName, namespace string) []kube.TektonPipelineRunInfo {
+	return a.clients.ListTektonPipelineRuns(contextName, namespace)
+}
+
+func (a *App) GetTektonPipelineRun(contextName, namespace, name string) (*kube.TektonPipelineRunDetail, error) {
+	return a.clients.GetTektonPipelineRun(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) TektonPipelineRunsForPipeline(contextName, namespace, pipeline string) []kube.TektonPipelineRunInfo {
+	return a.clients.TektonPipelineRunsForPipeline(contextName, namespace, pipeline)
+}
+
+func (a *App) ListTektonTaskRuns(contextName, namespace string) []kube.TektonTaskRunInfo {
+	return a.clients.ListTektonTaskRuns(contextName, namespace)
+}
+
+func (a *App) GetTektonTaskRun(contextName, namespace, name string) (*kube.TektonTaskRunDetail, error) {
+	return a.clients.GetTektonTaskRun(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) ListTektonPipelines(contextName, namespace string) []kube.TektonPipelineInfo {
+	return a.clients.ListTektonPipelines(contextName, namespace)
+}
+
+func (a *App) GetTektonPipeline(contextName, namespace, name string) (*kube.TektonPipelineDetail, error) {
+	return a.clients.GetTektonPipeline(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) ListTektonTasks(contextName, namespace string) []kube.TektonTaskInfo {
+	return a.clients.ListTektonTasks(contextName, namespace)
+}
+
+func (a *App) GetTektonTask(contextName, namespace, name string) (*kube.TektonTaskDetail, error) {
+	return a.clients.GetTektonTask(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) TektonRunState(contextName, resource, namespace, name string) (string, error) {
+	return a.clients.TektonRunState(a.ctx, contextName, resource, namespace, name)
+}
+
+func (a *App) CancelTektonPipelineRun(contextName, namespace, name string) error {
+	return a.clients.CancelTektonPipelineRun(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) CancelTektonTaskRun(contextName, namespace, name string) error {
+	return a.clients.CancelTektonTaskRun(a.ctx, contextName, namespace, name)
+}
+
+func (a *App) RerunTektonPipelineRun(contextName, namespace, name string) (string, error) {
+	return a.clients.RerunTektonPipelineRun(a.ctx, contextName, namespace, name)
+}
+
+// ---------------------------------------------------------------------------
 // Istio bindings.
 // ---------------------------------------------------------------------------
 

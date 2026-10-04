@@ -151,6 +151,10 @@ export type ResourceView =
   | 'certmanagercertificaterequests'
   | 'certmanagerorders'
   | 'certmanagerchallenges'
+  | 'tektonpipelineruns'
+  | 'tektontaskruns'
+  | 'tektonpipelines'
+  | 'tektontasks'
 
 export type ResourceKind =
   | 'Pod'

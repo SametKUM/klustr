@@ -3,6 +3,7 @@ package kube
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -373,6 +374,12 @@ func (w *crdWatcher) HasCRD(gvr schema.GroupVersionResource) bool {
 
 const crSyncTimeout = 5 * time.Second
 
+// errCRSyncPending reports that a CR informer is running but its initial LIST
+// has not landed within crSyncTimeout. The frontend matches on the message and
+// calls EnsureCRWatch again, which waits on the same informer: a large CR set
+// (thousands of Tekton TaskRuns) legitimately takes longer than one wait.
+var errCRSyncPending = errors.New("cache sync still in progress")
+
 // EnsureCRWatch starts a dynamic informer for the given GVR if not already
 // running, and waits up to ~5s for the cache to sync so the caller can List
 // immediately after. The timeout matters: a CR informer can be unable to
@@ -402,7 +409,7 @@ func (w *crdWatcher) EnsureCRWatch(gvr schema.GroupVersionResource) error {
 			w.crMu.Unlock()
 		} else {
 			informer := w.crFactory.ForResource(gvr).Informer()
-			if err := informer.SetTransform(stripManagedFields); err != nil {
+			if err := informer.SetTransform(transformForCR(gvr)); err != nil {
 				w.crMu.Unlock()
 				return err
 			}
@@ -436,7 +443,7 @@ func (w *crdWatcher) EnsureCRWatch(gvr schema.GroupVersionResource) error {
 	case <-synced:
 		return nil
 	case <-timeout.C:
-		return fmt.Errorf("timed out waiting for %s cache sync", gvr.Resource)
+		return fmt.Errorf("%s: %w", gvr.Resource, errCRSyncPending)
 	case <-w.stopCh:
 		return fmt.Errorf("context watch stopped")
 	}
@@ -628,6 +635,22 @@ func (m *ClientManager) crForDetail(ctx context.Context, contextName string, gvr
 		return nil, err
 	}
 	return resourceFor(dyn, gvr, namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+// servedGVR resolves the cluster's GVR for a group/resource pair from the
+// discovered CRD (its served storage version), or false when the CRD is absent.
+// Integrations whose CRDs serve different versions across installs use it
+// instead of pinning one; the frontend starts the watch at the same version.
+func (m *ClientManager) servedGVR(contextName, group, resource string) (schema.GroupVersionResource, bool) {
+	w, ok := m.watcher(contextName)
+	if !ok || w.crd == nil {
+		return schema.GroupVersionResource{}, false
+	}
+	info, ok := w.crd.LookupCRDByGVR(schema.GroupVersionResource{Group: group, Resource: resource})
+	if !ok {
+		return schema.GroupVersionResource{}, false
+	}
+	return info.GVR(), true
 }
 
 // MarshalCustomResourceYAML strips the noisy server-managed metadata fields

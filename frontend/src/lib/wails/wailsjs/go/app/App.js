@@ -14,6 +14,14 @@ export function ApproveCertificateSigningRequest(arg1, arg2, arg3) {
   return window['go']['app']['App']['ApproveCertificateSigningRequest'](arg1, arg2, arg3);
 }
 
+export function CancelTektonPipelineRun(arg1, arg2, arg3) {
+  return window['go']['app']['App']['CancelTektonPipelineRun'](arg1, arg2, arg3);
+}
+
+export function CancelTektonTaskRun(arg1, arg2, arg3) {
+  return window['go']['app']['App']['CancelTektonTaskRun'](arg1, arg2, arg3);
+}
+
 export function CaptureCredentials(arg1) {
   return window['go']['app']['App']['CaptureCredentials'](arg1);
 }
@@ -404,6 +412,22 @@ export function GetTCPRoute(arg1, arg2, arg3) {
 
 export function GetTLSRoute(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetTLSRoute'](arg1, arg2, arg3);
+}
+
+export function GetTektonPipeline(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTektonPipeline'](arg1, arg2, arg3);
+}
+
+export function GetTektonPipelineRun(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTektonPipelineRun'](arg1, arg2, arg3);
+}
+
+export function GetTektonTask(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTektonTask'](arg1, arg2, arg3);
+}
+
+export function GetTektonTaskRun(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTektonTaskRun'](arg1, arg2, arg3);
 }
 
 export function GetUDPRoute(arg1, arg2, arg3) {
@@ -858,6 +882,22 @@ export function ListTLSRoutes(arg1, arg2) {
   return window['go']['app']['App']['ListTLSRoutes'](arg1, arg2);
 }
 
+export function ListTektonPipelineRuns(arg1, arg2) {
+  return window['go']['app']['App']['ListTektonPipelineRuns'](arg1, arg2);
+}
+
+export function ListTektonPipelines(arg1, arg2) {
+  return window['go']['app']['App']['ListTektonPipelines'](arg1, arg2);
+}
+
+export function ListTektonTaskRuns(arg1, arg2) {
+  return window['go']['app']['App']['ListTektonTaskRuns'](arg1, arg2);
+}
+
+export function ListTektonTasks(arg1, arg2) {
+  return window['go']['app']['App']['ListTektonTasks'](arg1, arg2);
+}
+
 export function ListUDPRoutes(arg1, arg2) {
   return window['go']['app']['App']['ListUDPRoutes'](arg1, arg2);
 }
@@ -928,6 +968,10 @@ export function RemoveHelmRepo(arg1) {
 
 export function RenewCertificate(arg1, arg2, arg3) {
   return window['go']['app']['App']['RenewCertificate'](arg1, arg2, arg3);
+}
+
+export function RerunTektonPipelineRun(arg1, arg2, arg3) {
+  return window['go']['app']['App']['RerunTektonPipelineRun'](arg1, arg2, arg3);
 }
 
 export function ResizeExec(arg1, arg2, arg3) {
@@ -1052,6 +1096,14 @@ export function StopWatch(arg1) {
 
 export function SyncArgoApplication(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['SyncArgoApplication'](arg1, arg2, arg3, arg4);
+}
+
+export function TektonPipelineRunsForPipeline(arg1, arg2, arg3) {
+  return window['go']['app']['App']['TektonPipelineRunsForPipeline'](arg1, arg2, arg3);
+}
+
+export function TektonRunState(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['TektonRunState'](arg1, arg2, arg3, arg4);
 }
 
 export function UninstallHelmRelease(arg1, arg2, arg3, arg4) {

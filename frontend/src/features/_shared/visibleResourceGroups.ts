@@ -10,6 +10,7 @@ import {
   ISTIO_GROUP,
   KARPENTER_GROUP,
   RESOURCE_GROUPS,
+  TEKTON_GROUP_NAV,
   type ResourceGroup,
 } from './resourceGroups'
 
@@ -102,6 +103,10 @@ const CRD_REQUIREMENTS: Partial<Record<ResourceView, { group: string; resource: 
     group: 'cert-manager.io',
     resource: 'clusterissuers',
   },
+  tektonpipelineruns: { group: 'tekton.dev', resource: 'pipelineruns' },
+  tektontaskruns: { group: 'tekton.dev', resource: 'taskruns' },
+  tektonpipelines: { group: 'tekton.dev', resource: 'pipelines' },
+  tektontasks: { group: 'tekton.dev', resource: 'tasks' },
 }
 
 export function buildVisibleResourceGroups({
@@ -118,6 +123,7 @@ export function buildVisibleResourceGroups({
     ARGO_GROUP,
     KARPENTER_GROUP,
     FLUX_GROUP,
+    TEKTON_GROUP_NAV,
     HELM_GROUP,
   ]
   const hidden = new Set<string>(hiddenItems)

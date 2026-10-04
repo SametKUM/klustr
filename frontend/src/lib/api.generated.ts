@@ -259,6 +259,24 @@ export type TCPRouteDetail = kube.TCPRouteDetail
 export type TCPRouteInfo = kube.TCPRouteInfo
 export type TLSRouteDetail = kube.TLSRouteDetail
 export type TLSRouteInfo = kube.TLSRouteInfo
+export type TektonParam = kube.TektonParam
+export type TektonParamSpec = kube.TektonParamSpec
+export type TektonPipelineTaskSpec = kube.TektonPipelineTaskSpec
+export type TektonResultSpec = kube.TektonResultSpec
+export type TektonWorkspaceSpec = kube.TektonWorkspaceSpec
+export type TektonPipelineDetail = kube.TektonPipelineDetail
+export type TektonPipelineInfo = kube.TektonPipelineInfo
+export type TektonPipelineRunTask = kube.TektonPipelineRunTask
+export type TektonWorkspaceBinding = kube.TektonWorkspaceBinding
+export type TektonTaskCounts = kube.TektonTaskCounts
+export type TektonPipelineRunDetail = kube.TektonPipelineRunDetail
+export type TektonPipelineRunInfo = kube.TektonPipelineRunInfo
+export type TektonStep = kube.TektonStep
+export type TektonTaskStep = kube.TektonTaskStep
+export type TektonTaskDetail = kube.TektonTaskDetail
+export type TektonTaskInfo = kube.TektonTaskInfo
+export type TektonTaskRunDetail = kube.TektonTaskRunDetail
+export type TektonTaskRunInfo = kube.TektonTaskRunInfo
 export type UDPRouteDetail = kube.UDPRouteDetail
 export type UDPRouteInfo = kube.UDPRouteInfo
 export type VolumeAttachmentDetail = kube.VolumeAttachmentDetail
@@ -273,6 +291,8 @@ export const generatedApi = {
   addHelmRepo: bindings.AddHelmRepo,
   applyResourceYAML: bindings.ApplyResourceYAML,
   approveCertificateSigningRequest: bindings.ApproveCertificateSigningRequest,
+  cancelTektonPipelineRun: bindings.CancelTektonPipelineRun,
+  cancelTektonTaskRun: bindings.CancelTektonTaskRun,
   captureCredentials: bindings.CaptureCredentials,
   certManagerCertificateRequestsFor: bindings.CertManagerCertificateRequestsFor,
   certManagerChallengesFor: bindings.CertManagerChallengesFor,
@@ -371,6 +391,10 @@ export const generatedApi = {
   getSubjectAccess: bindings.GetSubjectAccess,
   getTCPRoute: bindings.GetTCPRoute,
   getTLSRoute: bindings.GetTLSRoute,
+  getTektonPipeline: bindings.GetTektonPipeline,
+  getTektonPipelineRun: bindings.GetTektonPipelineRun,
+  getTektonTask: bindings.GetTektonTask,
+  getTektonTaskRun: bindings.GetTektonTaskRun,
   getUDPRoute: bindings.GetUDPRoute,
   getValidatingAdmissionPolicy: bindings.GetValidatingAdmissionPolicy,
   getValidatingAdmissionPolicyBinding: bindings.GetValidatingAdmissionPolicyBinding,
@@ -484,6 +508,10 @@ export const generatedApi = {
   listSystemTerminals: bindings.ListSystemTerminals,
   listTCPRoutes: bindings.ListTCPRoutes,
   listTLSRoutes: bindings.ListTLSRoutes,
+  listTektonPipelineRuns: bindings.ListTektonPipelineRuns,
+  listTektonPipelines: bindings.ListTektonPipelines,
+  listTektonTaskRuns: bindings.ListTektonTaskRuns,
+  listTektonTasks: bindings.ListTektonTasks,
   listUDPRoutes: bindings.ListUDPRoutes,
   listValidatingAdmissionPolicies: bindings.ListValidatingAdmissionPolicies,
   listValidatingAdmissionPolicyBindings: bindings.ListValidatingAdmissionPolicyBindings,
@@ -502,6 +530,7 @@ export const generatedApi = {
   refreshArgoApplication: bindings.RefreshArgoApplication,
   removeHelmRepo: bindings.RemoveHelmRepo,
   renewCertificate: bindings.RenewCertificate,
+  rerunTektonPipelineRun: bindings.RerunTektonPipelineRun,
   resizeExec: bindings.ResizeExec,
   resizeLocalTerminal: bindings.ResizeLocalTerminal,
   resizePodResources: bindings.ResizePodResources,
@@ -533,6 +562,8 @@ export const generatedApi = {
   stopPortForward: bindings.StopPortForward,
   stopWatch: bindings.StopWatch,
   syncArgoApplication: bindings.SyncArgoApplication,
+  tektonPipelineRunsForPipeline: bindings.TektonPipelineRunsForPipeline,
+  tektonRunState: bindings.TektonRunState,
   uninstallHelmRelease: bindings.UninstallHelmRelease,
   updateHelmRepos: bindings.UpdateHelmRepos,
   upgradeHelmRelease: bindings.UpgradeHelmRelease,
