@@ -52,12 +52,14 @@ export function tektonStateClass(state: string): string {
 
 // tektonTaskSummary renders the PipelineRun task tally for the list, e.g.
 // "11 done, 1 failed, 4 skipped". Zero counts other than done are omitted.
+// Tekton's incomplete count covers tasks still waiting to start as well as
+// the running ones, so it is labelled incomplete, not running.
 export function tektonTaskSummary(counts: TektonTaskCounts | undefined): string {
   if (!counts?.known) return '—'
   const parts = [`${counts.completed} done`]
   if (counts.failed) parts.push(`${counts.failed} failed`)
   if (counts.cancelled) parts.push(`${counts.cancelled} cancelled`)
-  if (counts.incomplete) parts.push(`${counts.incomplete} running`)
+  if (counts.incomplete) parts.push(`${counts.incomplete} incomplete`)
   if (counts.skipped) parts.push(`${counts.skipped} skipped`)
   return parts.join(', ')
 }

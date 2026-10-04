@@ -49,7 +49,7 @@ describe('tektonTaskSummary', () => {
     expect(tektonTaskSummary(counts({ completed: 11, failed: 1, skipped: 4 }))).toBe(
       '11 done, 1 failed, 4 skipped',
     )
-    expect(tektonTaskSummary(counts({ completed: 2, incomplete: 3 }))).toBe('2 done, 3 running')
+    expect(tektonTaskSummary(counts({ completed: 2, incomplete: 3 }))).toBe('2 done, 3 incomplete')
   })
 
   it('shows a dash when the controller wrote no tally', () => {
