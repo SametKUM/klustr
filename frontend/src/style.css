@@ -287,6 +287,43 @@
     --sidebar-ring: #528bff;
 }
 
+/* Joker Classic and Matinee use their palette values verbatim, as the Joker
+   spec requires; only alpha is added. Highlights use Selection rather than
+   the spec's hover step, which in Matinee is too close to the page to see. */
+.theme-joker {
+    --background: #1c1626;
+    --foreground: #f4efe6;
+    --card: #16111e;
+    --card-foreground: #f4efe6;
+    --popover: #261e33;
+    --popover-foreground: #f4efe6;
+    --primary: #97b46e;
+    --primary-foreground: #110d17;
+    --secondary: #261e33;
+    --secondary-foreground: #f4efe6;
+    --muted: #30263f;
+    --muted-foreground: #f4efe6a6;
+    --accent: #3d3051;
+    --accent-foreground: #f4efe6;
+    --destructive: #ff5266;
+    --border: #3d3051;
+    --input: #3d3051;
+    --ring: #8f6ae8;
+    --chart-1: #ff5266;
+    --chart-2: #8af26a;
+    --chart-3: #97b46e;
+    --chart-4: #ff9447;
+    --chart-5: #a685ff;
+    --sidebar: #16111e;
+    --sidebar-foreground: #f4efe6;
+    --sidebar-primary: #97b46e;
+    --sidebar-primary-foreground: #110d17;
+    --sidebar-accent: #3d3051;
+    --sidebar-accent-foreground: #f4efe6;
+    --sidebar-border: #3d3051;
+    --sidebar-ring: #8f6ae8;
+}
+
 .theme-dracula-light {
     --background: #fffbeb;
     --foreground: #1f1f1f;
@@ -421,6 +458,40 @@
     --sidebar-accent-foreground: #232324;
     --sidebar-border: #dbdbdc;
     --sidebar-ring: #526fff;
+}
+
+.theme-joker-light {
+    --background: #f4efe6;
+    --foreground: #1c1626;
+    --card: #ebe3db;
+    --card-foreground: #1c1626;
+    --popover: #eee7df;
+    --popover-foreground: #1c1626;
+    --primary: #234e14;
+    --primary-foreground: #f4efe6;
+    --secondary: #eee7df;
+    --secondary-foreground: #1c1626;
+    --muted: #e9e0d8;
+    --muted-foreground: #1c1626a6;
+    --accent: #d8ceee;
+    --accent-foreground: #1c1626;
+    --destructive: #c7054c;
+    --border: #d8ceee;
+    --input: #d8ceee;
+    --ring: #7e44ff;
+    --chart-1: #c7054c;
+    --chart-2: #057502;
+    --chart-3: #234e14;
+    --chart-4: #a64003;
+    --chart-5: #601dd0;
+    --sidebar: #ebe3db;
+    --sidebar-foreground: #1c1626;
+    --sidebar-primary: #234e14;
+    --sidebar-primary-foreground: #f4efe6;
+    --sidebar-accent: #d8ceee;
+    --sidebar-accent-foreground: #1c1626;
+    --sidebar-border: #d8ceee;
+    --sidebar-ring: #7e44ff;
 }
 
 @layer base {
