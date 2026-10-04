@@ -44,7 +44,7 @@
 
 ## What is Klustr?
 
-Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://wails.io/) (Go + native webview) and React. It uses your existing `~/.kube/config` and speaks the standard Kubernetes API directly — **nothing is deployed in the cluster**. Drop the binary in, point at any context, and you're looking at a live view of everything you have permission to see — built-in resources, full **RBAC** with a **subject → effective-permissions** review, **Custom Resources (CRDs)**, **Helm releases**, **Argo CD Applications**, **Flux CD reconcilers**, **Gateway API** routes, and **cert-manager** certificates included. No extra logins, no `argocd`, `flux` or `helm` CLI required — only your kubeconfig.
+Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://wails.io/) (Go + native webview) and React. It uses your existing `~/.kube/config` and speaks the standard Kubernetes API directly — **nothing is deployed in the cluster**. Drop the binary in, point at any context, and you're looking at a live view of everything you have permission to see — built-in resources, full **RBAC** with a **subject → effective-permissions** review, **Custom Resources (CRDs)**, **Helm releases**, **Argo CD Applications**, **Flux CD reconcilers**, **Tekton** pipelines, **Gateway API** routes, **cert-manager** certificates, and **Kyverno** policy reports included. No extra logins, no `argocd`, `flux`, `tkn` or `helm` CLI required — only your kubeconfig.
 
 ## Features
 
@@ -58,10 +58,12 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 - ⎈ **Helm.** First-class Helm v3: install / upgrade / rollback / uninstall with a **dry-run preview** before any change, plus repo management and chart search.
 - 🚢 **Argo CD.** Sync, Refresh, Rollback and cascade-aware Delete through the Kubernetes API — no `argocd-server`, no `argocd` CLI, no Argo login.
 - 🚀 **Flux CD.** Kustomization · HelmRelease · GitRepository · HelmRepository · OCIRepository · Bucket · Provider · Alert · Receiver — each with Reconcile + Suspend/Resume buttons that hit the standard Flux annotations, no `flux` CLI.
+- 🏗️ **Tekton.** PipelineRuns, TaskRuns, Pipelines and Tasks. A PipelineRun's **task table** joins the resolved pipeline with its TaskRuns and skipped tasks; TaskRun **step logs** open on the running or failed step; **Cancel** and **Rerun** without `tkn`.
 - 🌉 **Gateway API.** Typed informers; **listener table**, per-rule **match → backend → weight** matrix and `RouteParentStatus` so a misrouted parent or `RefNotPermitted` backend is one click away. Vendor-neutral.
 - 🔐 **cert-manager.** Certificates, Issuers / ClusterIssuers, and the full issuance chain — CertificateRequest → Order → Challenge — with ready/expiry status and a drill-down across the chain. One-click **Renew**, no `cmctl` CLI.
 - 🕸️ **Istio.** VirtualServices, DestinationRules and PeerAuthentications, watch-backed; the served API version is read from the discovered CRD rather than hardcoded.
 - 🌳 **Karpenter.** NodePools and NodeClaims with provisioning status, surfaced automatically when the `karpenter.sh` CRDs are present.
+- 🛡️ **Kyverno.** ClusterPolicies, Policies, CEL ValidatingPolicies, PolicyExceptions and `wgpolicyk8s.io` **policy reports**. Each policy lists the resources it fails, and a resource's detail shows its own report.
 - 📜 **Logs.** Stern-style multi-pod streaming with per-pod ANSI colors, follow, save and regex.
 - 🖥️ **In-app exec.** SPDY shell into any container.
 - 🐚 **Node shell.** Root shell on any node via a temporary privileged `nsenter` pod that's removed when the session ends — no SSH, nothing pre-installed.
@@ -184,7 +186,7 @@ Task-focused guides live at [klustr.dev/docs](https://klustr.dev/docs/) (source:
 - [Cluster & workloads overviews](https://klustr.dev/docs/overview/) — capacity donuts, workload health, events feed
 - [Workloads & debugging](https://klustr.dev/docs/workloads-and-debugging/) — logs, exec, port-forward, node shell
 - [Terminal](https://klustr.dev/docs/terminal/) — the built-in shell drawer and external terminal apps
-- [Helm](https://klustr.dev/docs/helm/) · [GitOps: Argo CD & Flux](https://klustr.dev/docs/gitops/) · [Gateway API](https://klustr.dev/docs/gateway-api/) · [Platform integrations](https://klustr.dev/docs/integrations/) · [Custom Resources](https://klustr.dev/docs/custom-resources/)
+- [Helm](https://klustr.dev/docs/helm/) · [GitOps: Argo CD & Flux](https://klustr.dev/docs/gitops/) · [Tekton Pipelines](https://klustr.dev/docs/tekton/) · [Gateway API](https://klustr.dev/docs/gateway-api/) · [Kyverno & policy reports](https://klustr.dev/docs/kyverno/) · [Platform integrations](https://klustr.dev/docs/integrations/) · [Custom Resources](https://klustr.dev/docs/custom-resources/)
 
 ## Build from source
 
@@ -226,6 +228,8 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] cert-manager — Certificates, Issuers / ClusterIssuers, CertificateRequests, Orders, Challenges (issuance-chain drill-down, ready/expiry status, one-click Renew)
 - [x] Istio — VirtualServices, DestinationRules, PeerAuthentications (served version read from the discovered CRD)
 - [x] Karpenter — NodePools, NodeClaims (provisioning status, auto-detected via the `karpenter.sh` CRDs)
+- [x] Tekton — PipelineRuns, TaskRuns, Pipelines, Tasks (task table, step logs, Cancel and Rerun)
+- [x] Kyverno — ClusterPolicies, Policies, ValidatingPolicies, PolicyExceptions, PolicyReports (per-policy violations, per-resource Policy tab)
 - [x] Multi-cluster aggregated mode + named context groups + per-context health ping
 - [x] Notarized macOS build — signed with a Developer ID Application certificate and notarized by Apple
 - [x] Linux (amd64) release distribution
