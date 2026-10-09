@@ -258,14 +258,34 @@ func TestPodResourceTotals(t *testing.T) {
 	if cpuReq != 350 {
 		t.Errorf("cpuReq: got %d, want 350", cpuReq)
 	}
-	if cpuLim != 500 {
-		t.Errorf("cpuLim: got %d, want 500", cpuLim)
+	// The second container sets no limits, so the pod has none either.
+	if cpuLim != 0 {
+		t.Errorf("cpuLim: got %d, want 0 (unbounded)", cpuLim)
 	}
 	if memReq != 64*1024*1024 {
 		t.Errorf("memReq: got %d, want %d", memReq, 64*1024*1024)
 	}
-	if memLim != 128*1024*1024 {
-		t.Errorf("memLim: got %d, want %d", memLim, 128*1024*1024)
+	if memLim != 0 {
+		t.Errorf("memLim: got %d, want 0 (unbounded)", memLim)
+	}
+
+	pod.Spec.Containers[1].Resources.Limits = corev1.ResourceList{
+		corev1.ResourceCPU:    mustParse("200m"),
+		corev1.ResourceMemory: mustParse("64Mi"),
+	}
+	_, cpuLim, _, memLim = podResourceTotals(pod)
+	if cpuLim != 700 {
+		t.Errorf("cpuLim all set: got %d, want 700", cpuLim)
+	}
+	if memLim != 192*1024*1024 {
+		t.Errorf("memLim all set: got %d, want %d", memLim, 192*1024*1024)
+	}
+
+	// An init container without a limit also leaves the pod cgroup unbounded.
+	pod.Spec.InitContainers = []corev1.Container{{}}
+	_, cpuLim, _, _ = podResourceTotals(pod)
+	if cpuLim != 0 {
+		t.Errorf("cpuLim with unlimited init: got %d, want 0", cpuLim)
 	}
 }
 
