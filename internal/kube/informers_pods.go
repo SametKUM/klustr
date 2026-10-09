@@ -813,21 +813,29 @@ func isFailureReason(reason string) bool {
 // (bytes) requests and limits per Kubernetes scheduling semantics: regular and
 // sidecar containers sum; an ordinary init container only raises the total
 // when it plus the sidecars started before it exceeds that sum. Zero is unset.
+// A limit is unset as soon as one container (init included) leaves it out,
+// as the kubelet then leaves the pod cgroup unbounded; summing the rest would
+// show a cap the pod does not have.
 func podResourceTotals(p *corev1.Pod) (cpuReq, cpuLim, memReq, memLim int64) {
 	type res struct{ cpuReq, cpuLim, memReq, memLim int64 }
+	cpuUnbounded, memUnbounded := false, false
 	get := func(c corev1.Container) res {
 		var r res
 		if q, ok := c.Resources.Requests[corev1.ResourceCPU]; ok {
 			r.cpuReq = q.MilliValue()
 		}
-		if q, ok := c.Resources.Limits[corev1.ResourceCPU]; ok {
+		if q, ok := c.Resources.Limits[corev1.ResourceCPU]; ok && !q.IsZero() {
 			r.cpuLim = q.MilliValue()
+		} else {
+			cpuUnbounded = true
 		}
 		if q, ok := c.Resources.Requests[corev1.ResourceMemory]; ok {
 			r.memReq = q.Value()
 		}
-		if q, ok := c.Resources.Limits[corev1.ResourceMemory]; ok {
+		if q, ok := c.Resources.Limits[corev1.ResourceMemory]; ok && !q.IsZero() {
 			r.memLim = q.Value()
+		} else {
+			memUnbounded = true
 		}
 		return r
 	}
@@ -858,10 +866,14 @@ func podResourceTotals(p *corev1.Pod) (cpuReq, cpuLim, memReq, memLim int64) {
 			initMax.memLim = max(initMax.memLim, sidecar.memLim+r.memLim)
 		}
 	}
-	return max(base.cpuReq, initMax.cpuReq),
-		max(base.cpuLim, initMax.cpuLim),
-		max(base.memReq, initMax.memReq),
-		max(base.memLim, initMax.memLim)
+	cpuLim, memLim = max(base.cpuLim, initMax.cpuLim), max(base.memLim, initMax.memLim)
+	if cpuUnbounded {
+		cpuLim = 0
+	}
+	if memUnbounded {
+		memLim = 0
+	}
+	return max(base.cpuReq, initMax.cpuReq), cpuLim, max(base.memReq, initMax.memReq), memLim
 }
 
 // initRestartsAlways reports whether the named init container is a native
