@@ -210,6 +210,18 @@ export function GetFluxHelmRepository(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetFluxHelmRepository'](arg1, arg2, arg3);
 }
 
+export function GetFluxImagePolicy(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetFluxImagePolicy'](arg1, arg2, arg3);
+}
+
+export function GetFluxImageRepository(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetFluxImageRepository'](arg1, arg2, arg3);
+}
+
+export function GetFluxImageUpdateAutomation(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetFluxImageUpdateAutomation'](arg1, arg2, arg3);
+}
+
 export function GetFluxKustomization(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetFluxKustomization'](arg1, arg2, arg3);
 }
@@ -276,6 +288,10 @@ export function GetIstioVirtualService(arg1, arg2, arg3) {
 
 export function GetJob(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetJob'](arg1, arg2, arg3);
+}
+
+export function GetKarpenterEC2NodeClass(arg1, arg2) {
+  return window['go']['app']['App']['GetKarpenterEC2NodeClass'](arg1, arg2);
 }
 
 export function GetKyvernoClusterPolicy(arg1, arg2) {
@@ -670,6 +686,18 @@ export function ListFluxHelmRepositories(arg1, arg2) {
   return window['go']['app']['App']['ListFluxHelmRepositories'](arg1, arg2);
 }
 
+export function ListFluxImagePolicies(arg1, arg2) {
+  return window['go']['app']['App']['ListFluxImagePolicies'](arg1, arg2);
+}
+
+export function ListFluxImageRepositories(arg1, arg2) {
+  return window['go']['app']['App']['ListFluxImageRepositories'](arg1, arg2);
+}
+
+export function ListFluxImageUpdateAutomations(arg1, arg2) {
+  return window['go']['app']['App']['ListFluxImageUpdateAutomations'](arg1, arg2);
+}
+
 export function ListFluxKustomizations(arg1, arg2) {
   return window['go']['app']['App']['ListFluxKustomizations'](arg1, arg2);
 }
@@ -744,6 +772,10 @@ export function ListIstioVirtualServices(arg1, arg2) {
 
 export function ListJobs(arg1, arg2) {
   return window['go']['app']['App']['ListJobs'](arg1, arg2);
+}
+
+export function ListKarpenterEC2NodeClasses(arg1) {
+  return window['go']['app']['App']['ListKarpenterEC2NodeClasses'](arg1);
 }
 
 export function ListKarpenterNodeClaims(arg1) {

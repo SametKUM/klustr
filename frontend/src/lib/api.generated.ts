@@ -120,6 +120,12 @@ export type FluxHelmReleaseDetail = kube.FluxHelmReleaseDetail
 export type FluxHelmReleaseInfo = kube.FluxHelmReleaseInfo
 export type FluxHelmRepositoryDetail = kube.FluxHelmRepositoryDetail
 export type FluxHelmRepositoryInfo = kube.FluxHelmRepositoryInfo
+export type FluxImagePolicyDetail = kube.FluxImagePolicyDetail
+export type FluxImagePolicyInfo = kube.FluxImagePolicyInfo
+export type FluxImageRepositoryDetail = kube.FluxImageRepositoryDetail
+export type FluxImageRepositoryInfo = kube.FluxImageRepositoryInfo
+export type FluxImageUpdateAutomationDetail = kube.FluxImageUpdateAutomationDetail
+export type FluxImageUpdateAutomationInfo = kube.FluxImageUpdateAutomationInfo
 export type FluxKustomizationDetail = kube.FluxKustomizationDetail
 export type FluxKustomizationInfo = kube.FluxKustomizationInfo
 export type FluxOCIRepositoryDetail = kube.FluxOCIRepositoryDetail
@@ -173,6 +179,10 @@ export type IstioVirtualServiceDetail = kube.IstioVirtualServiceDetail
 export type IstioVirtualServiceInfo = kube.IstioVirtualServiceInfo
 export type JobDetail = kube.JobDetail
 export type JobInfo = kube.JobInfo
+export type KarpenterResolvedRequirement = kube.KarpenterResolvedRequirement
+export type KarpenterResolvedResource = kube.KarpenterResolvedResource
+export type KarpenterEC2NodeClassDetail = kube.KarpenterEC2NodeClassDetail
+export type KarpenterEC2NodeClassInfo = kube.KarpenterEC2NodeClassInfo
 export type KarpenterNodeClaimInfo = kube.KarpenterNodeClaimInfo
 export type KarpenterNodePoolInfo = kube.KarpenterNodePoolInfo
 export type Kubeconfig = kube.Kubeconfig
@@ -357,6 +367,9 @@ export const generatedApi = {
   getFluxGitRepository: bindings.GetFluxGitRepository,
   getFluxHelmRelease: bindings.GetFluxHelmRelease,
   getFluxHelmRepository: bindings.GetFluxHelmRepository,
+  getFluxImagePolicy: bindings.GetFluxImagePolicy,
+  getFluxImageRepository: bindings.GetFluxImageRepository,
+  getFluxImageUpdateAutomation: bindings.GetFluxImageUpdateAutomation,
   getFluxKustomization: bindings.GetFluxKustomization,
   getFluxOCIRepository: bindings.GetFluxOCIRepository,
   getFluxProvider: bindings.GetFluxProvider,
@@ -374,6 +387,7 @@ export const generatedApi = {
   getIstioPeerAuthentication: bindings.GetIstioPeerAuthentication,
   getIstioVirtualService: bindings.GetIstioVirtualService,
   getJob: bindings.GetJob,
+  getKarpenterEC2NodeClass: bindings.GetKarpenterEC2NodeClass,
   getKyvernoClusterPolicy: bindings.GetKyvernoClusterPolicy,
   getKyvernoNamespacedValidatingPolicy: bindings.GetKyvernoNamespacedValidatingPolicy,
   getKyvernoPolicy: bindings.GetKyvernoPolicy,
@@ -472,6 +486,9 @@ export const generatedApi = {
   listFluxGitRepositories: bindings.ListFluxGitRepositories,
   listFluxHelmReleases: bindings.ListFluxHelmReleases,
   listFluxHelmRepositories: bindings.ListFluxHelmRepositories,
+  listFluxImagePolicies: bindings.ListFluxImagePolicies,
+  listFluxImageRepositories: bindings.ListFluxImageRepositories,
+  listFluxImageUpdateAutomations: bindings.ListFluxImageUpdateAutomations,
   listFluxKustomizations: bindings.ListFluxKustomizations,
   listFluxOCIRepositories: bindings.ListFluxOCIRepositories,
   listFluxProviders: bindings.ListFluxProviders,
@@ -491,6 +508,7 @@ export const generatedApi = {
   listIstioPeerAuthentications: bindings.ListIstioPeerAuthentications,
   listIstioVirtualServices: bindings.ListIstioVirtualServices,
   listJobs: bindings.ListJobs,
+  listKarpenterEC2NodeClasses: bindings.ListKarpenterEC2NodeClasses,
   listKarpenterNodeClaims: bindings.ListKarpenterNodeClaims,
   listKarpenterNodePools: bindings.ListKarpenterNodePools,
   listKyvernoClusterPolicies: bindings.ListKyvernoClusterPolicies,

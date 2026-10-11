@@ -9,6 +9,7 @@ export const FLUX_KUSTOMIZATION_GROUP = 'kustomize.toolkit.fluxcd.io'
 export const FLUX_HELMRELEASE_GROUP = 'helm.toolkit.fluxcd.io'
 export const FLUX_SOURCE_GROUP = 'source.toolkit.fluxcd.io'
 export const FLUX_NOTIFICATION_GROUP = 'notification.toolkit.fluxcd.io'
+export const FLUX_IMAGE_GROUP = 'image.toolkit.fluxcd.io'
 
 export const FLUX_KUSTOMIZATION_RESOURCE = 'kustomizations'
 export const FLUX_HELMRELEASE_RESOURCE = 'helmreleases'
@@ -19,6 +20,9 @@ export const FLUX_BUCKET_RESOURCE = 'buckets'
 export const FLUX_PROVIDER_RESOURCE = 'providers'
 export const FLUX_ALERT_RESOURCE = 'alerts'
 export const FLUX_RECEIVER_RESOURCE = 'receivers'
+export const FLUX_IMAGE_REPOSITORY_RESOURCE = 'imagerepositories'
+export const FLUX_IMAGE_POLICY_RESOURCE = 'imagepolicies'
+export const FLUX_IMAGE_UPDATE_AUTOMATION_RESOURCE = 'imageupdateautomations'
 
 // fluxKind label used in the detail dialog header, distinct from the
 // Klustr-internal "FluxKustomization" identifier so the UI reads naturally.
@@ -32,6 +36,9 @@ export const FLUX_KIND_LABEL: Record<FluxKind, string> = {
   FluxProvider: 'Provider',
   FluxAlert: 'Alert',
   FluxReceiver: 'Receiver',
+  FluxImageRepository: 'ImageRepository',
+  FluxImagePolicy: 'ImagePolicy',
+  FluxImageUpdateAutomation: 'ImageUpdateAutomation',
 }
 
 const FLUX_KINDS = new Set<string>([
@@ -44,6 +51,9 @@ const FLUX_KINDS = new Set<string>([
   'FluxProvider',
   'FluxAlert',
   'FluxReceiver',
+  'FluxImageRepository',
+  'FluxImagePolicy',
+  'FluxImageUpdateAutomation',
 ])
 
 export function isFluxResource(resource: SelectedResource | null): resource is SelectedResource & { kind: FluxKind } {
@@ -55,4 +65,12 @@ export function isFluxResource(resource: SelectedResource | null): resource is S
 // because core/v1 Events store .involvedObject.kind as the actual CR kind.
 export function stripFluxKindPrefix(kind: string): string {
   return kind.startsWith('Flux') ? kind.slice(4) : kind
+}
+
+export function canReconcileFluxKind(kind: FluxKind): boolean {
+  return kind !== 'FluxImagePolicy'
+}
+
+export function canSuspendFluxKind(kind: FluxKind, version?: string): boolean {
+  return kind !== 'FluxImagePolicy' || version === 'v1'
 }

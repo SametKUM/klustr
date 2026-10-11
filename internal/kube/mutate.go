@@ -115,8 +115,8 @@ func (m *ClientManager) resolveKind(contextName, kind string) (schema.GroupVersi
 		}
 		return gvr, nil
 	}
-	if gvr, ok := fluxKindGVR[kind]; ok {
-		return gvr, nil
+	if _, ok := fluxKindGVR[kind]; ok {
+		return m.fluxActionGVR(contextName, kind)
 	}
 	if gvr, ok := SplitCRChangeKind(kind); ok {
 		if w, ok := m.watcher(contextName); ok && w.crd != nil {

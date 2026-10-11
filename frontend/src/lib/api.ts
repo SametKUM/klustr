@@ -33,6 +33,9 @@ export type FluxKind =
   | 'FluxProvider'
   | 'FluxAlert'
   | 'FluxReceiver'
+  | 'FluxImageRepository'
+  | 'FluxImagePolicy'
+  | 'FluxImageUpdateAutomation'
 
 export const api = {
   ...generatedApi,

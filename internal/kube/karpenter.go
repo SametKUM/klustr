@@ -31,6 +31,7 @@ type KarpenterNodePoolInfo struct {
 	Name                string `json:"name"`
 	Weight              int64  `json:"weight"`
 	NodeClassKind       string `json:"nodeClassKind"`
+	NodeClassGroup      string `json:"nodeClassGroup"`
 	NodeClassName       string `json:"nodeClassName"`
 	ConsolidationPolicy string `json:"consolidationPolicy"`
 	ConsolidateAfter    string `json:"consolidateAfter"`
@@ -47,23 +48,24 @@ type KarpenterNodePoolInfo struct {
 // status.conditions surfaces the per-claim lifecycle (Launched / Registered
 // / Initialized / Drifted / Empty) which is the most useful signal here.
 type KarpenterNodeClaimInfo struct {
-	Name          string `json:"name"`
-	NodeName      string `json:"nodeName"`
-	NodePool      string `json:"nodePool"`
-	NodeClassKind string `json:"nodeClassKind"`
-	NodeClassName string `json:"nodeClassName"`
-	InstanceType  string `json:"instanceType"`
-	CapacityType  string `json:"capacityType"`
-	Zone          string `json:"zone"`
-	ProviderID    string `json:"providerID"`
-	CPU           string `json:"cpu"`
-	Memory        string `json:"memory"`
-	Launched      string `json:"launched"`
-	Registered    string `json:"registered"`
-	Initialized   string `json:"initialized"`
-	Drifted       string `json:"drifted"`
-	Ready         string `json:"ready"`
-	CreatedAt     string `json:"createdAt"`
+	Name           string `json:"name"`
+	NodeName       string `json:"nodeName"`
+	NodePool       string `json:"nodePool"`
+	NodeClassKind  string `json:"nodeClassKind"`
+	NodeClassGroup string `json:"nodeClassGroup"`
+	NodeClassName  string `json:"nodeClassName"`
+	InstanceType   string `json:"instanceType"`
+	CapacityType   string `json:"capacityType"`
+	Zone           string `json:"zone"`
+	ProviderID     string `json:"providerID"`
+	CPU            string `json:"cpu"`
+	Memory         string `json:"memory"`
+	Launched       string `json:"launched"`
+	Registered     string `json:"registered"`
+	Initialized    string `json:"initialized"`
+	Drifted        string `json:"drifted"`
+	Ready          string `json:"ready"`
+	CreatedAt      string `json:"createdAt"`
 }
 
 // ListKarpenterNodePools projects cached NodePool CRs into KarpenterNodePoolInfo.
@@ -129,6 +131,7 @@ func extractKarpenterNodePool(obj *unstructured.Unstructured) KarpenterNodePoolI
 		info.Weight = w
 	}
 	info.NodeClassKind, _, _ = unstructured.NestedString(obj.Object, "spec", "template", "spec", "nodeClassRef", "kind")
+	info.NodeClassGroup, _, _ = unstructured.NestedString(obj.Object, "spec", "template", "spec", "nodeClassRef", "group")
 	info.NodeClassName, _, _ = unstructured.NestedString(obj.Object, "spec", "template", "spec", "nodeClassRef", "name")
 	info.ConsolidationPolicy, _, _ = unstructured.NestedString(obj.Object, "spec", "disruption", "consolidationPolicy")
 	info.ConsolidateAfter, _, _ = unstructured.NestedString(obj.Object, "spec", "disruption", "consolidateAfter")
@@ -164,6 +167,7 @@ func extractKarpenterNodeClaim(obj *unstructured.Unstructured) KarpenterNodeClai
 	info.NodeName, _, _ = unstructured.NestedString(obj.Object, "status", "nodeName")
 	info.ProviderID, _, _ = unstructured.NestedString(obj.Object, "status", "providerID")
 	info.NodeClassKind, _, _ = unstructured.NestedString(obj.Object, "spec", "nodeClassRef", "kind")
+	info.NodeClassGroup, _, _ = unstructured.NestedString(obj.Object, "spec", "nodeClassRef", "group")
 	info.NodeClassName, _, _ = unstructured.NestedString(obj.Object, "spec", "nodeClassRef", "name")
 
 	if capacity, found, _ := unstructured.NestedMap(obj.Object, "status", "capacity"); found {

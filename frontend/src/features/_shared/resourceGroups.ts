@@ -266,6 +266,7 @@ export const KARPENTER_GROUP: ResourceGroup = {
   items: [
     { label: 'NodePools', view: 'karpenternodepools', icon: Sprout },
     { label: 'NodeClaims', view: 'karpenternodeclaims', icon: Server },
+    { label: 'EC2NodeClasses', view: 'karpenterec2nodeclasses', icon: Layers3 },
   ],
 }
 
@@ -285,6 +286,9 @@ export const FLUX_GROUP: ResourceGroup = {
     { label: 'Providers', view: 'fluxproviders', icon: Plug },
     { label: 'Alerts', view: 'fluxalerts', icon: BellRing },
     { label: 'Receivers', view: 'fluxreceivers', icon: Webhook },
+    { label: 'ImageRepositories', view: 'fluximagerepositories', icon: Library },
+    { label: 'ImagePolicies', view: 'fluximagepolicies', icon: Filter },
+    { label: 'ImageUpdateAutomations', view: 'fluximageupdateautomations', icon: GitBranch },
   ],
 }
 

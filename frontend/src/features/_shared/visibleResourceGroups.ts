@@ -44,6 +44,10 @@ const CRD_REQUIREMENTS: Partial<Record<ResourceView, { group: string; resource: 
   },
   karpenternodepools: { group: 'karpenter.sh', resource: 'nodepools' },
   karpenternodeclaims: { group: 'karpenter.sh', resource: 'nodeclaims' },
+  karpenterec2nodeclasses: { group: 'karpenter.k8s.aws', resource: 'ec2nodeclasses' },
+  fluximagerepositories: { group: 'image.toolkit.fluxcd.io', resource: 'imagerepositories' },
+  fluximagepolicies: { group: 'image.toolkit.fluxcd.io', resource: 'imagepolicies' },
+  fluximageupdateautomations: { group: 'image.toolkit.fluxcd.io', resource: 'imageupdateautomations' },
   fluxkustomizations: {
     group: 'kustomize.toolkit.fluxcd.io',
     resource: 'kustomizations',

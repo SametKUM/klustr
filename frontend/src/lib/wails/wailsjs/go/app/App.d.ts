@@ -107,6 +107,12 @@ export function GetFluxHelmRelease(arg1:string,arg2:string,arg3:string):Promise<
 
 export function GetFluxHelmRepository(arg1:string,arg2:string,arg3:string):Promise<kube.FluxHelmRepositoryDetail>;
 
+export function GetFluxImagePolicy(arg1:string,arg2:string,arg3:string):Promise<kube.FluxImagePolicyDetail>;
+
+export function GetFluxImageRepository(arg1:string,arg2:string,arg3:string):Promise<kube.FluxImageRepositoryDetail>;
+
+export function GetFluxImageUpdateAutomation(arg1:string,arg2:string,arg3:string):Promise<kube.FluxImageUpdateAutomationDetail>;
+
 export function GetFluxKustomization(arg1:string,arg2:string,arg3:string):Promise<kube.FluxKustomizationDetail>;
 
 export function GetFluxOCIRepository(arg1:string,arg2:string,arg3:string):Promise<kube.FluxOCIRepositoryDetail>;
@@ -140,6 +146,8 @@ export function GetIstioPeerAuthentication(arg1:string,arg2:string,arg3:string):
 export function GetIstioVirtualService(arg1:string,arg2:string,arg3:string):Promise<kube.IstioVirtualServiceDetail>;
 
 export function GetJob(arg1:string,arg2:string,arg3:string):Promise<kube.JobDetail>;
+
+export function GetKarpenterEC2NodeClass(arg1:string,arg2:string):Promise<kube.KarpenterEC2NodeClassDetail>;
 
 export function GetKyvernoClusterPolicy(arg1:string,arg2:string):Promise<kube.KyvernoPolicyDetail>;
 
@@ -337,6 +345,12 @@ export function ListFluxHelmReleases(arg1:string,arg2:string):Promise<Array<kube
 
 export function ListFluxHelmRepositories(arg1:string,arg2:string):Promise<Array<kube.FluxHelmRepositoryInfo>>;
 
+export function ListFluxImagePolicies(arg1:string,arg2:string):Promise<Array<kube.FluxImagePolicyInfo>>;
+
+export function ListFluxImageRepositories(arg1:string,arg2:string):Promise<Array<kube.FluxImageRepositoryInfo>>;
+
+export function ListFluxImageUpdateAutomations(arg1:string,arg2:string):Promise<Array<kube.FluxImageUpdateAutomationInfo>>;
+
 export function ListFluxKustomizations(arg1:string,arg2:string):Promise<Array<kube.FluxKustomizationInfo>>;
 
 export function ListFluxOCIRepositories(arg1:string,arg2:string):Promise<Array<kube.FluxOCIRepositoryInfo>>;
@@ -374,6 +388,8 @@ export function ListIstioPeerAuthentications(arg1:string,arg2:string):Promise<Ar
 export function ListIstioVirtualServices(arg1:string,arg2:string):Promise<Array<kube.IstioVirtualServiceInfo>>;
 
 export function ListJobs(arg1:string,arg2:string):Promise<Array<kube.JobInfo>>;
+
+export function ListKarpenterEC2NodeClasses(arg1:string):Promise<Array<kube.KarpenterEC2NodeClassInfo>>;
 
 export function ListKarpenterNodeClaims(arg1:string):Promise<Array<kube.KarpenterNodeClaimInfo>>;
 

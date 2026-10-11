@@ -6,6 +6,8 @@ import { formatMemoryQuantity, parseQuantity } from '@/lib/quantity'
 import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { CustomResourceReference } from '@/features/_shared/CustomResourceReference'
+import { resourceContext } from '@/features/_shared/resourceContext'
 
 const KARPENTER_GROUP = 'karpenter.sh'
 const NODEPOOL_RESOURCE = 'nodepools'
@@ -28,6 +30,18 @@ export function KarpenterNodePoolsView() {
           const v = i.getValue()
           const kind = i.row.original.nodeClassKind
           if (!v) return <span className="text-muted-foreground">—</span>
+          if (kind === 'EC2NodeClass' && i.row.original.nodeClassGroup === 'karpenter.k8s.aws') {
+            return (
+              <CustomResourceReference
+                contextName={resourceContext(i.row.original)}
+                group="karpenter.k8s.aws"
+                resource="ec2nodeclasses"
+                kind="EC2NodeClass"
+                namespace=""
+                name={v}
+              />
+            )
+          }
           return (
             <span className="font-mono text-xs" title={kind ? `${kind}/${v}` : v}>
               {v}

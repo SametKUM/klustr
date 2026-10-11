@@ -6,6 +6,8 @@ import { formatMemoryQuantity, parseQuantity } from '@/lib/quantity'
 import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { CustomResourceReference } from '@/features/_shared/CustomResourceReference'
+import { resourceContext } from '@/features/_shared/resourceContext'
 
 const KARPENTER_GROUP = 'karpenter.sh'
 const NODECLAIM_RESOURCE = 'nodeclaims'
@@ -16,6 +18,24 @@ export function KarpenterNodeClaimsView() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('name', { header: 'Name' }),
+      columnHelper.accessor('nodeClassName', {
+        header: 'Node Class',
+        size: COL_MD,
+        cell: (info) =>
+          info.row.original.nodeClassKind === 'EC2NodeClass' &&
+          info.row.original.nodeClassGroup === 'karpenter.k8s.aws' ? (
+            <CustomResourceReference
+              contextName={resourceContext(info.row.original)}
+              group="karpenter.k8s.aws"
+              resource="ec2nodeclasses"
+              kind="EC2NodeClass"
+              namespace=""
+              name={info.getValue()}
+            />
+          ) : (
+            info.getValue() || '—'
+          ),
+      }),
       columnHelper.accessor('nodeName', {
         header: 'Node',
         cell: (i) => {

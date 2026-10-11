@@ -36,15 +36,18 @@ var (
 // ResourceDetailPanel and disambiguates dispatch in the UI without a
 // special-case for every site.
 var fluxKindGVR = map[string]schema.GroupVersionResource{
-	"FluxKustomization":  fluxKustomizationGVR,
-	"FluxHelmRelease":    fluxHelmReleaseGVR,
-	"FluxGitRepository":  fluxGitRepositoryGVR,
-	"FluxHelmRepository": fluxHelmRepositoryGVR,
-	"FluxOCIRepository":  fluxOCIRepositoryGVR,
-	"FluxBucket":         fluxBucketGVR,
-	"FluxProvider":       fluxProviderGVR,
-	"FluxAlert":          fluxAlertGVR,
-	"FluxReceiver":       fluxReceiverGVR,
+	"FluxImageRepository":       fluxImageRepositoryGVR,
+	"FluxImagePolicy":           fluxImagePolicyGVR,
+	"FluxImageUpdateAutomation": fluxImageUpdateAutomationGVR,
+	"FluxKustomization":         fluxKustomizationGVR,
+	"FluxHelmRelease":           fluxHelmReleaseGVR,
+	"FluxGitRepository":         fluxGitRepositoryGVR,
+	"FluxHelmRepository":        fluxHelmRepositoryGVR,
+	"FluxOCIRepository":         fluxOCIRepositoryGVR,
+	"FluxBucket":                fluxBucketGVR,
+	"FluxProvider":              fluxProviderGVR,
+	"FluxAlert":                 fluxAlertGVR,
+	"FluxReceiver":              fluxReceiverGVR,
 }
 
 // fluxReconcileAnnotation is the trigger Flux controllers watch for to
@@ -941,9 +944,12 @@ func (m *ClientManager) ReconcileFluxResource(ctx context.Context, contextName, 
 	if err := m.assertWritable(contextName); err != nil {
 		return err
 	}
-	gvr, ok := fluxKindGVR[kind]
-	if !ok {
-		return fmt.Errorf("unsupported flux kind: %q", kind)
+	if kind == "FluxImagePolicy" {
+		return fmt.Errorf("reconcile the ImagePolicy's ImageRepository to refresh its tags")
+	}
+	gvr, err := m.fluxActionGVR(contextName, kind)
+	if err != nil {
+		return err
 	}
 	dyn, err := m.dynamicClient(contextName)
 	if err != nil {
@@ -976,9 +982,12 @@ func (m *ClientManager) SetFluxResourceSuspended(ctx context.Context, contextNam
 	if err := m.assertWritable(contextName); err != nil {
 		return err
 	}
-	gvr, ok := fluxKindGVR[kind]
-	if !ok {
-		return fmt.Errorf("unsupported flux kind: %q", kind)
+	gvr, err := m.fluxActionGVR(contextName, kind)
+	if err != nil {
+		return err
+	}
+	if kind == "FluxImagePolicy" && gvr.Version != "v1" {
+		return fmt.Errorf("suspending ImagePolicy requires image.toolkit.fluxcd.io/v1")
 	}
 	dyn, err := m.dynamicClient(contextName)
 	if err != nil {
@@ -1017,6 +1026,13 @@ func listFluxRows[I any](
 	extract func(*unstructured.Unstructured) I,
 	key func(I) (string, string),
 ) []I {
+	if gvr.Group == fluxImageGroup {
+		served, ok := m.servedGVR(contextName, gvr.Group, gvr.Resource)
+		if !ok {
+			return []I{}
+		}
+		gvr = served
+	}
 	objs := listCachedCRs(m, contextName, gvr, namespace)
 	out := make([]I, 0, len(objs))
 	for _, obj := range objs {

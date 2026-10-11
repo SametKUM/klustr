@@ -3559,6 +3559,314 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class FluxImagePolicyDetail {
+	    name: string;
+	    namespace: string;
+	    ready: string;
+	    status: string;
+	    suspended: boolean;
+	    interval: string;
+	    createdAt: string;
+	    repositoryName: string;
+	    repositoryNamespace: string;
+	    policyType: string;
+	    policyValue: string;
+	    latestImage: string;
+	    latestTag: string;
+	    latestDigest: string;
+	    conditions: FluxCondition[];
+	    previousImage: string;
+	    filterPattern: string;
+	    filterExtract: string;
+	    digestReflectionPolicy: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FluxImagePolicyDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.suspended = source["suspended"];
+	        this.interval = source["interval"];
+	        this.createdAt = source["createdAt"];
+	        this.repositoryName = source["repositoryName"];
+	        this.repositoryNamespace = source["repositoryNamespace"];
+	        this.policyType = source["policyType"];
+	        this.policyValue = source["policyValue"];
+	        this.latestImage = source["latestImage"];
+	        this.latestTag = source["latestTag"];
+	        this.latestDigest = source["latestDigest"];
+	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.previousImage = source["previousImage"];
+	        this.filterPattern = source["filterPattern"];
+	        this.filterExtract = source["filterExtract"];
+	        this.digestReflectionPolicy = source["digestReflectionPolicy"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class FluxImagePolicyInfo {
+	    name: string;
+	    namespace: string;
+	    ready: string;
+	    status: string;
+	    suspended: boolean;
+	    interval: string;
+	    createdAt: string;
+	    repositoryName: string;
+	    repositoryNamespace: string;
+	    policyType: string;
+	    policyValue: string;
+	    latestImage: string;
+	    latestTag: string;
+	    latestDigest: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FluxImagePolicyInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.suspended = source["suspended"];
+	        this.interval = source["interval"];
+	        this.createdAt = source["createdAt"];
+	        this.repositoryName = source["repositoryName"];
+	        this.repositoryNamespace = source["repositoryNamespace"];
+	        this.policyType = source["policyType"];
+	        this.policyValue = source["policyValue"];
+	        this.latestImage = source["latestImage"];
+	        this.latestTag = source["latestTag"];
+	        this.latestDigest = source["latestDigest"];
+	    }
+	}
+	export class FluxImageRepositoryDetail {
+	    name: string;
+	    namespace: string;
+	    ready: string;
+	    status: string;
+	    suspended: boolean;
+	    interval: string;
+	    createdAt: string;
+	    image: string;
+	    provider: string;
+	    tagCount: number;
+	    lastScanTime: string;
+	    conditions: FluxCondition[];
+	    canonicalImage: string;
+	    latestTags: string[];
+	    exclusionList: string[];
+	    secretRef: string;
+	    certSecretRef: string;
+	    insecure: boolean;
+	    timeout: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FluxImageRepositoryDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.suspended = source["suspended"];
+	        this.interval = source["interval"];
+	        this.createdAt = source["createdAt"];
+	        this.image = source["image"];
+	        this.provider = source["provider"];
+	        this.tagCount = source["tagCount"];
+	        this.lastScanTime = source["lastScanTime"];
+	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.canonicalImage = source["canonicalImage"];
+	        this.latestTags = source["latestTags"];
+	        this.exclusionList = source["exclusionList"];
+	        this.secretRef = source["secretRef"];
+	        this.certSecretRef = source["certSecretRef"];
+	        this.insecure = source["insecure"];
+	        this.timeout = source["timeout"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class FluxImageRepositoryInfo {
+	    name: string;
+	    namespace: string;
+	    ready: string;
+	    status: string;
+	    suspended: boolean;
+	    interval: string;
+	    createdAt: string;
+	    image: string;
+	    provider: string;
+	    tagCount: number;
+	    lastScanTime: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FluxImageRepositoryInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.suspended = source["suspended"];
+	        this.interval = source["interval"];
+	        this.createdAt = source["createdAt"];
+	        this.image = source["image"];
+	        this.provider = source["provider"];
+	        this.tagCount = source["tagCount"];
+	        this.lastScanTime = source["lastScanTime"];
+	    }
+	}
+	export class FluxImageUpdateAutomationDetail {
+	    name: string;
+	    namespace: string;
+	    ready: string;
+	    status: string;
+	    suspended: boolean;
+	    interval: string;
+	    createdAt: string;
+	    sourceName: string;
+	    sourceKind: string;
+	    sourceNamespace: string;
+	    updatePath: string;
+	    pushBranch: string;
+	    lastRunTime: string;
+	    lastPushCommit: string;
+	    lastPushTime: string;
+	    conditions: FluxCondition[];
+	    checkoutBranch: string;
+	    updateStrategy: string;
+	    observedSourceRevision: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FluxImageUpdateAutomationDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.suspended = source["suspended"];
+	        this.interval = source["interval"];
+	        this.createdAt = source["createdAt"];
+	        this.sourceName = source["sourceName"];
+	        this.sourceKind = source["sourceKind"];
+	        this.sourceNamespace = source["sourceNamespace"];
+	        this.updatePath = source["updatePath"];
+	        this.pushBranch = source["pushBranch"];
+	        this.lastRunTime = source["lastRunTime"];
+	        this.lastPushCommit = source["lastPushCommit"];
+	        this.lastPushTime = source["lastPushTime"];
+	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.checkoutBranch = source["checkoutBranch"];
+	        this.updateStrategy = source["updateStrategy"];
+	        this.observedSourceRevision = source["observedSourceRevision"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class FluxImageUpdateAutomationInfo {
+	    name: string;
+	    namespace: string;
+	    ready: string;
+	    status: string;
+	    suspended: boolean;
+	    interval: string;
+	    createdAt: string;
+	    sourceName: string;
+	    sourceKind: string;
+	    sourceNamespace: string;
+	    updatePath: string;
+	    pushBranch: string;
+	    lastRunTime: string;
+	    lastPushCommit: string;
+	    lastPushTime: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FluxImageUpdateAutomationInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.suspended = source["suspended"];
+	        this.interval = source["interval"];
+	        this.createdAt = source["createdAt"];
+	        this.sourceName = source["sourceName"];
+	        this.sourceKind = source["sourceKind"];
+	        this.sourceNamespace = source["sourceNamespace"];
+	        this.updatePath = source["updatePath"];
+	        this.pushBranch = source["pushBranch"];
+	        this.lastRunTime = source["lastRunTime"];
+	        this.lastPushCommit = source["lastPushCommit"];
+	        this.lastPushTime = source["lastPushTime"];
+	    }
+	}
 	export class FluxKustomizationDetail {
 	    name: string;
 	    namespace: string;
@@ -5286,11 +5594,158 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class KarpenterResolvedRequirement {
+	    key: string;
+	    operator: string;
+	    values: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KarpenterResolvedRequirement(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.operator = source["operator"];
+	        this.values = source["values"];
+	    }
+	}
+	export class KarpenterResolvedResource {
+	    id: string;
+	    name: string;
+	    zone: string;
+	    requirements: KarpenterResolvedRequirement[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KarpenterResolvedResource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.zone = source["zone"];
+	        this.requirements = this.convertValues(source["requirements"], KarpenterResolvedRequirement);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KarpenterEC2NodeClassDetail {
+	    name: string;
+	    amiFamily: string;
+	    role: string;
+	    instanceProfile: string;
+	    subnetCount: number;
+	    securityGroupCount: number;
+	    amiCount: number;
+	    ready: string;
+	    status: string;
+	    createdAt: string;
+	    conditions: ConditionDetail[];
+	    subnets: KarpenterResolvedResource[];
+	    securityGroups: KarpenterResolvedResource[];
+	    amis: KarpenterResolvedResource[];
+	    subnetSelectors: string[];
+	    securityGroupSelectors: string[];
+	    amiSelectors: string[];
+	    resolvedInstanceProfile: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KarpenterEC2NodeClassDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.amiFamily = source["amiFamily"];
+	        this.role = source["role"];
+	        this.instanceProfile = source["instanceProfile"];
+	        this.subnetCount = source["subnetCount"];
+	        this.securityGroupCount = source["securityGroupCount"];
+	        this.amiCount = source["amiCount"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.createdAt = source["createdAt"];
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.subnets = this.convertValues(source["subnets"], KarpenterResolvedResource);
+	        this.securityGroups = this.convertValues(source["securityGroups"], KarpenterResolvedResource);
+	        this.amis = this.convertValues(source["amis"], KarpenterResolvedResource);
+	        this.subnetSelectors = source["subnetSelectors"];
+	        this.securityGroupSelectors = source["securityGroupSelectors"];
+	        this.amiSelectors = source["amiSelectors"];
+	        this.resolvedInstanceProfile = source["resolvedInstanceProfile"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KarpenterEC2NodeClassInfo {
+	    name: string;
+	    amiFamily: string;
+	    role: string;
+	    instanceProfile: string;
+	    subnetCount: number;
+	    securityGroupCount: number;
+	    amiCount: number;
+	    ready: string;
+	    status: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KarpenterEC2NodeClassInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.amiFamily = source["amiFamily"];
+	        this.role = source["role"];
+	        this.instanceProfile = source["instanceProfile"];
+	        this.subnetCount = source["subnetCount"];
+	        this.securityGroupCount = source["securityGroupCount"];
+	        this.amiCount = source["amiCount"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class KarpenterNodeClaimInfo {
 	    name: string;
 	    nodeName: string;
 	    nodePool: string;
 	    nodeClassKind: string;
+	    nodeClassGroup: string;
 	    nodeClassName: string;
 	    instanceType: string;
 	    capacityType: string;
@@ -5315,6 +5770,7 @@ export namespace kube {
 	        this.nodeName = source["nodeName"];
 	        this.nodePool = source["nodePool"];
 	        this.nodeClassKind = source["nodeClassKind"];
+	        this.nodeClassGroup = source["nodeClassGroup"];
 	        this.nodeClassName = source["nodeClassName"];
 	        this.instanceType = source["instanceType"];
 	        this.capacityType = source["capacityType"];
@@ -5334,6 +5790,7 @@ export namespace kube {
 	    name: string;
 	    weight: number;
 	    nodeClassKind: string;
+	    nodeClassGroup: string;
 	    nodeClassName: string;
 	    consolidationPolicy: string;
 	    consolidateAfter: string;
@@ -5354,6 +5811,7 @@ export namespace kube {
 	        this.name = source["name"];
 	        this.weight = source["weight"];
 	        this.nodeClassKind = source["nodeClassKind"];
+	        this.nodeClassGroup = source["nodeClassGroup"];
 	        this.nodeClassName = source["nodeClassName"];
 	        this.consolidationPolicy = source["consolidationPolicy"];
 	        this.consolidateAfter = source["consolidateAfter"];
@@ -5366,6 +5824,8 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	
+	
 	export class Kubeconfig {
 	    contexts: ContextInfo[];
 	    currentContext: string;

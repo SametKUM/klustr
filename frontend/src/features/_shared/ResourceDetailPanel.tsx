@@ -103,6 +103,12 @@ import { FluxGitRepositoryDetailBody } from '@/features/flux/FluxGitRepositoryDe
 import { FluxHelmRepositoryDetailBody } from '@/features/flux/FluxHelmRepositoryDetailBody'
 import { FluxOCIRepositoryDetailBody } from '@/features/flux/FluxOCIRepositoryDetailBody'
 import { FluxBucketDetailBody } from '@/features/flux/FluxBucketDetailBody'
+import {
+  FluxImageRepositoryDetailBody,
+  FluxImagePolicyDetailBody,
+  FluxImageUpdateAutomationDetailBody,
+} from '@/features/flux/FluxImageDetailBodies'
+import { KarpenterEC2NodeClassDetailBody } from '@/features/karpenter-nodeclasses/KarpenterEC2NodeClassDetailBody'
 import { FluxProviderDetailBody } from '@/features/flux/FluxProviderDetailBody'
 import { FluxAlertDetailBody } from '@/features/flux/FluxAlertDetailBody'
 import { FluxReceiverDetailBody } from '@/features/flux/FluxReceiverDetailBody'
@@ -147,6 +153,8 @@ import { ReconcileFluxResourceButton } from '@/features/flux/ReconcileFluxResour
 import { SuspendResumeFluxResourceButton } from '@/features/flux/SuspendResumeFluxResourceButton'
 import {
   isFluxResource,
+  canReconcileFluxKind,
+  canSuspendFluxKind,
   stripFluxKindPrefix,
 } from '@/features/flux/fluxKinds'
 import type { FluxKind, HelmReleaseDetail } from '@/lib/api'
@@ -273,19 +281,23 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
               )}
               {!readOnly && isFluxResource(resource) && (
                 <>
-                  <ReconcileFluxResourceButton
-                    contextName={contextName}
-                    kind={resource.kind as FluxKind}
-                    namespace={resource.namespace}
-                    name={resource.name}
-                  />
-                  <SuspendResumeFluxResourceButton
-                    contextName={contextName}
-                    kind={resource.kind as FluxKind}
-                    namespace={resource.namespace}
-                    name={resource.name}
-                    suspended={resource.suspended ?? false}
-                  />
+                  {canReconcileFluxKind(resource.kind) && (
+                    <ReconcileFluxResourceButton
+                      contextName={contextName}
+                      kind={resource.kind as FluxKind}
+                      namespace={resource.namespace}
+                      name={resource.name}
+                    />
+                  )}
+                  {canSuspendFluxKind(resource.kind, resource.gvr?.version) && (
+                    <SuspendResumeFluxResourceButton
+                      contextName={contextName}
+                      kind={resource.kind as FluxKind}
+                      namespace={resource.namespace}
+                      name={resource.name}
+                      suspended={resource.suspended ?? false}
+                    />
+                  )}
                 </>
               )}
               {!readOnly && isCertManagerCertificate(resource) && (
@@ -527,6 +539,22 @@ function customResourceOverview(contextName: string | null, resource: SelectedRe
       return <FluxOCIRepositoryDetailBody {...detailProps} />
     case 'FluxBucket':
       return <FluxBucketDetailBody {...detailProps} />
+    case 'FluxImageRepository':
+      return resource.gvr?.group === 'image.toolkit.fluxcd.io' ? (
+        <FluxImageRepositoryDetailBody {...detailProps} />
+      ) : null
+    case 'FluxImagePolicy':
+      return resource.gvr?.group === 'image.toolkit.fluxcd.io' ? (
+        <FluxImagePolicyDetailBody {...detailProps} />
+      ) : null
+    case 'FluxImageUpdateAutomation':
+      return resource.gvr?.group === 'image.toolkit.fluxcd.io' ? (
+        <FluxImageUpdateAutomationDetailBody {...detailProps} />
+      ) : null
+    case 'EC2NodeClass':
+      return resource.gvr?.group === 'karpenter.k8s.aws' ? (
+        <KarpenterEC2NodeClassDetailBody contextName={contextName} name={resource.name} />
+      ) : null
     case 'FluxProvider':
       return <FluxProviderDetailBody {...detailProps} />
     case 'FluxAlert':

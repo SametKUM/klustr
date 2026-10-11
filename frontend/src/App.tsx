@@ -86,6 +86,12 @@ import { GatewayClassesView } from '@/features/gatewayclasses/GatewayClassesView
 import { ReferenceGrantsView } from '@/features/referencegrants/ReferenceGrantsView'
 import { KarpenterNodePoolsView } from '@/features/karpenter-nodepools/KarpenterNodePoolsView'
 import { KarpenterNodeClaimsView } from '@/features/karpenter-nodeclaims/KarpenterNodeClaimsView'
+import { KarpenterEC2NodeClassesView } from '@/features/karpenter-nodeclasses/KarpenterEC2NodeClassesView'
+import {
+  FluxImageRepositoriesView,
+  FluxImagePoliciesView,
+  FluxImageUpdateAutomationsView,
+} from '@/features/flux/FluxImageViews'
 import { FluxKustomizationsView } from '@/features/flux/FluxKustomizationsView'
 import { FluxHelmReleasesView } from '@/features/flux/FluxHelmReleasesView'
 import { FluxGitRepositoriesView } from '@/features/flux/FluxGitRepositoriesView'
@@ -317,6 +323,14 @@ function MainView() {
       return <KarpenterNodePoolsView />
     case 'karpenternodeclaims':
       return <KarpenterNodeClaimsView />
+    case 'karpenterec2nodeclasses':
+      return <KarpenterEC2NodeClassesView />
+    case 'fluximagerepositories':
+      return <FluxImageRepositoriesView />
+    case 'fluximagepolicies':
+      return <FluxImagePoliciesView />
+    case 'fluximageupdateautomations':
+      return <FluxImageUpdateAutomationsView />
     case 'fluxkustomizations':
       return <FluxKustomizationsView />
     case 'fluxhelmreleases':
