@@ -382,29 +382,5 @@ jobs:
             artifacts/klustr-*-windows-amd64.zip
             artifacts/SHA256SUMS
           generate_release_notes: true
-          # Keep installation instructions in the README and guides; release
-          # notes contain changes and download verification.
-          body: |
-            ## Verify a download
-
-            Checksums for every asset:
-
-            ```bash
-            curl -LO https://github.com/SametKUM/klustr/releases/download/${{ github.ref_name }}/SHA256SUMS
-            sha256sum -c --ignore-missing SHA256SUMS   # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
-            ```
-
-            On Windows, compare this with the zip's line in SHA256SUMS:
-
-            ```powershell
-            (Get-FileHash klustr-${{ github.ref_name }}-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
-            ```
-
-            Each asset also carries build provenance, which ties it to the
-            commit and workflow run that produced it:
-
-            ```bash
-            gh attestation verify klustr-${{ github.ref_name }}-linux-amd64.tar.gz --repo SametKUM/klustr
-            ```
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
