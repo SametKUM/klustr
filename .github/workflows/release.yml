@@ -382,69 +382,9 @@ jobs:
             artifacts/klustr-*-windows-amd64.zip
             artifacts/SHA256SUMS
           generate_release_notes: true
+          # Keep installation instructions in the README and guides; release
+          # notes contain changes and download verification.
           body: |
-            ## Install (macOS Apple Silicon)
-
-            The build is signed with a Developer ID Application certificate and notarized by Apple.
-
-            ### Homebrew
-
-            ```bash
-            brew tap sametkum/klustr
-            brew install klustr
-            ```
-
-            ### Manual
-
-            ```bash
-            curl -LO https://github.com/SametKUM/klustr/releases/download/${{ github.ref_name }}/klustr-${{ github.ref_name }}-darwin-arm64.tar.gz
-            tar -xzf klustr-${{ github.ref_name }}-darwin-arm64.tar.gz
-            mv klustr.app /Applications/
-            open /Applications/klustr.app
-            ```
-
-            ## Install (Linux amd64)
-
-            The Linux build links against `webkit2gtk-4.1` + `gtk-3`. Ubuntu
-            24.04+, Fedora 39+, Arch and most modern distros ship those
-            runtime libraries by default; on Ubuntu 22.04 install
-            `libwebkit2gtk-4.1-0 libgtk-3-0` first.
-
-            ### Debian / Ubuntu (.deb)
-
-            The .deb pulls in the runtime dependencies automatically and
-            registers a `klustr` desktop entry.
-
-            ```bash
-            VERSION="${{ github.ref_name }}"; V="${VERSION#v}"; DEB="klustr_${V/-/\~}_amd64.deb"
-            curl -LO "https://github.com/SametKUM/klustr/releases/download/${VERSION}/${DEB}"
-            sudo apt install "./${DEB}"
-            ```
-
-            ### Manual (tarball)
-
-            ```bash
-            curl -LO https://github.com/SametKUM/klustr/releases/download/${{ github.ref_name }}/klustr-${{ github.ref_name }}-linux-amd64.tar.gz
-            tar -xzf klustr-${{ github.ref_name }}-linux-amd64.tar.gz
-            install -Dm755 klustr ~/.local/bin/klustr
-            klustr
-            ```
-
-            ## Install (Windows amd64)
-
-            Tested on Windows 11, which ships the WebView2 runtime Klustr
-            renders with. The build is not code-signed yet: downloaded with a
-            browser, it gets a SmartScreen warning on first launch (choose
-            **More info**, then **Run anyway**), and Smart App Control, when
-            on, blocks it outright.
-
-            ```powershell
-            $zip = "klustr-${{ github.ref_name }}-windows-amd64.zip"
-            Invoke-WebRequest "https://github.com/SametKUM/klustr/releases/download/${{ github.ref_name }}/$zip" -OutFile $zip
-            Expand-Archive $zip "$env:LOCALAPPDATA\Programs\Klustr" -Force
-            & "$env:LOCALAPPDATA\Programs\Klustr\klustr.exe"
-            ```
-
             ## Verify a download
 
             Checksums for every asset:
