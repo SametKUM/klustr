@@ -57,12 +57,12 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 - 🧩 **Custom Resources (CRDs).** Auto-discovered on connect, grouped by API group, watch-backed.
 - ⎈ **Helm.** First-class Helm v3: install / upgrade / rollback / uninstall with a **dry-run preview** before any change, plus repo management and chart search.
 - 🚢 **Argo CD.** Sync, Refresh, Rollback and cascade-aware Delete through the Kubernetes API — no `argocd-server`, no `argocd` CLI, no Argo login.
-- 🚀 **Flux CD.** Kustomization · HelmRelease · GitRepository · HelmRepository · OCIRepository · Bucket · Provider · Alert · Receiver — each with Reconcile + Suspend/Resume buttons that hit the standard Flux annotations, no `flux` CLI.
+- 🚀 **Flux CD.** Kustomization · HelmRelease · GitRepository · HelmRepository · OCIRepository · Bucket · Provider · Alert · Receiver, plus **ImageRepository**, **ImagePolicy** and **ImageUpdateAutomation**. Inspect scanned tags, selected images and digests, and automation Git commits; follow repository references across namespaces. Reconcile and Suspend/Resume actions are available where the resource API supports them, with no `flux` CLI required.
 - 🏗️ **Tekton.** PipelineRuns, TaskRuns, Pipelines and Tasks. A PipelineRun's **task table** joins the resolved pipeline with its TaskRuns and skipped tasks; TaskRun **step logs** open on the running or failed step; **Cancel** and **Rerun** without `tkn`.
 - 🌉 **Gateway API.** Typed informers; **listener table**, per-rule **match → backend → weight** matrix and `RouteParentStatus` so a misrouted parent or `RefNotPermitted` backend is one click away. Vendor-neutral.
 - 🔐 **cert-manager.** Certificates, Issuers / ClusterIssuers, and the full issuance chain — CertificateRequest → Order → Challenge — with ready/expiry status and a drill-down across the chain. One-click **Renew**, no `cmctl` CLI.
 - 🕸️ **Istio.** VirtualServices, DestinationRules and PeerAuthentications, watch-backed; the served API version is read from the discovered CRD rather than hardcoded.
-- 🌳 **Karpenter.** NodePools and NodeClaims with provisioning status, surfaced automatically when the `karpenter.sh` CRDs are present.
+- 🌳 **Karpenter.** NodePools, NodeClaims and AWS **EC2NodeClasses**, surfaced automatically when their CRDs are present. Follow a pool or claim to its node class and inspect resolved subnets, security groups, AMIs and their requirements, IAM configuration and readiness conditions.
 - 🛡️ **Kyverno.** ClusterPolicies, Policies, CEL ValidatingPolicies, PolicyExceptions and `wgpolicyk8s.io` **policy reports**. Each policy lists the resources it fails, and a resource's detail shows its own report.
 - 📜 **Logs.** Stern-style multi-pod streaming with per-pod ANSI colors, follow, save and regex.
 - 🖥️ **In-app exec.** SPDY shell into any container.
@@ -229,7 +229,8 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] Gateway API — Gateways, HTTPRoutes, GRPCRoutes, GatewayClasses, ReferenceGrants (typed informers, status pills, listener / rule / RouteParentStatus tables)
 - [x] cert-manager — Certificates, Issuers / ClusterIssuers, CertificateRequests, Orders, Challenges (issuance-chain drill-down, ready/expiry status, one-click Renew)
 - [x] Istio — VirtualServices, DestinationRules, PeerAuthentications (served version read from the discovered CRD)
-- [x] Karpenter — NodePools, NodeClaims (provisioning status, auto-detected via the `karpenter.sh` CRDs)
+- [x] Karpenter — NodePools, NodeClaims, AWS EC2NodeClasses (provisioning status, resolved infrastructure and reference navigation)
+- [x] Flux image automation — ImageRepositories, ImagePolicies, ImageUpdateAutomations (tag/digest selection, Git update status, cross-namespace references)
 - [x] Tekton — PipelineRuns, TaskRuns, Pipelines, Tasks (task table, step logs, Cancel and Rerun)
 - [x] Kyverno — ClusterPolicies, Policies, ValidatingPolicies, PolicyExceptions, PolicyReports (per-policy violations, per-resource Policy tab)
 - [x] Multi-cluster aggregated mode + named context groups + per-context health ping
