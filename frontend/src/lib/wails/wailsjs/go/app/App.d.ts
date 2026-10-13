@@ -71,6 +71,8 @@ export function GetCertManagerOrder(arg1:string,arg2:string,arg3:string):Promise
 
 export function GetCertificateSigningRequest(arg1:string,arg2:string):Promise<kube.CertificateSigningRequestDetail>;
 
+export function GetCiliumResource(arg1:string,arg2:string,arg3:string,arg4:string):Promise<kube.CiliumResourceDetail>;
+
 export function GetClusterOverview(arg1:string):Promise<kube.ClusterOverview>;
 
 export function GetClusterPolicyReport(arg1:string,arg2:string):Promise<kube.PolicyReportDetail>;
@@ -294,6 +296,8 @@ export function ListCertManagerIssuers(arg1:string,arg2:string):Promise<Array<ku
 export function ListCertManagerOrders(arg1:string,arg2:string):Promise<Array<kube.CertManagerOrderInfo>>;
 
 export function ListCertificateSigningRequests(arg1:string):Promise<Array<kube.CertificateSigningRequestInfo>>;
+
+export function ListCiliumResources(arg1:string,arg2:string,arg3:string):Promise<Array<kube.CiliumResourceInfo>>;
 
 export function ListClusterPolicyReports(arg1:string):Promise<Array<kube.PolicyReportInfo>>;
 

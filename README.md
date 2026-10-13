@@ -62,6 +62,7 @@ Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://
 - 🌉 **Gateway API.** Typed informers; **listener table**, per-rule **match → backend → weight** matrix and `RouteParentStatus` so a misrouted parent or `RefNotPermitted` backend is one click away. Vendor-neutral.
 - 🔐 **cert-manager.** Certificates, Issuers / ClusterIssuers, and the full issuance chain — CertificateRequest → Order → Challenge — with ready/expiry status and a drill-down across the chain. One-click **Renew**, no `cmctl` CLI.
 - 🕸️ **Istio.** VirtualServices, DestinationRules and PeerAuthentications, watch-backed; the served API version is read from the discovered CRD rather than hardcoded.
+- **Cilium.** Dedicated views for network policies, endpoints, nodes, identities, CIDR groups, LoadBalancer IP pools, L2 announcement and egress gateway policies, and BGP configuration. Read policy rules, IP allocation and reported BGP peer status directly from CRDs, with links to referenced resources.
 - 🌳 **Karpenter.** NodePools, NodeClaims and AWS **EC2NodeClasses**, surfaced automatically when their CRDs are present. Follow a pool or claim to its node class and inspect resolved subnets, security groups, AMIs and their requirements, IAM configuration and readiness conditions.
 - 🛡️ **Kyverno.** ClusterPolicies, Policies, CEL ValidatingPolicies, PolicyExceptions and `wgpolicyk8s.io` **policy reports**. Each policy lists the resources it fails, and a resource's detail shows its own report.
 - 📜 **Logs.** Stern-style multi-pod streaming with per-pod ANSI colors, follow, save and regex.
@@ -229,6 +230,7 @@ Full design notes, conventions and the "add a new resource kind" recipe live in 
 - [x] Gateway API — Gateways, HTTPRoutes, GRPCRoutes, GatewayClasses, ReferenceGrants (typed informers, status pills, listener / rule / RouteParentStatus tables)
 - [x] cert-manager — Certificates, Issuers / ClusterIssuers, CertificateRequests, Orders, Challenges (issuance-chain drill-down, ready/expiry status, one-click Renew)
 - [x] Istio — VirtualServices, DestinationRules, PeerAuthentications (served version read from the discovered CRD)
+- [x] Cilium — policies, endpoints, nodes, identities, CIDR groups, LB IPAM, L2 announcements, egress gateways and BGP (CRD-backed views)
 - [x] Karpenter — NodePools, NodeClaims, AWS EC2NodeClasses (provisioning status, resolved infrastructure and reference navigation)
 - [x] Flux image automation — ImageRepositories, ImagePolicies, ImageUpdateAutomations (tag/digest selection, Git update status, cross-namespace references)
 - [x] Tekton — PipelineRuns, TaskRuns, Pipelines, Tasks (task table, step logs, Cancel and Rerun)

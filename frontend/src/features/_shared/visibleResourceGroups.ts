@@ -1,9 +1,11 @@
 import type { CRDInfo } from '@/lib/api'
 import { kindAccessibleInAny } from '@/store/access'
 import type { ResourceView } from '@/store/ui'
+import { CILIUM_GROUP, CILIUM_RESOURCES } from '@/features/cilium/ciliumKinds'
 import {
   ARGO_GROUP,
   CERT_MANAGER_GROUP_NAV,
+  CILIUM_GROUP_NAV,
   FLUX_GROUP,
   GATEWAY_GROUP,
   HELM_GROUP,
@@ -23,6 +25,7 @@ type VisibleResourceGroupsInput = {
 }
 
 const CRD_REQUIREMENTS: Partial<Record<ResourceView, { group: string; resource: string }>> = {
+  ...Object.fromEntries(Object.keys(CILIUM_RESOURCES).map((resource) => [resource, { group: CILIUM_GROUP, resource }])),
   argocdapplications: { group: 'argoproj.io', resource: 'applications' },
   argocdappprojects: { group: 'argoproj.io', resource: 'appprojects' },
   argocdapplicationsets: { group: 'argoproj.io', resource: 'applicationsets' },
@@ -134,6 +137,7 @@ export function buildVisibleResourceGroups({
     ...RESOURCE_GROUPS,
     GATEWAY_GROUP,
     ISTIO_GROUP,
+    CILIUM_GROUP_NAV,
     CERT_MANAGER_GROUP_NAV,
     KYVERNO_GROUP_NAV,
     ARGO_GROUP,

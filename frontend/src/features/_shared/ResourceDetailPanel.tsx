@@ -129,6 +129,8 @@ import { useResourcePolicyReport } from '@/features/kyverno/useResourcePolicyRep
 import { kyvernoKindOf, POLICY_REPORT_GROUP, POLICYREPORT_RESOURCE } from '@/features/kyverno/kyvernoKinds'
 import { findCRD, useCRDStore } from '@/store/crds'
 import { IstioVirtualServiceDetailBody } from '@/features/istio/IstioVirtualServiceDetailBody'
+import { CiliumResourceDetailBody } from '@/features/cilium/CiliumResourceDetailBody'
+import { ciliumResourceOf } from '@/features/cilium/ciliumKinds'
 import { IstioDestinationRuleDetailBody } from '@/features/istio/IstioDestinationRuleDetailBody'
 import { IstioPeerAuthenticationDetailBody } from '@/features/istio/IstioPeerAuthenticationDetailBody'
 import { CertificateDetailBody } from '@/features/cert-manager/CertificateDetailBody'
@@ -518,6 +520,8 @@ function customResourceOverview(contextName: string | null, resource: SelectedRe
       return <PolicyReportDetailBody {...detailProps} cluster />
   }
 
+  const ciliumResource = ciliumResourceOf(resource)
+  if (ciliumResource) return <CiliumResourceDetailBody {...detailProps} resource={ciliumResource} />
   switch (resource.kind) {
     case 'AppProject':
       return resource.gvr?.group === 'argoproj.io' ? (

@@ -66,9 +66,10 @@ import {
   Webhook,
   Workflow,
 } from 'lucide-react'
-import { Karpenter, Kyverno, SiArgo, SiHelm, SiIstio, SiTekton } from './brandIcons'
+import { Cilium, Karpenter, Kyverno, SiArgo, SiHelm, SiIstio, SiTekton } from './brandIcons'
 
 import type { ResourceKind, ResourceView } from '@/store/ui'
+import { CILIUM_RESOURCES, type CiliumView } from '@/features/cilium/ciliumKinds'
 
 export type SidebarIcon = ComponentType<SVGAttributes<SVGElement>>
 // `kind` ties a sidebar item to its Kubernetes kind so the sidebar filter
@@ -351,6 +352,16 @@ export const KYVERNO_GROUP_NAV: ResourceGroup = {
   ],
 }
 
+export const CILIUM_GROUP_NAV: ResourceGroup = {
+  label: 'Cilium',
+  icon: Cilium,
+  items: (Object.keys(CILIUM_RESOURCES) as CiliumView[]).map((view) => ({
+    label: CILIUM_RESOURCES[view].label,
+    view,
+    icon: Network,
+  })),
+}
+
 // Every group any sidebar can render, conditional or not. Persisted-entry
 // pruning and the hidden-items restore lookup must both run over this complete
 // list — a group missing from one of them makes its hidden items unrestorable.
@@ -365,6 +376,7 @@ export const ALL_SIDEBAR_GROUPS: readonly ResourceGroup[] = [
   ISTIO_GROUP,
   CERT_MANAGER_GROUP_NAV,
   KYVERNO_GROUP_NAV,
+  CILIUM_GROUP_NAV,
 ]
 
 // Every view id any sidebar group can surface. Used to prune persisted

@@ -2,6 +2,8 @@
 // file so persistence helpers can reference these without pulling the whole
 // Zustand store and its DOM side effects into their dependency graph.
 
+import type { CiliumView } from '@/features/cilium/ciliumKinds'
+
 export type SidebarMode = 'expanded' | 'icons'
 
 export const SIDEBAR_WIDTH_MIN = 200
@@ -60,6 +62,7 @@ export type LastSession = {
 export const MAX_TAGS_PER_CONTEXT = 3
 
 export type ResourceView =
+  | CiliumView
   | 'overview'
   | 'workloadsoverview'
   | 'pods'

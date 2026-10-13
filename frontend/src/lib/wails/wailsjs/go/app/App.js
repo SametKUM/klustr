@@ -138,6 +138,10 @@ export function GetCertificateSigningRequest(arg1, arg2) {
   return window['go']['app']['App']['GetCertificateSigningRequest'](arg1, arg2);
 }
 
+export function GetCiliumResource(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['GetCiliumResource'](arg1, arg2, arg3, arg4);
+}
+
 export function GetClusterOverview(arg1) {
   return window['go']['app']['App']['GetClusterOverview'](arg1);
 }
@@ -584,6 +588,10 @@ export function ListCertManagerOrders(arg1, arg2) {
 
 export function ListCertificateSigningRequests(arg1) {
   return window['go']['app']['App']['ListCertificateSigningRequests'](arg1);
+}
+
+export function ListCiliumResources(arg1, arg2, arg3) {
+  return window['go']['app']['App']['ListCiliumResources'](arg1, arg2, arg3);
 }
 
 export function ListClusterPolicyReports(arg1) {

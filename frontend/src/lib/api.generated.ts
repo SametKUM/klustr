@@ -61,6 +61,11 @@ export type CertManagerOrderDetail = kube.CertManagerOrderDetail
 export type CertManagerOrderInfo = kube.CertManagerOrderInfo
 export type CertificateSigningRequestDetail = kube.CertificateSigningRequestDetail
 export type CertificateSigningRequestInfo = kube.CertificateSigningRequestInfo
+export type CiliumField = kube.CiliumField
+export type CiliumReference = kube.CiliumReference
+export type CiliumTable = kube.CiliumTable
+export type CiliumResourceDetail = kube.CiliumResourceDetail
+export type CiliumResourceInfo = kube.CiliumResourceInfo
 export type ClusterPods = kube.ClusterPods
 export type ClusterResource = kube.ClusterResource
 export type ClusterOverview = kube.ClusterOverview
@@ -349,6 +354,7 @@ export const generatedApi = {
   getCertManagerIssuer: bindings.GetCertManagerIssuer,
   getCertManagerOrder: bindings.GetCertManagerOrder,
   getCertificateSigningRequest: bindings.GetCertificateSigningRequest,
+  getCiliumResource: bindings.GetCiliumResource,
   getClusterOverview: bindings.GetClusterOverview,
   getClusterPolicyReport: bindings.GetClusterPolicyReport,
   getClusterRole: bindings.GetClusterRole,
@@ -461,6 +467,7 @@ export const generatedApi = {
   listCertManagerIssuers: bindings.ListCertManagerIssuers,
   listCertManagerOrders: bindings.ListCertManagerOrders,
   listCertificateSigningRequests: bindings.ListCertificateSigningRequests,
+  listCiliumResources: bindings.ListCiliumResources,
   listClusterPolicyReports: bindings.ListClusterPolicyReports,
   listClusterRoleBindings: bindings.ListClusterRoleBindings,
   listClusterRoles: bindings.ListClusterRoles,

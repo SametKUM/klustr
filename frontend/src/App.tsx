@@ -117,6 +117,8 @@ import { IssuersView } from '@/features/cert-manager/IssuersView'
 import { CertificateRequestsView } from '@/features/cert-manager/CertificateRequestsView'
 import { OrdersView } from '@/features/cert-manager/OrdersView'
 import { ChallengesView } from '@/features/cert-manager/ChallengesView'
+import { CiliumResourcesView } from '@/features/cilium/CiliumResourcesView'
+import { isCiliumView } from '@/features/cilium/ciliumKinds'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
 import type { ResourceGroup } from '@/features/_shared/resourceGroups'
 import { useVisibleResourceGroups } from '@/features/_shared/useVisibleResourceGroups'
@@ -176,6 +178,7 @@ function MainView() {
     }
     return <CustomResourceView crd={crd} />
   }
+  if (isCiliumView(view)) return <CiliumResourcesView key={view} resource={view} />
   switch (view) {
     case 'overview':
       return <OverviewView />
