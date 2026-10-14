@@ -11,6 +11,7 @@ import { MetricsServerInstaller } from '@/features/_shared/MetricsServerInstalle
 import { MetricsServerUninstaller } from '@/features/_shared/MetricsServerUninstaller'
 import { ProviderIcon } from '@/features/_shared/providerIcons'
 import { providerMeta } from '@/features/_shared/providerInfo'
+import { selectsTextWithin } from '@/features/_shared/textSelection'
 import {
   api,
   type ClusterOverview,
@@ -684,7 +685,7 @@ function WarningsSection({
                 <th className="px-3 py-2 font-medium">Age</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="allow-select">
               {warnings.map(({ contextName, event: w }, i) => {
                 const clickable = Boolean(w.objectKind && w.objectName)
                 return (
@@ -693,13 +694,15 @@ function WarningsSection({
                     className={`border-b border-border/50 last:border-0 hover:bg-muted/40 ${clickable ? 'cursor-pointer' : ''}`}
                     onClick={
                       clickable
-                        ? () =>
+                        ? (ev) => {
+                            if (selectsTextWithin(ev.currentTarget)) return
                             setSelectedResource({
                               kind: w.objectKind,
                               namespace: w.namespace,
                               name: w.objectName,
                               context: contextName,
                             })
+                          }
                         : undefined
                     }
                   >

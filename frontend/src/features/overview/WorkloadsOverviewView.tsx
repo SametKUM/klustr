@@ -11,6 +11,7 @@ import {
   type ReplicationControllerInfo,
   type StatefulSetInfo,
 } from '@/lib/api'
+import { selectsTextWithin } from '@/features/_shared/textSelection'
 import { onKubeChange } from '@/lib/events'
 import { formatAge } from '@/lib/time'
 import { useNowTick } from '@/lib/nowTick'
@@ -487,7 +488,7 @@ function EventsTable({ events, showContext }: { events: TaggedEvent[]; showConte
             <th className="px-3 py-2 font-medium">Age</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="allow-select">
           {events.map((e, i) => {
             const clickable = Boolean(e.objectKind && e.objectName)
             return (
@@ -496,13 +497,15 @@ function EventsTable({ events, showContext }: { events: TaggedEvent[]; showConte
                 className={`border-b border-border/50 last:border-0 hover:bg-muted/40 ${clickable ? 'cursor-pointer' : ''}`}
                 onClick={
                   clickable
-                    ? () =>
+                    ? (ev) => {
+                        if (selectsTextWithin(ev.currentTarget)) return
                         setSelectedResource({
                           kind: e.objectKind,
                           namespace: e.namespace,
                           name: e.objectName,
                           context: e.contextName,
                         })
+                      }
                     : undefined
                 }
               >

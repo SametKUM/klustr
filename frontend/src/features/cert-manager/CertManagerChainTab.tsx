@@ -109,7 +109,7 @@ export function CertManagerChainTab<T extends ChainRow>({
                 {rows.map((row) => (
                   <tr
                     key={`${row.namespace}/${row.name}`}
-                    className="cursor-pointer border-t border-border align-top hover:bg-muted/30"
+                    className="cursor-pointer select-none border-t border-border align-top hover:bg-muted/30"
                     onClick={() =>
                       openResource({
                         kind: childKind,

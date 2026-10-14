@@ -75,7 +75,7 @@ export function KarpenterNodesTab({ contextName, name, load, title, emptyMessage
                 {nodes.map((n) => (
                   <tr
                     key={n.name}
-                    className="cursor-pointer border-t border-border align-top hover:bg-muted/40"
+                    className="cursor-pointer select-none border-t border-border align-top hover:bg-muted/40"
                     onClick={() =>
                       openResource({
                         kind: 'Node',

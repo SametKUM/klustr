@@ -91,7 +91,7 @@ export function TektonPipelineRunsTab({ contextName, namespace, pipeline }: Prop
               {rows.map((row) => (
                 <tr
                   key={row.name}
-                  className="cursor-pointer border-t border-border align-top hover:bg-muted/30"
+                  className="cursor-pointer select-none border-t border-border align-top hover:bg-muted/30"
                   onClick={() => openTekton('PipelineRun', row.namespace, row.name)}
                 >
                   <Td className="font-mono">{row.name}</Td>

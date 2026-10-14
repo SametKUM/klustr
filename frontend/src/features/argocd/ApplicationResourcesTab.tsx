@@ -92,7 +92,7 @@ export function ApplicationResourcesTab({ contextName, namespace, name }: Props)
                 className={[
                   'border-b border-border/60 transition-colors',
                   clickable
-                    ? 'cursor-pointer hover:bg-accent hover:text-accent-foreground'
+                    ? 'cursor-pointer select-none hover:bg-accent hover:text-accent-foreground'
                     : 'cursor-default opacity-75',
                 ].join(' ')}
                 title={clickable ? `Open ${r.kind} ${r.namespace}/${r.name}` : undefined}

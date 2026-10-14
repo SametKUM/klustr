@@ -507,7 +507,9 @@
   html {
     @apply font-sans;
   }
-  input, textarea, [contenteditable="true"], .allow-select {
+  /* Detail tab bodies hold text people copy out: event messages, conditions,
+     labels. Clickable rows inside them opt back out with select-none. */
+  input, textarea, [contenteditable="true"], .allow-select, [data-slot="tabs-content"] {
     user-select: text;
     -webkit-user-select: text;
   }
