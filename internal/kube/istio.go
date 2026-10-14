@@ -301,7 +301,11 @@ func (m *ClientManager) GetIstioPeerAuthentication(ctx context.Context, contextN
 	if err != nil {
 		return nil, err
 	}
+	// A namespace-wide PeerAuthentication has no selector; send {} rather than null.
 	selectorLabels, _, _ := unstructured.NestedStringMap(obj.Object, "spec", "selector", "matchLabels")
+	if selectorLabels == nil {
+		selectorLabels = map[string]string{}
+	}
 	return &IstioPeerAuthenticationDetail{
 		IstioPeerAuthenticationInfo: extractPeerAuthentication(obj),
 		SelectorLabels:              selectorLabels,
