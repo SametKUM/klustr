@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { api, type EventInfo } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Th, Td } from './DetailPrimitives'
+
+// Events have no informer, so the open tab polls on the overview feeds' interval.
+const POLL_INTERVAL_MS = 15_000
 
 type Props = {
   contextName: string | null
@@ -16,25 +19,43 @@ export function EventsTab({ contextName, namespace, kind, name }: Props) {
   const [events, setEvents] = useState<EventInfo[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const requestRef = useRef(0)
 
-  const refresh = useCallback(async () => {
-    if (!contextName) return
-    setLoading(true)
-    setError(null)
-    try {
-      const list = await api.listEvents(contextName, namespace, kind, name)
-      setEvents(list)
-    } catch (err) {
-      setError(String(err))
-    } finally {
-      setLoading(false)
-    }
-  }, [contextName, namespace, kind, name])
+  // Polls are quiet: only the first load and Refresh show the loading state,
+  // so the list doesn't flash on every interval. The latest request wins.
+  const load = useCallback(
+    async (quiet: boolean) => {
+      if (!contextName) return
+      const request = ++requestRef.current
+      if (!quiet) {
+        setLoading(true)
+        setError(null)
+      }
+      try {
+        const list = await api.listEvents(contextName, namespace, kind, name)
+        if (request !== requestRef.current) return
+        setEvents(list)
+        setError(null)
+      } catch (err) {
+        if (request !== requestRef.current) return
+        setError(String(err))
+      } finally {
+        if (request === requestRef.current) setLoading(false)
+      }
+    },
+    [contextName, namespace, kind, name],
+  )
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial load belongs to this subscription lifecycle.
-    refresh()
-  }, [refresh])
+    void load(false)
+    const id = window.setInterval(() => void load(true), POLL_INTERVAL_MS)
+    return () => {
+      window.clearInterval(id)
+      requestRef.current += 1
+    }
+  }, [load])
+  const refresh = () => void load(false)
 
   return (
     <div className="flex h-full min-h-0 flex-col">
