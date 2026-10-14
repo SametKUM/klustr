@@ -6,7 +6,7 @@ Cross-platform Kubernetes desktop client: multi-context cluster management with 
 
 - `internal/kube/` holds everything that talks to a cluster and imports nothing from Wails, so it stays testable with plain `go test`; `doc.go` has the package overview. Files are split per sidebar group: `informers_<group>.go` (list types and listers), `details_<group>.go` (detail builders), `manager_<group>.go` (`ClientManager` forwarders).
 - `app/` is the thin Wails binding layer over `ClientManager` — the only part a CLI or web mode would replace.
-- `frontend/src/lib/wails/` and `frontend/src/lib/api.generated.ts` are generated: change the Go side and run `npm run generate:api` instead of editing them. `frontend/src/lib/api.ts` is only for bindings that need real normalization on top.
+- `frontend/src/lib/wails/` and `frontend/src/lib/api.generated.ts` are generated: change the Go side and run `npm run generate:api` instead of editing them. `frontend/src/lib/api.ts` is only for bindings that need real normalization on top. `frontend/src/lib/integrationCatalog.generated.ts` is generated from the Go integration catalog (see below).
 - The landing site and user guides live in [SametKUM/klustr.dev](https://github.com/SametKUM/klustr.dev). When a change alters behavior a guide describes, point it out so the guide can be updated there in its own pull request.
 
 ## How it works
@@ -14,7 +14,7 @@ Cross-platform Kubernetes desktop client: multi-context cluster management with 
 - **Live data comes from informers.** K8s watch → informer → Wails event (debounced ~100 ms) → Zustand → React. Resource lists are not polled; the deliberate exceptions are `metrics.k8s.io`, which has no watch, and Events (the bounded cluster feed and the detail panel's Events tab), all refreshed every 15 s by the frontend.
 - **Access routing.** On `Watch`, `permissions.go` probes SelfSubjectAccessReview per kind and routes it to the all-namespaces factory, a factory scoped to the kubeconfig namespace, or nothing (denied: empty list, `errKindNoAccess` on Get). Every lister and Get goes through `w.factoryFor(kind)`, which also starts that kind's informer on first use (`ensureKind`); only Namespace and Pod start on attach. Covered kinds are listed twice: `kindBindings` in `informers.go` and the probe's `watchedKinds` in `permissions.go`.
 - **Namespaces and contexts filter at query time**, so switching them never restarts informers. A multi-namespace selection reaches the backend as a comma-separated string; namespaced list forwarders route through `listAcrossNamespaces`, and one that passes the string straight to a lister renders an empty table. In aggregated (multi-context) mode the frontend fans list calls out per context, while detail and mutation calls target the row's own context.
-- **CRDs.** `crd.go` watches the CRD list and starts a dynamic informer per GVR when a CR view opens (`EnsureCRWatch`); a CR without a dedicated integration gets a generic list with its printer columns and a YAML detail.
+- **CRDs.** `crd.go` watches the CRD list and starts a dynamic informer per GVR when a CR view opens (`EnsureCRWatch`), at the version the CRD stores; integrations read at that same served version. A CR without a dedicated integration gets a generic list with its printer columns and a YAML detail.
 - **Helm** uses the upstream `helm.sh/helm/v3` library. A metadata-only informer on the release Secrets (`helm.sh/release.v1`) drives live updates and the release list, which decodes only revisions that changed since the last refresh and never caches a payload; release detail and history read through the library. Install and Upgrade return a dry-run diff that the UI shows before applying.
 - **Credentials.** GUI launches skip the shell rc, so `shellenv.go` imports the login-shell environment and `creds*.go` capture aws-vault credentials into the exec plugin env. Captured credentials stay in memory: they are not logged, written to disk or sent over a binding.
 
@@ -42,11 +42,17 @@ A new kind is the same thin slice its neighbors are, across `internal/kube`, `ap
 
 ## Adding an ecosystem integration
 
-An integration is worth building when a widely used tool's resources need more than YAML: status worth reading at a glance, relations worth following, actions worth a button. The current set is Helm plus the CRD-backed groups in `CRD_REQUIREMENTS` (`visibleResourceGroups.ts`); some tools enrich an existing view instead of adding a group, as `keda.go` does for HPAs.
+An integration is worth building when a widely used tool's resources need more than YAML: status worth reading at a glance, relations worth following, actions worth a button. The current set is Helm, the Gateway API (through its typed client) and the CRD-backed resources in `integrationCatalog` (`internal/kube/integration_conformance_test.go`); some tools enrich an existing view instead of adding a group, as `keda.go` does for HPAs.
 
-- Backend: a `<name>.go` in `internal/kube`, using the project's typed client when it ships one (`gateway.go`), otherwise unstructured objects decoded into typed Go structs (`argocd.go`, `flux.go`).
-- Actions so far are Kubernetes API calls: Argo CD Sync and Refresh, for example, are PATCHes on the Application.
-- Frontend: a feature folder, `RESOURCE_GROUPS` items and `CRD_REQUIREMENTS` entries. The group then shows only when an active context serves the CRDs, and aggregated mode fans out only to those contexts.
+A CRD-backed integration follows the same contract as its neighbors, and tests hold every step to it:
+
+1. **Resources are a `schema.GroupResource`, never a pinned version.** Read through `listServedRows`, `listServedCRs` and `getServedCR` (`crd.go`), which resolve the version the cluster serves. The frontend starts the watch at that version, so a pinned GVR lists nothing on an install that stores another one.
+2. **Rows and details are typed Go structs** decoded from the unstructured object (`argocd.go`, `flux.go`). Slices and maps that reach the frontend are never nil.
+3. **Conditions and health** use `conditions.go`: `crConditions` for the list, `readyCondition` for the Ready headline. The frontend renders them with `ConditionsSection` and `ReadyPill`.
+4. **Actions** are Kubernetes API calls through `cr_actions.go`: `mergePatchCR`, or `writableResource` with `updateCR`/`updateCRStatus` for a Get → Update. They refuse a read-only context before any request; live reads use `servedReader`, which cannot write. Add each action to `integrationActions` (`cr_actions_test.go`).
+5. **Every resource goes in `integrationCatalog`** with its view id and list/detail bindings, plus a fixture at `internal/kube/testdata/integrations/<group>/<resource>.yaml` shaped like what the upstream controller writes, status included. `TestIntegrationConformance` checks the served-version read, JSON nulls, namespace selection, an unstarted watch and a missing CRD.
+6. **Regenerate the frontend catalog** with `go test ./internal/kube -run TestIntegrationCatalogIsCurrent -update-catalog`; CI fails while it is stale. The sidebar shows the view only when an active context serves its CRD, aggregated mode fans out only to those contexts, and typecheck fails until the view has entries in `INTEGRATION_LIST_VIEWS` (`features/integrationViews.tsx`) and `INTEGRATION_DETAIL_BODIES` (`features/integrationDetails.tsx`).
+7. **Frontend**: a feature folder with the views and detail bodies, and `RESOURCE_GROUPS` items; `integrations.test.ts` fails for a catalog view the sidebar cannot reach.
 
 ## Testing and checks
 
