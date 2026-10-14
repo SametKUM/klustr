@@ -6,7 +6,7 @@ import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { resourceContext } from '@/features/_shared/resourceContext'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { FLUX_NOTIFICATION_GROUP, FLUX_RECEIVER_RESOURCE } from './fluxKinds'
-import { FluxReadyPill } from './FluxReadyPill'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { ReconcileFluxResourceButton } from './ReconcileFluxResourceButton'
 import { SuspendResumeFluxResourceButton } from './SuspendResumeFluxResourceButton'
 
@@ -20,7 +20,7 @@ export function FluxReceiversView() {
       columnHelper.accessor('ready', {
         header: 'Ready',
         size: COL_SM,
-        cell: (i) => <FluxReadyPill value={i.getValue()} suspended={i.row.original.suspended} />,
+        cell: (i) => <ReadyPill status={i.getValue()} suspended={i.row.original.suspended} />,
       }),
       columnHelper.accessor('type', {
         header: 'Type',

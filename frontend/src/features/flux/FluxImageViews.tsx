@@ -23,7 +23,7 @@ import {
   canReconcileFluxKind,
   canSuspendFluxKind,
 } from './fluxKinds'
-import { FluxReadyPill } from './FluxReadyPill'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { ReconcileFluxResourceButton } from './ReconcileFluxResourceButton'
 import { SuspendResumeFluxResourceButton } from './SuspendResumeFluxResourceButton'
 
@@ -43,7 +43,7 @@ function imageColumns<T extends FluxImageStatus>(kind: FluxKind, resource: strin
         size: 110,
         cell: (info) => (
           <span title={info.row.original.status}>
-            <FluxReadyPill value={info.getValue()} suspended={info.row.original.suspended} />
+            <ReadyPill status={info.getValue()} suspended={info.row.original.suspended} />
           </span>
         ),
       }),

@@ -388,7 +388,7 @@ func extractArgoApplicationSetDetail(obj *unstructured.Unstructured) ArgoApplica
 	d.TemplateRevision, _, _ = unstructured.NestedString(obj.Object, "spec", "template", "spec", "source", "targetRevision")
 	d.TemplateDestNS, _, _ = unstructured.NestedString(obj.Object, "spec", "template", "spec", "destination", "namespace")
 	d.GeneratedApps = readArgoApplicationSetGeneratedApps(obj)
-	d.Conditions = readArgoApplicationSetConditions(obj)
+	d.Conditions = crConditions(obj)
 	return d
 }
 
@@ -515,24 +515,6 @@ func readArgoApplicationSetGeneratedApps(obj *unstructured.Unstructured) []ArgoA
 			entry.TargetRevisions = strings.Join(parts, ", ")
 		}
 		out = append(out, entry)
-	}
-	return out
-}
-
-func readArgoApplicationSetConditions(obj *unstructured.Unstructured) []ConditionDetail {
-	raw, _, _ := nestedSliceNoCopy(obj.Object, "status", "conditions")
-	out := make([]ConditionDetail, 0, len(raw))
-	for _, item := range raw {
-		m, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		c := ConditionDetail{}
-		c.Type, _ = m["type"].(string)
-		c.Status, _ = m["status"].(string)
-		c.Reason, _ = m["reason"].(string)
-		c.Message, _ = m["message"].(string)
-		out = append(out, c)
 	}
 	return out
 }

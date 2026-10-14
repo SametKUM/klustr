@@ -6,8 +6,8 @@ import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
 import { Copyable } from '@/features/_shared/Copyable'
 import { CustomResourceReference } from '@/features/_shared/CustomResourceReference'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
-import { FluxReadyPill } from './FluxReadyPill'
-import { FluxConditionsTable } from './FluxConditionsTable'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 import { FLUX_IMAGE_GROUP, FLUX_IMAGE_REPOSITORY_RESOURCE } from './fluxKinds'
 
 type Props = { contextName: string | null; namespace: string; name: string }
@@ -16,7 +16,7 @@ function ImageStatus({ title, detail }: { title: string; detail: FluxImageStatus
   return (
     <Section title={title}>
       <Field label="Ready">
-        <FluxReadyPill value={detail.ready} suspended={detail.suspended} />
+        <ReadyPill status={detail.ready} suspended={detail.suspended} />
       </Field>
       <Field label="Status message">{detail.status || '—'}</Field>
       <Field label="Interval">{detail.interval || '—'}</Field>
@@ -71,7 +71,7 @@ export function FluxImageRepositoryDetailBody({ contextName, namespace, name }: 
           {detail.exclusionList.length ? detail.exclusionList.join(', ') : '—'}
         </Field>
       </Section>
-      <FluxConditionsTable conditions={detail.conditions} />
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }
@@ -133,7 +133,7 @@ export function FluxImagePolicyDetailBody({ contextName, namespace, name }: Prop
           Reconcile the linked image repository to rescan tags and refresh this policy.
         </div>
       </Section>
-      <FluxConditionsTable conditions={detail.conditions} />
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }
@@ -200,7 +200,7 @@ export function FluxImageUpdateAutomationDetailBody({ contextName, namespace, na
           )}
         </Field>
       </Section>
-      <FluxConditionsTable conditions={detail.conditions} />
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }

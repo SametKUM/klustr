@@ -4,8 +4,8 @@ import { formatAge, formatTimestamp } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
-import { CertManagerConditionPill } from './CertManagerConditionPill'
-import { CertManagerConditionsTable } from './CertManagerConditionsTable'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 import { ExpiryCell } from './ExpiryCell'
 
 type Props = {
@@ -34,7 +34,7 @@ export function CertificateDetailBody({ contextName, namespace, name }: Props) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section title="Certificate">
           <Field label="Ready">
-            <CertManagerConditionPill kind="ready" status={detail.ready} />
+            <ReadyPill status={detail.ready} />
           </Field>
           <Field label="Status message">{detail.status || '—'}</Field>
           <Field label="Common name">
@@ -104,7 +104,7 @@ export function CertificateDetailBody({ contextName, namespace, name }: Props) {
         </Section>
       )}
 
-      <CertManagerConditionsTable conditions={detail.conditions} />
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }

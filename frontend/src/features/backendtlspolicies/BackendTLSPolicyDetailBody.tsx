@@ -4,7 +4,8 @@ import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
-import { GatewayConditions, GatewayReferences } from '@/features/gateways/GatewayDetailPrimitives'
+import { ConditionsTable } from '@/features/_shared/ConditionsTable'
+import { GatewayReferences } from '@/features/gateways/GatewayDetailPrimitives'
 
 export function BackendTLSPolicyDetailBody({ contextName, namespace, name }: {
   contextName: string | null
@@ -55,7 +56,7 @@ export function BackendTLSPolicyDetailBody({ contextName, namespace, name }: {
             <div key={index} className="space-y-2">
               <GatewayReferences references={[ancestor.ancestor]} namespace={namespace} contextName={contextName} />
               <Field label="Controller" mono><Copyable value={ancestor.controller} /></Field>
-              <GatewayConditions conditions={ancestor.conditions} />
+              <ConditionsTable conditions={ancestor.conditions} />
             </div>
           ))}
         </div>

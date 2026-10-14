@@ -1,7 +1,6 @@
 package kube
 
 import (
-	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -128,7 +127,7 @@ func extractKarpenterNodePool(obj *unstructured.Unstructured) KarpenterNodePoolI
 			info.NodeCount = nodes
 		}
 	}
-	info.Ready = unstructuredConditionStatus(obj, "Ready")
+	info.Ready = conditionStatusByType(crConditions(obj), "Ready")
 	return info
 }
 
@@ -162,34 +161,11 @@ func extractKarpenterNodeClaim(obj *unstructured.Unstructured) KarpenterNodeClai
 	info.CapacityType = lbls["karpenter.sh/capacity-type"]
 	info.Zone = lbls["topology.kubernetes.io/zone"]
 
-	info.Launched = unstructuredConditionStatus(obj, "Launched")
-	info.Registered = unstructuredConditionStatus(obj, "Registered")
-	info.Initialized = unstructuredConditionStatus(obj, "Initialized")
-	info.Drifted = unstructuredConditionStatus(obj, "Drifted")
-	info.Ready = unstructuredConditionStatus(obj, "Ready")
+	conds := crConditions(obj)
+	info.Launched = conditionStatusByType(conds, "Launched")
+	info.Registered = conditionStatusByType(conds, "Registered")
+	info.Initialized = conditionStatusByType(conds, "Initialized")
+	info.Drifted = conditionStatusByType(conds, "Drifted")
+	info.Ready = conditionStatusByType(conds, "Ready")
 	return info
-}
-
-// unstructuredConditionStatus walks status.conditions[] on an unstructured
-// CR and returns the matched condition's status ("True" / "False" /
-// "Unknown") or empty string if absent. Lives next to the Karpenter
-// extractors because every Karpenter CR uses this shape.
-func unstructuredConditionStatus(obj *unstructured.Unstructured, conditionType string) string {
-	conditions, found, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
-	if !found {
-		return ""
-	}
-	for _, c := range conditions {
-		m, ok := c.(map[string]any)
-		if !ok {
-			continue
-		}
-		t, _ := m["type"].(string)
-		if !strings.EqualFold(t, conditionType) {
-			continue
-		}
-		s, _ := m["status"].(string)
-		return s
-	}
-	return ""
 }

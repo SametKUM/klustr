@@ -36,14 +36,14 @@ type FluxImageRepositoryInfo struct {
 
 type FluxImageRepositoryDetail struct {
 	FluxImageRepositoryInfo
-	Conditions     []FluxCondition `json:"conditions"`
-	CanonicalImage string          `json:"canonicalImage"`
-	LatestTags     []string        `json:"latestTags"`
-	ExclusionList  []string        `json:"exclusionList"`
-	SecretRef      string          `json:"secretRef"`
-	CertSecretRef  string          `json:"certSecretRef"`
-	Insecure       bool            `json:"insecure"`
-	Timeout        string          `json:"timeout"`
+	Conditions     []ConditionDetail `json:"conditions"`
+	CanonicalImage string            `json:"canonicalImage"`
+	LatestTags     []string          `json:"latestTags"`
+	ExclusionList  []string          `json:"exclusionList"`
+	SecretRef      string            `json:"secretRef"`
+	CertSecretRef  string            `json:"certSecretRef"`
+	Insecure       bool              `json:"insecure"`
+	Timeout        string            `json:"timeout"`
 }
 
 type FluxImagePolicyInfo struct {
@@ -59,11 +59,11 @@ type FluxImagePolicyInfo struct {
 
 type FluxImagePolicyDetail struct {
 	FluxImagePolicyInfo
-	Conditions             []FluxCondition `json:"conditions"`
-	PreviousImage          string          `json:"previousImage"`
-	FilterPattern          string          `json:"filterPattern"`
-	FilterExtract          string          `json:"filterExtract"`
-	DigestReflectionPolicy string          `json:"digestReflectionPolicy"`
+	Conditions             []ConditionDetail `json:"conditions"`
+	PreviousImage          string            `json:"previousImage"`
+	FilterPattern          string            `json:"filterPattern"`
+	FilterExtract          string            `json:"filterExtract"`
+	DigestReflectionPolicy string            `json:"digestReflectionPolicy"`
 }
 
 type FluxImageUpdateAutomationInfo struct {
@@ -80,14 +80,14 @@ type FluxImageUpdateAutomationInfo struct {
 
 type FluxImageUpdateAutomationDetail struct {
 	FluxImageUpdateAutomationInfo
-	Conditions             []FluxCondition `json:"conditions"`
-	CheckoutBranch         string          `json:"checkoutBranch"`
-	UpdateStrategy         string          `json:"updateStrategy"`
-	ObservedSourceRevision string          `json:"observedSourceRevision"`
+	Conditions             []ConditionDetail `json:"conditions"`
+	CheckoutBranch         string            `json:"checkoutBranch"`
+	UpdateStrategy         string            `json:"updateStrategy"`
+	ObservedSourceRevision string            `json:"observedSourceRevision"`
 }
 
 func extractFluxImageStatus(obj *unstructured.Unstructured) FluxImageStatus {
-	ready, status := readySummary(extractFluxConditions(obj))
+	ready, status := readyCondition(crConditions(obj))
 	suspended, _, _ := unstructured.NestedBool(obj.Object, "spec", "suspend")
 	interval, _, _ := unstructured.NestedString(obj.Object, "spec", "interval")
 	return FluxImageStatus{Name: obj.GetName(), Namespace: obj.GetNamespace(),
@@ -113,7 +113,7 @@ func extractFluxImageRepositoryDetail(obj *unstructured.Unstructured) *FluxImage
 	timeout, _, _ := unstructured.NestedString(obj.Object, "spec", "timeout")
 	insecure, _, _ := unstructured.NestedBool(obj.Object, "spec", "insecure")
 	return &FluxImageRepositoryDetail{FluxImageRepositoryInfo: extractFluxImageRepository(obj),
-		Conditions: extractFluxConditions(obj), CanonicalImage: canonical, LatestTags: append([]string{}, tags...),
+		Conditions: crConditions(obj), CanonicalImage: canonical, LatestTags: append([]string{}, tags...),
 		ExclusionList: append([]string{}, exclusions...), SecretRef: nestedRefName(obj, "spec", "secretRef"),
 		CertSecretRef: nestedRefName(obj, "spec", "certSecretRef"), Timeout: timeout, Insecure: insecure}
 }
@@ -169,7 +169,7 @@ func extractFluxImagePolicyDetail(obj *unstructured.Unstructured) *FluxImagePoli
 		reflection = "Never"
 	}
 	return &FluxImagePolicyDetail{FluxImagePolicyInfo: extractFluxImagePolicy(obj),
-		Conditions: extractFluxConditions(obj), PreviousImage: previous,
+		Conditions: crConditions(obj), PreviousImage: previous,
 		FilterPattern: pattern, FilterExtract: extract, DigestReflectionPolicy: reflection}
 }
 
@@ -211,7 +211,7 @@ func extractFluxImageUpdateAutomationDetail(obj *unstructured.Unstructured) *Flu
 	strategy, _, _ := unstructured.NestedString(obj.Object, "spec", "update", "strategy")
 	revision, _, _ := unstructured.NestedString(obj.Object, "status", "observedSourceRevision")
 	return &FluxImageUpdateAutomationDetail{FluxImageUpdateAutomationInfo: extractFluxImageUpdateAutomation(obj),
-		Conditions: extractFluxConditions(obj), CheckoutBranch: checkout, UpdateStrategy: strategy, ObservedSourceRevision: revision}
+		Conditions: crConditions(obj), CheckoutBranch: checkout, UpdateStrategy: strategy, ObservedSourceRevision: revision}
 }
 
 func (m *ClientManager) fluxActionGVR(contextName, kind string) (schema.GroupVersionResource, error) {

@@ -135,7 +135,7 @@ func extractKyvernoPolicy(obj *unstructured.Unstructured) KyvernoPolicyInfo {
 		Admission:  nestedBoolOrTrue(obj.Object, "spec", "admission"),
 		CreatedAt:  crCreatedAt(obj),
 	}
-	info.Ready, info.Message = kyvernoReady(obj)
+	info.Ready, info.Message = readyCondition(crConditions(obj))
 
 	actions := map[string]bool{}
 	policyAction, _, _ := unstructured.NestedString(obj.Object, "spec", "validationFailureAction")
@@ -263,24 +263,6 @@ func kyvernoFailureAction(rule map[string]any, policyAction string) string {
 	default:
 		return "Audit"
 	}
-}
-
-// kyvernoReady reads the Ready condition Kyverno sets once a policy compiled
-// and its webhooks are registered.
-func kyvernoReady(obj *unstructured.Unstructured) (status, message string) {
-	conds, _, _ := nestedSliceNoCopy(obj.Object, "status", "conditions")
-	for _, item := range conds {
-		cond, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		if t, _ := cond["type"].(string); t == "Ready" {
-			status, _ = cond["status"].(string)
-			message, _ = cond["message"].(string)
-			return status, message
-		}
-	}
-	return "", ""
 }
 
 // kyvernoResourceFilters returns the resources blocks of a match or exclude

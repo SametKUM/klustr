@@ -4,7 +4,7 @@ import { api, type CertManagerIssuerInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
-import { CertManagerConditionPill } from './CertManagerConditionPill'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import {
   CERT_MANAGER_CLUSTERISSUER_RESOURCE,
   CERT_MANAGER_GROUP,
@@ -36,7 +36,7 @@ export function IssuersView({ cluster }: Props) {
       columnHelper.accessor('ready', {
         header: 'Ready',
         size: COL_SM,
-        cell: (i) => <CertManagerConditionPill kind="ready" status={i.getValue()} />,
+        cell: (i) => <ReadyPill status={i.getValue()} />,
       }),
       columnHelper.accessor('type', {
         header: 'Type',

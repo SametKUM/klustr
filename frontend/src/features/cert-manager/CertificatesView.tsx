@@ -5,7 +5,7 @@ import { formatAge } from '@/lib/time'
 import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { resourceContext } from '@/features/_shared/resourceContext'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
-import { CertManagerConditionPill } from './CertManagerConditionPill'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { CERT_MANAGER_CERTIFICATE_RESOURCE, CERT_MANAGER_GROUP } from './certManagerKinds'
 import { ExpiryCell } from './ExpiryCell'
 import { RenewCertificateButton } from './RenewCertificateButton'
@@ -20,7 +20,7 @@ export function CertificatesView() {
       columnHelper.accessor('ready', {
         header: 'Ready',
         size: COL_SM,
-        cell: (i) => <CertManagerConditionPill kind="ready" status={i.getValue()} />,
+        cell: (i) => <ReadyPill status={i.getValue()} />,
       }),
       columnHelper.accessor('secretName', {
         header: 'Secret',

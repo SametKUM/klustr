@@ -76,34 +76,26 @@ type TektonWorkspaceBinding struct {
 	Source string `json:"source"`
 }
 
-type tektonCondition struct{ typ, status, reason, message string }
-
 // tektonRunState buckets a run's Succeeded condition into a UI state and
 // returns the condition's reason and message. Tekton runs carry that single
 // knative-style condition; a run without it has not been picked up by the
 // controller yet, or is held by PipelineRunPending.
 func tektonRunState(obj *unstructured.Unstructured) (state, reason, message string) {
-	conds := extractConditions(obj, func(t, s, reason, message, _ string) tektonCondition {
-		return tektonCondition{typ: t, status: s, reason: reason, message: message}
-	})
-	for _, c := range conds {
-		if c.typ != "Succeeded" {
-			continue
-		}
-		switch c.status {
+	if c, ok := findCondition(crConditions(obj), "Succeeded"); ok {
+		switch c.Status {
 		case "True":
-			return tektonStateSucceeded, c.reason, c.message
+			return tektonStateSucceeded, c.Reason, c.Message
 		case "False":
-			switch c.reason {
+			switch c.Reason {
 			case "Cancelled", "PipelineRunCancelled", tektonTaskRunCancelled, "StoppedRunFinally", "CancelledRunFinally":
-				return tektonStateCancelled, c.reason, c.message
+				return tektonStateCancelled, c.Reason, c.Message
 			}
-			return tektonStateFailed, c.reason, c.message
+			return tektonStateFailed, c.Reason, c.Message
 		default:
-			if c.reason == tektonPipelineRunPending || c.reason == "Pending" {
-				return tektonStatePending, c.reason, c.message
+			if c.Reason == tektonPipelineRunPending || c.Reason == "Pending" {
+				return tektonStatePending, c.Reason, c.Message
 			}
-			return tektonStateRunning, c.reason, c.message
+			return tektonStateRunning, c.Reason, c.Message
 		}
 	}
 	if specStatus, _, _ := unstructured.NestedString(obj.Object, "spec", "status"); specStatus == tektonPipelineRunPending {

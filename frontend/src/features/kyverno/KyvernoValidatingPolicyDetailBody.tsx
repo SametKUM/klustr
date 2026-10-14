@@ -1,7 +1,8 @@
 import { useCallback } from 'react'
 import { api, type KyvernoCELExpression, type KyvernoValidatingPolicyDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { failureActionClass } from './kyvernoFormat'
@@ -53,7 +54,7 @@ export function KyvernoValidatingPolicyDetailBody({ contextName, namespace, name
           <Field label="Admission">{detail.admission ? 'yes' : 'no'}</Field>
           <Field label="Background scans">{detail.background ? 'yes' : 'no'}</Field>
           <Field label="Ready">
-            <ConditionPill status={detail.ready} />
+            <ReadyPill status={detail.ready} />
           </Field>
           <Field label="Age">{formatAge(detail.createdAt)}</Field>
         </Section>
@@ -105,34 +106,7 @@ export function KyvernoValidatingPolicyDetailBody({ contextName, namespace, name
       <ExpressionsTable title="Variables" rows={detail.variables} nameHeader="Name" />
       <ExpressionsTable title="Audit annotations" rows={detail.auditAnnotations} nameHeader="Key" />
 
-      {detail.conditions.length > 0 && (
-        <Section title={`Conditions (${detail.conditions.length})`}>
-          <div className="overflow-hidden rounded border border-border">
-            <table className="w-full text-xs">
-              <thead className="bg-muted/40 text-muted-foreground">
-                <tr>
-                  <Th>Type</Th>
-                  <Th>Status</Th>
-                  <Th>Reason</Th>
-                  <Th>Message</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.conditions.map((c) => (
-                  <tr key={c.type} className="border-t border-border align-top">
-                    <Td className="font-mono">{c.type}</Td>
-                    <Td>
-                      <ConditionPill status={c.status} />
-                    </Td>
-                    <Td className="font-mono">{c.reason || '—'}</Td>
-                    <Td className="whitespace-pre-wrap break-words">{c.message || '—'}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
-      )}
+      <ConditionsSection conditions={detail.conditions} hideWhenEmpty />
     </div>
   )
 }

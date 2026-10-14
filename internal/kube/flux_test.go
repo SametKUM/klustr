@@ -147,31 +147,6 @@ func TestExtractFluxGitRepositoryRefPrecedence(t *testing.T) {
 	}
 }
 
-func TestExtractFluxConditions(t *testing.T) {
-	t.Run("missing status returns empty slice not nil", func(t *testing.T) {
-		obj := &unstructured.Unstructured{Object: map[string]any{}}
-		out := extractFluxConditions(obj)
-		if out == nil {
-			t.Fatal("should be empty slice not nil")
-		}
-	})
-	t.Run("skips entries without type or status", func(t *testing.T) {
-		obj := &unstructured.Unstructured{Object: map[string]any{
-			"status": map[string]any{
-				"conditions": []any{
-					map[string]any{"type": "Ready"},
-					map[string]any{"status": "True"},
-					map[string]any{"type": "Reconciling", "status": "True", "reason": "Pulling"},
-				},
-			},
-		}}
-		out := extractFluxConditions(obj)
-		if len(out) != 1 || out[0].Type != "Reconciling" {
-			t.Errorf("got %+v", out)
-		}
-	})
-}
-
 func TestFormatSourceRef(t *testing.T) {
 	cases := []struct {
 		name     string

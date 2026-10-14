@@ -3,8 +3,9 @@ import { api, type CertManagerCertificateRequestDetail } from '@/lib/api'
 import { formatAge, formatTimestamp } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { CertManagerConditionPill } from './CertManagerConditionPill'
-import { CertManagerConditionsTable } from './CertManagerConditionsTable'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 
 type Props = {
   contextName: string | null
@@ -31,7 +32,7 @@ export function CertificateRequestDetailBody({ contextName, namespace, name }: P
     <div className="space-y-6">
       <Section title="CertificateRequest">
         <Field label="Ready">
-          <CertManagerConditionPill kind="ready" status={detail.ready} />
+          <ReadyPill status={detail.ready} />
         </Field>
         <Field label="Approved">
           <CertManagerConditionPill kind="approved" status={detail.approved} />
@@ -56,7 +57,7 @@ export function CertificateRequestDetailBody({ contextName, namespace, name }: P
         </Section>
       )}
 
-      <CertManagerConditionsTable conditions={detail.conditions} />
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }

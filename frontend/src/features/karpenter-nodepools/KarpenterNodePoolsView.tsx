@@ -5,7 +5,7 @@ import { formatAge } from '@/lib/time'
 import { formatMemoryQuantity, parseQuantity } from '@/lib/quantity'
 import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { CustomResourceReference } from '@/features/_shared/CustomResourceReference'
 import { resourceContext } from '@/features/_shared/resourceContext'
 
@@ -85,7 +85,7 @@ export function KarpenterNodePoolsView() {
       columnHelper.accessor('ready', {
         header: 'Ready',
         size: COL_SM,
-        cell: (i) => <ConditionPill status={i.getValue()} />,
+        cell: (i) => <ReadyPill status={i.getValue()} />,
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',

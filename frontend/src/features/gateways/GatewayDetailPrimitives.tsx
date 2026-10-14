@@ -1,6 +1,5 @@
-import type { ConditionDetail, ParentRefDetail } from '@/lib/api'
+import type { ParentRefDetail } from '@/lib/api'
 import { useUIStore } from '@/store/ui'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
 import { Copyable } from '@/features/_shared/Copyable'
 import { Td, Th } from '@/features/_shared/DetailPrimitives'
 import { gatewayReferenceLabel, gatewayReferenceResource, type GatewayReference } from './gatewayReferences'
@@ -26,31 +25,6 @@ export function GatewayReferenceLink({ reference, namespace, contextName }: {
         </button>
       ) : label}
     </Copyable>
-  )
-}
-
-export function GatewayConditions({ conditions }: { conditions: ConditionDetail[] }) {
-  if (conditions.length === 0) {
-    return <p className="text-xs text-muted-foreground">No conditions reported yet.</p>
-  }
-  return (
-    <div className="overflow-x-auto rounded border border-border">
-      <table className="w-full text-xs">
-        <thead className="bg-muted/40 text-muted-foreground">
-          <tr><Th>Type</Th><Th>Status</Th><Th>Reason</Th><Th>Message</Th></tr>
-        </thead>
-        <tbody>
-          {conditions.map((condition) => (
-            <tr key={condition.type} className="border-t border-border">
-              <Td className="font-mono">{condition.type}</Td>
-              <Td><ConditionPill status={condition.status} /></Td>
-              <Td className="font-mono">{condition.reason || '—'}</Td>
-              <Td className="min-w-40 whitespace-pre-wrap break-words">{condition.message || '—'}</Td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   )
 }
 

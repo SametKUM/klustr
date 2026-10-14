@@ -5,6 +5,7 @@ export namespace kube {
 	    status: string;
 	    reason: string;
 	    message: string;
+	    lastTransitionTime: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConditionDetail(source);
@@ -16,6 +17,7 @@ export namespace kube {
 	        this.status = source["status"];
 	        this.reason = source["reason"];
 	        this.message = source["message"];
+	        this.lastTransitionTime = source["lastTransitionTime"];
 	    }
 	}
 	export class APIServiceDetail {
@@ -1271,26 +1273,6 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
-	export class CertManagerCondition {
-	    type: string;
-	    status: string;
-	    reason: string;
-	    message: string;
-	    lastTransitionTime: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new CertManagerCondition(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.type = source["type"];
-	        this.status = source["status"];
-	        this.reason = source["reason"];
-	        this.message = source["message"];
-	        this.lastTransitionTime = source["lastTransitionTime"];
-	    }
-	}
 	export class CertManagerCertificateDetail {
 	    name: string;
 	    namespace: string;
@@ -1302,7 +1284,7 @@ export namespace kube {
 	    notAfter: string;
 	    renewalTime: string;
 	    createdAt: string;
-	    conditions: CertManagerCondition[];
+	    conditions: ConditionDetail[];
 	    issuerKind: string;
 	    issuerGroup: string;
 	    dnsNames: string[];
@@ -1330,7 +1312,7 @@ export namespace kube {
 	        this.notAfter = source["notAfter"];
 	        this.renewalTime = source["renewalTime"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], CertManagerCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.issuerKind = source["issuerKind"];
 	        this.issuerGroup = source["issuerGroup"];
 	        this.dnsNames = source["dnsNames"];
@@ -1400,7 +1382,7 @@ export namespace kube {
 	    status: string;
 	    issuer: string;
 	    createdAt: string;
-	    conditions: CertManagerCondition[];
+	    conditions: ConditionDetail[];
 	    issuerKind: string;
 	    issuerGroup: string;
 	    usages: string[];
@@ -1421,7 +1403,7 @@ export namespace kube {
 	        this.status = source["status"];
 	        this.issuer = source["issuer"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], CertManagerCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.issuerKind = source["issuerKind"];
 	        this.issuerGroup = source["issuerGroup"];
 	        this.usages = source["usages"];
@@ -1531,7 +1513,6 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
-	
 	export class CertManagerIssuerDetail {
 	    name: string;
 	    namespace: string;
@@ -1539,7 +1520,7 @@ export namespace kube {
 	    status: string;
 	    type: string;
 	    createdAt: string;
-	    conditions: CertManagerCondition[];
+	    conditions: ConditionDetail[];
 	    acmeServer: string;
 	    acmeEmail: string;
 	
@@ -1555,7 +1536,7 @@ export namespace kube {
 	        this.status = source["status"];
 	        this.type = source["type"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], CertManagerCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.acmeServer = source["acmeServer"];
 	        this.acmeEmail = source["acmeEmail"];
 	    }
@@ -3198,26 +3179,6 @@ export namespace kube {
 	        this.namespace = source["namespace"];
 	    }
 	}
-	export class FluxCondition {
-	    type: string;
-	    status: string;
-	    reason: string;
-	    message: string;
-	    lastTransitionTime: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new FluxCondition(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.type = source["type"];
-	        this.status = source["status"];
-	        this.reason = source["reason"];
-	        this.message = source["message"];
-	        this.lastTransitionTime = source["lastTransitionTime"];
-	    }
-	}
 	export class FluxAlertDetail {
 	    name: string;
 	    namespace: string;
@@ -3230,7 +3191,7 @@ export namespace kube {
 	    sources: string;
 	    sourceCount: number;
 	    createdAt: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    eventSources: FluxAlertSource[];
 	    inclusionList: string[];
 	    exclusionList: string[];
@@ -3253,7 +3214,7 @@ export namespace kube {
 	        this.sources = source["sources"];
 	        this.sourceCount = source["sourceCount"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.eventSources = this.convertValues(source["eventSources"], FluxAlertSource);
 	        this.inclusionList = source["inclusionList"];
 	        this.exclusionList = source["exclusionList"];
@@ -3324,7 +3285,7 @@ export namespace kube {
 	    revision: string;
 	    interval: string;
 	    createdAt: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    secretRef: string;
 	    timeout: string;
 	    insecure: boolean;
@@ -3348,7 +3309,7 @@ export namespace kube {
 	        this.revision = source["revision"];
 	        this.interval = source["interval"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.secretRef = source["secretRef"];
 	        this.timeout = source["timeout"];
 	        this.insecure = source["insecure"];
@@ -3407,7 +3368,6 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
-	
 	export class FluxGitRepositoryDetail {
 	    name: string;
 	    namespace: string;
@@ -3419,7 +3379,7 @@ export namespace kube {
 	    revision: string;
 	    interval: string;
 	    createdAt: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    secretRef: string;
 	    timeout: string;
 	    ignorePatterns: string;
@@ -3441,7 +3401,7 @@ export namespace kube {
 	        this.revision = source["revision"];
 	        this.interval = source["interval"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.secretRef = source["secretRef"];
 	        this.timeout = source["timeout"];
 	        this.ignorePatterns = source["ignorePatterns"];
@@ -3508,7 +3468,7 @@ export namespace kube {
 	    lastAppliedRevision: string;
 	    interval: string;
 	    createdAt: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    releaseName: string;
 	    targetNamespace: string;
 	    storageNamespace: string;
@@ -3533,7 +3493,7 @@ export namespace kube {
 	        this.lastAppliedRevision = source["lastAppliedRevision"];
 	        this.interval = source["interval"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.releaseName = source["releaseName"];
 	        this.targetNamespace = source["targetNamespace"];
 	        this.storageNamespace = source["storageNamespace"];
@@ -3604,7 +3564,7 @@ export namespace kube {
 	    revision: string;
 	    interval: string;
 	    createdAt: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    secretRef: string;
 	    timeout: string;
 	    passCredentials: boolean;
@@ -3626,7 +3586,7 @@ export namespace kube {
 	        this.revision = source["revision"];
 	        this.interval = source["interval"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.secretRef = source["secretRef"];
 	        this.timeout = source["timeout"];
 	        this.passCredentials = source["passCredentials"];
@@ -3697,7 +3657,7 @@ export namespace kube {
 	    latestImage: string;
 	    latestTag: string;
 	    latestDigest: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    previousImage: string;
 	    filterPattern: string;
 	    filterExtract: string;
@@ -3723,7 +3683,7 @@ export namespace kube {
 	        this.latestImage = source["latestImage"];
 	        this.latestTag = source["latestTag"];
 	        this.latestDigest = source["latestDigest"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.previousImage = source["previousImage"];
 	        this.filterPattern = source["filterPattern"];
 	        this.filterExtract = source["filterExtract"];
@@ -3798,7 +3758,7 @@ export namespace kube {
 	    provider: string;
 	    tagCount: number;
 	    lastScanTime: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    canonicalImage: string;
 	    latestTags: string[];
 	    exclusionList: string[];
@@ -3824,7 +3784,7 @@ export namespace kube {
 	        this.provider = source["provider"];
 	        this.tagCount = source["tagCount"];
 	        this.lastScanTime = source["lastScanTime"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.canonicalImage = source["canonicalImage"];
 	        this.latestTags = source["latestTags"];
 	        this.exclusionList = source["exclusionList"];
@@ -3900,7 +3860,7 @@ export namespace kube {
 	    lastRunTime: string;
 	    lastPushCommit: string;
 	    lastPushTime: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    checkoutBranch: string;
 	    updateStrategy: string;
 	    observedSourceRevision: string;
@@ -3926,7 +3886,7 @@ export namespace kube {
 	        this.lastRunTime = source["lastRunTime"];
 	        this.lastPushCommit = source["lastPushCommit"];
 	        this.lastPushTime = source["lastPushTime"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.checkoutBranch = source["checkoutBranch"];
 	        this.updateStrategy = source["updateStrategy"];
 	        this.observedSourceRevision = source["observedSourceRevision"];
@@ -4002,7 +3962,7 @@ export namespace kube {
 	    lastAppliedRevision: string;
 	    interval: string;
 	    createdAt: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    prune: boolean;
 	    force: boolean;
 	    wait: boolean;
@@ -4029,7 +3989,7 @@ export namespace kube {
 	        this.lastAppliedRevision = source["lastAppliedRevision"];
 	        this.interval = source["interval"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.prune = source["prune"];
 	        this.force = source["force"];
 	        this.wait = source["wait"];
@@ -4102,7 +4062,7 @@ export namespace kube {
 	    revision: string;
 	    interval: string;
 	    createdAt: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    secretRef: string;
 	    serviceAccountName: string;
 	    certSecretRef: string;
@@ -4127,7 +4087,7 @@ export namespace kube {
 	        this.revision = source["revision"];
 	        this.interval = source["interval"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.secretRef = source["secretRef"];
 	        this.serviceAccountName = source["serviceAccountName"];
 	        this.certSecretRef = source["certSecretRef"];
@@ -4198,7 +4158,7 @@ export namespace kube {
 	    address: string;
 	    addressFromSecret: boolean;
 	    createdAt: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    secretRef: string;
 	    certSecretRef: string;
 	    proxy: string;
@@ -4221,7 +4181,7 @@ export namespace kube {
 	        this.address = source["address"];
 	        this.addressFromSecret = source["addressFromSecret"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.secretRef = source["secretRef"];
 	        this.certSecretRef = source["certSecretRef"];
 	        this.proxy = source["proxy"];
@@ -4289,7 +4249,7 @@ export namespace kube {
 	    resourceCount: number;
 	    secretRef: string;
 	    createdAt: string;
-	    conditions: FluxCondition[];
+	    conditions: ConditionDetail[];
 	    events: string[];
 	    resources: FluxAlertSource[];
 	    interval: string;
@@ -4310,7 +4270,7 @@ export namespace kube {
 	        this.resourceCount = source["resourceCount"];
 	        this.secretRef = source["secretRef"];
 	        this.createdAt = source["createdAt"];
-	        this.conditions = this.convertValues(source["conditions"], FluxCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.events = source["events"];
 	        this.resources = this.convertValues(source["resources"], FluxAlertSource);
 	        this.interval = source["interval"];
@@ -6041,24 +6001,6 @@ export namespace kube {
 	        this.ruleNames = source["ruleNames"];
 	    }
 	}
-	export class KyvernoPolicyCondition {
-	    type: string;
-	    status: string;
-	    reason: string;
-	    message: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new KyvernoPolicyCondition(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.type = source["type"];
-	        this.status = source["status"];
-	        this.reason = source["reason"];
-	        this.message = source["message"];
-	    }
-	}
 	export class KyvernoRule {
 	    name: string;
 	    type: string;
@@ -6291,7 +6233,7 @@ export namespace kube {
 	    variables: KyvernoCELExpression[];
 	    validationRules: KyvernoCELValidation[];
 	    auditAnnotations: KyvernoCELExpression[];
-	    conditions: KyvernoPolicyCondition[];
+	    conditions: ConditionDetail[];
 	
 	    static createFrom(source: any = {}) {
 	        return new KyvernoValidatingPolicyDetail(source);
@@ -6317,7 +6259,7 @@ export namespace kube {
 	        this.variables = this.convertValues(source["variables"], KyvernoCELExpression);
 	        this.validationRules = this.convertValues(source["validationRules"], KyvernoCELValidation);
 	        this.auditAnnotations = this.convertValues(source["auditAnnotations"], KyvernoCELExpression);
-	        this.conditions = this.convertValues(source["conditions"], KyvernoPolicyCondition);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

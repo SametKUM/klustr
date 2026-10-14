@@ -10,7 +10,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -42,15 +41,6 @@ func controllerOwnerRef(refs []metav1.OwnerReference) *OwnerRef {
 		}
 	}
 	return nil
-}
-
-// ConditionDetail is the per-condition shape used across PodDetail,
-// DeploymentDetail, PDB/HPA/PVC/ReplicaSet/Node detail bodies.
-type ConditionDetail struct {
-	Type    string `json:"type"`
-	Status  string `json:"status"`
-	Reason  string `json:"reason"`
-	Message string `json:"message"`
 }
 
 type ChangeFunc func(kind string, delta *KindDelta)
@@ -677,35 +667,6 @@ func toInt64(v any) int64 {
 		return int64(n)
 	}
 	return 0
-}
-
-// extractConditions reads .status.conditions[] in the metav1.Condition shape
-// (type/status/reason/message/lastTransitionTime) every integration CR uses and
-// projects each entry through ctor. Returns an empty slice (not nil) so the JSON
-// encoder never emits `null` for a missing status block. Entries lacking a type
-// or status are skipped.
-func extractConditions[T any](obj *unstructured.Unstructured, ctor func(typ, status, reason, message, ts string) T) []T {
-	raw, found, _ := nestedSliceNoCopy(obj.Object, "status", "conditions")
-	if !found {
-		return []T{}
-	}
-	out := make([]T, 0, len(raw))
-	for _, item := range raw {
-		m, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		t, _ := m["type"].(string)
-		s, _ := m["status"].(string)
-		if t == "" || s == "" {
-			continue
-		}
-		reason, _ := m["reason"].(string)
-		message, _ := m["message"].(string)
-		ts, _ := m["lastTransitionTime"].(string)
-		out = append(out, ctor(t, s, reason, message, ts))
-	}
-	return out
 }
 
 func formatLabelSelector(sel *metav1.LabelSelector) string {

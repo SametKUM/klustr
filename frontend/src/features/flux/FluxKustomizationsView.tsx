@@ -9,7 +9,7 @@ import { useCustomResourceCapability } from '@/features/_shared/useCustomResourc
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { useUIStore, type SelectedResource } from '@/store/ui'
 import { FLUX_KUSTOMIZATION_GROUP, FLUX_KUSTOMIZATION_RESOURCE } from './fluxKinds'
-import { FluxReadyPill } from './FluxReadyPill'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { ReconcileFluxResourceButton } from './ReconcileFluxResourceButton'
 import { SuspendResumeFluxResourceButton } from './SuspendResumeFluxResourceButton'
 
@@ -29,7 +29,7 @@ export function FluxKustomizationsView() {
       columnHelper.accessor('ready', {
         header: 'Ready',
         size: COL_SM,
-        cell: (i) => <FluxReadyPill value={i.getValue()} suspended={i.row.original.suspended} />,
+        cell: (i) => <ReadyPill status={i.getValue()} suspended={i.row.original.suspended} />,
       }),
       columnHelper.accessor('sourceRef', { header: 'Source', size: COL_MD }),
       columnHelper.accessor('path', { header: 'Path', size: COL_MD }),

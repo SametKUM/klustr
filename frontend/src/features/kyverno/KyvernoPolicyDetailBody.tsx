@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { api, type KyvernoPolicyDetail, type KyvernoRule } from '@/lib/api'
 import { formatAge } from '@/lib/time'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { failureActionClass, ruleSummary } from './kyvernoFormat'
@@ -45,7 +45,7 @@ export function KyvernoPolicyDetailBody({ contextName, namespace, name, cluster 
         <Section title="Status">
           <Field label="Ready">
             <span className="inline-flex items-center gap-2">
-              <ConditionPill status={detail.ready} />
+              <ReadyPill status={detail.ready} />
               {detail.message && detail.message !== 'Ready' && (
                 <span className="text-xs text-muted-foreground">{detail.message}</span>
               )}

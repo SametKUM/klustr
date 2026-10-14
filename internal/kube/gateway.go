@@ -767,11 +767,16 @@ func conditionsToDetail(conds []metav1.Condition, generation int64) []ConditionD
 			status = "Unknown"
 			message = strings.TrimSpace(fmt.Sprintf("Stale status %s: observed generation %d, current generation %d. %s", c.Status, c.ObservedGeneration, generation, c.Message))
 		}
+		changed := ""
+		if !c.LastTransitionTime.IsZero() {
+			changed = c.LastTransitionTime.UTC().Format(time.RFC3339)
+		}
 		out = append(out, ConditionDetail{
-			Type:    c.Type,
-			Status:  status,
-			Reason:  c.Reason,
-			Message: message,
+			Type:               c.Type,
+			Status:             status,
+			Reason:             c.Reason,
+			Message:            message,
+			LastTransitionTime: changed,
 		})
 	}
 	return out

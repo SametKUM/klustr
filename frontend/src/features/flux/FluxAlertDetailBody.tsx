@@ -5,8 +5,8 @@ import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimi
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { findCRD, useCRDStore } from '@/store/crds'
 import { useUIStore } from '@/store/ui'
-import { FluxReadyPill } from './FluxReadyPill'
-import { FluxConditionsTable } from './FluxConditionsTable'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 import {
   FLUX_NOTIFICATION_GROUP,
   FLUX_PROVIDER_RESOURCE,
@@ -49,7 +49,7 @@ export function FluxAlertDetailBody({ contextName, namespace, name }: Props) {
     <div className="space-y-6">
       <Section title="Alert">
         <Field label="Ready">
-          <FluxReadyPill value={detail.ready} suspended={detail.suspended} />
+          <ReadyPill status={detail.ready} suspended={detail.suspended} />
         </Field>
         <Field label="Status message">{detail.status || '—'}</Field>
         <Field label="Severity">{detail.severity || 'info'}</Field>
@@ -140,7 +140,7 @@ export function FluxAlertDetailBody({ contextName, namespace, name }: Props) {
         </Section>
       )}
 
-      <FluxConditionsTable conditions={detail.conditions} />
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }

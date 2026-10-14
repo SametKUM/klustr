@@ -3,7 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type KyvernoPolicyInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { COL_MD, COL_SM } from '@/features/_shared/columnSizes'
 import { failureActionClass, ruleSummary } from './kyvernoFormat'
 import { KYVERNO_CLUSTERPOLICY_RESOURCE, KYVERNO_GROUP, KYVERNO_POLICY_RESOURCE } from './kyvernoKinds'
@@ -49,7 +49,7 @@ export function KyvernoPoliciesView({ cluster }: { cluster: boolean }) {
       columnHelper.accessor('ready', {
         header: 'Ready',
         size: COL_SM,
-        cell: (i) => <ConditionPill status={i.getValue()} />,
+        cell: (i) => <ReadyPill status={i.getValue()} />,
       }),
       columnHelper.accessor('createdAt', {
         header: 'Age',

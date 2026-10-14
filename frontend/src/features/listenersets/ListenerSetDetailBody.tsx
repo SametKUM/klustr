@@ -4,7 +4,8 @@ import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, MaybeSection, Section } from '@/features/_shared/DetailPrimitives'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
-import { GatewayConditions, GatewayReferences } from '@/features/gateways/GatewayDetailPrimitives'
+import { ConditionsTable } from '@/features/_shared/ConditionsTable'
+import { GatewayReferences } from '@/features/gateways/GatewayDetailPrimitives'
 
 export function ListenerSetDetailBody({ contextName, namespace, name }: {
   contextName: string | null
@@ -23,7 +24,7 @@ export function ListenerSetDetailBody({ contextName, namespace, name }: {
       <Section title="Parent Gateway">
         <GatewayReferences references={[detail.parent]} namespace={namespace} contextName={contextName} />
       </Section>
-      <Section title="Conditions"><GatewayConditions conditions={detail.conditions} /></Section>
+      <Section title="Conditions"><ConditionsTable conditions={detail.conditions} /></Section>
       <Section title="Listeners">
         {detail.listeners.length === 0 && <p className="text-xs text-muted-foreground">No listeners configured.</p>}
         <div className="space-y-5">
@@ -44,7 +45,7 @@ export function ListenerSetDetailBody({ contextName, namespace, name }: {
                   <GatewayReferences references={listener.certificateRefs} namespace={namespace} contextName={contextName} />
                 </div>
               )}
-              <GatewayConditions conditions={listener.conditions} />
+              <ConditionsTable conditions={listener.conditions} />
             </div>
           ))}
         </div>

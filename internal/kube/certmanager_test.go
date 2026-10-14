@@ -168,21 +168,3 @@ func TestOwnedBy(t *testing.T) {
 		t.Error("ownedBy should not match a different owner kind")
 	}
 }
-
-func TestExtractCertManagerConditionsEmpty(t *testing.T) {
-	obj := &unstructured.Unstructured{Object: map[string]any{
-		"metadata": map[string]any{"name": "bare", "namespace": "default"},
-		"spec":     map[string]any{},
-	}}
-	conds := extractCertManagerConditions(obj)
-	if conds == nil {
-		t.Fatal("conditions must be a non-nil empty slice for JSON friendliness")
-	}
-	if len(conds) != 0 {
-		t.Errorf("expected no conditions: %+v", conds)
-	}
-	status, msg := certManagerReady(conds)
-	if status != "" || msg != "" {
-		t.Errorf("missing Ready condition should produce empty summary: %q %q", status, msg)
-	}
-}

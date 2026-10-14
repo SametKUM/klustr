@@ -2,7 +2,8 @@ import { useCallback } from 'react'
 import { api, type KarpenterResolvedResource } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section, Th, Td } from '@/features/_shared/DetailPrimitives'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 
 export function KarpenterEC2NodeClassDetailBody({
@@ -21,7 +22,7 @@ export function KarpenterEC2NodeClassDetailBody({
     <div className="space-y-6">
       <Section title="EC2 node class">
         <Field label="Ready">
-          <ConditionPill status={detail.ready} />
+          <ReadyPill status={detail.ready} />
         </Field>
         <Field label="Status message">{detail.status || '—'}</Field>
         <Field label="AMI family">{detail.amiFamily || '—'}</Field>
@@ -52,35 +53,7 @@ export function KarpenterEC2NodeClassDetailBody({
         selectors={detail.amiSelectors}
         showRequirements
       />
-      <Section title="Conditions">
-        <div className="overflow-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr>
-                <Th>Type</Th>
-                <Th>Status</Th>
-                <Th>Reason</Th>
-                <Th>Message</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {detail.conditions.map((condition) => (
-                <tr key={condition.type} className="border-t border-border">
-                  <Td>{condition.type}</Td>
-                  <Td>
-                    <ConditionPill status={condition.status} />
-                  </Td>
-                  <Td>{condition.reason || '—'}</Td>
-                  <Td className="whitespace-pre-wrap break-words">{condition.message || '—'}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {detail.conditions.length === 0 && (
-          <div className="text-xs text-muted-foreground">No conditions reported yet.</div>
-        )}
-      </Section>
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }

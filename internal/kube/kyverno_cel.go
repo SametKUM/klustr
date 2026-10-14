@@ -53,25 +53,18 @@ type KyvernoCELValidation struct {
 	Reason            string `json:"reason"`
 }
 
-type KyvernoPolicyCondition struct {
-	Type    string `json:"type"`
-	Status  string `json:"status"`
-	Reason  string `json:"reason"`
-	Message string `json:"message"`
-}
-
 type KyvernoValidatingPolicyDetail struct {
 	KyvernoValidatingPolicyInfo
-	ReportKey         string                   `json:"reportKey"`
-	FailurePolicy     string                   `json:"failurePolicy"`
-	Mode              string                   `json:"mode"`
-	NamespaceSelector string                   `json:"namespaceSelector"`
-	ObjectSelector    string                   `json:"objectSelector"`
-	MatchConditions   []KyvernoCELExpression   `json:"matchConditions"`
-	Variables         []KyvernoCELExpression   `json:"variables"`
-	Validations       []KyvernoCELValidation   `json:"validationRules"`
-	AuditAnnotations  []KyvernoCELExpression   `json:"auditAnnotations"`
-	Conditions        []KyvernoPolicyCondition `json:"conditions"`
+	ReportKey         string                 `json:"reportKey"`
+	FailurePolicy     string                 `json:"failurePolicy"`
+	Mode              string                 `json:"mode"`
+	NamespaceSelector string                 `json:"namespaceSelector"`
+	ObjectSelector    string                 `json:"objectSelector"`
+	MatchConditions   []KyvernoCELExpression `json:"matchConditions"`
+	Variables         []KyvernoCELExpression `json:"variables"`
+	Validations       []KyvernoCELValidation `json:"validationRules"`
+	AuditAnnotations  []KyvernoCELExpression `json:"auditAnnotations"`
+	Conditions        []ConditionDetail      `json:"conditions"`
 }
 
 func (m *ClientManager) ListKyvernoValidatingPolicies(contextName string) []KyvernoValidatingPolicyInfo {
@@ -149,19 +142,8 @@ func extractKyvernoValidatingPolicyDetail(obj *unstructured.Unstructured) *Kyver
 		})
 	}
 
-	conditions := []KyvernoPolicyCondition{}
-	rawConds, _, _ := nestedSliceNoCopy(obj.Object, "status", "conditionStatus", "conditions")
-	for _, item := range rawConds {
-		c, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		typ, _ := c["type"].(string)
-		status, _ := c["status"].(string)
-		reason, _ := c["reason"].(string)
-		message, _ := c["message"].(string)
-		conditions = append(conditions, KyvernoPolicyCondition{Type: typ, Status: status, Reason: reason, Message: message})
-	}
+	// The CEL policies nest their conditions under status.conditionStatus.
+	conditions := conditionsAt(obj, "status", "conditionStatus", "conditions")
 
 	reportKey := obj.GetName()
 	if obj.GetNamespace() != "" {

@@ -3,7 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { api, type KarpenterEC2NodeClassInfo } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { COL_SM, COL_MD } from '@/features/_shared/columnSizes'
 
 const columnHelper = createColumnHelper<KarpenterEC2NodeClassInfo>()
@@ -17,7 +17,7 @@ export function KarpenterEC2NodeClassesView() {
         size: COL_SM,
         cell: (info) => (
           <span title={info.row.original.status}>
-            <ConditionPill status={info.getValue()} />
+            <ReadyPill status={info.getValue()} />
           </span>
         ),
       }),

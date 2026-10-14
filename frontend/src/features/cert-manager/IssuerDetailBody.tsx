@@ -4,8 +4,8 @@ import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
-import { CertManagerConditionPill } from './CertManagerConditionPill'
-import { CertManagerConditionsTable } from './CertManagerConditionsTable'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 
 type Props = {
   contextName: string | null
@@ -36,7 +36,7 @@ export function IssuerDetailBody({ contextName, namespace, name, cluster }: Prop
     <div className="space-y-6">
       <Section title={cluster ? 'ClusterIssuer' : 'Issuer'}>
         <Field label="Ready">
-          <CertManagerConditionPill kind="ready" status={detail.ready} />
+          <ReadyPill status={detail.ready} />
         </Field>
         <Field label="Status message">{detail.status || '—'}</Field>
         <Field label="Type">
@@ -58,7 +58,7 @@ export function IssuerDetailBody({ contextName, namespace, name, cluster }: Prop
         </Section>
       )}
 
-      <CertManagerConditionsTable conditions={detail.conditions} />
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }

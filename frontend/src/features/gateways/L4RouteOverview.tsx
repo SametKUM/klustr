@@ -2,7 +2,8 @@ import type { TCPRouteDetail, TLSRouteDetail, UDPRouteDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, Field, MaybeSection, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { Copyable } from '@/features/_shared/Copyable'
-import { GatewayConditions, GatewayReferenceLink, GatewayReferences } from './GatewayDetailPrimitives'
+import { ConditionsTable } from '@/features/_shared/ConditionsTable'
+import { GatewayReferenceLink, GatewayReferences } from './GatewayDetailPrimitives'
 
 export function L4RouteOverview({ detail, kind, contextName }: {
   detail: TLSRouteDetail | TCPRouteDetail | UDPRouteDetail
@@ -60,7 +61,7 @@ export function L4RouteOverview({ detail, kind, contextName }: {
             <div key={index} className="space-y-2">
               <GatewayReferences references={[status.parent]} namespace={detail.namespace} contextName={contextName} />
               <Field label="Controller" mono><Copyable value={status.controller} /></Field>
-              <GatewayConditions conditions={status.conditions} />
+              <ConditionsTable conditions={status.conditions} />
             </div>
           ))}
         </div>

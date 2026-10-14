@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { api, type ArgoApplicationSetDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
-import { ConditionPill } from '@/features/_shared/ConditionPill'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { useUIStore } from '@/store/ui'
@@ -163,34 +163,7 @@ export function ApplicationSetDetailBody({
         </Section>
       )}
 
-      {detail.conditions.length > 0 && (
-        <Section title="Conditions">
-          <div className="overflow-hidden rounded border border-border">
-            <table className="w-full text-xs">
-              <thead className="bg-muted/40 text-muted-foreground">
-                <tr>
-                  <Th>Type</Th>
-                  <Th>Status</Th>
-                  <Th>Reason</Th>
-                  <Th>Message</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.conditions.map((c, i) => (
-                  <tr key={i} className="border-t border-border">
-                    <Td className="font-mono">{c.type}</Td>
-                    <Td>
-                      <ConditionPill status={c.status} />
-                    </Td>
-                    <Td className="font-mono">{c.reason || '—'}</Td>
-                    <Td>{c.message || '—'}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
-      )}
+      <ConditionsSection conditions={detail.conditions} hideWhenEmpty />
     </div>
   )
 }

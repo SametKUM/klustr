@@ -1,13 +1,10 @@
-type ConditionKind = 'ready' | 'approved' | 'denied'
+// CertManagerConditionPill labels a CertificateRequest's Approved and Denied
+// conditions, whose True is good and bad respectively. Ready uses ReadyPill.
+type ConditionKind = 'approved' | 'denied'
 type ConditionStatus = 'true' | 'false' | 'unknown'
 type Tone = 'success' | 'danger' | 'warning' | 'neutral'
 
 const DISPLAY: Record<ConditionKind, Record<ConditionStatus, { label: string; tone: Tone }>> = {
-  ready: {
-    true: { label: 'Ready', tone: 'success' },
-    false: { label: 'Failed', tone: 'danger' },
-    unknown: { label: 'Reconciling', tone: 'warning' },
-  },
   approved: {
     true: { label: 'Approved', tone: 'success' },
     false: { label: 'Not approved', tone: 'neutral' },

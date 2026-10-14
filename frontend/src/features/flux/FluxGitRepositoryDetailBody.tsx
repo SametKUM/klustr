@@ -4,8 +4,8 @@ import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
 import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
-import { FluxReadyPill } from './FluxReadyPill'
-import { FluxConditionsTable } from './FluxConditionsTable'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 
 type Props = {
   contextName: string | null
@@ -26,7 +26,7 @@ export function FluxGitRepositoryDetailBody({ contextName, namespace, name }: Pr
     <div className="space-y-6">
       <Section title="GitRepository">
         <Field label="Ready">
-          <FluxReadyPill value={detail.ready} suspended={detail.suspended} />
+          <ReadyPill status={detail.ready} suspended={detail.suspended} />
         </Field>
         <Field label="Status message">{detail.status || '—'}</Field>
         <Field label="URL">
@@ -60,7 +60,7 @@ export function FluxGitRepositoryDetailBody({ contextName, namespace, name }: Pr
         )}
       </Section>
 
-      <FluxConditionsTable conditions={detail.conditions} />
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }

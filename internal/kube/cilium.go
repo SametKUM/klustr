@@ -110,10 +110,12 @@ func extractCiliumInfo(obj *unstructured.Unstructured, resource string) CiliumRe
 	out := CiliumResourceInfo{
 		Name: obj.GetName(), Namespace: obj.GetNamespace(), Kind: ciliumResources[resource].kind, CreatedAt: crCreatedAt(obj),
 	}
-	conditions := extractConditions(obj, func(t, s, _, _, _ string) string {
-		return strings.TrimPrefix(t, "cilium.io/") + "=" + s
-	})
-	out.State = strings.Join(conditions, ", ")
+	conds := crConditions(obj)
+	states := make([]string, 0, len(conds))
+	for _, c := range conds {
+		states = append(states, strings.TrimPrefix(c.Type, "cilium.io/")+"="+c.Status)
+	}
+	out.State = strings.Join(states, ", ")
 	spec := ciliumMap(obj.Object, "spec")
 	switch resource {
 	case "ciliumnetworkpolicies", "ciliumclusterwidenetworkpolicies":
@@ -195,10 +197,12 @@ func extractCiliumDetail(obj *unstructured.Unstructured, resource string) *Ciliu
 			}
 		}
 	}
-	conditions := extractConditions(obj, func(t, s, reason, message, ts string) []string {
-		return []string{t, s, reason, message, ts}
-	})
-	d.table("Conditions", []string{"Type", "Status", "Reason", "Message", "Changed"}, conditions)
+	conds := crConditions(obj)
+	rows := make([][]string, 0, len(conds))
+	for _, c := range conds {
+		rows = append(rows, []string{c.Type, c.Status, c.Reason, c.Message, c.LastTransitionTime})
+	}
+	d.table("Conditions", []string{"Type", "Status", "Reason", "Message", "Changed"}, rows)
 	switch resource {
 	case "ciliumnetworkpolicies", "ciliumclusterwidenetworkpolicies":
 		extractCiliumPolicyDetail(d, obj)

@@ -4,8 +4,8 @@ import { formatAge } from '@/lib/time'
 import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { CopyButton } from '@/features/_shared/Copyable'
-import { FluxReadyPill } from './FluxReadyPill'
-import { FluxConditionsTable } from './FluxConditionsTable'
+import { ReadyPill } from '@/features/_shared/ReadyPill'
+import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 
 type Props = {
   contextName: string | null
@@ -26,7 +26,7 @@ export function FluxReceiverDetailBody({ contextName, namespace, name }: Props) 
     <div className="space-y-6">
       <Section title="Receiver">
         <Field label="Ready">
-          <FluxReadyPill value={detail.ready} suspended={detail.suspended} />
+          <ReadyPill status={detail.ready} suspended={detail.suspended} />
         </Field>
         <Field label="Status message">{detail.status || '—'}</Field>
         <Field label="Type">{detail.type}</Field>
@@ -92,7 +92,7 @@ export function FluxReceiverDetailBody({ contextName, namespace, name }: Props) 
         )}
       </Section>
 
-      <FluxConditionsTable conditions={detail.conditions} />
+      <ConditionsSection conditions={detail.conditions} />
     </div>
   )
 }

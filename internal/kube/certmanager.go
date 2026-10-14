@@ -30,18 +30,6 @@ var (
 // condition when manually triggering re-issuance, mirroring `cmctl renew`.
 const certManagerIssuingReason = "ManuallyTriggered"
 
-// CertManagerCondition is the projection of one entry in .status.conditions
-// (the metav1.Condition shape every cert-manager resource uses). The Ready
-// condition is the user-facing health signal; Issuing tells whether a
-// re-issuance is currently in flight.
-type CertManagerCondition struct {
-	Type               string `json:"type"`
-	Status             string `json:"status"`
-	Reason             string `json:"reason"`
-	Message            string `json:"message"`
-	LastTransitionTime string `json:"lastTransitionTime"`
-}
-
 // ---------------------------------------------------------------------------
 // Certificate
 // ---------------------------------------------------------------------------
@@ -64,17 +52,17 @@ type CertManagerCertificateInfo struct {
 
 type CertManagerCertificateDetail struct {
 	CertManagerCertificateInfo
-	Conditions  []CertManagerCondition `json:"conditions"`
-	IssuerKind  string                 `json:"issuerKind"`
-	IssuerGroup string                 `json:"issuerGroup"`
-	DNSNames    []string               `json:"dnsNames"`
-	IPAddresses []string               `json:"ipAddresses"`
-	URIs        []string               `json:"uris"`
-	Usages      []string               `json:"usages"`
-	NotBefore   string                 `json:"notBefore"`
-	Duration    string                 `json:"duration"`
-	RenewBefore string                 `json:"renewBefore"`
-	IsCA        bool                   `json:"isCA"`
+	Conditions  []ConditionDetail `json:"conditions"`
+	IssuerKind  string            `json:"issuerKind"`
+	IssuerGroup string            `json:"issuerGroup"`
+	DNSNames    []string          `json:"dnsNames"`
+	IPAddresses []string          `json:"ipAddresses"`
+	URIs        []string          `json:"uris"`
+	Usages      []string          `json:"usages"`
+	NotBefore   string            `json:"notBefore"`
+	Duration    string            `json:"duration"`
+	RenewBefore string            `json:"renewBefore"`
+	IsCA        bool              `json:"isCA"`
 }
 
 func (m *ClientManager) ListCertManagerCertificates(contextName, namespace string) []CertManagerCertificateInfo {
@@ -99,7 +87,7 @@ func (m *ClientManager) GetCertManagerCertificate(ctx context.Context, contextNa
 	issuerGroup, _, _ := unstructured.NestedString(obj.Object, "spec", "issuerRef", "group")
 	return &CertManagerCertificateDetail{
 		CertManagerCertificateInfo: extractCertManagerCertificate(obj),
-		Conditions:                 extractCertManagerConditions(obj),
+		Conditions:                 crConditions(obj),
 		IssuerKind:                 issuerKind,
 		IssuerGroup:                issuerGroup,
 		DNSNames:                   append([]string{}, dnsNames...),
@@ -114,8 +102,8 @@ func (m *ClientManager) GetCertManagerCertificate(ctx context.Context, contextNa
 }
 
 func extractCertManagerCertificate(obj *unstructured.Unstructured) CertManagerCertificateInfo {
-	conds := extractCertManagerConditions(obj)
-	readyStatus, readyMsg := certManagerReady(conds)
+	conds := crConditions(obj)
+	readyStatus, readyMsg := readyCondition(conds)
 	secretName, _, _ := unstructured.NestedString(obj.Object, "spec", "secretName")
 	commonName, _, _ := unstructured.NestedString(obj.Object, "spec", "commonName")
 	notAfter, _, _ := unstructured.NestedString(obj.Object, "status", "notAfter")
@@ -153,9 +141,9 @@ type CertManagerIssuerInfo struct {
 
 type CertManagerIssuerDetail struct {
 	CertManagerIssuerInfo
-	Conditions []CertManagerCondition `json:"conditions"`
-	ACMEServer string                 `json:"acmeServer"`
-	ACMEEmail  string                 `json:"acmeEmail"`
+	Conditions []ConditionDetail `json:"conditions"`
+	ACMEServer string            `json:"acmeServer"`
+	ACMEEmail  string            `json:"acmeEmail"`
 }
 
 func (m *ClientManager) ListCertManagerIssuers(contextName, namespace string) []CertManagerIssuerInfo {
@@ -188,15 +176,15 @@ func (m *ClientManager) getCertManagerIssuer(ctx context.Context, contextName st
 	acmeEmail, _, _ := unstructured.NestedString(obj.Object, "spec", "acme", "email")
 	return &CertManagerIssuerDetail{
 		CertManagerIssuerInfo: extractCertManagerIssuer(obj),
-		Conditions:            extractCertManagerConditions(obj),
+		Conditions:            crConditions(obj),
 		ACMEServer:            acmeServer,
 		ACMEEmail:             acmeEmail,
 	}, nil
 }
 
 func extractCertManagerIssuer(obj *unstructured.Unstructured) CertManagerIssuerInfo {
-	conds := extractCertManagerConditions(obj)
-	readyStatus, readyMsg := certManagerReady(conds)
+	conds := crConditions(obj)
+	readyStatus, readyMsg := readyCondition(conds)
 	return CertManagerIssuerInfo{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
@@ -290,12 +278,12 @@ type CertManagerCertificateRequestInfo struct {
 
 type CertManagerCertificateRequestDetail struct {
 	CertManagerCertificateRequestInfo
-	Conditions  []CertManagerCondition `json:"conditions"`
-	IssuerKind  string                 `json:"issuerKind"`
-	IssuerGroup string                 `json:"issuerGroup"`
-	Usages      []string               `json:"usages"`
-	IsCA        bool                   `json:"isCA"`
-	FailureTime string                 `json:"failureTime"`
+	Conditions  []ConditionDetail `json:"conditions"`
+	IssuerKind  string            `json:"issuerKind"`
+	IssuerGroup string            `json:"issuerGroup"`
+	Usages      []string          `json:"usages"`
+	IsCA        bool              `json:"isCA"`
+	FailureTime string            `json:"failureTime"`
 }
 
 func (m *ClientManager) ListCertManagerCertificateRequests(contextName, namespace string) []CertManagerCertificateRequestInfo {
@@ -338,7 +326,7 @@ func (m *ClientManager) GetCertManagerCertificateRequest(ctx context.Context, co
 	issuerGroup, _, _ := unstructured.NestedString(obj.Object, "spec", "issuerRef", "group")
 	return &CertManagerCertificateRequestDetail{
 		CertManagerCertificateRequestInfo: extractCertManagerCertificateRequest(obj),
-		Conditions:                        extractCertManagerConditions(obj),
+		Conditions:                        crConditions(obj),
 		IssuerKind:                        issuerKind,
 		IssuerGroup:                       issuerGroup,
 		Usages:                            append([]string{}, usages...),
@@ -348,8 +336,8 @@ func (m *ClientManager) GetCertManagerCertificateRequest(ctx context.Context, co
 }
 
 func extractCertManagerCertificateRequest(obj *unstructured.Unstructured) CertManagerCertificateRequestInfo {
-	conds := extractCertManagerConditions(obj)
-	readyStatus, readyMsg := certManagerReady(conds)
+	conds := crConditions(obj)
+	readyStatus, readyMsg := readyCondition(conds)
 	return CertManagerCertificateRequestInfo{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
@@ -543,27 +531,6 @@ func extractCertManagerChallenge(obj *unstructured.Unstructured) CertManagerChal
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-// extractCertManagerConditions reads .status.conditions[] in the
-// metav1.Condition shape. Returns an empty slice (not nil) so the JSON
-// encoder never emits null for a resource cert-manager hasn't reconciled yet.
-func extractCertManagerConditions(obj *unstructured.Unstructured) []CertManagerCondition {
-	return extractConditions(obj, func(t, s, reason, message, ts string) CertManagerCondition {
-		return CertManagerCondition{Type: t, Status: s, Reason: reason, Message: message, LastTransitionTime: ts}
-	})
-}
-
-// conditionStatusByType returns the status ("True"/"False"/"Unknown") of the
-// named condition, or empty string when absent. Used for CertificateRequest's
-// independent Approved/Denied conditions.
-func conditionStatusByType(conds []CertManagerCondition, t string) string {
-	for _, c := range conds {
-		if c.Type == t {
-			return c.Status
-		}
-	}
-	return ""
-}
-
 // ownedBy reports whether obj carries an ownerReference of the given kind and
 // name — the link cert-manager stamps down each step of the issuance chain
 // (Certificate → CertificateRequest → Order → Challenge).
@@ -583,22 +550,6 @@ func joinTrim(items []string, max int) string {
 		return strings.Join(items, ", ")
 	}
 	return strings.Join(items[:max], ", ") + fmt.Sprintf(" +%d", len(items)-max)
-}
-
-// certManagerReady returns the (status, message) of the Ready condition,
-// cert-manager's user-facing health signal. Empty strings when the resource
-// has no Ready condition yet.
-func certManagerReady(conds []CertManagerCondition) (status, message string) {
-	for _, c := range conds {
-		if c.Type == "Ready" {
-			msg := c.Message
-			if msg == "" {
-				msg = c.Reason
-			}
-			return c.Status, msg
-		}
-	}
-	return "", ""
 }
 
 // formatIssuerRef collapses .spec.issuerRef into "Kind/name" (or just name
