@@ -1894,6 +1894,7 @@ export namespace kube {
 	    memory: ClusterResource;
 	    pods: ClusterPods;
 	    nodeCount: number;
+	    podCount: number;
 	    namespaceCount: number;
 	    metricsAvailable: boolean;
 	    metricsError?: string;
@@ -1908,6 +1909,7 @@ export namespace kube {
 	        this.memory = this.convertValues(source["memory"], ClusterResource);
 	        this.pods = this.convertValues(source["pods"], ClusterPods);
 	        this.nodeCount = source["nodeCount"];
+	        this.podCount = source["podCount"];
 	        this.namespaceCount = source["namespaceCount"];
 	        this.metricsAvailable = source["metricsAvailable"];
 	        this.metricsError = source["metricsError"];

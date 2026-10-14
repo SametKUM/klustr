@@ -30,6 +30,7 @@ type ClusterOverview struct {
 	Memory           ClusterResource `json:"memory"`
 	Pods             ClusterPods     `json:"pods"`
 	NodeCount        int             `json:"nodeCount"`
+	PodCount         int             `json:"podCount"`
 	NamespaceCount   int             `json:"namespaceCount"`
 	MetricsAvailable bool            `json:"metricsAvailable"`
 	MetricsError     string          `json:"metricsError,omitempty"`
@@ -78,6 +79,7 @@ func (m *ClientManager) GetClusterOverview(ctx context.Context, contextName stri
 	if f := w.factoryFor("Pod"); f != nil {
 		pods, _ = f.Core().V1().Pods().Lister().List(labels.Everything())
 	}
+	overview.PodCount = len(pods)
 	for _, p := range pods {
 		if p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed {
 			continue

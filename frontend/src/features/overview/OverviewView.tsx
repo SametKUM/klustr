@@ -296,6 +296,8 @@ function ClusterSection({
               <>
                 {overview.nodeCount} node{overview.nodeCount === 1 ? '' : 's'}
                 {' · '}
+                {overview.podCount} pod{overview.podCount === 1 ? '' : 's'}
+                {' · '}
                 {overview.namespaceCount} namespace{overview.namespaceCount === 1 ? '' : 's'}
               </>
             )}
