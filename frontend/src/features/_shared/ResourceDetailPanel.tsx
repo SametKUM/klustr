@@ -25,8 +25,6 @@ import type { ResourceKind } from '@/store/ui'
 import { PodOverviewBody } from '@/features/pods/PodOverviewBody'
 import { ApplicationResourcesTab } from '@/features/argocd/ApplicationResourcesTab'
 import { ApplicationHistoryTab } from '@/features/argocd/ApplicationHistoryTab'
-import { AppProjectDetailBody } from '@/features/argocd/AppProjectDetailBody'
-import { ApplicationSetDetailBody } from '@/features/argocd/ApplicationSetDetailBody'
 import { DeleteArgoApplicationButton } from '@/features/argocd/DeleteArgoApplicationButton'
 import { isArgoApplication } from '@/features/argocd/argoApplication'
 import { SyncArgoApplicationButton } from '@/features/argocd/SyncArgoApplicationButton'
@@ -97,47 +95,16 @@ import { HelmInstallDialog } from '@/features/helm/HelmInstallDialog'
 import { HelmRollbackDialog } from '@/features/helm/HelmRollbackDialog'
 import { HelmRollbackPickerDialog } from '@/features/helm/HelmRollbackPickerDialog'
 import { HelmUninstallDialog } from '@/features/helm/HelmUninstallDialog'
-import { FluxKustomizationDetailBody } from '@/features/flux/FluxKustomizationDetailBody'
-import { FluxHelmReleaseDetailBody } from '@/features/flux/FluxHelmReleaseDetailBody'
-import { FluxGitRepositoryDetailBody } from '@/features/flux/FluxGitRepositoryDetailBody'
-import { FluxHelmRepositoryDetailBody } from '@/features/flux/FluxHelmRepositoryDetailBody'
-import { FluxOCIRepositoryDetailBody } from '@/features/flux/FluxOCIRepositoryDetailBody'
-import { FluxBucketDetailBody } from '@/features/flux/FluxBucketDetailBody'
-import {
-  FluxImageRepositoryDetailBody,
-  FluxImagePolicyDetailBody,
-  FluxImageUpdateAutomationDetailBody,
-} from '@/features/flux/FluxImageDetailBodies'
-import { KarpenterEC2NodeClassDetailBody } from '@/features/karpenter-nodeclasses/KarpenterEC2NodeClassDetailBody'
-import { FluxProviderDetailBody } from '@/features/flux/FluxProviderDetailBody'
-import { FluxAlertDetailBody } from '@/features/flux/FluxAlertDetailBody'
-import { FluxReceiverDetailBody } from '@/features/flux/FluxReceiverDetailBody'
-import { TektonPipelineRunDetailBody } from '@/features/tekton/TektonPipelineRunDetailBody'
-import { TektonTaskRunDetailBody } from '@/features/tekton/TektonTaskRunDetailBody'
-import { TektonPipelineDetailBody } from '@/features/tekton/TektonPipelineDetailBody'
-import { TektonTaskDetailBody } from '@/features/tekton/TektonTaskDetailBody'
+import { INTEGRATION_DETAIL_BODIES } from '@/features/integrationDetails'
+import { integrationFor } from '@/lib/integrations'
 import { TektonPipelineRunsTab } from '@/features/tekton/TektonPipelineRunsTab'
 import { TektonRunHeaderActions } from '@/features/tekton/TektonRunHeaderActions'
 import { tektonKindOf } from '@/features/tekton/tektonKinds'
-import { KyvernoPolicyDetailBody } from '@/features/kyverno/KyvernoPolicyDetailBody'
-import { KyvernoValidatingPolicyDetailBody } from '@/features/kyverno/KyvernoValidatingPolicyDetailBody'
-import { KyvernoPolicyExceptionDetailBody } from '@/features/kyverno/KyvernoPolicyExceptionDetailBody'
-import { PolicyReportDetailBody } from '@/features/kyverno/PolicyReportDetailBody'
 import { KyvernoPolicyViolationsTab } from '@/features/kyverno/KyvernoPolicyViolationsTab'
 import { PolicyTabLabel, ResourcePolicyTab } from '@/features/kyverno/ResourcePolicyTab'
 import { useResourcePolicyReport } from '@/features/kyverno/useResourcePolicyReport'
 import { kyvernoKindOf, POLICY_REPORT_GROUP, POLICYREPORT_RESOURCE } from '@/features/kyverno/kyvernoKinds'
 import { findCRD, useCRDStore } from '@/store/crds'
-import { IstioVirtualServiceDetailBody } from '@/features/istio/IstioVirtualServiceDetailBody'
-import { CiliumResourceDetailBody } from '@/features/cilium/CiliumResourceDetailBody'
-import { ciliumResourceOf } from '@/features/cilium/ciliumKinds'
-import { IstioDestinationRuleDetailBody } from '@/features/istio/IstioDestinationRuleDetailBody'
-import { IstioPeerAuthenticationDetailBody } from '@/features/istio/IstioPeerAuthenticationDetailBody'
-import { CertificateDetailBody } from '@/features/cert-manager/CertificateDetailBody'
-import { IssuerDetailBody } from '@/features/cert-manager/IssuerDetailBody'
-import { CertificateRequestDetailBody } from '@/features/cert-manager/CertificateRequestDetailBody'
-import { OrderDetailBody } from '@/features/cert-manager/OrderDetailBody'
-import { ChallengeDetailBody } from '@/features/cert-manager/ChallengeDetailBody'
 import { CertManagerChainTab } from '@/features/cert-manager/CertManagerChainTab'
 import { CertManagerStatePill } from '@/features/cert-manager/CertManagerStatePill'
 import { RenewCertificateButton } from '@/features/cert-manager/RenewCertificateButton'
@@ -486,154 +453,22 @@ function HelmReleaseTabs({
 }
 
 function customResourceOverview(contextName: string | null, resource: SelectedResource) {
-  const detailProps = {
-    contextName,
-    namespace: resource.namespace,
-    name: resource.name,
-  }
-
-  switch (tektonKindOf(resource)) {
-    case 'PipelineRun':
-      return <TektonPipelineRunDetailBody {...detailProps} />
-    case 'TaskRun':
-      return <TektonTaskRunDetailBody {...detailProps} />
-    case 'Pipeline':
-      return <TektonPipelineDetailBody {...detailProps} />
-    case 'Task':
-      return <TektonTaskDetailBody {...detailProps} />
-  }
-
-  switch (kyvernoKindOf(resource)) {
-    case 'ClusterPolicy':
-      return <KyvernoPolicyDetailBody {...detailProps} cluster />
-    case 'Policy':
-      return <KyvernoPolicyDetailBody {...detailProps} cluster={false} />
-    case 'ValidatingPolicy':
-      return <KyvernoValidatingPolicyDetailBody {...detailProps} namespaced={false} />
-    case 'NamespacedValidatingPolicy':
-      return <KyvernoValidatingPolicyDetailBody {...detailProps} namespaced />
-    case 'PolicyException':
-      return <KyvernoPolicyExceptionDetailBody {...detailProps} />
-    case 'PolicyReport':
-      return <PolicyReportDetailBody {...detailProps} cluster={false} />
-    case 'ClusterPolicyReport':
-      return <PolicyReportDetailBody {...detailProps} cluster />
-  }
-
-  const ciliumResource = ciliumResourceOf(resource)
-  if (ciliumResource) return <CiliumResourceDetailBody {...detailProps} resource={ciliumResource} />
-  switch (resource.kind) {
-    case 'AppProject':
-      return resource.gvr?.group === 'argoproj.io' ? (
-        <AppProjectDetailBody {...detailProps} />
-      ) : null
-    case 'ApplicationSet':
-      return resource.gvr?.group === 'argoproj.io' ? (
-        <ApplicationSetDetailBody {...detailProps} />
-      ) : null
-    case 'FluxKustomization':
-      return <FluxKustomizationDetailBody {...detailProps} />
-    case 'FluxHelmRelease':
-      return <FluxHelmReleaseDetailBody {...detailProps} />
-    case 'FluxGitRepository':
-      return <FluxGitRepositoryDetailBody {...detailProps} />
-    case 'FluxHelmRepository':
-      return <FluxHelmRepositoryDetailBody {...detailProps} />
-    case 'FluxOCIRepository':
-      return <FluxOCIRepositoryDetailBody {...detailProps} />
-    case 'FluxBucket':
-      return <FluxBucketDetailBody {...detailProps} />
-    case 'FluxImageRepository':
-      return resource.gvr?.group === 'image.toolkit.fluxcd.io' ? (
-        <FluxImageRepositoryDetailBody {...detailProps} />
-      ) : null
-    case 'FluxImagePolicy':
-      return resource.gvr?.group === 'image.toolkit.fluxcd.io' ? (
-        <FluxImagePolicyDetailBody {...detailProps} />
-      ) : null
-    case 'FluxImageUpdateAutomation':
-      return resource.gvr?.group === 'image.toolkit.fluxcd.io' ? (
-        <FluxImageUpdateAutomationDetailBody {...detailProps} />
-      ) : null
-    case 'EC2NodeClass':
-      return resource.gvr?.group === 'karpenter.k8s.aws' ? (
-        <KarpenterEC2NodeClassDetailBody contextName={contextName} name={resource.name} />
-      ) : null
-    case 'FluxProvider':
-      return <FluxProviderDetailBody {...detailProps} />
-    case 'FluxAlert':
-      return <FluxAlertDetailBody {...detailProps} />
-    case 'FluxReceiver':
-      return <FluxReceiverDetailBody {...detailProps} />
-    case 'IstioVirtualService':
-      return resource.gvr?.group === 'networking.istio.io' ? (
-        <IstioVirtualServiceDetailBody {...detailProps} />
-      ) : null
-    case 'IstioDestinationRule':
-      return resource.gvr?.group === 'networking.istio.io' ? (
-        <IstioDestinationRuleDetailBody {...detailProps} />
-      ) : null
-    case 'IstioPeerAuthentication':
-      return resource.gvr?.group === 'security.istio.io' ? (
-        <IstioPeerAuthenticationDetailBody {...detailProps} />
-      ) : null
-    case 'Certificate':
-      return resource.gvr?.group === CERT_MANAGER_GROUP ? (
-        <CertificateDetailBody {...detailProps} />
-      ) : null
-    case 'Issuer':
-      return resource.gvr?.group === CERT_MANAGER_GROUP ? (
-        <IssuerDetailBody {...detailProps} cluster={false} />
-      ) : null
-    case 'ClusterIssuer':
-      return resource.gvr?.group === CERT_MANAGER_GROUP ? (
-        <IssuerDetailBody {...detailProps} cluster />
-      ) : null
-    case 'CertificateRequest':
-      return resource.gvr?.group === CERT_MANAGER_GROUP ? (
-        <CertificateRequestDetailBody {...detailProps} />
-      ) : null
-    case 'Order':
-      return resource.gvr?.group === CERT_MANAGER_ACME_GROUP ? (
-        <OrderDetailBody {...detailProps} />
-      ) : null
-    case 'Challenge':
-      return resource.gvr?.group === CERT_MANAGER_ACME_GROUP ? (
-        <ChallengeDetailBody {...detailProps} />
-      ) : null
-    default:
-      return null
-  }
+  const integration = integrationFor(resource.gvr)
+  const body = integration ? INTEGRATION_DETAIL_BODIES[integration.view] : null
+  return body ? body({ contextName, namespace: resource.namespace, name: resource.name }) : null
 }
 
 function CustomResourceTabs({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
-  const isArgoApp =
-    resource.kind === 'Application' && resource.gvr?.group === 'argoproj.io'
+  const integration = integrationFor(resource.gvr)
+  const view = integration?.view
+  const isArgoApp = view === 'argocdapplications'
   const isFlux = isFluxResource(resource)
-  const isKarpenterNodePool =
-    resource.kind === 'NodePool' && resource.gvr?.group === 'karpenter.sh'
-  const isKarpenterNodeClaim =
-    resource.kind === 'NodeClaim' && resource.gvr?.group === 'karpenter.sh'
-  const hasKarpenterNodes = isKarpenterNodePool || isKarpenterNodeClaim
-  const isCertManagerCert =
-    resource.kind === 'Certificate' && resource.gvr?.group === CERT_MANAGER_GROUP
-  const isCertManagerIssuer =
-    resource.kind === 'Issuer' && resource.gvr?.group === CERT_MANAGER_GROUP
-  const isCertManagerClusterIssuer =
-    resource.kind === 'ClusterIssuer' && resource.gvr?.group === CERT_MANAGER_GROUP
-  const isCertManagerRequest =
-    resource.kind === 'CertificateRequest' && resource.gvr?.group === CERT_MANAGER_GROUP
-  const isCertManagerOrder =
-    resource.kind === 'Order' && resource.gvr?.group === CERT_MANAGER_ACME_GROUP
-  const isCertManagerChallenge =
-    resource.kind === 'Challenge' && resource.gvr?.group === CERT_MANAGER_ACME_GROUP
-  const isCertManager =
-    isCertManagerCert ||
-    isCertManagerIssuer ||
-    isCertManagerClusterIssuer ||
-    isCertManagerRequest ||
-    isCertManagerOrder ||
-    isCertManagerChallenge
+  const isKarpenterNodeClaim = view === 'karpenternodeclaims'
+  const hasKarpenterNodes = view === 'karpenternodepools' || isKarpenterNodeClaim
+  const isCertManagerCert = view === 'certmanagercertificates'
+  const isCertManagerRequest = view === 'certmanagercertificaterequests'
+  const isCertManagerOrder = view === 'certmanagerorders'
+  const isCertManager = integration?.group === CERT_MANAGER_GROUP || integration?.group === CERT_MANAGER_ACME_GROUP
   const tektonKind = tektonKindOf(resource)
   const isTektonRun = tektonKind === 'PipelineRun' || tektonKind === 'TaskRun'
   const hasTektonLogs = tektonKind === 'TaskRun'

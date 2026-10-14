@@ -1,7 +1,7 @@
 import type { CRDInfo } from '@/lib/api'
 import { kindAccessibleInAny } from '@/store/access'
 import type { ResourceView } from '@/store/ui'
-import { CILIUM_GROUP, CILIUM_RESOURCES } from '@/features/cilium/ciliumKinds'
+import { INTEGRATION_RESOURCES } from '@/lib/integrationCatalog.generated'
 import {
   ARGO_GROUP,
   CERT_MANAGER_GROUP_NAV,
@@ -24,107 +24,27 @@ type VisibleResourceGroupsInput = {
   hiddenItems: ResourceView[]
 }
 
+// Gateway API views read through the typed gateway-api client rather than the
+// dynamic CR path the integration catalog covers, so their CRDs are listed here.
+const GATEWAY_API_REQUIREMENTS = Object.fromEntries(
+  [
+    'gateways',
+    'httproutes',
+    'grpcroutes',
+    'tlsroutes',
+    'tcproutes',
+    'udproutes',
+    'listenersets',
+    'backendtlspolicies',
+    'gatewayclasses',
+    'referencegrants',
+  ].map((resource) => [resource, { group: 'gateway.networking.k8s.io', resource }]),
+)
+
+// A view with a requirement shows only while an active context serves its CRD.
 const CRD_REQUIREMENTS: Partial<Record<ResourceView, { group: string; resource: string }>> = {
-  ...Object.fromEntries(Object.keys(CILIUM_RESOURCES).map((resource) => [resource, { group: CILIUM_GROUP, resource }])),
-  argocdapplications: { group: 'argoproj.io', resource: 'applications' },
-  argocdappprojects: { group: 'argoproj.io', resource: 'appprojects' },
-  argocdapplicationsets: { group: 'argoproj.io', resource: 'applicationsets' },
-  gateways: { group: 'gateway.networking.k8s.io', resource: 'gateways' },
-  httproutes: { group: 'gateway.networking.k8s.io', resource: 'httproutes' },
-  grpcroutes: { group: 'gateway.networking.k8s.io', resource: 'grpcroutes' },
-  tlsroutes: { group: 'gateway.networking.k8s.io', resource: 'tlsroutes' },
-  tcproutes: { group: 'gateway.networking.k8s.io', resource: 'tcproutes' },
-  udproutes: { group: 'gateway.networking.k8s.io', resource: 'udproutes' },
-  listenersets: { group: 'gateway.networking.k8s.io', resource: 'listenersets' },
-  backendtlspolicies: { group: 'gateway.networking.k8s.io', resource: 'backendtlspolicies' },
-  gatewayclasses: {
-    group: 'gateway.networking.k8s.io',
-    resource: 'gatewayclasses',
-  },
-  referencegrants: {
-    group: 'gateway.networking.k8s.io',
-    resource: 'referencegrants',
-  },
-  karpenternodepools: { group: 'karpenter.sh', resource: 'nodepools' },
-  karpenternodeclaims: { group: 'karpenter.sh', resource: 'nodeclaims' },
-  karpenterec2nodeclasses: { group: 'karpenter.k8s.aws', resource: 'ec2nodeclasses' },
-  fluximagerepositories: { group: 'image.toolkit.fluxcd.io', resource: 'imagerepositories' },
-  fluximagepolicies: { group: 'image.toolkit.fluxcd.io', resource: 'imagepolicies' },
-  fluximageupdateautomations: { group: 'image.toolkit.fluxcd.io', resource: 'imageupdateautomations' },
-  fluxkustomizations: {
-    group: 'kustomize.toolkit.fluxcd.io',
-    resource: 'kustomizations',
-  },
-  fluxhelmreleases: {
-    group: 'helm.toolkit.fluxcd.io',
-    resource: 'helmreleases',
-  },
-  fluxgitrepositories: {
-    group: 'source.toolkit.fluxcd.io',
-    resource: 'gitrepositories',
-  },
-  fluxhelmrepositories: {
-    group: 'source.toolkit.fluxcd.io',
-    resource: 'helmrepositories',
-  },
-  fluxocirepositories: {
-    group: 'source.toolkit.fluxcd.io',
-    resource: 'ocirepositories',
-  },
-  fluxbuckets: { group: 'source.toolkit.fluxcd.io', resource: 'buckets' },
-  fluxproviders: {
-    group: 'notification.toolkit.fluxcd.io',
-    resource: 'providers',
-  },
-  fluxalerts: { group: 'notification.toolkit.fluxcd.io', resource: 'alerts' },
-  fluxreceivers: {
-    group: 'notification.toolkit.fluxcd.io',
-    resource: 'receivers',
-  },
-  istiovirtualservices: {
-    group: 'networking.istio.io',
-    resource: 'virtualservices',
-  },
-  istiodestinationrules: {
-    group: 'networking.istio.io',
-    resource: 'destinationrules',
-  },
-  istiopeerauthentications: {
-    group: 'security.istio.io',
-    resource: 'peerauthentications',
-  },
-  certmanagercertificates: {
-    group: 'cert-manager.io',
-    resource: 'certificates',
-  },
-  certmanagercertificaterequests: {
-    group: 'cert-manager.io',
-    resource: 'certificaterequests',
-  },
-  certmanagerorders: { group: 'acme.cert-manager.io', resource: 'orders' },
-  certmanagerchallenges: {
-    group: 'acme.cert-manager.io',
-    resource: 'challenges',
-  },
-  certmanagerissuers: { group: 'cert-manager.io', resource: 'issuers' },
-  certmanagerclusterissuers: {
-    group: 'cert-manager.io',
-    resource: 'clusterissuers',
-  },
-  tektonpipelineruns: { group: 'tekton.dev', resource: 'pipelineruns' },
-  tektontaskruns: { group: 'tekton.dev', resource: 'taskruns' },
-  tektonpipelines: { group: 'tekton.dev', resource: 'pipelines' },
-  tektontasks: { group: 'tekton.dev', resource: 'tasks' },
-  kyvernoclusterpolicies: { group: 'kyverno.io', resource: 'clusterpolicies' },
-  kyvernopolicies: { group: 'kyverno.io', resource: 'policies' },
-  kyvernovalidatingpolicies: { group: 'policies.kyverno.io', resource: 'validatingpolicies' },
-  kyvernonamespacedvalidatingpolicies: {
-    group: 'policies.kyverno.io',
-    resource: 'namespacedvalidatingpolicies',
-  },
-  kyvernopolicyexceptions: { group: 'kyverno.io', resource: 'policyexceptions' },
-  policyreports: { group: 'wgpolicyk8s.io', resource: 'policyreports' },
-  clusterpolicyreports: { group: 'wgpolicyk8s.io', resource: 'clusterpolicyreports' },
+  ...GATEWAY_API_REQUIREMENTS,
+  ...Object.fromEntries(INTEGRATION_RESOURCES.map(({ view, group, resource }) => [view, { group, resource }])),
 }
 
 export function buildVisibleResourceGroups({

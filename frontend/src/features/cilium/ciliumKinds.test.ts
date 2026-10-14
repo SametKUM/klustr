@@ -4,7 +4,8 @@ import { kube } from '@/lib/wails/wailsjs/go/models'
 import { ALL_RESOURCE_VIEWS } from '@/features/_shared/resourceGroups'
 import { buildVisibleResourceGroups } from '@/features/_shared/visibleResourceGroups'
 import { buildCustomResourceSelection } from '@/features/_shared/customResourceModel'
-import { CILIUM_GROUP, CILIUM_RESOURCES, ciliumResourceOf, isCiliumView, type CiliumView } from './ciliumKinds'
+import { integrationFor, isIntegrationView } from '@/lib/integrations'
+import { CILIUM_GROUP, CILIUM_RESOURCES, isCiliumView, type CiliumView } from './ciliumKinds'
 
 describe('Cilium navigation', () => {
   it.each(Object.keys(CILIUM_RESOURCES) as CiliumView[])('gates %s on the exact CRD in an active context', (resource) => {
@@ -23,15 +24,14 @@ describe('Cilium navigation', () => {
     const selection = buildCustomResourceSelection(row, 'dev', { dev: crd }, definition.kind, (value) => value)
     expect(selection.context).toBe('dev')
     expect(selection.gvr?.version).toBe('v2alpha1')
-    expect(ciliumResourceOf(selection)).toBe(resource)
-    expect(ciliumResourceOf({ ...selection, gvr: { ...selection.gvr!, group: 'example.com' } })).toBeNull()
-    expect(ciliumResourceOf({ ...selection, kind: 'AnotherKind' })).toBeNull()
+    expect(integrationFor(selection.gvr)?.view).toBe(resource)
+    expect(integrationFor({ ...selection.gvr!, group: 'example.com' })).toBeUndefined()
   })
 
   it('rejects unknown and prototype properties', () => {
     expect(isCiliumView('toString')).toBe(false)
     expect(isCiliumView('ciliumunknown')).toBe(false)
-    expect(ciliumResourceOf(null)).toBeNull()
-    expect(ciliumResourceOf({ kind: 'CiliumEndpoint', namespace: 'app', name: 'web' })).toBeNull()
+    expect(isIntegrationView('toString')).toBe(false)
+    expect(integrationFor(undefined)).toBeUndefined()
   })
 })

@@ -1,5 +1,3 @@
-import type { SelectedResource } from '@/store/ui'
-
 export const CILIUM_GROUP = 'cilium.io'
 
 export const CILIUM_RESOURCES = {
@@ -23,10 +21,4 @@ export type CiliumView = keyof typeof CILIUM_RESOURCES
 
 export function isCiliumView(view: string): view is CiliumView {
   return Object.hasOwn(CILIUM_RESOURCES, view)
-}
-
-export function ciliumResourceOf(resource: SelectedResource | null): CiliumView | null {
-  const gvr = resource?.gvr
-  if (!resource || !gvr || gvr.group !== CILIUM_GROUP || !isCiliumView(gvr.resource)) return null
-  return CILIUM_RESOURCES[gvr.resource].kind === resource.kind ? gvr.resource : null
 }

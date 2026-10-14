@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { Fragment, useEffect, useMemo, useRef } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ReadOnlyToggle } from '@/features/_shared/ReadOnlyToggle'
@@ -69,9 +69,6 @@ import { WorkloadsOverviewView } from '@/features/overview/WorkloadsOverviewView
 import { CustomResourceView } from '@/features/crds/CustomResourceView'
 import { CRDGroups } from '@/features/crds/CRDGroups'
 import { orderedCRDKeys } from '@/features/crds/crdGrouping'
-import { ApplicationsView } from '@/features/argocd/ApplicationsView'
-import { AppProjectsView } from '@/features/argocd/AppProjectsView'
-import { ApplicationSetsView } from '@/features/argocd/ApplicationSetsView'
 import { HelmReleasesView } from '@/features/helm/HelmReleasesView'
 import { HelmReposView } from '@/features/helm/HelmReposView'
 import { GatewaysView } from '@/features/gateways/GatewaysView'
@@ -84,41 +81,8 @@ import { ListenerSetsView } from '@/features/listenersets/ListenerSetsView'
 import { BackendTLSPoliciesView } from '@/features/backendtlspolicies/BackendTLSPoliciesView'
 import { GatewayClassesView } from '@/features/gatewayclasses/GatewayClassesView'
 import { ReferenceGrantsView } from '@/features/referencegrants/ReferenceGrantsView'
-import { KarpenterNodePoolsView } from '@/features/karpenter-nodepools/KarpenterNodePoolsView'
-import { KarpenterNodeClaimsView } from '@/features/karpenter-nodeclaims/KarpenterNodeClaimsView'
-import { KarpenterEC2NodeClassesView } from '@/features/karpenter-nodeclasses/KarpenterEC2NodeClassesView'
-import {
-  FluxImageRepositoriesView,
-  FluxImagePoliciesView,
-  FluxImageUpdateAutomationsView,
-} from '@/features/flux/FluxImageViews'
-import { FluxKustomizationsView } from '@/features/flux/FluxKustomizationsView'
-import { FluxHelmReleasesView } from '@/features/flux/FluxHelmReleasesView'
-import { FluxGitRepositoriesView } from '@/features/flux/FluxGitRepositoriesView'
-import { FluxHelmRepositoriesView } from '@/features/flux/FluxHelmRepositoriesView'
-import { FluxOCIRepositoriesView } from '@/features/flux/FluxOCIRepositoriesView'
-import { FluxBucketsView } from '@/features/flux/FluxBucketsView'
-import { FluxProvidersView } from '@/features/flux/FluxProvidersView'
-import { FluxAlertsView } from '@/features/flux/FluxAlertsView'
-import { FluxReceiversView } from '@/features/flux/FluxReceiversView'
-import { TektonPipelineRunsView } from '@/features/tekton/TektonPipelineRunsView'
-import { TektonTaskRunsView } from '@/features/tekton/TektonTaskRunsView'
-import { TektonPipelinesView } from '@/features/tekton/TektonPipelinesView'
-import { TektonTasksView } from '@/features/tekton/TektonTasksView'
-import { KyvernoPoliciesView } from '@/features/kyverno/KyvernoPoliciesView'
-import { KyvernoValidatingPoliciesView } from '@/features/kyverno/KyvernoValidatingPoliciesView'
-import { KyvernoPolicyExceptionsView } from '@/features/kyverno/KyvernoPolicyExceptionsView'
-import { PolicyReportsView } from '@/features/kyverno/PolicyReportsView'
-import { IstioVirtualServicesView } from '@/features/istio/IstioVirtualServicesView'
-import { IstioDestinationRulesView } from '@/features/istio/IstioDestinationRulesView'
-import { IstioPeerAuthenticationsView } from '@/features/istio/IstioPeerAuthenticationsView'
-import { CertificatesView } from '@/features/cert-manager/CertificatesView'
-import { IssuersView } from '@/features/cert-manager/IssuersView'
-import { CertificateRequestsView } from '@/features/cert-manager/CertificateRequestsView'
-import { OrdersView } from '@/features/cert-manager/OrdersView'
-import { ChallengesView } from '@/features/cert-manager/ChallengesView'
-import { CiliumResourcesView } from '@/features/cilium/CiliumResourcesView'
-import { isCiliumView } from '@/features/cilium/ciliumKinds'
+import { INTEGRATION_LIST_VIEWS } from '@/features/integrationViews'
+import { isIntegrationView } from '@/lib/integrations'
 import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
 import type { ResourceGroup } from '@/features/_shared/resourceGroups'
 import { useVisibleResourceGroups } from '@/features/_shared/useVisibleResourceGroups'
@@ -178,7 +142,8 @@ function MainView() {
     }
     return <CustomResourceView crd={crd} />
   }
-  if (isCiliumView(view)) return <CiliumResourcesView key={view} resource={view} />
+  // Keyed by view so switching between two views of one component remounts it.
+  if (isIntegrationView(view)) return <Fragment key={view}>{INTEGRATION_LIST_VIEWS[view]()}</Fragment>
   switch (view) {
     case 'overview':
       return <OverviewView />
@@ -296,12 +261,6 @@ function MainView() {
       return <HelmReleasesView />
     case 'helmrepos':
       return <HelmReposView />
-    case 'argocdapplications':
-      return <ApplicationsView />
-    case 'argocdappprojects':
-      return <AppProjectsView />
-    case 'argocdapplicationsets':
-      return <ApplicationSetsView />
     case 'gateways':
       return <GatewaysView />
     case 'httproutes':
@@ -322,76 +281,6 @@ function MainView() {
       return <GatewayClassesView />
     case 'referencegrants':
       return <ReferenceGrantsView />
-    case 'karpenternodepools':
-      return <KarpenterNodePoolsView />
-    case 'karpenternodeclaims':
-      return <KarpenterNodeClaimsView />
-    case 'karpenterec2nodeclasses':
-      return <KarpenterEC2NodeClassesView />
-    case 'fluximagerepositories':
-      return <FluxImageRepositoriesView />
-    case 'fluximagepolicies':
-      return <FluxImagePoliciesView />
-    case 'fluximageupdateautomations':
-      return <FluxImageUpdateAutomationsView />
-    case 'fluxkustomizations':
-      return <FluxKustomizationsView />
-    case 'fluxhelmreleases':
-      return <FluxHelmReleasesView />
-    case 'fluxgitrepositories':
-      return <FluxGitRepositoriesView />
-    case 'fluxhelmrepositories':
-      return <FluxHelmRepositoriesView />
-    case 'fluxocirepositories':
-      return <FluxOCIRepositoriesView />
-    case 'fluxbuckets':
-      return <FluxBucketsView />
-    case 'fluxproviders':
-      return <FluxProvidersView />
-    case 'fluxalerts':
-      return <FluxAlertsView />
-    case 'fluxreceivers':
-      return <FluxReceiversView />
-    case 'tektonpipelineruns':
-      return <TektonPipelineRunsView />
-    case 'tektontaskruns':
-      return <TektonTaskRunsView />
-    case 'tektonpipelines':
-      return <TektonPipelinesView />
-    case 'tektontasks':
-      return <TektonTasksView />
-    case 'kyvernoclusterpolicies':
-      return <KyvernoPoliciesView key="cluster" cluster />
-    case 'kyvernopolicies':
-      return <KyvernoPoliciesView key="namespaced" cluster={false} />
-    case 'kyvernovalidatingpolicies':
-      return <KyvernoValidatingPoliciesView key="cluster" namespaced={false} />
-    case 'kyvernonamespacedvalidatingpolicies':
-      return <KyvernoValidatingPoliciesView key="namespaced" namespaced />
-    case 'kyvernopolicyexceptions':
-      return <KyvernoPolicyExceptionsView />
-    case 'policyreports':
-      return <PolicyReportsView key="namespaced" cluster={false} />
-    case 'clusterpolicyreports':
-      return <PolicyReportsView key="cluster" cluster />
-    case 'istiovirtualservices':
-      return <IstioVirtualServicesView />
-    case 'istiodestinationrules':
-      return <IstioDestinationRulesView />
-    case 'istiopeerauthentications':
-      return <IstioPeerAuthenticationsView />
-    case 'certmanagercertificates':
-      return <CertificatesView />
-    case 'certmanagerissuers':
-      return <IssuersView cluster={false} />
-    case 'certmanagerclusterissuers':
-      return <IssuersView cluster={true} />
-    case 'certmanagercertificaterequests':
-      return <CertificateRequestsView />
-    case 'certmanagerorders':
-      return <OrdersView />
-    case 'certmanagerchallenges':
-      return <ChallengesView />
     default:
       return (
         <div className="flex flex-1 items-center justify-center">

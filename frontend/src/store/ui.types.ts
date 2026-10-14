@@ -2,7 +2,7 @@
 // file so persistence helpers can reference these without pulling the whole
 // Zustand store and its DOM side effects into their dependency graph.
 
-import type { CiliumView } from '@/features/cilium/ciliumKinds'
+import type { IntegrationView } from '@/lib/integrationCatalog.generated'
 
 export type SidebarMode = 'expanded' | 'icons'
 
@@ -61,8 +61,10 @@ export type LastSession = {
 
 export const MAX_TAGS_PER_CONTEXT = 3
 
+// Integration views come from the generated catalog; the rest are built-in
+// kinds, Helm and Gateway API.
 export type ResourceView =
-  | CiliumView
+  | IntegrationView
   | 'overview'
   | 'workloadsoverview'
   | 'pods'
@@ -121,9 +123,6 @@ export type ResourceView =
   | 'accessreview'
   | 'helmreleases'
   | 'helmrepos'
-  | 'argocdapplications'
-  | 'argocdappprojects'
-  | 'argocdapplicationsets'
   | 'gateways'
   | 'httproutes'
   | 'grpcroutes'
@@ -134,41 +133,6 @@ export type ResourceView =
   | 'backendtlspolicies'
   | 'gatewayclasses'
   | 'referencegrants'
-  | 'karpenternodepools'
-  | 'karpenternodeclaims'
-  | 'karpenterec2nodeclasses'
-  | 'fluxkustomizations'
-  | 'fluxhelmreleases'
-  | 'fluxgitrepositories'
-  | 'fluxhelmrepositories'
-  | 'fluxocirepositories'
-  | 'fluxbuckets'
-  | 'fluxproviders'
-  | 'fluxalerts'
-  | 'fluxreceivers'
-  | 'fluximagerepositories'
-  | 'fluximagepolicies'
-  | 'fluximageupdateautomations'
-  | 'istiovirtualservices'
-  | 'istiodestinationrules'
-  | 'istiopeerauthentications'
-  | 'certmanagercertificates'
-  | 'certmanagerissuers'
-  | 'certmanagerclusterissuers'
-  | 'certmanagercertificaterequests'
-  | 'certmanagerorders'
-  | 'certmanagerchallenges'
-  | 'tektonpipelineruns'
-  | 'tektontaskruns'
-  | 'tektonpipelines'
-  | 'tektontasks'
-  | 'kyvernoclusterpolicies'
-  | 'kyvernopolicies'
-  | 'kyvernovalidatingpolicies'
-  | 'kyvernonamespacedvalidatingpolicies'
-  | 'kyvernopolicyexceptions'
-  | 'policyreports'
-  | 'clusterpolicyreports'
 
 export type ResourceKind =
   | 'Pod'
