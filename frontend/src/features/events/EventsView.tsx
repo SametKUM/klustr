@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { formatAge } from '@/lib/time'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { ErrorBox, Th, Td } from '@/features/_shared/DetailPrimitives'
+import { selectsTextWithin } from '@/features/_shared/textSelection'
 import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
 
 type TaggedEvent = EventInfo & { contextName: string }
@@ -246,7 +247,7 @@ export function EventsView() {
                   <Th>Message</Th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="allow-select">
                 {visible.map((e) => {
                   const clickable = !!(e.objectKind && e.objectName)
                   return (
@@ -257,13 +258,15 @@ export function EventsView() {
                       }`}
                       onClick={
                         clickable
-                          ? () =>
+                          ? (ev) => {
+                              if (selectsTextWithin(ev.currentTarget)) return
                               setSelectedResource({
                                 kind: e.objectKind,
                                 namespace: e.namespace,
                                 name: e.objectName,
                                 context: e.contextName,
                               })
+                            }
                           : undefined
                       }
                     >
