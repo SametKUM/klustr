@@ -214,10 +214,22 @@ func extractFluxImageUpdateAutomationDetail(obj *unstructured.Unstructured) *Flu
 		Conditions: crConditions(obj), CheckoutBranch: checkout, UpdateStrategy: strategy, ObservedSourceRevision: revision}
 }
 
-func (m *ClientManager) fluxActionGVR(contextName, kind string) (schema.GroupVersionResource, error) {
+// fluxActionResource maps a Klustr-side Flux kind ("FluxKustomization") to
+// its resource.
+func fluxActionResource(kind string) (schema.GroupResource, error) {
 	gr, ok := fluxKindResource[kind]
 	if !ok {
-		return schema.GroupVersionResource{}, fmt.Errorf("unsupported flux kind: %q", kind)
+		return schema.GroupResource{}, fmt.Errorf("unsupported flux kind: %q", kind)
+	}
+	return gr, nil
+}
+
+// fluxActionGVR is fluxActionResource at the version the cluster serves, for
+// the generic YAML and delete paths.
+func (m *ClientManager) fluxActionGVR(contextName, kind string) (schema.GroupVersionResource, error) {
+	gr, err := fluxActionResource(kind)
+	if err != nil {
+		return schema.GroupVersionResource{}, err
 	}
 	return m.requireServedGVR(contextName, gr)
 }

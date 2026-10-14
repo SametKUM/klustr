@@ -6,10 +6,8 @@ import (
 	"strings"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/util/retry"
 )
 
 // cert-manager resources. Certificate, Issuer and CertificateRequest are
@@ -205,22 +203,11 @@ func extractCertManagerIssuer(obj *unstructured.Unstructured) CertManagerIssuerI
 // rather than waiting for the renewal window. Uses the status subresource so
 // the spec is never touched.
 func (m *ClientManager) RenewCertificate(ctx context.Context, contextName, namespace, name string) error {
-	if err := m.assertWritable(contextName); err != nil {
-		return err
-	}
-	ri, err := m.servedResource(contextName, certManagerCertificateGR, namespace)
+	ri, err := m.writableResource(contextName, certManagerCertificateGR, namespace)
 	if err != nil {
 		return err
 	}
-	// cert-manager controllers rewrite Certificate status constantly, so a bare
-	// Get → UpdateStatus races them and 409s; retry on conflict with a fresh Get
-	// each round (mirrors setArgoFinalizer). The callback returns raw errors so
-	// RetryOnConflict can detect the 409.
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		obj, err := ri.Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
+	err = updateCRStatus(ctx, ri, name, func(obj *unstructured.Unstructured) (bool, error) {
 		conds, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
 		issuing := map[string]any{
 			"type":               "Issuing",
@@ -246,10 +233,9 @@ func (m *ClientManager) RenewCertificate(ctx context.Context, contextName, names
 			conds = append(conds, issuing)
 		}
 		if err := unstructured.SetNestedSlice(obj.Object, conds, "status", "conditions"); err != nil {
-			return err
+			return false, err
 		}
-		_, err = ri.UpdateStatus(ctx, obj, metav1.UpdateOptions{})
-		return err
+		return true, nil
 	})
 	if err != nil {
 		return fmt.Errorf("renew certificate %s/%s: %w", namespace, name, err)

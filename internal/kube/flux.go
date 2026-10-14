@@ -2,14 +2,11 @@ package kube
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // Flux CD CR resources. Versions differ across Flux releases (HelmRelease
@@ -926,17 +923,10 @@ func extractFluxReceiver(obj *unstructured.Unstructured) FluxReceiverInfo {
 // it up on its next sync poll (interval ≤ a few seconds typically) and
 // reconciles immediately, the same path `flux reconcile <kind> <name>` uses.
 func (m *ClientManager) ReconcileFluxResource(ctx context.Context, contextName, kind, namespace, name string) error {
-	if err := m.assertWritable(contextName); err != nil {
-		return err
-	}
 	if kind == "FluxImagePolicy" {
 		return fmt.Errorf("reconcile the ImagePolicy's ImageRepository to refresh its tags")
 	}
-	gvr, err := m.fluxActionGVR(contextName, kind)
-	if err != nil {
-		return err
-	}
-	dyn, err := m.dynamicClient(contextName)
+	gr, err := fluxActionResource(kind)
 	if err != nil {
 		return err
 	}
@@ -947,14 +937,7 @@ func (m *ClientManager) ReconcileFluxResource(ctx context.Context, contextName, 
 			},
 		},
 	}
-	body, err := json.Marshal(patch)
-	if err != nil {
-		return err
-	}
-	_, err = dyn.Resource(gvr).Namespace(namespace).Patch(
-		ctx, name, types.MergePatchType, body, metav1.PatchOptions{},
-	)
-	if err != nil {
+	if err := m.mergePatchCR(ctx, contextName, gr, namespace, name, patch); err != nil {
 		return fmt.Errorf("reconcile %s %s/%s: %w", kind, namespace, name, err)
 	}
 	return nil
@@ -964,33 +947,20 @@ func (m *ClientManager) ReconcileFluxResource(ctx context.Context, contextName, 
 // controller leaves the resource alone — useful for taking a managed
 // workload offline temporarily without deleting the Flux object.
 func (m *ClientManager) SetFluxResourceSuspended(ctx context.Context, contextName, kind, namespace, name string, suspended bool) error {
-	if err := m.assertWritable(contextName); err != nil {
-		return err
-	}
-	gvr, err := m.fluxActionGVR(contextName, kind)
+	gr, err := fluxActionResource(kind)
 	if err != nil {
 		return err
 	}
-	if kind == "FluxImagePolicy" && gvr.Version != "v1" {
+	// spec.suspend arrived in ImagePolicy with image.toolkit.fluxcd.io/v1.
+	if gvr, ok := m.servedGVR(contextName, gr); kind == "FluxImagePolicy" && ok && gvr.Version != "v1" {
 		return fmt.Errorf("suspending ImagePolicy requires image.toolkit.fluxcd.io/v1")
-	}
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return err
 	}
 	patch := map[string]any{
 		"spec": map[string]any{
 			"suspend": suspended,
 		},
 	}
-	body, err := json.Marshal(patch)
-	if err != nil {
-		return err
-	}
-	_, err = dyn.Resource(gvr).Namespace(namespace).Patch(
-		ctx, name, types.MergePatchType, body, metav1.PatchOptions{},
-	)
-	if err != nil {
+	if err := m.mergePatchCR(ctx, contextName, gr, namespace, name, patch); err != nil {
 		return fmt.Errorf("suspend %s %s/%s: %w", kind, namespace, name, err)
 	}
 	return nil

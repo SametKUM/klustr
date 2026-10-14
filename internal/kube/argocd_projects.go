@@ -299,11 +299,11 @@ func (m *ClientManager) findArgoApplicationsOwnedBy(
 	}
 	apps := listCachedCRs(m, contextName, gvr, namespace)
 	if apps == nil {
-		dyn, err := m.dynamicClient(contextName)
+		ri, err := m.servedReader(contextName, argoApplicationGR, namespace)
 		if err != nil {
 			return []ArgoApplicationSetGeneratedApp{}
 		}
-		list, err := dyn.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{})
+		list, err := ri.List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return []ArgoApplicationSetGeneratedApp{}
 		}

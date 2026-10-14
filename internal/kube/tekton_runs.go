@@ -152,15 +152,14 @@ func tektonPipelineRefName(obj *unstructured.Unstructured) (display, refName str
 // controller stamps on them, so opening one run never starts the (large)
 // cluster-wide TaskRun informer.
 func (m *ClientManager) tektonChildTaskRuns(ctx context.Context, contextName, namespace, pipelineRun string) ([]*unstructured.Unstructured, error) {
-	gvr, ok := m.servedGVR(contextName, tektonGR(tektonTaskRunsResource))
-	if !ok {
+	if _, ok := m.servedGVR(contextName, tektonGR(tektonTaskRunsResource)); !ok {
 		return nil, nil
 	}
-	dyn, err := m.dynamicClient(contextName)
+	ri, err := m.servedReader(contextName, tektonGR(tektonTaskRunsResource), namespace)
 	if err != nil {
 		return nil, err
 	}
-	list, err := dyn.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{
+	list, err := ri.List(ctx, metav1.ListOptions{
 		LabelSelector: labels.Set{tektonPipelineRunLabel: pipelineRun}.String(),
 	})
 	if err != nil {
@@ -176,7 +175,7 @@ func (m *ClientManager) tektonChildTaskRuns(ctx context.Context, contextName, na
 // getTektonLive GETs a Tekton object from the API server, bypassing the
 // informer cache whose copy has crCachePrunedFields removed.
 func (m *ClientManager) getTektonLive(ctx context.Context, contextName string, gr schema.GroupResource, namespace, name string) (*unstructured.Unstructured, error) {
-	ri, err := m.servedResource(contextName, gr, namespace)
+	ri, err := m.servedReader(contextName, gr, namespace)
 	if err != nil {
 		return nil, err
 	}

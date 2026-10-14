@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // Tekton Pipelines serves its core kinds at tekton.dev/v1 (stored as v1 since
@@ -306,18 +305,8 @@ func (m *ClientManager) CancelTektonTaskRun(ctx context.Context, contextName, na
 }
 
 func (m *ClientManager) patchTektonSpecStatus(ctx context.Context, contextName, resource, namespace, name, status string) error {
-	if err := m.assertWritable(contextName); err != nil {
-		return err
-	}
-	ri, err := m.servedResource(contextName, tektonGR(resource), namespace)
-	if err != nil {
-		return err
-	}
-	body, err := json.Marshal(map[string]any{"spec": map[string]any{"status": status}})
-	if err != nil {
-		return err
-	}
-	if _, err := ri.Patch(ctx, name, types.MergePatchType, body, metav1.PatchOptions{}); err != nil {
+	patch := map[string]any{"spec": map[string]any{"status": status}}
+	if err := m.mergePatchCR(ctx, contextName, tektonGR(resource), namespace, name, patch); err != nil {
 		return fmt.Errorf("cancel %s %s/%s: %w", resource, namespace, name, err)
 	}
 	return nil
@@ -327,10 +316,7 @@ func (m *ClientManager) patchTektonSpecStatus(ctx context.Context, contextName, 
 // and returns the new run's name. It reads the source live, so the copy never
 // comes from the pruned informer cache.
 func (m *ClientManager) RerunTektonPipelineRun(ctx context.Context, contextName, namespace, name string) (string, error) {
-	if err := m.assertWritable(contextName); err != nil {
-		return "", err
-	}
-	ri, err := m.servedResource(contextName, tektonGR(tektonPipelineRunsResource), namespace)
+	ri, err := m.writableResource(contextName, tektonGR(tektonPipelineRunsResource), namespace)
 	if err != nil {
 		return "", err
 	}

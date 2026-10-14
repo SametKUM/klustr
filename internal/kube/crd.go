@@ -693,10 +693,22 @@ func (m *ClientManager) listServedCRs(contextName string, gr schema.GroupResourc
 	return listCachedCRs(m, contextName, gvr, namespace)
 }
 
-// servedResource is the dynamic client for an integration resource at its
-// served version, scoped to namespace ("" for cluster-scoped kinds). Actions
-// write through it so a PATCH never targets a version the cluster dropped.
-func (m *ClientManager) servedResource(contextName string, gr schema.GroupResource, namespace string) (dynamic.ResourceInterface, error) {
+// crReader is the read half of dynamic.ResourceInterface. Integration read
+// paths get only this, so a write has to come from writableResource
+// (cr_actions.go), which refuses read-only contexts.
+type crReader interface {
+	Get(ctx context.Context, name string, options metav1.GetOptions, subresources ...string) (*unstructured.Unstructured, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*unstructured.UnstructuredList, error)
+}
+
+// servedReader reads an integration resource live from the API server at its
+// served version, scoped to namespace ("" for cluster-scoped kinds), for the
+// few paths that bypass the informer cache.
+func (m *ClientManager) servedReader(contextName string, gr schema.GroupResource, namespace string) (crReader, error) {
+	return m.servedClient(contextName, gr, namespace)
+}
+
+func (m *ClientManager) servedClient(contextName string, gr schema.GroupResource, namespace string) (dynamic.ResourceInterface, error) {
 	gvr, err := m.requireServedGVR(contextName, gr)
 	if err != nil {
 		return nil, err
