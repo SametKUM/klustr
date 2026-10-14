@@ -1,0 +1,42 @@
+apiVersion: acme.cert-manager.io/v1
+kind: Challenge
+metadata:
+  name: web-tls-2-1803512417-2948316754
+  namespace: apps
+  uid: 9d8c7b6a-5f4e-4d3c-b2a1-0f9e8d7c6b5a
+  generation: 1
+  creationTimestamp: "2026-10-14T05:41:53Z"
+  finalizers:
+    - acme.cert-manager.io/finalizer
+  ownerReferences:
+    - apiVersion: acme.cert-manager.io/v1
+      kind: Order
+      name: web-tls-2-1803512417
+      uid: 4e5f6a7b-8c9d-4e0f-a1b2-c3d4e5f6a7b8
+      controller: true
+      blockOwnerDeletion: true
+spec:
+  type: HTTP-01
+  dnsName: www.example.com
+  wildcard: false
+  url: https://acme-v02.api.letsencrypt.org/acme/chall/1234567890/52018834101/Q2xhaW0
+  authorizationURL: https://acme-v02.api.letsencrypt.org/acme/authz/1234567890/52018834101
+  token: example-token-www
+  key: example-token-www.example-account-thumbprint
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    group: cert-manager.io
+  solver:
+    http01:
+      ingress:
+        ingressClassName: nginx
+status:
+  presented: true
+  processing: true
+  state: pending
+  reason: >-
+    Waiting for HTTP-01 challenge propagation: failed to perform self check GET request
+    'http://www.example.com/.well-known/acme-challenge/example-token-www': Get
+    "http://www.example.com/.well-known/acme-challenge/example-token-www": dial tcp
+    203.0.113.10:80: connect: connection refused

@@ -1,0 +1,39 @@
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: tor
+  uid: 8a0c2e4b-6d8f-4f0a-8c2e-6a8c0e2a4f6b
+  generation: 1
+  creationTimestamp: "2026-04-22T07:00:00Z"
+spec:
+  nodeSelector:
+    matchLabels:
+      bgp: tor
+  bgpInstances:
+    - name: instance-65001
+      localASN: 65001
+      peers:
+        - name: tor-1
+          peerASN: 65000
+          peerAddress: 10.0.0.1
+          peerConfigRef:
+            name: tor-peer
+        - name: tor-2
+          peerASN: 65000
+          peerAddress: 10.0.0.2
+          peerConfigRef:
+            name: tor-peer
+status:
+  conditions:
+    - type: cilium.io/NoMatchingNode
+      status: "False"
+      reason: NoMatchingNode
+      message: ""
+      lastTransitionTime: "2026-04-22T07:00:02Z"
+      observedGeneration: 1
+    - type: cilium.io/MissingPeerConfigs
+      status: "False"
+      reason: MissingPeerConfigs
+      message: ""
+      lastTransitionTime: "2026-04-22T07:00:02Z"
+      observedGeneration: 1

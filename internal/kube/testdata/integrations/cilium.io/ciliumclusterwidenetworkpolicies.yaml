@@ -1,0 +1,50 @@
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: baseline
+  uid: 9d2c7e4a-1b3f-4a5c-8e6d-0f1a2b3c4d5e
+  generation: 1
+  creationTimestamp: "2026-04-02T09:30:00Z"
+specs:
+  - description: Every endpoint may resolve names through cluster DNS
+    endpointSelector: {}
+    egress:
+      - toEndpoints:
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: kube-system
+              k8s:k8s-app: kube-dns
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: ANY
+            rules:
+              dns:
+                - matchPattern: "*"
+  - description: Host firewall for worker nodes
+    nodeSelector:
+      matchLabels:
+        node-role.kubernetes.io/worker: ""
+    ingress:
+      - fromEntities:
+          - cluster
+      - fromCIDRSet:
+          - cidrGroupRef: office-networks
+        toPorts:
+          - ports:
+              - port: "22"
+                protocol: TCP
+      - fromEntities:
+          - world
+        icmps:
+          - fields:
+              - family: IPv4
+                type: 8
+    ingressDeny:
+      - fromCIDR:
+          - 198.51.100.0/24
+status:
+  conditions:
+    - type: Valid
+      status: "True"
+      message: Policy validation succeeded
+      lastTransitionTime: "2026-04-02T09:30:01Z"

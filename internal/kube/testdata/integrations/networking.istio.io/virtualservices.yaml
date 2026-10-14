@@ -1,0 +1,65 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: checkout
+  namespace: apps
+  creationTimestamp: "2026-09-20T10:05:12Z"
+  generation: 3
+spec:
+  hosts:
+    - checkout.example.com
+    - checkout.apps.svc.cluster.local
+  gateways:
+    - istio-ingress/public-gateway
+    - mesh
+  http:
+    - name: canary-header
+      match:
+        - uri:
+            prefix: /api
+          headers:
+            x-canary:
+              exact: "true"
+      route:
+        - destination:
+            host: checkout.apps.svc.cluster.local
+            subset: v2
+            port:
+              number: 8080
+    - name: default
+      route:
+        - destination:
+            host: checkout.apps.svc.cluster.local
+            subset: v1
+            port:
+              number: 8080
+          weight: 90
+        - destination:
+            host: checkout.apps.svc.cluster.local
+            subset: v2
+            port:
+              number: 8080
+          weight: 10
+      retries:
+        attempts: 3
+        perTryTimeout: 2s
+        retryOn: 5xx,connect-failure
+      timeout: 10s
+  tls:
+    - match:
+        - port: 443
+          sniHosts:
+            - checkout.example.com
+      route:
+        - destination:
+            host: checkout.apps.svc.cluster.local
+            port:
+              number: 8443
+status:
+  observedGeneration: "3"
+  conditions:
+    - type: Reconciled
+      status: "True"
+      message: 12/12 proxies up to date.
+      lastProbeTime: "2026-09-20T10:05:14Z"
+      lastTransitionTime: "2026-09-20T10:05:14Z"

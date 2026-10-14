@@ -1,0 +1,43 @@
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: checkout
+  namespace: apps
+  creationTimestamp: "2026-09-20T10:05:12Z"
+  generation: 2
+spec:
+  host: checkout.apps.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_REQUEST
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 1024
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v2
+      labels:
+        version: v2
+      trafficPolicy:
+        loadBalancer:
+          simple: ROUND_ROBIN
+status:
+  observedGeneration: "2"
+  conditions:
+    - type: Reconciled
+      status: "True"
+      message: 12/12 proxies up to date.
+      lastProbeTime: "2026-09-20T10:05:14Z"
+      lastTransitionTime: "2026-09-20T10:05:14Z"

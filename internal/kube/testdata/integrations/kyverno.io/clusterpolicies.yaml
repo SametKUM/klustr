@@ -1,0 +1,71 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: baseline-workloads
+  creationTimestamp: "2026-10-02T08:14:36Z"
+  generation: 3
+  annotations:
+    policies.kyverno.io/title: Baseline Workloads
+    policies.kyverno.io/category: Pod Security Standards (Baseline)
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod, Namespace
+    policies.kyverno.io/description: >-
+      Pods must meet the Pod Security Standards baseline profile, and every new
+      namespace gets a default-deny ingress NetworkPolicy.
+spec:
+  admission: true
+  background: true
+  rules:
+    - name: baseline-pod-security
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces: [kube-system, kyverno]
+      validate:
+        failureAction: Enforce
+        podSecurity:
+          level: baseline
+          version: latest
+    - name: default-deny-ingress
+      match:
+        any:
+          - resources:
+              kinds: [Namespace]
+              selector:
+                matchExpressions:
+                  - {key: kubernetes.io/metadata.name, operator: NotIn, values: [kube-system, kyverno]}
+      generate:
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        name: default-deny-ingress
+        namespace: "{{request.object.metadata.name}}"
+        synchronize: true
+        data:
+          spec:
+            podSelector: {}
+            policyTypes: [Ingress]
+status:
+  autogen:
+    rules:
+      - name: autogen-baseline-pod-security
+        match: {any: [{resources: {kinds: [DaemonSet, Deployment, Job, ReplicaSet, ReplicationController, StatefulSet]}}]}
+        exclude: {any: [{resources: {namespaces: [kube-system, kyverno]}}]}
+        validate: {failureAction: Enforce, podSecurity: {level: baseline, version: latest}}
+      - name: autogen-cronjob-baseline-pod-security
+        match: {any: [{resources: {kinds: [CronJob]}}]}
+        exclude: {any: [{resources: {namespaces: [kube-system, kyverno]}}]}
+        validate: {failureAction: Enforce, podSecurity: {level: baseline, version: latest}}
+  conditions:
+    - lastTransitionTime: "2026-10-02T08:14:39Z"
+      message: Ready
+      reason: Succeeded
+      status: "True"
+      type: Ready
+  rulecount: {generate: 1, mutate: 0, validate: 1, verifyimages: 0}
+  validatingadmissionpolicy:
+    generated: false
+    message: "skip generating ValidatingAdmissionPolicy: multiple rules are not applicable."

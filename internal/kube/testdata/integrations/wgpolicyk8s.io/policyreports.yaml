@@ -1,0 +1,58 @@
+apiVersion: wgpolicyk8s.io/v1alpha2
+kind: PolicyReport
+metadata:
+  name: 3aaa1049-1fdf-420d-8b79-bb3e3ef9e31c
+  namespace: apps
+  creationTimestamp: "2026-10-06T09:12:40Z"
+  generation: 7
+  labels:
+    app.kubernetes.io/managed-by: kyverno
+  ownerReferences:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: ingress-gateway
+      uid: 3aaa1049-1fdf-420d-8b79-bb3e3ef9e31c
+scope:
+  apiVersion: apps/v1
+  kind: Deployment
+  name: ingress-gateway
+  namespace: apps
+  uid: 3aaa1049-1fdf-420d-8b79-bb3e3ef9e31c
+summary: {error: 0, fail: 1, pass: 1, skip: 1, warn: 1}
+results:
+  - policy: baseline-workloads
+    rule: autogen-baseline-pod-security
+    result: skip
+    scored: true
+    category: Pod Security Standards (Baseline)
+    severity: high
+    source: kyverno
+    properties: {exceptions: apps-ingress-gateway, process: background scan}
+    timestamp: {nanos: 0, seconds: 1791931267}
+  - policy: apps/apps-supply-chain
+    rule: require-memory-limits
+    result: pass
+    message: validation rule 'require-memory-limits' passed.
+    scored: true
+    category: Software Supply Chain Security
+    severity: high
+    source: kyverno
+    properties: {process: background scan}
+    timestamp: {nanos: 0, seconds: 1791931267}
+  - policy: require-probes
+    result: fail
+    message: "readiness probe missing on: envoy"
+    scored: true
+    source: KyvernoValidatingPolicy
+    properties: {process: background scan}
+    timestamp: {nanos: 0, seconds: 1791931268}
+  - policy: disallow-latest-tag
+    rule: autogen-validate-image-tag
+    result: warn
+    message: "validation error: Using a mutable image tag such as latest is not allowed. rule autogen-validate-image-tag failed at path /spec/template/spec/initContainers/0/image/"
+    scored: false
+    category: Best Practices
+    severity: medium
+    source: kyverno
+    properties: {process: background scan}
+    timestamp: {nanos: 0, seconds: 1791931268}

@@ -1,0 +1,64 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: build-and-push-7kq2m
+  generateName: build-and-push-
+  namespace: ci
+  creationTimestamp: "2026-10-13T09:12:04Z"
+  labels:
+    tekton.dev/pipeline: build-and-push
+spec:
+  pipelineRef:
+    name: build-and-push
+  params:
+    - {name: git-url, value: https://git.example.com/platform/checkout.git}
+    - {name: git-revision, value: main}
+    - {name: image, value: registry.example.com/apps/checkout:4f2c1e9}
+    - {name: build-args, value: ["GOOS=linux", "CGO_ENABLED=0"]}
+    - {name: scan, value: "false"}
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 1Gi
+    - name: docker-credentials
+      secret:
+        secretName: registry-push-credentials
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  timeouts:
+    pipeline: 1h0m0s
+status:
+  startTime: "2026-10-13T09:12:04Z"
+  completionTime: "2026-10-13T09:15:31Z"
+  conditions:
+    - type: Succeeded
+      status: "True"
+      reason: Completed
+      message: "Tasks Completed: 3 (Failed: 0, Cancelled 0), Skipped: 1"
+      lastTransitionTime: "2026-10-13T09:15:31Z"
+  pipelineSpec:
+    tasks:
+      - {name: fetch-source, taskRef: {kind: Task, name: git-clone}}
+      - {name: build-push, runAfter: [fetch-source], taskRef: {kind: Task, name: kaniko}}
+      - name: scan-image
+        runAfter: [build-push]
+        when: [{input: "false", operator: in, values: ["true"]}]
+        taskRef: {kind: Task, name: trivy-scan}
+    finally:
+      - {name: notify, taskRef: {kind: Task, name: send-to-webhook}}
+  childReferences:
+    - {apiVersion: tekton.dev/v1, kind: TaskRun, name: build-and-push-7kq2m-fetch-source, pipelineTaskName: fetch-source}
+    - {apiVersion: tekton.dev/v1, kind: TaskRun, name: build-and-push-7kq2m-build-push, pipelineTaskName: build-push}
+    - {apiVersion: tekton.dev/v1, kind: TaskRun, name: build-and-push-7kq2m-notify, pipelineTaskName: notify}
+  skippedTasks:
+    - name: scan-image
+      reason: When Expressions evaluated to false
+      whenExpressions: [{input: "false", operator: in, values: ["true"]}]
+  finallyStartTime: "2026-10-13T09:15:12Z"
+  results:
+    - name: image-digest
+      value: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef

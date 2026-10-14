@@ -1,0 +1,44 @@
+apiVersion: cilium.io/v2
+kind: CiliumBGPNodeConfig
+metadata:
+  name: worker-1
+  uid: 6e8a0c2f-4b6d-4e8a-8c2f-4b6d8f0a2c4e
+  generation: 1
+  creationTimestamp: "2026-04-22T07:00:03Z"
+  ownerReferences:
+    - apiVersion: cilium.io/v2
+      kind: CiliumBGPClusterConfig
+      name: tor
+      uid: 8a0c2e4b-6d8f-4f0a-8c2e-6a8c0e2a4f6b
+      controller: true
+spec:
+  bgpInstances:
+    - name: instance-65001
+      localASN: 65001
+      routerID: 10.0.1.23
+      localPort: 179
+      peers:
+        - name: tor-1
+          peerASN: 65000
+          peerAddress: 10.0.0.1
+          localAddress: 10.0.1.23
+          peerConfigRef:
+            name: tor-peer
+status:
+  bgpInstances:
+    - name: instance-65001
+      localASN: 65001
+      peers:
+        - name: tor-1
+          peerAddress: 10.0.0.1
+          peerASN: 65000
+          peeringState: established
+          establishedTime: "2026-04-22T07:00:41Z"
+          timers:
+            appliedHoldTimeSeconds: 9
+            appliedKeepaliveSeconds: 3
+          routeCount:
+            - afi: ipv4
+              safi: unicast
+              received: 4
+              advertised: 2

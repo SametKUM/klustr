@@ -1,0 +1,34 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-staging
+  namespace: apps
+  uid: 2b9c8d7e-6f5a-4b3c-9d2e-1f0a9b8c7d6e
+  generation: 1
+  creationTimestamp: "2026-06-10T08:03:12Z"
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: platform@example.com
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - selector:
+          dnsZones:
+            - example.com
+        dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+status:
+  acme:
+    uri: https://acme-staging-v02.api.letsencrypt.org/acme/acct/987654321
+    lastRegisteredEmail: platform@example.com
+  conditions:
+    - type: Ready
+      status: "True"
+      reason: ACMEAccountRegistered
+      message: The ACME account was registered with the ACME server
+      lastTransitionTime: "2026-06-10T08:03:14Z"
+      observedGeneration: 1

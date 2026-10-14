@@ -1,0 +1,47 @@
+apiVersion: cert-manager.io/v1
+kind: CertificateRequest
+metadata:
+  name: web-tls-2
+  namespace: apps
+  uid: 8c4d2e6f-1a3b-4c5d-8e7f-0a1b2c3d4e5f
+  generation: 1
+  creationTimestamp: "2026-10-14T05:41:51Z"
+  annotations:
+    cert-manager.io/certificate-name: web-tls
+    cert-manager.io/certificate-revision: "2"
+    cert-manager.io/private-key-secret-name: web-tls-x8k2m
+  ownerReferences:
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: web-tls
+      uid: 3f6d2c1a-8b4e-4d7f-9a21-5c0e7b9d4a10
+      controller: true
+      blockOwnerDeletion: true
+spec:
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KWm1sNGRIVnlaU0JEVTFJZ1ptOXlJSGQzZHk1bGVHRnRjR3hsTG1OdmJRPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUgUkVRVUVTVC0tLS0tCg==
+  duration: 2160h0m0s
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    group: cert-manager.io
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+  username: system:serviceaccount:cert-manager:cert-manager
+  groups:
+    - system:serviceaccounts
+    - system:serviceaccounts:cert-manager
+    - system:authenticated
+status:
+  conditions:
+    - type: Approved
+      status: "True"
+      reason: cert-manager.io
+      message: Certificate request has been approved by cert-manager.io
+      lastTransitionTime: "2026-10-14T05:41:51Z"
+    - type: Ready
+      status: "False"
+      reason: Pending
+      message: 'Waiting on certificate issuance from order apps/web-tls-2-1803512417: "pending"'
+      lastTransitionTime: "2026-10-14T05:41:52Z"

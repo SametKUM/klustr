@@ -1,0 +1,70 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: build-and-push-7kq2m-build-push
+  namespace: ci
+  creationTimestamp: "2026-10-13T09:12:41Z"
+  labels:
+    app.kubernetes.io/managed-by: tekton-pipelines
+    tekton.dev/memberOf: tasks
+    tekton.dev/pipeline: build-and-push
+    tekton.dev/pipelineRun: build-and-push-7kq2m
+    tekton.dev/pipelineTask: build-push
+    tekton.dev/task: kaniko
+spec:
+  taskRef:
+    kind: Task
+    name: kaniko
+  params:
+    - {name: IMAGE, value: registry.example.com/apps/checkout:4f2c1e9}
+    - {name: EXTRA_ARGS, value: ["--build-arg=GOOS=linux", "--build-arg=CGO_ENABLED=0"]}
+  workspaces:
+    - name: source
+      persistentVolumeClaim:
+        claimName: pvc-3f9c2a1b7e
+    - name: dockerconfig
+      secret:
+        secretName: registry-push-credentials
+  serviceAccountName: pipeline
+  timeout: 1h0m0s
+status:
+  podName: build-and-push-7kq2m-build-push-pod
+  startTime: "2026-10-13T09:12:41Z"
+  completionTime: "2026-10-13T09:15:09Z"
+  conditions:
+    - type: Succeeded
+      status: "True"
+      reason: Succeeded
+      message: All Steps have completed executing
+      lastTransitionTime: "2026-10-13T09:15:09Z"
+  steps:
+    - name: build-and-push
+      container: step-build-and-push
+      terminationReason: Completed
+      terminated: {exitCode: 0, reason: Completed, startedAt: "2026-10-13T09:12:47Z", finishedAt: "2026-10-13T09:15:06Z"}
+    - name: write-url
+      container: step-write-url
+      terminationReason: Completed
+      terminated: {exitCode: 0, reason: Completed, startedAt: "2026-10-13T09:15:06Z", finishedAt: "2026-10-13T09:15:07Z"}
+  results:
+    - name: IMAGE_DIGEST
+      type: string
+      value: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    - {name: IMAGE_URL, type: string, value: registry.example.com/apps/checkout:4f2c1e9}
+  taskSpec:
+    params:
+      - {name: IMAGE, type: string}
+      - {name: EXTRA_ARGS, type: array, default: []}
+    workspaces:
+      - {name: source}
+      - {name: dockerconfig, optional: true, mountPath: /kaniko/.docker}
+    results:
+      - {name: IMAGE_DIGEST, type: string}
+      - {name: IMAGE_URL, type: string}
+    steps:
+      - name: build-and-push
+        image: gcr.io/kaniko-project/executor:v1.23.2
+        args: ["$(params.EXTRA_ARGS[*])", "--destination=$(params.IMAGE)", "--digest-file=$(results.IMAGE_DIGEST.path)"]
+      - name: write-url
+        image: docker.io/library/bash:5.2
+        script: printf "%s" "$(params.IMAGE)" | tee "$(results.IMAGE_URL.path)"

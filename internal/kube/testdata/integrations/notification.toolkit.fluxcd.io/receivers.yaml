@@ -1,0 +1,32 @@
+apiVersion: notification.toolkit.fluxcd.io/v1
+kind: Receiver
+metadata:
+  name: fleet-infra-push
+  namespace: flux-system
+  creationTimestamp: "2026-09-01T10:12:00Z"
+spec:
+  type: github
+  interval: 10m
+  events:
+    - ping
+    - push
+  secretRef:
+    name: github-receiver
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: GitRepository
+      name: fleet-infra
+    - apiVersion: image.toolkit.fluxcd.io/v1
+      kind: ImageRepository
+      name: podinfo
+      namespace: flux-system
+status:
+  observedGeneration: 1
+  webhookPath: /hook/16623bbc30db96f7723c0e78e103702556b411991feb36bb6e0954613f600cc1
+  conditions:
+    - type: Ready
+      status: "True"
+      observedGeneration: 1
+      reason: Succeeded
+      message: "Receiver initialized for path: /hook/16623bbc30db96f7723c0e78e103702556b411991feb36bb6e0954613f600cc1"
+      lastTransitionTime: "2026-09-01T10:12:03Z"

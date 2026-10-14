@@ -1,0 +1,46 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: public
+  uid: 0b2d4f6a-8c0e-4a2b-9d4f-6b8d0f2a4c6e
+  generation: 1
+  creationTimestamp: "2026-04-15T13:05:00Z"
+spec:
+  blocks:
+    - cidr: 192.0.2.0/27
+    - start: 198.51.100.10
+      stop: 198.51.100.20
+  serviceSelector:
+    matchExpressions:
+      - key: exposure
+        operator: In
+        values:
+          - public
+  allowFirstLastIPs: "No"
+  disabled: false
+status:
+  conditions:
+    - type: cilium.io/IPsTotal
+      status: Unknown
+      reason: noreason
+      message: "41"
+      lastTransitionTime: "2026-04-15T13:05:01Z"
+      observedGeneration: 1
+    - type: cilium.io/IPsAvailable
+      status: Unknown
+      reason: noreason
+      message: "38"
+      lastTransitionTime: "2026-05-11T08:31:47Z"
+      observedGeneration: 1
+    - type: cilium.io/IPsUsed
+      status: Unknown
+      reason: noreason
+      message: "3"
+      lastTransitionTime: "2026-05-11T08:31:47Z"
+      observedGeneration: 1
+    - type: cilium.io/PoolConflict
+      status: "False"
+      reason: resolved
+      message: ""
+      lastTransitionTime: "2026-04-15T13:05:01Z"
+      observedGeneration: 1

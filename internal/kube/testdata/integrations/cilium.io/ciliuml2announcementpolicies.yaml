@@ -1,0 +1,19 @@
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: public-services
+  uid: 4e6a8c0b-2d4f-4b6e-8a0c-2e4a6c8e0b2d
+  generation: 1
+  creationTimestamp: "2026-04-15T13:06:30Z"
+spec:
+  serviceSelector:
+    matchLabels:
+      exposure: public
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: DoesNotExist
+  interfaces:
+    - ^eth[0-9]+
+  externalIPs: false
+  loadBalancerIPs: true

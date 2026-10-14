@@ -1,0 +1,53 @@
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedValidatingPolicy
+metadata:
+  name: restrict-ingress-hosts
+  namespace: apps
+  creationTimestamp: "2026-10-06T14:02:51Z"
+  generation: 1
+spec:
+  validationActions: [Audit, Warn]
+  failurePolicy: Ignore
+  evaluation:
+    background: {enabled: true}
+  matchConstraints:
+    objectSelector:
+      matchExpressions:
+        - {key: app.kubernetes.io/managed-by, operator: NotIn, values: [Helm]}
+    resourceRules:
+      - apiGroups: [networking.k8s.io]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [ingresses]
+      - apiGroups: [gateway.networking.k8s.io]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [httproutes]
+  variables:
+    - name: hosts
+      expression: >-
+        object.kind == 'Ingress'
+        ? object.spec.?rules.orValue([]).filter(r, has(r.host)).map(r, r.host)
+        : object.spec.?hostnames.orValue([])
+  validations:
+    - expression: "variables.hosts.all(h, h.endsWith('.apps.acme.example'))"
+      messageExpression: "'hosts must be under apps.acme.example, got: ' + variables.hosts.join(', ')"
+      reason: Forbidden
+  auditAnnotations:
+    - key: hosts
+      valueExpression: "variables.hosts.join(',')"
+status:
+  conditionStatus:
+    ready: true
+    conditions:
+      - lastTransitionTime: "2026-10-06T14:02:53Z"
+        message: Policy is ready for reporting.
+        reason: Succeeded
+        status: "True"
+        type: RBACPermissionsGranted
+      - lastTransitionTime: "2026-10-06T14:02:53Z"
+        message: Webhook configured.
+        reason: Succeeded
+        status: "True"
+        type: WebhookConfigured
+  generated: false

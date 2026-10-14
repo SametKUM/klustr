@@ -1,0 +1,60 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+  creationTimestamp: "2026-09-12T08:13:58Z"
+  finalizers:
+    - karpenter.k8s.aws/termination
+spec:
+  role: KarpenterNodeRole-prod-primary
+  amiSelectorTerms:
+    - alias: al2023@v20260915
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: prod-primary
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: prod-primary
+    - id: sg-0123456789abcdef1
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 1
+    httpTokens: required
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp3
+        encrypted: true
+  tags:
+    team: platform
+status:
+  instanceProfile: prod-primary_8812473021476548120
+  subnets:
+    - {id: subnet-0123456789abcdef0, zone: eu-central-1a, zoneID: euc1-az2}
+    - {id: subnet-0123456789abcdef1, zone: eu-central-1b, zoneID: euc1-az3}
+    - {id: subnet-0123456789abcdef2, zone: eu-central-1c, zoneID: euc1-az1}
+  securityGroups:
+    - {id: sg-0123456789abcdef0, name: eks-cluster-sg-prod-primary-1234567890}
+    - {id: sg-0123456789abcdef1, name: prod-primary-node}
+  amis:
+    - id: ami-0123456789abcdef0
+      name: amazon-eks-node-al2023-x86_64-standard-1.33-v20260915
+      requirements:
+        - {key: kubernetes.io/arch, operator: In, values: ["amd64"]}
+        - {key: karpenter.k8s.aws/instance-gpu-count, operator: DoesNotExist}
+        - {key: karpenter.k8s.aws/instance-accelerator-count, operator: DoesNotExist}
+    - id: ami-0123456789abcdef1
+      name: amazon-eks-node-al2023-arm64-standard-1.33-v20260915
+      requirements:
+        - {key: kubernetes.io/arch, operator: In, values: ["arm64"]}
+        - {key: karpenter.k8s.aws/instance-gpu-count, operator: DoesNotExist}
+        - {key: karpenter.k8s.aws/instance-accelerator-count, operator: DoesNotExist}
+  conditions:
+    - {type: AMIsReady, status: "True", reason: AMIsReady, message: "", lastTransitionTime: "2026-09-15T11:02:44Z"}
+    - {type: SubnetsReady, status: "True", reason: SubnetsReady, message: "", lastTransitionTime: "2026-09-12T08:14:00Z"}
+    - {type: SecurityGroupsReady, status: "True", reason: SecurityGroupsReady, message: "", lastTransitionTime: "2026-09-12T08:14:00Z"}
+    - {type: InstanceProfileReady, status: "True", reason: InstanceProfileReady, message: "", lastTransitionTime: "2026-09-12T08:14:01Z"}
+    - {type: ValidationSucceeded, status: "True", reason: ValidationSucceeded, message: "", lastTransitionTime: "2026-09-12T08:14:01Z"}
+    - {type: Ready, status: "True", reason: Ready, message: "", lastTransitionTime: "2026-09-12T08:14:01Z"}

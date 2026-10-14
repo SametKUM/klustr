@@ -1,0 +1,15 @@
+apiVersion: cilium.io/v2
+kind: CiliumBGPNodeConfigOverride
+metadata:
+  name: worker-1
+  uid: 0a2c4e6b-8d0f-4a2c-9e4b-6d8f0a2c4e6b
+  generation: 1
+  creationTimestamp: "2026-04-22T06:58:00Z"
+spec:
+  bgpInstances:
+    - name: instance-65001
+      routerID: 10.0.1.23
+      localPort: 179
+      peers:
+        - name: tor-1
+          localAddress: 10.0.1.23

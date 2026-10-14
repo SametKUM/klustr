@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guestbook
+  namespace: argocd
+  creationTimestamp: "2026-09-01T08:00:00Z"
+spec:
+  project: default
+  source:
+    repoURL: https://git.example.com/platform/apps.git
+    path: guestbook
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: guestbook
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+status:
+  sync:
+    status: OutOfSync
+    revision: 4f1c2a9e0b7d3c5a8e6f1d2b3c4a5e6f7a8b9c0d
+  health:
+    status: Degraded
+    message: Deployment guestbook-ui exceeded its progress deadline
+  conditions:
+    - type: SyncError
+      message: one or more objects failed to apply
+  resourceHealthSource: appTree
+  resources:
+    - group: apps
+      version: v1
+      kind: Deployment
+      namespace: guestbook
+      name: guestbook-ui
+      status: OutOfSync
+      health:
+        status: Degraded
+        message: Deployment "guestbook-ui" exceeded its progress deadline
+    - version: v1
+      kind: Service
+      namespace: guestbook
+      name: guestbook-ui
+      status: Synced
+      health:
+        status: Healthy
+  history:
+    - id: 3
+      revision: 2b9d7c1e0a4f6b8c3d5e7f9a1b2c3d4e5f6a7b8c
+      deployedAt: "2026-09-30T10:15:00Z"
+      deployStartedAt: "2026-09-30T10:14:40Z"
+      source:
+        repoURL: https://git.example.com/platform/apps.git
+        path: guestbook
+        targetRevision: main
+  operationState:
+    phase: Failed
+    message: one or more objects failed to apply
+    startedAt: "2026-10-01T09:00:00Z"
+    finishedAt: "2026-10-01T09:00:12Z"
+    operation:
+      sync:
+        revision: 4f1c2a9e0b7d3c5a8e6f1d2b3c4a5e6f7a8b9c0d
+    syncResult:
+      revision: 4f1c2a9e0b7d3c5a8e6f1d2b3c4a5e6f7a8b9c0d
+      resources:
+        - group: apps
+          version: v1
+          kind: Deployment
+          namespace: guestbook
+          name: guestbook-ui
+          status: SyncFailed
+          message: admission webhook denied the request
+          hookPhase: Running
+          syncPhase: Sync

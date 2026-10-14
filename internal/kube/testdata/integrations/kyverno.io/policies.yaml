@@ -1,0 +1,77 @@
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: apps-supply-chain
+  namespace: apps
+  creationTimestamp: "2026-10-05T11:37:02Z"
+  generation: 4
+  annotations:
+    pod-policies.kyverno.io/autogen-controllers: none
+    policies.kyverno.io/title: Apps Supply Chain
+    policies.kyverno.io/category: Software Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Workloads in apps run only signed images from ghcr.io/acme and set memory
+      limits; NodePort services are reported and Deployments get the team label.
+spec:
+  admission: true
+  background: true
+  rules:
+    - name: verify-signature
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      verifyImages:
+        - imageReferences: ["ghcr.io/acme/*"]
+          failureAction: Enforce
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+          attestors:
+            - entries:
+                - keyless: {issuer: https://token.actions.githubusercontent.com, subject: "https://github.com/acme/*", rekor: {url: https://rekor.sigstore.dev}}
+    - name: require-memory-limits
+      match:
+        any:
+          - resources:
+              kinds: [Deployment, StatefulSet]
+              operations: [CREATE, UPDATE]
+      validate:
+        failureAction: Enforce
+        cel:
+          expressions:
+            - expression: "object.spec.template.spec.containers.all(c, has(c.resources.limits) && 'memory' in c.resources.limits)"
+              message: Every container must set a memory limit.
+    - name: block-nodeport-services
+      match:
+        any:
+          - resources:
+              kinds: [Service]
+      preconditions:
+        all:
+          - key: "{{ request.object.spec.type || '' }}"
+            operator: Equals
+            value: NodePort
+      validate:
+        failureAction: Audit
+        message: NodePort services bypass the gateway; expose a ClusterIP service behind it instead.
+        deny: {}
+    - name: add-team-label
+      match:
+        any:
+          - resources:
+              kinds: [Deployment]
+      exclude:
+        any:
+          - subjects:
+              - {kind: ServiceAccount, name: argocd-application-controller, namespace: argocd}
+      mutate:
+        patchStrategicMerge:
+          metadata:
+            labels:
+              +(team): apps
+status:
+  conditions:
+    - {lastTransitionTime: "2026-10-05T11:37:05Z", message: Ready, reason: Succeeded, status: "True", type: Ready}
+  rulecount: {generate: 0, mutate: 1, validate: 2, verifyimages: 1}

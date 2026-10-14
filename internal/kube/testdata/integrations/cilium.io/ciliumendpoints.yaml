@@ -1,0 +1,58 @@
+apiVersion: cilium.io/v2
+kind: CiliumEndpoint
+metadata:
+  name: web-7c9d8b6f5-x2k4p
+  namespace: apps
+  uid: 2e4f6a8c-0b1d-4c3e-9f5a-7b9c1d3e5f70
+  creationTimestamp: "2026-05-11T08:20:41Z"
+  ownerReferences:
+    - apiVersion: v1
+      kind: Pod
+      name: web-7c9d8b6f5-x2k4p
+      uid: 6a1b2c3d-4e5f-4a7b-8c9d-0e1f2a3b4c5d
+status:
+  id: 1873
+  state: ready
+  service-account: web
+  encryption:
+    key: 3
+  external-identifiers:
+    k8s-namespace: apps
+    k8s-pod-name: web-7c9d8b6f5-x2k4p
+    pod-name: apps/web-7c9d8b6f5-x2k4p
+  identity:
+    id: 12345
+    labels:
+      - k8s:app=web
+      - k8s:io.cilium.k8s.policy.serviceaccount=web
+      - k8s:io.kubernetes.pod.namespace=apps
+  networking:
+    node: 10.0.1.23
+    addressing:
+      - ipv4: 10.0.1.104
+        ipv6: 2001:db8:0:1::68
+  named-ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+  policy:
+    ingress:
+      enforcing: true
+      state: enforcing
+      allowed:
+        - identity: 23456
+          identity-labels:
+            k8s:app: frontend
+          dest-port: 8080
+          protocol: 6
+    egress:
+      enforcing: true
+      state: enforcing
+  controllers:
+    - name: resolve-labels-apps/web-7c9d8b6f5-x2k4p
+      status:
+        consecutive-failure-count: 1
+        failure-count: 1
+        success-count: 4
+        last-failure-msg: "unable to resolve identity: context deadline exceeded"
+        last-failure-timestamp: "2026-05-11T08:20:43Z"

@@ -1,0 +1,35 @@
+apiVersion: cilium.io/v2
+kind: CiliumBGPAdvertisement
+metadata:
+  name: tor-routes
+  uid: 4c6e8a0d-2f4b-4c6e-8a0d-2f4b6d8f0a2c
+  generation: 1
+  creationTimestamp: "2026-04-22T07:00:00Z"
+  labels:
+    advertise: bgp
+spec:
+  advertisements:
+    - advertisementType: PodCIDR
+      attributes:
+        communities:
+          standard:
+            - "65001:100"
+        localPreference: 150
+    - advertisementType: Service
+      service:
+        addresses:
+          - LoadBalancerIP
+          - ExternalIP
+        aggregationLengthIPv4: 28
+      selector:
+        matchExpressions:
+          - key: exposure
+            operator: In
+            values:
+              - public
+      attributes:
+        communities:
+          wellKnown:
+            - no-export
+          large:
+            - "65001:1:100"

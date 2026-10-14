@@ -1,0 +1,46 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: Bucket
+metadata:
+  name: fleet-manifests
+  namespace: flux-system
+  creationTimestamp: "2026-09-03T07:15:00Z"
+spec:
+  interval: 5m
+  timeout: 60s
+  provider: generic
+  bucketName: fleet-manifests
+  endpoint: minio.example.com:9000
+  region: eu-central-1
+  prefix: clusters/production
+  insecure: false
+  secretRef:
+    name: minio-credentials
+status:
+  observedGeneration: 2
+  url: http://source-controller.flux-system.svc.cluster.local./bucket/flux-system/fleet-manifests/latest.tar.gz
+  artifact:
+    path: bucket/flux-system/fleet-manifests/1f628222112539aebee62aa737b8bb4aa14b747f52bb04afa722215727c326c6.tar.gz
+    url: http://source-controller.flux-system.svc.cluster.local./bucket/flux-system/fleet-manifests/1f628222112539aebee62aa737b8bb4aa14b747f52bb04afa722215727c326c6.tar.gz
+    revision: sha256:1f628222112539aebee62aa737b8bb4aa14b747f52bb04afa722215727c326c6
+    digest: sha256:1f628222112539aebee62aa737b8bb4aa14b747f52bb04afa722215727c326c6
+    lastUpdateTime: "2026-10-14T08:30:02Z"
+    size: 9876
+  conditions:
+    - type: Reconciling
+      status: "True"
+      observedGeneration: 2
+      reason: Progressing
+      message: "building artifact: new upstream revision 'sha256:cda5b81ff2987806dcde8137f148de8c0f5dc4cd6158f609203c05640615da17'"
+      lastTransitionTime: "2026-10-14T08:35:01Z"
+    - type: Ready
+      status: Unknown
+      observedGeneration: 2
+      reason: Progressing
+      message: "building artifact: new upstream revision 'sha256:cda5b81ff2987806dcde8137f148de8c0f5dc4cd6158f609203c05640615da17'"
+      lastTransitionTime: "2026-10-14T08:35:01Z"
+    - type: ArtifactInStorage
+      status: "True"
+      observedGeneration: 2
+      reason: Succeeded
+      message: "stored artifact: revision 'sha256:1f628222112539aebee62aa737b8bb4aa14b747f52bb04afa722215727c326c6'"
+      lastTransitionTime: "2026-10-14T08:30:02Z"

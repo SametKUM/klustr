@@ -1,0 +1,49 @@
+# Mid-renewal: the current certificate is still valid (Ready=True) while
+# revision 2 is being issued through CertificateRequest web-tls-2.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: web-tls
+  namespace: apps
+  uid: 3f6d2c1a-8b4e-4d7f-9a21-5c0e7b9d4a10
+  generation: 1
+  creationTimestamp: "2026-08-15T06:40:47Z"
+spec:
+  secretName: web-tls
+  commonName: www.example.com
+  dnsNames:
+    - www.example.com
+    - example.com
+  duration: 2160h0m0s
+  renewBefore: 720h0m0s
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    group: cert-manager.io
+status:
+  conditions:
+    - type: Ready
+      status: "True"
+      reason: Ready
+      message: Certificate is up to date and has not expired
+      lastTransitionTime: "2026-08-15T06:42:31Z"
+      observedGeneration: 1
+    - type: Issuing
+      status: "True"
+      reason: Renewing
+      message: Renewing certificate as renewal was scheduled at 2026-10-14 05:41:49 +0000 UTC
+      lastTransitionTime: "2026-10-14T05:41:49Z"
+      observedGeneration: 1
+  notBefore: "2026-08-15T05:41:50Z"
+  notAfter: "2026-11-13T05:41:49Z"
+  renewalTime: "2026-10-14T05:41:49Z"
+  revision: 1
+  nextPrivateKeySecretName: web-tls-x8k2m

@@ -1,0 +1,32 @@
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: apps-ingress-gateway
+  namespace: apps
+  creationTimestamp: "2026-10-06T09:05:18Z"
+  generation: 1
+spec:
+  background: true
+  exceptions:
+    - policyName: baseline-workloads
+      ruleNames: [baseline-pod-security, autogen-baseline-pod-security]
+    - policyName: apps/apps-supply-chain
+      ruleNames: [block-nodeport-services]
+  match:
+    any:
+      - resources:
+          kinds: [Pod, Deployment, Service]
+          namespaces: [apps]
+          names: ["ingress-gateway*"]
+  conditions:
+    any:
+      - key: "{{ request.object.metadata.labels.\"app.kubernetes.io/part-of\" || '' }}"
+        operator: Equals
+        value: edge
+  podSecurity:
+    - controlName: Host Ports
+      images: ["ghcr.io/acme/ingress-gateway*"]
+    - controlName: Capabilities
+      images: ["ghcr.io/acme/ingress-gateway*"]
+      restrictedField: spec.containers[*].securityContext.capabilities.add
+      values: [NET_ADMIN]

@@ -1,0 +1,54 @@
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-probes
+  creationTimestamp: "2026-10-03T09:21:44Z"
+  generation: 2
+spec:
+  validationActions: [Deny, Audit]
+  failurePolicy: Fail
+  evaluation:
+    mode: Kubernetes
+    admission: {enabled: true}
+    background: {enabled: true}
+  webhookConfiguration:
+    timeoutSeconds: 10
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - {key: kubernetes.io/metadata.name, operator: NotIn, values: [kube-system, kyverno]}
+    resourceRules:
+      - apiGroups: [apps]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [deployments, statefulsets]
+  matchConditions:
+    - name: not-scaled-to-zero
+      expression: "object.spec.?replicas.orValue(1) > 0"
+  variables:
+    - name: containers
+      expression: object.spec.template.spec.containers
+  validations:
+    - expression: "variables.containers.all(c, has(c.readinessProbe))"
+      messageExpression: "'readiness probe missing on: ' + variables.containers.filter(c, !has(c.readinessProbe)).map(c, c.name).join(', ')"
+      reason: Invalid
+    - expression: "variables.containers.all(c, has(c.livenessProbe))"
+      message: Every container must define a liveness probe.
+  auditAnnotations:
+    - key: containers-without-readiness-probe
+      valueExpression: "string(size(variables.containers.filter(c, !has(c.readinessProbe))))"
+status:
+  conditionStatus:
+    ready: true
+    conditions:
+      - lastTransitionTime: "2026-10-03T09:21:47Z"
+        message: Policy is ready for reporting.
+        reason: Succeeded
+        status: "True"
+        type: RBACPermissionsGranted
+      - lastTransitionTime: "2026-10-03T09:21:47Z"
+        message: Webhook configured.
+        reason: Succeeded
+        status: "True"
+        type: WebhookConfigured
+  generated: false

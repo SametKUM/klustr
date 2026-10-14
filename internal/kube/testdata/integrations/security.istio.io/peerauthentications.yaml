@@ -1,0 +1,24 @@
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: checkout
+  namespace: apps
+  creationTimestamp: "2026-09-20T10:05:12Z"
+  generation: 1
+spec:
+  selector:
+    matchLabels:
+      app: checkout
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    9090:
+      mode: PERMISSIVE
+status:
+  observedGeneration: "1"
+  conditions:
+    - type: Reconciled
+      status: "True"
+      message: 12/12 proxies up to date.
+      lastProbeTime: "2026-09-20T10:05:14Z"
+      lastTransitionTime: "2026-09-20T10:05:14Z"

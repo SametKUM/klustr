@@ -1,0 +1,28 @@
+# v1beta3 Alerts are static objects: notification-controller writes no
+# status, so the row's Ready and Status stay empty.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: platform-errors
+  namespace: flux-system
+  creationTimestamp: "2026-09-01T10:11:00Z"
+spec:
+  providerRef:
+    name: slack
+  eventSeverity: error
+  summary: Production cluster eu-central-1
+  eventSources:
+    - kind: GitRepository
+      name: "*"
+    - kind: Kustomization
+      name: apps
+    - kind: HelmRelease
+      name: podinfo
+      namespace: apps
+  inclusionList:
+    - ".*failed.*"
+  exclusionList:
+    - ".*no changes.*"
+  eventMetadata:
+    env: production
+    cluster: prod-eu-central-1

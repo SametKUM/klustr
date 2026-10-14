@@ -1,0 +1,18 @@
+# v1beta3 Providers are static objects: notification-controller writes no
+# status, so the row's Ready and Status stay empty.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: slack
+  namespace: flux-system
+  creationTimestamp: "2026-09-01T10:10:00Z"
+spec:
+  type: slack
+  channel: platform-alerts
+  username: flux
+  timeout: 15s
+  proxy: http://10.0.0.15:3128
+  secretRef:
+    name: slack-webhook
+  certSecretRef:
+    name: slack-proxy-ca

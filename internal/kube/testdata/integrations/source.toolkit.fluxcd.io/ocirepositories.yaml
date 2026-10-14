@@ -1,0 +1,56 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: podinfo-manifests
+  namespace: flux-system
+  creationTimestamp: "2026-09-02T11:20:00Z"
+spec:
+  interval: 5m
+  timeout: 60s
+  url: oci://registry.example.com/platform/podinfo-manifests
+  ref:
+    semver: ">=6.7.0 <7.0.0"
+  provider: generic
+  serviceAccountName: source-reader
+  insecure: false
+  secretRef:
+    name: registry-auth
+  certSecretRef:
+    name: registry-ca
+  verify:
+    provider: cosign
+    secretRef:
+      name: cosign-public-key
+status:
+  observedGeneration: 3
+  url: http://source-controller.flux-system.svc.cluster.local./ocirepository/flux-system/podinfo-manifests/latest.tar.gz
+  artifact:
+    path: ocirepository/flux-system/podinfo-manifests/f2e0d0705d6069a53f7f52bc418c2810eaf055de99d539ce55b2a3ea35d1f712.tar.gz
+    url: http://source-controller.flux-system.svc.cluster.local./ocirepository/flux-system/podinfo-manifests/f2e0d0705d6069a53f7f52bc418c2810eaf055de99d539ce55b2a3ea35d1f712.tar.gz
+    revision: 6.7.1@sha256:f2e0d0705d6069a53f7f52bc418c2810eaf055de99d539ce55b2a3ea35d1f712
+    digest: sha256:e101493dc9f09de728850337377203f4b3ca9fb03d1cdd49746feeb05a67eb11
+    lastUpdateTime: "2026-10-14T08:35:41Z"
+    size: 3122
+    metadata:
+      org.opencontainers.image.created: "2026-10-13T16:02:11Z"
+      org.opencontainers.image.revision: 6.7.1@sha1:66dc9aaff2c379ee4649ce6646b1f1cfa2a29509
+      org.opencontainers.image.source: https://git.example.com/platform/podinfo
+  conditions:
+    - type: Ready
+      status: "True"
+      observedGeneration: 3
+      reason: Succeeded
+      message: "stored artifact for digest '6.7.1@sha256:f2e0d0705d6069a53f7f52bc418c2810eaf055de99d539ce55b2a3ea35d1f712'"
+      lastTransitionTime: "2026-10-14T08:35:41Z"
+    - type: ArtifactInStorage
+      status: "True"
+      observedGeneration: 3
+      reason: Succeeded
+      message: "stored artifact for digest '6.7.1@sha256:f2e0d0705d6069a53f7f52bc418c2810eaf055de99d539ce55b2a3ea35d1f712'"
+      lastTransitionTime: "2026-10-14T08:35:41Z"
+    - type: SourceVerified
+      status: "True"
+      observedGeneration: 3
+      reason: Succeeded
+      message: "verified signature of revision 6.7.1@sha256:f2e0d0705d6069a53f7f52bc418c2810eaf055de99d539ce55b2a3ea35d1f712"
+      lastTransitionTime: "2026-10-14T08:35:41Z"

@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: guestbook
+  namespace: argocd
+  creationTimestamp: "2026-09-01T08:00:00Z"
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - cluster: staging
+            url: https://staging.example.com
+          - cluster: production
+            url: https://production.example.com
+  template:
+    metadata:
+      name: "guestbook-{{.cluster}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://git.example.com/platform/apps.git
+        path: guestbook
+        targetRevision: main
+      destination:
+        server: "{{.url}}"
+        namespace: guestbook
+status:
+  conditions:
+    - type: ResourcesUpToDate
+      status: "True"
+      reason: ApplicationSetUpToDate
+      message: All applications have been generated successfully
+      lastTransitionTime: "2026-10-01T09:00:00Z"
+  applicationStatus:
+    - application: guestbook-staging
+      status: Healthy
+      message: Application resource became Healthy
+      step: "1"
+      lastTransitionTime: "2026-10-01T09:00:00Z"
+  resources:
+    - name: guestbook-staging
+      namespace: argocd
+      kind: Application
+      group: argoproj.io
+      version: v1alpha1
+      status: Synced
+      health:
+        status: Healthy

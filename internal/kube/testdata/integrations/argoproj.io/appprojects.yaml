@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  creationTimestamp: "2026-08-15T12:00:00Z"
+spec:
+  description: Platform team workloads
+  sourceRepos:
+    - https://git.example.com/platform/*
+  sourceNamespaces:
+    - platform-apps
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: platform-*
+    - name: staging
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceBlacklist:
+    - group: ""
+      kind: ResourceQuota
+  roles:
+    - name: deployer
+      description: CI deploy role
+      policies:
+        - p, proj:platform:deployer, applications, sync, platform/*, allow
+      groups:
+        - platform-admins
+  syncWindows:
+    - kind: deny
+      schedule: "0 22 * * *"
+      duration: 8h
+      applications:
+        - "*"
+      manualSync: true

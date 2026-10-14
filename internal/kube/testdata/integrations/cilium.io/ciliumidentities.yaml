@@ -1,0 +1,17 @@
+apiVersion: cilium.io/v2
+kind: CiliumIdentity
+metadata:
+  name: "12345"
+  uid: 8f0a2c4e-6b8d-4f1a-9c3e-5a7b9d1f3c5e
+  creationTimestamp: "2026-05-11T08:20:42Z"
+  labels:
+    app: web
+    io.cilium.k8s.policy.cluster: default
+    io.cilium.k8s.policy.serviceaccount: web
+    io.kubernetes.pod.namespace: apps
+security-labels:
+  k8s:app: web
+  k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name: apps
+  k8s:io.cilium.k8s.policy.cluster: default
+  k8s:io.cilium.k8s.policy.serviceaccount: web
+  k8s:io.kubernetes.pod.namespace: apps

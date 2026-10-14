@@ -1,0 +1,42 @@
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: podinfo
+  namespace: flux-system
+  creationTimestamp: "2026-09-04T12:00:00Z"
+spec:
+  image: registry.example.com/apps/podinfo
+  interval: 5m
+  timeout: 60s
+  provider: generic
+  insecure: false
+  secretRef:
+    name: registry-auth
+  certSecretRef:
+    name: registry-ca
+  exclusionList:
+    - ^.*\.sig$
+    - ^sha-.*
+status:
+  observedGeneration: 2
+  canonicalImageName: registry.example.com/apps/podinfo
+  observedExclusionList:
+    - ^.*\.sig$
+    - ^sha-.*
+  lastScanResult:
+    revision: sha256:978c2f8941354cf552831bb8b5b648bb3748e83f5d0a69e3301569af01e1de93
+    tagCount: 42
+    scanTime: "2026-10-14T08:55:00Z"
+    latestTags:
+      - 6.7.1
+      - 6.7.0
+      - 6.6.3
+      - 6.6.2
+      - 6.6.1
+  conditions:
+    - type: Ready
+      status: "True"
+      observedGeneration: 2
+      reason: Succeeded
+      message: "successful scan: found 42 tags"
+      lastTransitionTime: "2026-10-14T08:55:00Z"

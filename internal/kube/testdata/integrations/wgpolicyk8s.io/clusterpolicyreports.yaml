@@ -1,0 +1,50 @@
+apiVersion: wgpolicyk8s.io/v1alpha2
+kind: ClusterPolicyReport
+metadata:
+  name: b4f0d7da-82c2-4334-a26d-ba2e390e2c80
+  creationTimestamp: "2026-10-02T08:15:02Z"
+  generation: 4
+  labels:
+    app.kubernetes.io/managed-by: kyverno
+  ownerReferences:
+    - apiVersion: v1
+      kind: Namespace
+      name: apps
+      uid: b4f0d7da-82c2-4334-a26d-ba2e390e2c80
+scope:
+  apiVersion: v1
+  kind: Namespace
+  name: apps
+  uid: b4f0d7da-82c2-4334-a26d-ba2e390e2c80
+summary: {error: 0, fail: 1, pass: 1, skip: 0, warn: 1}
+results:
+  - policy: require-namespace-owner
+    rule: check-owner-label
+    result: fail
+    message: "validation error: Namespaces must carry an owner label. rule check-owner-label failed at path /metadata/labels/owner/"
+    scored: true
+    category: Multi-Tenancy
+    severity: medium
+    source: kyverno
+    properties: {process: background scan}
+    timestamp: {nanos: 0, seconds: 1791958350}
+  - policy: enforce-pod-security-labels
+    rule: check-enforce-label
+    result: pass
+    message: validation rule 'check-enforce-label' passed.
+    scored: true
+    category: Pod Security Admission
+    severity: high
+    source: kyverno
+    properties: {process: background scan}
+    timestamp: {nanos: 0, seconds: 1791958350}
+  - policy: restrict-namespace-names
+    rule: check-team-prefix
+    result: warn
+    message: "validation error: Namespace names must start with a team prefix such as team-. rule check-team-prefix failed at path /metadata/name/"
+    scored: false
+    category: Multi-Tenancy
+    severity: low
+    source: kyverno
+    properties: {process: background scan}
+    timestamp: {nanos: 0, seconds: 1791958350}

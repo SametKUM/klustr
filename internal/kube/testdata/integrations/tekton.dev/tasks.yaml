@@ -1,0 +1,48 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: go-integration-test
+  namespace: ci
+  creationTimestamp: "2026-09-30T14:20:11Z"
+  labels:
+    app.kubernetes.io/version: "0.3"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.62.0"
+spec:
+  displayName: Go integration test
+  description: Run Go tests against a throwaway PostgreSQL sidecar.
+  params:
+    - {name: packages, type: string, default: ./..., description: Packages to test}
+    - {name: go-version, type: string, default: "1.25"}
+    - {name: test-flags, type: array, default: ["-race"]}
+  workspaces:
+    - {name: source, description: Checked-out repository}
+    - {name: go-cache, optional: true, mountPath: /root/.cache/go-build}
+  results:
+    - {name: coverage, type: string, description: Total statement coverage}
+  steps:
+    - name: wait-for-db
+      ref:
+        name: wait-for-tcp
+      params:
+        - {name: address, value: localhost:5432}
+    - name: test
+      image: docker.io/library/golang:$(params.go-version)
+      workingDir: $(workspaces.source.path)
+      env:
+        - {name: PGHOST, value: localhost}
+        - {name: PGUSER, value: postgres}
+      command: ["go"]
+      args: ["test", "$(params.test-flags[*])", "-coverprofile=/workspace/cover.out", "$(params.packages)"]
+    - name: report
+      image: docker.io/library/golang:$(params.go-version)
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env sh
+        set -e
+        go tool cover -func=/workspace/cover.out | awk '/^total:/ {printf "%s", $3}' | tee $(results.coverage.path)
+  sidecars:
+    - name: postgres
+      image: docker.io/library/postgres:17
+      env:
+        - {name: POSTGRES_HOST_AUTH_METHOD, value: trust}

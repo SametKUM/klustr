@@ -1,0 +1,47 @@
+apiVersion: acme.cert-manager.io/v1
+kind: Order
+metadata:
+  name: web-tls-2-1803512417
+  namespace: apps
+  uid: 4e5f6a7b-8c9d-4e0f-a1b2-c3d4e5f6a7b8
+  generation: 1
+  creationTimestamp: "2026-10-14T05:41:51Z"
+  ownerReferences:
+    - apiVersion: cert-manager.io/v1
+      kind: CertificateRequest
+      name: web-tls-2
+      uid: 8c4d2e6f-1a3b-4c5d-8e7f-0a1b2c3d4e5f
+      controller: true
+      blockOwnerDeletion: true
+spec:
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KWm1sNGRIVnlaU0JEVTFJZ1ptOXlJSGQzZHk1bGVHRnRjR3hsTG1OdmJRPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUgUkVRVUVTVC0tLS0tCg==
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    group: cert-manager.io
+  commonName: www.example.com
+  dnsNames:
+    - www.example.com
+    - example.com
+  duration: 2160h0m0s
+status:
+  url: https://acme-v02.api.letsencrypt.org/acme/order/1234567890/412398765
+  finalizeURL: https://acme-v02.api.letsencrypt.org/acme/finalize/1234567890/412398765
+  state: pending
+  authorizations:
+    - url: https://acme-v02.api.letsencrypt.org/acme/authz/1234567890/52018834101
+      identifier: www.example.com
+      initialState: pending
+      wildcard: false
+      challenges:
+        - url: https://acme-v02.api.letsencrypt.org/acme/chall/1234567890/52018834101/Q2xhaW0
+          token: example-token-www
+          type: http-01
+    - url: https://acme-v02.api.letsencrypt.org/acme/authz/1234567890/52018834102
+      identifier: example.com
+      initialState: valid
+      wildcard: false
+      challenges:
+        - url: https://acme-v02.api.letsencrypt.org/acme/chall/1234567890/52018834102/R3JhbnQ
+          token: example-token-apex
+          type: http-01

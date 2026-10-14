@@ -1,0 +1,42 @@
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: fleet-infra
+  namespace: flux-system
+  creationTimestamp: "2026-09-04T12:02:00Z"
+spec:
+  interval: 30m
+  sourceRef:
+    kind: GitRepository
+    name: fleet-infra
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        name: fluxcdbot
+        email: fluxcdbot@example.com
+      messageTemplate: "chore: update images"
+    push:
+      branch: image-updates
+  update:
+    path: ./clusters/production
+    strategy: Setters
+status:
+  observedGeneration: 1
+  lastAutomationRunTime: "2026-10-14T08:56:10Z"
+  lastPushCommit: 88ef17ff15bffd045b6bb0bbc08a34ff44b7309e
+  lastPushTime: "2026-10-14T08:56:10Z"
+  observedSourceRevision: main@sha1:5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7
+  observedPolicies:
+    podinfo:
+      name: registry.example.com/apps/podinfo
+      tag: 6.7.1
+  conditions:
+    - type: Ready
+      status: "True"
+      observedGeneration: 1
+      reason: Succeeded
+      message: "pushed commit '88ef17f' to branch 'image-updates'\nchore: update images"
+      lastTransitionTime: "2026-10-14T08:56:10Z"

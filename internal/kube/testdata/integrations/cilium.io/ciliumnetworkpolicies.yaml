@@ -1,0 +1,61 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: web
+  namespace: apps
+  uid: 4b8e2f1a-6c3d-4e7f-9a0b-1c2d3e4f5a6b
+  generation: 2
+  creationTimestamp: "2026-05-11T08:14:22Z"
+spec:
+  description: Frontend may call the web API; web may reach DNS, the database and the payments API
+  endpointSelector:
+    matchLabels:
+      app: web
+  enableDefaultDeny:
+    ingress: true
+    egress: true
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            app: frontend
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+          rules:
+            http:
+              - method: GET
+                path: "/api/.*"
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    - toServices:
+        - k8sService:
+            serviceName: postgres
+            namespace: apps
+    - toFQDNs:
+        - matchName: payments.example.com
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+  egressDeny:
+    - toCIDRSet:
+        - cidr: 10.0.0.0/8
+          except:
+            - 10.20.0.0/16
+status:
+  conditions:
+    - type: Valid
+      status: "True"
+      message: Policy validation succeeded
+      lastTransitionTime: "2026-05-11T08:14:23Z"

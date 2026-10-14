@@ -1,0 +1,46 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps
+  namespace: flux-system
+  creationTimestamp: "2026-09-01T10:00:00Z"
+spec:
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  path: ./clusters/production/apps
+  prune: true
+  wait: true
+  force: false
+  targetNamespace: apps
+  serviceAccountName: kustomize-controller
+  sourceRef:
+    kind: GitRepository
+    name: fleet-infra
+  dependsOn:
+    - name: infrastructure
+    - name: cert-manager
+      namespace: cert-manager
+status:
+  observedGeneration: 4
+  lastAppliedRevision: main@sha1:5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7
+  lastAttemptedRevision: main@sha1:5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7
+  inventory:
+    entries:
+      - id: apps_podinfo_apps_Deployment
+        v: v1
+      - id: apps_podinfo__Service
+        v: v1
+  conditions:
+    - type: Ready
+      status: "True"
+      observedGeneration: 4
+      reason: ReconciliationSucceeded
+      message: "Applied revision: main@sha1:5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7"
+      lastTransitionTime: "2026-10-14T08:40:12Z"
+    - type: Healthy
+      status: "True"
+      observedGeneration: 4
+      reason: Succeeded
+      message: Health check passed in 2.104s
+      lastTransitionTime: "2026-10-14T08:40:12Z"

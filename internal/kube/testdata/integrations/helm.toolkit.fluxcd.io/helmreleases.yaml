@@ -1,0 +1,63 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: podinfo
+  namespace: apps
+  creationTimestamp: "2026-09-01T10:05:00Z"
+spec:
+  interval: 30m
+  timeout: 5m
+  releaseName: podinfo
+  targetNamespace: apps
+  storageNamespace: apps
+  serviceAccountName: apps-reconciler
+  chart:
+    spec:
+      chart: podinfo
+      version: 6.7.x
+      interval: 12h
+      sourceRef:
+        kind: HelmRepository
+        name: podinfo
+        namespace: flux-system
+  dependsOn:
+    - name: cert-manager
+      namespace: cert-manager
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    replicaCount: 2
+status:
+  observedGeneration: 3
+  lastAttemptedGeneration: 3
+  lastAttemptedRevision: 6.7.1
+  lastAttemptedConfigDigest: sha256:e67d23e7820c49a8051dac2831f38290f5e72f66c8db5079eeb60d82f14894c0
+  lastAttemptedReleaseAction: upgrade
+  helmChart: flux-system/apps-podinfo
+  storageNamespace: apps
+  history:
+    - name: podinfo
+      namespace: apps
+      version: 4
+      status: deployed
+      chartName: podinfo
+      chartVersion: 6.7.1
+      appVersion: 6.7.1
+      configDigest: sha256:e67d23e7820c49a8051dac2831f38290f5e72f66c8db5079eeb60d82f14894c0
+      digest: sha256:68b076be5ba974795f927bf1aa53b0dc2991b90d8d535a9dbaf33bad74a2d3a3
+      firstDeployed: "2026-09-01T10:06:31Z"
+      lastDeployed: "2026-10-14T08:41:02Z"
+  conditions:
+    - type: Ready
+      status: "True"
+      observedGeneration: 3
+      reason: UpgradeSucceeded
+      message: Helm upgrade succeeded for release apps/podinfo.v4 with chart podinfo@6.7.1
+      lastTransitionTime: "2026-10-14T08:41:02Z"
+    - type: Released
+      status: "True"
+      observedGeneration: 3
+      reason: UpgradeSucceeded
+      message: Helm upgrade succeeded for release apps/podinfo.v4 with chart podinfo@6.7.1
+      lastTransitionTime: "2026-10-14T08:41:02Z"

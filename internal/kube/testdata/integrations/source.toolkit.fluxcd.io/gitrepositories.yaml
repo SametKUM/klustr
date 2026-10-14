@@ -1,0 +1,53 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: fleet-infra
+  namespace: flux-system
+  creationTimestamp: "2026-09-01T09:58:00Z"
+spec:
+  interval: 1m
+  timeout: 60s
+  url: ssh://git@git.example.com/platform/fleet-infra
+  ref:
+    branch: main
+  secretRef:
+    name: flux-system
+  ignore: |
+    /*
+    !/clusters
+  verify:
+    mode: HEAD
+    secretRef:
+      name: pgp-public-keys
+status:
+  observedGeneration: 2
+  observedIgnore: |
+    /*
+    !/clusters
+  sourceVerificationMode: HEAD
+  artifact:
+    path: gitrepository/flux-system/fleet-infra/5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7.tar.gz
+    url: http://source-controller.flux-system.svc.cluster.local./gitrepository/flux-system/fleet-infra/5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7.tar.gz
+    revision: main@sha1:5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7
+    digest: sha256:f66b01e1629f9b5b9dcdc336c90e04706f308febfe8a5ad2a1737a8478b646d6
+    lastUpdateTime: "2026-10-14T08:39:55Z"
+    size: 48213
+  conditions:
+    - type: Ready
+      status: "True"
+      observedGeneration: 2
+      reason: Succeeded
+      message: "stored artifact for revision 'main@sha1:5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7'"
+      lastTransitionTime: "2026-10-14T08:39:55Z"
+    - type: ArtifactInStorage
+      status: "True"
+      observedGeneration: 2
+      reason: Succeeded
+      message: "stored artifact for revision 'main@sha1:5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7'"
+      lastTransitionTime: "2026-10-14T08:39:55Z"
+    - type: SourceVerified
+      status: "True"
+      observedGeneration: 2
+      reason: Succeeded
+      message: "verified signature of\n\t- commit 'sha1:5ca3589d773df355b8b1dc5cec13d8ce8cdc4ea7' with key '3AA5C34371567BD2'"
+      lastTransitionTime: "2026-10-14T08:39:55Z"

@@ -1,0 +1,54 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-push
+  namespace: ci
+  creationTimestamp: "2026-09-30T14:20:11Z"
+spec:
+  displayName: Build and push
+  description: Clone a repository, build its image with Kaniko and push it to the registry.
+  params:
+    - {name: git-url, type: string, description: Repository to clone}
+    - {name: git-revision, type: string, default: main}
+    - {name: image, type: string, description: Image reference to push}
+    - {name: build-args, type: array, default: []}
+    - {name: scan, type: string, default: "true"}
+  workspaces:
+    - {name: source, description: Checkout shared by every task}
+    - {name: docker-credentials, description: Registry push credentials}
+  results:
+    - name: image-digest
+      description: Digest of the pushed image
+      value: $(tasks.build-push.results.IMAGE_DIGEST)
+  tasks:
+    - name: fetch-source
+      taskRef: {name: git-clone}
+      params:
+        - {name: url, value: $(params.git-url)}
+        - {name: revision, value: $(params.git-revision)}
+      workspaces: [{name: output, workspace: source}]
+    - name: build-push
+      displayName: Build and push image
+      runAfter: [fetch-source]
+      taskRef: {name: kaniko}
+      params:
+        - {name: IMAGE, value: $(params.image)}
+        - {name: EXTRA_ARGS, value: ["$(params.build-args[*])"]}
+      workspaces:
+        - {name: source, workspace: source}
+        - {name: dockerconfig, workspace: docker-credentials}
+    - name: scan-image
+      runAfter: [build-push]
+      when: [{input: $(params.scan), operator: in, values: ["true"]}]
+      taskRef:
+        resolver: hub
+        params:
+          - {name: name, value: trivy-scanner}
+          - {name: version, value: "0.2"}
+      params:
+        - {name: IMAGE_PATH, value: $(params.image)}
+  finally:
+    - name: notify
+      taskRef: {name: send-to-webhook}
+      params:
+        - {name: status, value: $(tasks.status)}

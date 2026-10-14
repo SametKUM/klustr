@@ -1,0 +1,25 @@
+apiVersion: cilium.io/v2
+kind: CiliumEgressGatewayPolicy
+metadata:
+  name: payments-egress
+  uid: 6c8e0a2d-4f6b-4d8e-9a2c-4e6a8c0e2d4f
+  generation: 1
+  creationTimestamp: "2026-04-20T10:12:00Z"
+spec:
+  selectors:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: apps
+      podSelector:
+        matchLabels:
+          app: web
+  destinationCIDRs:
+    - 0.0.0.0/0
+  excludedCIDRs:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+  egressGateway:
+    nodeSelector:
+      matchLabels:
+        egress-gateway: "true"
+    egressIP: 10.0.1.250

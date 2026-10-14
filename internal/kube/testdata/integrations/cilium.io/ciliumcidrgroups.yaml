@@ -1,0 +1,14 @@
+apiVersion: cilium.io/v2
+kind: CiliumCIDRGroup
+metadata:
+  name: office-networks
+  uid: 7d9f1b3c-5e7a-4c9d-8b1f-3d5f7b9d1e3a
+  generation: 1
+  creationTimestamp: "2026-04-02T09:28:12Z"
+  labels:
+    team: platform
+spec:
+  externalCIDRs:
+    - 203.0.113.0/24
+    - 198.51.100.64/26
+    - 2001:db8:100::/48

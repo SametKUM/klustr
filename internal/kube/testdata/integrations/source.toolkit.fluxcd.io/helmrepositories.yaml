@@ -1,0 +1,37 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: podinfo
+  namespace: flux-system
+  creationTimestamp: "2026-09-01T09:58:30Z"
+spec:
+  interval: 1h
+  timeout: 60s
+  url: https://charts.example.com/podinfo
+  provider: generic
+  passCredentials: true
+  secretRef:
+    name: charts-basic-auth
+status:
+  observedGeneration: 1
+  url: http://source-controller.flux-system.svc.cluster.local./helmrepository/flux-system/podinfo/index.yaml
+  artifact:
+    path: helmrepository/flux-system/podinfo/index-8cff0f62500540860d14b95ec6a833b3269c186c9415a0e8484768e0ba3dc3c2.yaml
+    url: http://source-controller.flux-system.svc.cluster.local./helmrepository/flux-system/podinfo/index-8cff0f62500540860d14b95ec6a833b3269c186c9415a0e8484768e0ba3dc3c2.yaml
+    revision: sha256:8cff0f62500540860d14b95ec6a833b3269c186c9415a0e8484768e0ba3dc3c2
+    digest: sha256:8cff0f62500540860d14b95ec6a833b3269c186c9415a0e8484768e0ba3dc3c2
+    lastUpdateTime: "2026-10-14T08:00:04Z"
+    size: 61840
+  conditions:
+    - type: Ready
+      status: "True"
+      observedGeneration: 1
+      reason: Succeeded
+      message: "stored artifact: revision 'sha256:8cff0f62500540860d14b95ec6a833b3269c186c9415a0e8484768e0ba3dc3c2'"
+      lastTransitionTime: "2026-10-14T08:00:04Z"
+    - type: ArtifactInStorage
+      status: "True"
+      observedGeneration: 1
+      reason: Succeeded
+      message: "stored artifact: revision 'sha256:8cff0f62500540860d14b95ec6a833b3269c186c9415a0e8484768e0ba3dc3c2'"
+      lastTransitionTime: "2026-10-14T08:00:04Z"

@@ -1,0 +1,52 @@
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: ip-10-0-1-23.eu-central-1.compute.internal
+  uid: 1c3e5a7b-9d0f-4b2c-8e4a-6c8e0a2b4d6f
+  creationTimestamp: "2026-05-02T06:41:10Z"
+  ownerReferences:
+    - apiVersion: v1
+      kind: Node
+      name: ip-10-0-1-23.eu-central-1.compute.internal
+      uid: 3a5c7e9b-1d3f-4a6c-8e0b-2d4f6a8c0e1b
+spec:
+  instance-id: i-0a1b2c3d4e5f60718
+  addresses:
+    - type: InternalIP
+      ip: 10.0.1.23
+    - type: CiliumInternalIP
+      ip: 10.0.1.87
+  health:
+    ipv4: 10.0.1.142
+  encryption:
+    key: 3
+  eni:
+    availability-zone: eu-central-1a
+    instance-type: m6i.large
+    first-interface-index: 0
+    vpc-id: vpc-0a1b2c3d4e5f60718
+    node-subnet-id: subnet-0a1b2c3d4e5f60718
+  ipam:
+    min-allocate: 10
+    pre-allocate: 8
+    max-allocate: 29
+    pool:
+      10.0.1.87:
+        resource: eni-0a1b2c3d4e5f60718
+      10.0.1.104:
+        resource: eni-0a1b2c3d4e5f60718
+      10.0.1.142:
+        resource: eni-0a1b2c3d4e5f60718
+status:
+  ipam:
+    operator-status: {}
+    used:
+      10.0.1.87:
+        owner: router
+        resource: eni-0a1b2c3d4e5f60718
+      10.0.1.104:
+        owner: apps/web-7c9d8b6f5-x2k4p
+        resource: eni-0a1b2c3d4e5f60718
+      10.0.1.142:
+        owner: health
+        resource: eni-0a1b2c3d4e5f60718

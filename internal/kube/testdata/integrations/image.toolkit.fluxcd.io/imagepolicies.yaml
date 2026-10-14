@@ -1,0 +1,35 @@
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: podinfo
+  namespace: flux-system
+  creationTimestamp: "2026-09-04T12:01:00Z"
+spec:
+  imageRepositoryRef:
+    name: podinfo
+    namespace: flux-system
+  policy:
+    semver:
+      range: ">=6.0.0 <7.0.0"
+  filterTags:
+    pattern: '^v?(?P<version>[0-9]+\.[0-9]+\.[0-9]+)$'
+    extract: $version
+  digestReflectionPolicy: Always
+  interval: 10m
+status:
+  observedGeneration: 3
+  latestRef:
+    name: registry.example.com/apps/podinfo
+    tag: 6.7.1
+    digest: sha256:e101493dc9f09de728850337377203f4b3ca9fb03d1cdd49746feeb05a67eb11
+  observedPreviousRef:
+    name: registry.example.com/apps/podinfo
+    tag: 6.7.0
+    digest: sha256:961c1e18015c2816327e0390b44d34d33917358348331c92385a9c950f11b2e8
+  conditions:
+    - type: Ready
+      status: "True"
+      observedGeneration: 3
+      reason: Succeeded
+      message: "Latest image tag for registry.example.com/apps/podinfo updated from 6.7.0 to 6.7.1"
+      lastTransitionTime: "2026-10-14T08:55:02Z"

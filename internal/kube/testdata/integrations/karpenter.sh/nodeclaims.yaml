@@ -1,0 +1,67 @@
+apiVersion: karpenter.sh/v1
+kind: NodeClaim
+metadata:
+  name: general-purpose-7xk2p
+  generateName: general-purpose-
+  creationTimestamp: "2026-10-13T21:42:17Z"
+  labels:
+    karpenter.sh/nodepool: general-purpose
+    karpenter.sh/capacity-type: spot
+    karpenter.k8s.aws/ec2nodeclass: default
+    karpenter.k8s.aws/instance-category: m
+    karpenter.k8s.aws/instance-family: m6i
+    karpenter.k8s.aws/instance-generation: "6"
+    karpenter.k8s.aws/instance-size: 2xlarge
+    kubernetes.io/arch: amd64
+    kubernetes.io/os: linux
+    node.kubernetes.io/instance-type: m6i.2xlarge
+    topology.kubernetes.io/region: eu-central-1
+    topology.kubernetes.io/zone: eu-central-1b
+    workload-type: general
+  finalizers:
+    - karpenter.sh/termination
+  ownerReferences:
+    - apiVersion: karpenter.sh/v1
+      kind: NodePool
+      name: general-purpose
+      uid: 3b1f6c2e-8d4a-4e57-9a0b-2c6d8e1f4a73
+      blockOwnerDeletion: true
+spec:
+  nodeClassRef:
+    group: karpenter.k8s.aws
+    kind: EC2NodeClass
+    name: default
+  expireAfter: 720h
+  requirements:
+    - key: karpenter.sh/nodepool
+      operator: In
+      values: ["general-purpose"]
+    - key: node.kubernetes.io/instance-type
+      operator: In
+      values: ["m6i.2xlarge", "m6a.2xlarge", "c6i.2xlarge"]
+  resources:
+    requests:
+      cpu: 3150m
+      memory: 6Gi
+      pods: "9"
+status:
+  providerID: aws:///eu-central-1b/i-0123456789abcdef0
+  nodeName: ip-10-20-41-117.eu-central-1.compute.internal
+  imageID: ami-0123456789abcdef0
+  capacity:
+    cpu: "8"
+    ephemeral-storage: 100Gi
+    memory: 30310Mi
+    pods: "58"
+  allocatable:
+    cpu: 7910m
+    ephemeral-storage: 89Gi
+    memory: 29317Mi
+    pods: "58"
+  conditions:
+    - {type: Launched, status: "True", reason: Launched, message: "", lastTransitionTime: "2026-10-13T21:42:19Z"}
+    - {type: Registered, status: "True", reason: Registered, message: "", lastTransitionTime: "2026-10-13T21:42:51Z"}
+    - {type: Initialized, status: "True", reason: Initialized, message: "", lastTransitionTime: "2026-10-13T21:43:02Z"}
+    - {type: ConsistentStateFound, status: "True", reason: ConsistentStateFound, message: "", lastTransitionTime: "2026-10-13T21:43:02Z"}
+    - {type: Drifted, status: "True", reason: AMIDrift, message: "", lastTransitionTime: "2026-10-14T06:05:40Z"}
+    - {type: Ready, status: "True", reason: Ready, message: "", lastTransitionTime: "2026-10-13T21:43:02Z"}
