@@ -2,13 +2,13 @@ package kube
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // PolicyReports (wgpolicyk8s.io, v1alpha2) are the Kubernetes Policy WG's
@@ -21,6 +21,10 @@ const (
 	policyReportsResource        = "policyreports"
 	clusterPolicyReportsResource = "clusterpolicyreports"
 )
+
+func policyReportGR(resource string) schema.GroupResource {
+	return schema.GroupResource{Group: policyReportGroup, Resource: resource}
+}
 
 // PolicyReportInfo is the row shape for both report lists: the resource the
 // report is about (Scope*, empty for a report without a scope) and its tally.
@@ -76,17 +80,8 @@ func (m *ClientManager) ListClusterPolicyReports(contextName string) []PolicyRep
 }
 
 func (m *ClientManager) listPolicyReports(contextName, resource, namespace string) []PolicyReportInfo {
-	gvr, ok := m.servedGVR(contextName, policyReportGroup, resource)
-	if !ok {
-		return []PolicyReportInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]PolicyReportInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractPolicyReport(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, policyReportGR(resource), namespace, extractPolicyReport,
+		func(r PolicyReportInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetPolicyReport(ctx context.Context, contextName, namespace, name string) (*PolicyReportDetail, error) {
@@ -98,11 +93,7 @@ func (m *ClientManager) GetClusterPolicyReport(ctx context.Context, contextName,
 }
 
 func (m *ClientManager) getPolicyReport(ctx context.Context, contextName, resource, namespace, name string) (*PolicyReportDetail, error) {
-	gvr, ok := m.servedGVR(contextName, policyReportGroup, resource)
-	if !ok {
-		return nil, fmt.Errorf("%s.%s is not served by this cluster", resource, policyReportGroup)
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, policyReportGR(resource), namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +110,7 @@ func (m *ClientManager) PolicyReportForResource(ctx context.Context, contextName
 	if namespace == "" {
 		reportResource = clusterPolicyReportsResource
 	}
-	reportGVR, ok := m.servedGVR(contextName, policyReportGroup, reportResource)
+	reportGVR, ok := m.servedGVR(contextName, policyReportGR(reportResource))
 	if !ok {
 		return nil, nil
 	}
@@ -170,7 +161,7 @@ type PolicyViolation struct {
 func (m *ClientManager) PolicyViolationsFor(contextName, policyKey string) []PolicyViolation {
 	out := []PolicyViolation{}
 	for _, resource := range []string{policyReportsResource, clusterPolicyReportsResource} {
-		gvr, ok := m.servedGVR(contextName, policyReportGroup, resource)
+		gvr, ok := m.servedGVR(contextName, policyReportGR(resource))
 		if !ok {
 			continue
 		}

@@ -13,23 +13,12 @@ import (
 )
 
 // Istio read-only typed views. Istio serves these kinds at versions that vary
-// by install (v1 / v1beta1 / v1alpha3), so unlike the Flux slice we never
-// hardcode a version: istioGVR resolves the served storage version from the
-// discovered CRD, which is the same version the frontend watches.
-const (
-	istioNetworkingGroup = "networking.istio.io"
-	istioSecurityGroup   = "security.istio.io"
-
-	istioVirtualServiceResource     = "virtualservices"
-	istioDestinationRuleResource    = "destinationrules"
-	istioPeerAuthenticationResource = "peerauthentications"
+// by install (v1 / v1beta1 / v1alpha3).
+var (
+	istioVirtualServiceGR     = schema.GroupResource{Group: "networking.istio.io", Resource: "virtualservices"}
+	istioDestinationRuleGR    = schema.GroupResource{Group: "networking.istio.io", Resource: "destinationrules"}
+	istioPeerAuthenticationGR = schema.GroupResource{Group: "security.istio.io", Resource: "peerauthentications"}
 )
-
-// istioGVR resolves the cluster's served GVR for a group/resource pair via the
-// discovered CRD, or false when Istio's CRDs are absent.
-func (m *ClientManager) istioGVR(contextName, group, resource string) (schema.GroupVersionResource, bool) {
-	return m.servedGVR(contextName, group, resource)
-}
 
 // ---------------------------------------------------------------------------
 // VirtualService
@@ -66,25 +55,12 @@ type IstioVirtualServiceDetail struct {
 }
 
 func (m *ClientManager) ListIstioVirtualServices(contextName, namespace string) []IstioVirtualServiceInfo {
-	gvr, ok := m.istioGVR(contextName, istioNetworkingGroup, istioVirtualServiceResource)
-	if !ok {
-		return []IstioVirtualServiceInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]IstioVirtualServiceInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractVirtualService(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, istioVirtualServiceGR, namespace, extractVirtualService,
+		func(r IstioVirtualServiceInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetIstioVirtualService(ctx context.Context, contextName, namespace, name string) (*IstioVirtualServiceDetail, error) {
-	gvr, ok := m.istioGVR(contextName, istioNetworkingGroup, istioVirtualServiceResource)
-	if !ok {
-		return nil, fmt.Errorf("istio VirtualService CRD not found")
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, istioVirtualServiceGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -235,25 +211,12 @@ type IstioDestinationRuleDetail struct {
 }
 
 func (m *ClientManager) ListIstioDestinationRules(contextName, namespace string) []IstioDestinationRuleInfo {
-	gvr, ok := m.istioGVR(contextName, istioNetworkingGroup, istioDestinationRuleResource)
-	if !ok {
-		return []IstioDestinationRuleInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]IstioDestinationRuleInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractDestinationRule(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, istioDestinationRuleGR, namespace, extractDestinationRule,
+		func(r IstioDestinationRuleInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetIstioDestinationRule(ctx context.Context, contextName, namespace, name string) (*IstioDestinationRuleDetail, error) {
-	gvr, ok := m.istioGVR(contextName, istioNetworkingGroup, istioDestinationRuleResource)
-	if !ok {
-		return nil, fmt.Errorf("istio DestinationRule CRD not found")
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, istioDestinationRuleGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -329,25 +292,12 @@ type IstioPeerAuthenticationDetail struct {
 }
 
 func (m *ClientManager) ListIstioPeerAuthentications(contextName, namespace string) []IstioPeerAuthenticationInfo {
-	gvr, ok := m.istioGVR(contextName, istioSecurityGroup, istioPeerAuthenticationResource)
-	if !ok {
-		return []IstioPeerAuthenticationInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]IstioPeerAuthenticationInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractPeerAuthentication(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, istioPeerAuthenticationGR, namespace, extractPeerAuthentication,
+		func(r IstioPeerAuthenticationInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetIstioPeerAuthentication(ctx context.Context, contextName, namespace, name string) (*IstioPeerAuthenticationDetail, error) {
-	gvr, ok := m.istioGVR(contextName, istioSecurityGroup, istioPeerAuthenticationResource)
-	if !ok {
-		return nil, fmt.Errorf("istio PeerAuthentication CRD not found")
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, istioPeerAuthenticationGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}

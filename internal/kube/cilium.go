@@ -10,9 +10,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const ciliumGroup = "cilium.io"
+
+func ciliumGR(resource string) schema.GroupResource {
+	return schema.GroupResource{Group: ciliumGroup, Resource: resource}
+}
 
 type ciliumResourceDefinition struct {
 	kind       string
@@ -75,20 +80,15 @@ type CiliumResourceDetail struct {
 
 func (m *ClientManager) ListCiliumResources(contextName, resource, namespace string) []CiliumResourceInfo {
 	def, supported := ciliumResources[resource]
-	gvr, installed := m.servedGVR(contextName, ciliumGroup, resource)
-	if !supported || !installed {
+	if !supported {
 		return []CiliumResourceInfo{}
 	}
 	if !def.namespaced {
 		namespace = ""
 	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]CiliumResourceInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractCiliumInfo(obj, resource))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	extract := func(obj *unstructured.Unstructured) CiliumResourceInfo { return extractCiliumInfo(obj, resource) }
+	return listServedRows(m, contextName, ciliumGR(resource), namespace, extract,
+		func(r CiliumResourceInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetCiliumResource(ctx context.Context, contextName, resource, namespace, name string) (*CiliumResourceDetail, error) {
@@ -96,14 +96,10 @@ func (m *ClientManager) GetCiliumResource(ctx context.Context, contextName, reso
 	if !supported {
 		return nil, fmt.Errorf("unsupported Cilium resource %q", resource)
 	}
-	gvr, installed := m.servedGVR(contextName, ciliumGroup, resource)
-	if !installed {
-		return nil, fmt.Errorf("cilium %s CRD not found", def.kind)
-	}
 	if !def.namespaced {
 		namespace = ""
 	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, ciliumGR(resource), namespace, name)
 	if err != nil {
 		return nil, err
 	}

@@ -2,10 +2,10 @@ package kube
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // Kyverno's CEL policy family (policies.kyverno.io, v1 since Kyverno 1.16)
@@ -17,6 +17,10 @@ const (
 	kyvernoValidatingPoliciesResource           = "validatingpolicies"
 	kyvernoNamespacedValidatingPoliciesResource = "namespacedvalidatingpolicies"
 )
+
+func kyvernoCELGR(resource string) schema.GroupResource {
+	return schema.GroupResource{Group: kyvernoCELGroup, Resource: resource}
+}
 
 // KyvernoValidatingPolicyInfo is the row shape for both ValidatingPolicy lists.
 // Actions are the validationActions (Deny, Audit, Warn); Resources summarizes
@@ -79,17 +83,8 @@ func (m *ClientManager) ListKyvernoNamespacedValidatingPolicies(contextName, nam
 }
 
 func (m *ClientManager) listKyvernoValidatingPolicies(contextName, resource, namespace string) []KyvernoValidatingPolicyInfo {
-	gvr, ok := m.servedGVR(contextName, kyvernoCELGroup, resource)
-	if !ok {
-		return []KyvernoValidatingPolicyInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]KyvernoValidatingPolicyInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractKyvernoValidatingPolicy(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, kyvernoCELGR(resource), namespace, extractKyvernoValidatingPolicy,
+		func(r KyvernoValidatingPolicyInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetKyvernoValidatingPolicy(ctx context.Context, contextName, name string) (*KyvernoValidatingPolicyDetail, error) {
@@ -101,11 +96,7 @@ func (m *ClientManager) GetKyvernoNamespacedValidatingPolicy(ctx context.Context
 }
 
 func (m *ClientManager) getKyvernoValidatingPolicy(ctx context.Context, contextName, resource, namespace, name string) (*KyvernoValidatingPolicyDetail, error) {
-	gvr, ok := m.servedGVR(contextName, kyvernoCELGroup, resource)
-	if !ok {
-		return nil, fmt.Errorf("%s.%s is not served by this cluster", resource, kyvernoCELGroup)
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, kyvernoCELGR(resource), namespace, name)
 	if err != nil {
 		return nil, err
 	}

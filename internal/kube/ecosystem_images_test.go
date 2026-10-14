@@ -9,7 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic/dynamicinformer"
 )
 
 func TestFluxImagePolicyRefsAndVersions(t *testing.T) {
@@ -238,16 +237,10 @@ func TestLegacyImagePolicyActionsDoNotWrite(t *testing.T) {
 func TestFluxImageListsUseServedCacheAndNamespaceSelection(t *testing.T) {
 	gvr := schema.GroupVersionResource{Group: fluxImageGroup, Version: "v1beta2", Resource: "imagerepositories"}
 	m, dyn := fakeCRDManager(t, []fakeCRD{{gvr: gvr, kind: "ImageRepository", namespaced: true}})
-	w := m.watchers["ctx"].crd
-	w.crFactory = dynamicinformer.NewDynamicSharedInformerFactory(dyn, 0)
-	w.crWatches = map[schema.GroupVersionResource]bool{gvr: true}
-	informer := w.crFactory.ForResource(gvr).Informer()
 	for _, ns := range []string{"zeta", "alpha", "excluded"} {
 		obj := &unstructured.Unstructured{Object: map[string]any{"apiVersion": gvr.Group + "/" + gvr.Version,
 			"kind": "ImageRepository", "metadata": map[string]any{"name": "app", "namespace": ns}}}
-		if err := informer.GetStore().Add(obj); err != nil {
-			t.Fatal(err)
-		}
+		startFakeCRWatch(t, m, gvr, obj)
 	}
 	rows := m.ListFluxImageRepositories("ctx", "zeta,alpha")
 	if len(rows) != 2 || rows[0].Namespace != "alpha" || rows[1].Namespace != "zeta" {

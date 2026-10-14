@@ -58,8 +58,8 @@ const (
 	tektonStateNotRun  = "notrun"
 )
 
-func (m *ClientManager) tektonGVR(contextName, resource string) (schema.GroupVersionResource, bool) {
-	return m.servedGVR(contextName, tektonGroup, resource)
+func tektonGR(resource string) schema.GroupResource {
+	return schema.GroupResource{Group: tektonGroup, Resource: resource}
 }
 
 // TektonParam is a name/value pair: a run's resolved param or a result.
@@ -287,11 +287,7 @@ func (m *ClientManager) TektonRunState(ctx context.Context, contextName, resourc
 	if resource != tektonPipelineRunsResource && resource != tektonTaskRunsResource {
 		return "", fmt.Errorf("unsupported tekton run resource: %q", resource)
 	}
-	gvr, ok := m.tektonGVR(contextName, resource)
-	if !ok {
-		return "", fmt.Errorf("%s.%s is not served by this cluster", resource, tektonGroup)
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, tektonGR(resource), namespace, name)
 	if err != nil {
 		return "", err
 	}
@@ -321,11 +317,7 @@ func (m *ClientManager) patchTektonSpecStatus(ctx context.Context, contextName, 
 	if err := m.assertWritable(contextName); err != nil {
 		return err
 	}
-	gvr, ok := m.tektonGVR(contextName, resource)
-	if !ok {
-		return fmt.Errorf("%s.%s is not served by this cluster", resource, tektonGroup)
-	}
-	dyn, err := m.dynamicClient(contextName)
+	ri, err := m.servedResource(contextName, tektonGR(resource), namespace)
 	if err != nil {
 		return err
 	}
@@ -333,7 +325,7 @@ func (m *ClientManager) patchTektonSpecStatus(ctx context.Context, contextName, 
 	if err != nil {
 		return err
 	}
-	if _, err := dyn.Resource(gvr).Namespace(namespace).Patch(ctx, name, types.MergePatchType, body, metav1.PatchOptions{}); err != nil {
+	if _, err := ri.Patch(ctx, name, types.MergePatchType, body, metav1.PatchOptions{}); err != nil {
 		return fmt.Errorf("cancel %s %s/%s: %w", resource, namespace, name, err)
 	}
 	return nil
@@ -346,15 +338,10 @@ func (m *ClientManager) RerunTektonPipelineRun(ctx context.Context, contextName,
 	if err := m.assertWritable(contextName); err != nil {
 		return "", err
 	}
-	gvr, ok := m.tektonGVR(contextName, tektonPipelineRunsResource)
-	if !ok {
-		return "", fmt.Errorf("%s.%s is not served by this cluster", tektonPipelineRunsResource, tektonGroup)
-	}
-	dyn, err := m.dynamicClient(contextName)
+	ri, err := m.servedResource(contextName, tektonGR(tektonPipelineRunsResource), namespace)
 	if err != nil {
 		return "", err
 	}
-	ri := dyn.Resource(gvr).Namespace(namespace)
 	src, err := ri.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("rerun pipelinerun %s/%s: %w", namespace, name, err)

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // Kyverno's classic policy kinds live under kyverno.io (ClusterPolicy and
@@ -19,6 +20,10 @@ const (
 	kyvernoPoliciesResource         = "policies"
 	kyvernoPolicyExceptionsResource = "policyexceptions"
 )
+
+func kyvernoGR(resource string) schema.GroupResource {
+	return schema.GroupResource{Group: kyvernoGroup, Resource: resource}
+}
 
 // Annotations the Kyverno policy library puts on every policy; the UI shows
 // them as the policy's title, category and severity.
@@ -98,17 +103,8 @@ func (m *ClientManager) ListKyvernoPolicies(contextName, namespace string) []Kyv
 }
 
 func (m *ClientManager) listKyvernoPolicies(contextName, resource, namespace string) []KyvernoPolicyInfo {
-	gvr, ok := m.servedGVR(contextName, kyvernoGroup, resource)
-	if !ok {
-		return []KyvernoPolicyInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]KyvernoPolicyInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractKyvernoPolicy(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, kyvernoGR(resource), namespace, extractKyvernoPolicy,
+		func(r KyvernoPolicyInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetKyvernoClusterPolicy(ctx context.Context, contextName, name string) (*KyvernoPolicyDetail, error) {
@@ -120,11 +116,7 @@ func (m *ClientManager) GetKyvernoPolicy(ctx context.Context, contextName, names
 }
 
 func (m *ClientManager) getKyvernoPolicy(ctx context.Context, contextName, resource, namespace, name string) (*KyvernoPolicyDetail, error) {
-	gvr, ok := m.servedGVR(contextName, kyvernoGroup, resource)
-	if !ok {
-		return nil, fmt.Errorf("%s.%s is not served by this cluster", resource, kyvernoGroup)
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, kyvernoGR(resource), namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -452,25 +444,12 @@ type KyvernoPolicyExceptionDetail struct {
 }
 
 func (m *ClientManager) ListKyvernoPolicyExceptions(contextName, namespace string) []KyvernoPolicyExceptionInfo {
-	gvr, ok := m.servedGVR(contextName, kyvernoGroup, kyvernoPolicyExceptionsResource)
-	if !ok {
-		return []KyvernoPolicyExceptionInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]KyvernoPolicyExceptionInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractKyvernoPolicyException(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, kyvernoGR(kyvernoPolicyExceptionsResource), namespace, extractKyvernoPolicyException,
+		func(r KyvernoPolicyExceptionInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetKyvernoPolicyException(ctx context.Context, contextName, namespace, name string) (*KyvernoPolicyExceptionDetail, error) {
-	gvr, ok := m.servedGVR(contextName, kyvernoGroup, kyvernoPolicyExceptionsResource)
-	if !ok {
-		return nil, fmt.Errorf("%s.%s is not served by this cluster", kyvernoPolicyExceptionsResource, kyvernoGroup)
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, kyvernoGR(kyvernoPolicyExceptionsResource), namespace, name)
 	if err != nil {
 		return nil, err
 	}

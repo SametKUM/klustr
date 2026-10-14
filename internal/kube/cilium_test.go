@@ -9,7 +9,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic/dynamicinformer"
 )
 
 func ciliumTestTable(t *testing.T, detail *CiliumResourceDetail, title string) CiliumTable {
@@ -260,17 +259,11 @@ func TestCiliumDiscoveryAndScope(t *testing.T) {
 func TestCiliumCachedListsAcrossNamespaces(t *testing.T) {
 	gvr := schema.GroupVersionResource{Group: ciliumGroup, Version: "v2", Resource: "ciliumendpoints"}
 	m, dyn := fakeCRDManager(t, []fakeCRD{{gvr: gvr, kind: "CiliumEndpoint", namespaced: true}})
-	w := m.watchers["ctx"].crd
-	w.crFactory = dynamicinformer.NewDynamicSharedInformerFactory(dyn, 0)
-	w.crWatches = map[schema.GroupVersionResource]bool{gvr: true}
-	indexer := w.crFactory.ForResource(gvr).Informer().GetIndexer()
 	for _, ns := range []string{"z", "a", "b"} {
 		obj := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "cilium.io/v2", "kind": "CiliumEndpoint"}}
 		obj.SetName("web")
 		obj.SetNamespace(ns)
-		if err := indexer.Add(obj); err != nil {
-			t.Fatal(err)
-		}
+		startFakeCRWatch(t, m, gvr, obj)
 	}
 	rows := m.ListCiliumResources("ctx", "ciliumendpoints", "z,a")
 	if len(rows) != 2 || rows[0].Namespace != "a" || rows[1].Namespace != "z" {

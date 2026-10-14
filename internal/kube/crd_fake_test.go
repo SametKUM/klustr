@@ -6,6 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/yaml"
@@ -53,6 +54,27 @@ func fakeCRDManager(t *testing.T, crds []fakeCRD, objs ...runtime.Object) (*Clie
 		"ctx": {dyn: dyn, crd: &crdWatcher{dyn: dyn, informer: crdInformer}},
 	}}
 	return m, dyn
+}
+
+// startFakeCRWatch stands in for EnsureCRWatch on the fake context: it marks
+// gvr's informer as started, as the frontend does at the discovered CRD
+// version, and seeds its cache with objs without touching the API.
+func startFakeCRWatch(t *testing.T, m *ClientManager, gvr schema.GroupVersionResource, objs ...*unstructured.Unstructured) {
+	t.Helper()
+	w := m.watchers["ctx"].crd
+	if w.crFactory == nil {
+		w.crFactory = dynamicinformer.NewDynamicSharedInformerFactory(w.dyn, 0)
+	}
+	if w.crWatches == nil {
+		w.crWatches = map[schema.GroupVersionResource]bool{}
+	}
+	w.crWatches[gvr] = true
+	indexer := w.crFactory.ForResource(gvr).Informer().GetIndexer()
+	for _, obj := range objs {
+		if err := indexer.Add(obj); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 // mustUnstructured parses a YAML manifest into an unstructured object.

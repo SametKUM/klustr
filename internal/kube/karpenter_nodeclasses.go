@@ -7,10 +7,13 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const karpenterAWSGroup = "karpenter.k8s.aws"
 const karpenterEC2NodeClassResource = "ec2nodeclasses"
+
+var karpenterEC2NodeClassGR = schema.GroupResource{Group: karpenterAWSGroup, Resource: karpenterEC2NodeClassResource}
 
 type KarpenterEC2NodeClassInfo struct {
 	Name               string `json:"name"`
@@ -51,24 +54,12 @@ type KarpenterEC2NodeClassDetail struct {
 }
 
 func (m *ClientManager) ListKarpenterEC2NodeClasses(contextName string) []KarpenterEC2NodeClassInfo {
-	gvr, ok := m.servedGVR(contextName, karpenterAWSGroup, karpenterEC2NodeClassResource)
-	if !ok {
-		return []KarpenterEC2NodeClassInfo{}
-	}
-	out := []KarpenterEC2NodeClassInfo{}
-	for _, obj := range listCachedCRs(m, contextName, gvr, "") {
-		out = append(out, extractKarpenterEC2NodeClass(obj))
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out
+	return listServedRows(m, contextName, karpenterEC2NodeClassGR, "", extractKarpenterEC2NodeClass,
+		func(r KarpenterEC2NodeClassInfo) (string, string) { return "", r.Name })
 }
 
 func (m *ClientManager) GetKarpenterEC2NodeClass(ctx context.Context, contextName, name string) (*KarpenterEC2NodeClassDetail, error) {
-	gvr, ok := m.servedGVR(contextName, karpenterAWSGroup, karpenterEC2NodeClassResource)
-	if !ok {
-		return nil, fmt.Errorf("EC2NodeClass CRD not found")
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, "", name)
+	obj, err := m.getServedCR(ctx, contextName, karpenterEC2NodeClassGR, "", name)
 	if err != nil {
 		return nil, err
 	}

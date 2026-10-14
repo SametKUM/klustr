@@ -12,20 +12,18 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-// cert-manager has served its core kinds at cert-manager.io/v1 since v1.0;
-// every release Klustr targets exposes v1, so unlike Istio we pin the version
-// rather than resolving it from the discovered CRD. Certificate, Issuer and
-// CertificateRequest are namespaced; ClusterIssuer is cluster-scoped.
+// cert-manager resources. Certificate, Issuer and CertificateRequest are
+// namespaced; ClusterIssuer is cluster-scoped.
 var (
-	certManagerCertificateGVR        = schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "certificates"}
-	certManagerIssuerGVR             = schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "issuers"}
-	certManagerClusterIssuer         = schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "clusterissuers"}
-	certManagerCertificateRequestGVR = schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "certificaterequests"}
+	certManagerCertificateGR        = schema.GroupResource{Group: "cert-manager.io", Resource: "certificates"}
+	certManagerIssuerGR             = schema.GroupResource{Group: "cert-manager.io", Resource: "issuers"}
+	certManagerClusterIssuerGR      = schema.GroupResource{Group: "cert-manager.io", Resource: "clusterissuers"}
+	certManagerCertificateRequestGR = schema.GroupResource{Group: "cert-manager.io", Resource: "certificaterequests"}
 	// Order and Challenge are the ACME-specific leg of the issuance chain and
 	// live under acme.cert-manager.io. They only exist on installs that use an
 	// ACME issuer; the listers return empty when the CRDs are absent.
-	certManagerOrderGVR     = schema.GroupVersionResource{Group: "acme.cert-manager.io", Version: "v1", Resource: "orders"}
-	certManagerChallengeGVR = schema.GroupVersionResource{Group: "acme.cert-manager.io", Version: "v1", Resource: "challenges"}
+	certManagerOrderGR     = schema.GroupResource{Group: "acme.cert-manager.io", Resource: "orders"}
+	certManagerChallengeGR = schema.GroupResource{Group: "acme.cert-manager.io", Resource: "challenges"}
 )
 
 // certManagerIssuingReason is the reason Klustr stamps on the Issuing status
@@ -80,17 +78,12 @@ type CertManagerCertificateDetail struct {
 }
 
 func (m *ClientManager) ListCertManagerCertificates(contextName, namespace string) []CertManagerCertificateInfo {
-	objs := listCachedCRs(m, contextName, certManagerCertificateGVR, namespace)
-	out := make([]CertManagerCertificateInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractCertManagerCertificate(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, certManagerCertificateGR, namespace, extractCertManagerCertificate,
+		func(r CertManagerCertificateInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetCertManagerCertificate(ctx context.Context, contextName, namespace, name string) (*CertManagerCertificateDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, certManagerCertificateGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, certManagerCertificateGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -166,33 +159,28 @@ type CertManagerIssuerDetail struct {
 }
 
 func (m *ClientManager) ListCertManagerIssuers(contextName, namespace string) []CertManagerIssuerInfo {
-	return m.listCertManagerIssuers(contextName, certManagerIssuerGVR, namespace)
+	return m.listCertManagerIssuers(contextName, certManagerIssuerGR, namespace)
 }
 
 func (m *ClientManager) ListCertManagerClusterIssuers(contextName string) []CertManagerIssuerInfo {
-	return m.listCertManagerIssuers(contextName, certManagerClusterIssuer, "")
+	return m.listCertManagerIssuers(contextName, certManagerClusterIssuerGR, "")
 }
 
-func (m *ClientManager) listCertManagerIssuers(contextName string, gvr schema.GroupVersionResource, namespace string) []CertManagerIssuerInfo {
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]CertManagerIssuerInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractCertManagerIssuer(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+func (m *ClientManager) listCertManagerIssuers(contextName string, gr schema.GroupResource, namespace string) []CertManagerIssuerInfo {
+	return listServedRows(m, contextName, gr, namespace, extractCertManagerIssuer,
+		func(r CertManagerIssuerInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetCertManagerIssuer(ctx context.Context, contextName, namespace, name string) (*CertManagerIssuerDetail, error) {
-	return m.getCertManagerIssuer(ctx, contextName, certManagerIssuerGVR, namespace, name)
+	return m.getCertManagerIssuer(ctx, contextName, certManagerIssuerGR, namespace, name)
 }
 
 func (m *ClientManager) GetCertManagerClusterIssuer(ctx context.Context, contextName, name string) (*CertManagerIssuerDetail, error) {
-	return m.getCertManagerIssuer(ctx, contextName, certManagerClusterIssuer, "", name)
+	return m.getCertManagerIssuer(ctx, contextName, certManagerClusterIssuerGR, "", name)
 }
 
-func (m *ClientManager) getCertManagerIssuer(ctx context.Context, contextName string, gvr schema.GroupVersionResource, namespace, name string) (*CertManagerIssuerDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+func (m *ClientManager) getCertManagerIssuer(ctx context.Context, contextName string, gr schema.GroupResource, namespace, name string) (*CertManagerIssuerDetail, error) {
+	obj, err := m.getServedCR(ctx, contextName, gr, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -232,11 +220,10 @@ func (m *ClientManager) RenewCertificate(ctx context.Context, contextName, names
 	if err := m.assertWritable(contextName); err != nil {
 		return err
 	}
-	dyn, err := m.dynamicClient(contextName)
+	ri, err := m.servedResource(contextName, certManagerCertificateGR, namespace)
 	if err != nil {
 		return err
 	}
-	ri := dyn.Resource(certManagerCertificateGVR).Namespace(namespace)
 	// cert-manager controllers rewrite Certificate status constantly, so a bare
 	// Get → UpdateStatus races them and 409s; retry on conflict with a fresh Get
 	// each round (mirrors setArgoFinalizer). The callback returns raw errors so
@@ -312,7 +299,7 @@ type CertManagerCertificateRequestDetail struct {
 }
 
 func (m *ClientManager) ListCertManagerCertificateRequests(contextName, namespace string) []CertManagerCertificateRequestInfo {
-	objs := listCachedCRs(m, contextName, certManagerCertificateRequestGVR, namespace)
+	objs := m.listServedCRs(contextName, certManagerCertificateRequestGR, namespace)
 	return certificateRequestRows(objs)
 }
 
@@ -320,7 +307,7 @@ func (m *ClientManager) ListCertManagerCertificateRequests(contextName, namespac
 // the named Certificate — the next link down the issuance chain. The frontend
 // renders these in the Certificate detail's Requests tab.
 func (m *ClientManager) CertManagerCertificateRequestsFor(contextName, namespace, certName string) []CertManagerCertificateRequestInfo {
-	objs := listCachedCRs(m, contextName, certManagerCertificateRequestGVR, namespace)
+	objs := m.listServedCRs(contextName, certManagerCertificateRequestGR, namespace)
 	owned := make([]*unstructured.Unstructured, 0, len(objs))
 	for _, obj := range objs {
 		if ownedBy(obj, "Certificate", certName) {
@@ -340,7 +327,7 @@ func certificateRequestRows(objs []*unstructured.Unstructured) []CertManagerCert
 }
 
 func (m *ClientManager) GetCertManagerCertificateRequest(ctx context.Context, contextName, namespace, name string) (*CertManagerCertificateRequestDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, certManagerCertificateRequestGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, certManagerCertificateRequestGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -402,14 +389,14 @@ type CertManagerOrderDetail struct {
 }
 
 func (m *ClientManager) ListCertManagerOrders(contextName, namespace string) []CertManagerOrderInfo {
-	objs := listCachedCRs(m, contextName, certManagerOrderGVR, namespace)
+	objs := m.listServedCRs(contextName, certManagerOrderGR, namespace)
 	return orderRows(objs)
 }
 
 // CertManagerOrdersFor returns the Orders owned by the named
 // CertificateRequest — the ACME leg of the chain.
 func (m *ClientManager) CertManagerOrdersFor(contextName, namespace, requestName string) []CertManagerOrderInfo {
-	objs := listCachedCRs(m, contextName, certManagerOrderGVR, namespace)
+	objs := m.listServedCRs(contextName, certManagerOrderGR, namespace)
 	owned := make([]*unstructured.Unstructured, 0, len(objs))
 	for _, obj := range objs {
 		if ownedBy(obj, "CertificateRequest", requestName) {
@@ -429,7 +416,7 @@ func orderRows(objs []*unstructured.Unstructured) []CertManagerOrderInfo {
 }
 
 func (m *ClientManager) GetCertManagerOrder(ctx context.Context, contextName, namespace, name string) (*CertManagerOrderDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, certManagerOrderGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, certManagerOrderGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -491,13 +478,13 @@ type CertManagerChallengeDetail struct {
 }
 
 func (m *ClientManager) ListCertManagerChallenges(contextName, namespace string) []CertManagerChallengeInfo {
-	objs := listCachedCRs(m, contextName, certManagerChallengeGVR, namespace)
+	objs := m.listServedCRs(contextName, certManagerChallengeGR, namespace)
 	return challengeRows(objs)
 }
 
 // CertManagerChallengesFor returns the Challenges owned by the named Order.
 func (m *ClientManager) CertManagerChallengesFor(contextName, namespace, orderName string) []CertManagerChallengeInfo {
-	objs := listCachedCRs(m, contextName, certManagerChallengeGVR, namespace)
+	objs := m.listServedCRs(contextName, certManagerChallengeGR, namespace)
 	owned := make([]*unstructured.Unstructured, 0, len(objs))
 	for _, obj := range objs {
 		if ownedBy(obj, "Order", orderName) {
@@ -517,7 +504,7 @@ func challengeRows(objs []*unstructured.Unstructured) []CertManagerChallengeInfo
 }
 
 func (m *ClientManager) GetCertManagerChallenge(ctx context.Context, contextName, namespace, name string) (*CertManagerChallengeDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, certManagerChallengeGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, certManagerChallengeGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}

@@ -13,16 +13,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// kedaScaledObjectGVR is KEDA's ScaledObject CR. Klustr keeps the generic CRD
+// kedaScaledObjectGR is KEDA's ScaledObject CR. Klustr keeps the generic CRD
 // browse for KEDA, but additionally enriches HPA target labels with the real
 // trigger type / metadata — KEDA stamps a vanilla HPA whose metrics are all
 // of type `External` and named `s<N>-<trigger>-<shortkey>`, which without
 // this enrichment renders as a wall of identical "external" rows.
-var kedaScaledObjectGVR = schema.GroupVersionResource{
-	Group:    "keda.sh",
-	Version:  "v1alpha1",
-	Resource: "scaledobjects",
-}
+var kedaScaledObjectGR = schema.GroupResource{Group: "keda.sh", Resource: "scaledobjects"}
 
 const kedaScaledObjectLabel = "scaledobject.keda.sh/name"
 
@@ -53,20 +49,25 @@ func (w *contextWatcher) warmKEDA(ctx context.Context) {
 	}
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
-	for !w.crd.HasCRD(kedaScaledObjectGVR) {
+	for !w.crd.HasCRD(kedaScaledObjectGR.WithVersion("")) {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 		}
 	}
-	if ok, _ := canList(ctx, w.cs, kedaScaledObjectGVR, ""); !ok {
+	info, ok := w.crd.LookupCRDByGVR(kedaScaledObjectGR.WithVersion(""))
+	if !ok {
 		return
 	}
-	if err := w.crd.EnsureCRWatch(kedaScaledObjectGVR); err != nil {
+	gvr := info.GVR()
+	if ok, _ := canList(ctx, w.cs, gvr, ""); !ok {
 		return
 	}
-	_ = w.crd.AddCRHandler(kedaScaledObjectGVR, cache.ResourceEventHandlerFuncs{
+	if err := w.crd.EnsureCRWatch(gvr); err != nil {
+		return
+	}
+	_ = w.crd.AddCRHandler(gvr, cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(any) { w.touch("HorizontalPodAutoscaler") },
 		UpdateFunc: func(any, any) { w.touch("HorizontalPodAutoscaler") },
 		DeleteFunc: func(any) { w.touch("HorizontalPodAutoscaler") },
@@ -79,7 +80,11 @@ func (w *contextWatcher) scaledObjectByName(namespace, name string) (*unstructur
 	if w.crd == nil {
 		return nil, false
 	}
-	return w.crd.GetCachedCustomResource(kedaScaledObjectGVR, namespace, name)
+	gvr, ok := w.crd.startedGVR(kedaScaledObjectGR)
+	if !ok {
+		return nil, false
+	}
+	return w.crd.GetCachedCustomResource(gvr, namespace, name)
 }
 
 // enrichKEDAMetrics replaces the labels of External-type metrics in `metrics`

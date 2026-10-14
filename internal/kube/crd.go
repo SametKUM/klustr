@@ -558,6 +558,20 @@ func evaluateCells(evaluators []compiledPrinterColumn, obj *unstructured.Unstruc
 	return out
 }
 
+// startedGVR returns the GVR whose informer was started for gr, so a cache
+// reader that runs per row (KEDA's HPA enrichment) needn't resolve the served
+// version from the CRD list each time.
+func (w *crdWatcher) startedGVR(gr schema.GroupResource) (schema.GroupVersionResource, bool) {
+	w.crMu.Lock()
+	defer w.crMu.Unlock()
+	for gvr := range w.crWatches {
+		if gvr.GroupResource() == gr {
+			return gvr, true
+		}
+	}
+	return schema.GroupVersionResource{}, false
+}
+
 // GetCachedCustomResource returns the cached CR for the given GVR + ns + name
 // without ever touching the server. Used by enrichment paths (e.g. KEDA HPA
 // targets) where blocking the caller on a network round-trip would be wrong.
@@ -642,20 +656,86 @@ func crCreatedAt(obj *unstructured.Unstructured) string {
 	return obj.GetCreationTimestamp().UTC().Format(time.RFC3339)
 }
 
-// servedGVR resolves the cluster's GVR for a group/resource pair from the
+// servedGVR resolves the cluster's GVR for an integration resource from the
 // discovered CRD (its served storage version), or false when the CRD is absent.
-// Integrations whose CRDs serve different versions across installs use it
-// instead of pinning one; the frontend starts the watch at the same version.
-func (m *ClientManager) servedGVR(contextName, group, resource string) (schema.GroupVersionResource, bool) {
+// Integrations never pin a version: the frontend starts the CR watch at the
+// discovered version, and a pinned GVR that differs finds no informer, so its
+// list comes back empty without an error.
+func (m *ClientManager) servedGVR(contextName string, gr schema.GroupResource) (schema.GroupVersionResource, bool) {
 	w, ok := m.watcher(contextName)
 	if !ok || w.crd == nil {
 		return schema.GroupVersionResource{}, false
 	}
-	info, ok := w.crd.LookupCRDByGVR(schema.GroupVersionResource{Group: group, Resource: resource})
+	info, ok := w.crd.LookupCRDByGVR(gr.WithVersion(""))
 	if !ok {
 		return schema.GroupVersionResource{}, false
 	}
 	return info.GVR(), true
+}
+
+// requireServedGVR is servedGVR for detail and action paths, which report an
+// absent CRD as an error instead of an empty result.
+func (m *ClientManager) requireServedGVR(contextName string, gr schema.GroupResource) (schema.GroupVersionResource, error) {
+	gvr, ok := m.servedGVR(contextName, gr)
+	if !ok {
+		return schema.GroupVersionResource{}, fmt.Errorf("%s is not served by this cluster", gr)
+	}
+	return gvr, nil
+}
+
+// listServedCRs reads the cached CRs of an integration resource at its served
+// version. It returns nil when the CRD is absent or its watch has not started.
+func (m *ClientManager) listServedCRs(contextName string, gr schema.GroupResource, namespace string) []*unstructured.Unstructured {
+	gvr, ok := m.servedGVR(contextName, gr)
+	if !ok {
+		return nil
+	}
+	return listCachedCRs(m, contextName, gvr, namespace)
+}
+
+// servedResource is the dynamic client for an integration resource at its
+// served version, scoped to namespace ("" for cluster-scoped kinds). Actions
+// write through it so a PATCH never targets a version the cluster dropped.
+func (m *ClientManager) servedResource(contextName string, gr schema.GroupResource, namespace string) (dynamic.ResourceInterface, error) {
+	gvr, err := m.requireServedGVR(contextName, gr)
+	if err != nil {
+		return nil, err
+	}
+	dyn, err := m.dynamicClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+	return resourceFor(dyn, gvr, namespace), nil
+}
+
+// listServedRows projects the cached CRs of an integration resource through
+// extract and sorts the rows by key (namespace, then name). It returns an empty
+// slice, never nil, so the frontend always receives an array.
+func listServedRows[I any](
+	m *ClientManager,
+	contextName string,
+	gr schema.GroupResource,
+	namespace string,
+	extract func(*unstructured.Unstructured) I,
+	key func(I) (string, string),
+) []I {
+	objs := m.listServedCRs(contextName, gr, namespace)
+	out := make([]I, 0, len(objs))
+	for _, obj := range objs {
+		out = append(out, extract(obj))
+	}
+	sortByNamespaceName(out, func(i int) (string, string) { return key(out[i]) })
+	return out
+}
+
+// getServedCR reads one CR of an integration resource at its served version,
+// cache-first like crForDetail.
+func (m *ClientManager) getServedCR(ctx context.Context, contextName string, gr schema.GroupResource, namespace, name string) (*unstructured.Unstructured, error) {
+	gvr, err := m.requireServedGVR(contextName, gr)
+	if err != nil {
+		return nil, err
+	}
+	return m.crForDetail(ctx, contextName, gvr, namespace, name)
 }
 
 // MarshalCustomResourceYAML strips the noisy server-managed metadata fields

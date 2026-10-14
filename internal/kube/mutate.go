@@ -99,7 +99,7 @@ func resourceForKind(kind string) (schema.GroupVersionResource, error) {
 }
 
 // resolveKind looks up a Kind in the built-in table, then Klustr's own aliases
-// ("FluxKustomization" in fluxKindGVR), then the per-context CRD cache. It
+// ("FluxKustomization" in fluxKindResource), then the per-context CRD cache. It
 // also accepts "cr:<group>/<resource>": the bulk-delete dialog passes a CR
 // view's table-prefs key as the kind.
 func (m *ClientManager) resolveKind(contextName, kind string) (schema.GroupVersionResource, error) {
@@ -115,7 +115,7 @@ func (m *ClientManager) resolveKind(contextName, kind string) (schema.GroupVersi
 		}
 		return gvr, nil
 	}
-	if _, ok := fluxKindGVR[kind]; ok {
+	if _, ok := fluxKindResource[kind]; ok {
 		return m.fluxActionGVR(contextName, kind)
 	}
 	if gvr, ok := SplitCRChangeKind(kind); ok {

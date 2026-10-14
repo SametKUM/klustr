@@ -63,29 +63,16 @@ type TektonPipelineRunDetail struct {
 }
 
 func (m *ClientManager) ListTektonPipelineRuns(contextName, namespace string) []TektonPipelineRunInfo {
-	gvr, ok := m.tektonGVR(contextName, tektonPipelineRunsResource)
-	if !ok {
-		return []TektonPipelineRunInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]TektonPipelineRunInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractTektonPipelineRun(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, tektonGR(tektonPipelineRunsResource), namespace, extractTektonPipelineRun,
+		func(r TektonPipelineRunInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 // TektonPipelineRunsForPipeline returns the cached runs of the named Pipeline,
 // newest first, matched on the tekton.dev/pipeline label the controller sets
 // (it also covers runs whose Pipeline came from a remote resolver).
 func (m *ClientManager) TektonPipelineRunsForPipeline(contextName, namespace, pipeline string) []TektonPipelineRunInfo {
-	gvr, ok := m.tektonGVR(contextName, tektonPipelineRunsResource)
-	if !ok {
-		return []TektonPipelineRunInfo{}
-	}
 	out := []TektonPipelineRunInfo{}
-	for _, obj := range listCachedCRs(m, contextName, gvr, namespace) {
+	for _, obj := range m.listServedCRs(contextName, tektonGR(tektonPipelineRunsResource), namespace) {
 		if obj.GetLabels()[tektonPipelineLabel] == pipeline {
 			out = append(out, extractTektonPipelineRun(obj))
 		}
@@ -97,11 +84,7 @@ func (m *ClientManager) TektonPipelineRunsForPipeline(contextName, namespace, pi
 // GetTektonPipelineRun reads the run live (the cache prunes status.pipelineSpec,
 // which the task table needs) and its child TaskRuns by label.
 func (m *ClientManager) GetTektonPipelineRun(ctx context.Context, contextName, namespace, name string) (*TektonPipelineRunDetail, error) {
-	gvr, ok := m.tektonGVR(contextName, tektonPipelineRunsResource)
-	if !ok {
-		return nil, fmt.Errorf("%s.%s is not served by this cluster", tektonPipelineRunsResource, tektonGroup)
-	}
-	obj, err := m.getTektonLive(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getTektonLive(ctx, contextName, tektonGR(tektonPipelineRunsResource), namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +152,7 @@ func tektonPipelineRefName(obj *unstructured.Unstructured) (display, refName str
 // controller stamps on them, so opening one run never starts the (large)
 // cluster-wide TaskRun informer.
 func (m *ClientManager) tektonChildTaskRuns(ctx context.Context, contextName, namespace, pipelineRun string) ([]*unstructured.Unstructured, error) {
-	gvr, ok := m.tektonGVR(contextName, tektonTaskRunsResource)
+	gvr, ok := m.servedGVR(contextName, tektonGR(tektonTaskRunsResource))
 	if !ok {
 		return nil, nil
 	}
@@ -192,12 +175,12 @@ func (m *ClientManager) tektonChildTaskRuns(ctx context.Context, contextName, na
 
 // getTektonLive GETs a Tekton object from the API server, bypassing the
 // informer cache whose copy has crCachePrunedFields removed.
-func (m *ClientManager) getTektonLive(ctx context.Context, contextName string, gvr schema.GroupVersionResource, namespace, name string) (*unstructured.Unstructured, error) {
-	dyn, err := m.dynamicClient(contextName)
+func (m *ClientManager) getTektonLive(ctx context.Context, contextName string, gr schema.GroupResource, namespace, name string) (*unstructured.Unstructured, error) {
+	ri, err := m.servedResource(contextName, gr, namespace)
 	if err != nil {
 		return nil, err
 	}
-	return resourceFor(dyn, gvr, namespace).Get(ctx, name, metav1.GetOptions{})
+	return ri.Get(ctx, name, metav1.GetOptions{})
 }
 
 // buildTektonPipelineRunTasks joins the run's resolved pipeline tasks
@@ -417,27 +400,14 @@ type TektonTaskRunDetail struct {
 }
 
 func (m *ClientManager) ListTektonTaskRuns(contextName, namespace string) []TektonTaskRunInfo {
-	gvr, ok := m.tektonGVR(contextName, tektonTaskRunsResource)
-	if !ok {
-		return []TektonTaskRunInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]TektonTaskRunInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractTektonTaskRun(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, tektonGR(tektonTaskRunsResource), namespace, extractTektonTaskRun,
+		func(r TektonTaskRunInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 // GetTektonTaskRun reads the run live: step images come from status.taskSpec,
 // which the cache prunes.
 func (m *ClientManager) GetTektonTaskRun(ctx context.Context, contextName, namespace, name string) (*TektonTaskRunDetail, error) {
-	gvr, ok := m.tektonGVR(contextName, tektonTaskRunsResource)
-	if !ok {
-		return nil, fmt.Errorf("%s.%s is not served by this cluster", tektonTaskRunsResource, tektonGroup)
-	}
-	obj, err := m.getTektonLive(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getTektonLive(ctx, contextName, tektonGR(tektonTaskRunsResource), namespace, name)
 	if err != nil {
 		return nil, err
 	}

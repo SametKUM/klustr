@@ -2,7 +2,6 @@ package kube
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -154,25 +153,12 @@ type TektonPipelineDetail struct {
 }
 
 func (m *ClientManager) ListTektonPipelines(contextName, namespace string) []TektonPipelineInfo {
-	gvr, ok := m.tektonGVR(contextName, tektonPipelinesResource)
-	if !ok {
-		return []TektonPipelineInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]TektonPipelineInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractTektonPipeline(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, tektonGR(tektonPipelinesResource), namespace, extractTektonPipeline,
+		func(r TektonPipelineInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetTektonPipeline(ctx context.Context, contextName, namespace, name string) (*TektonPipelineDetail, error) {
-	gvr, ok := m.tektonGVR(contextName, tektonPipelinesResource)
-	if !ok {
-		return nil, fmt.Errorf("%s.%s is not served by this cluster", tektonPipelinesResource, tektonGroup)
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, tektonGR(tektonPipelinesResource), namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -278,25 +264,12 @@ type TektonTaskDetail struct {
 }
 
 func (m *ClientManager) ListTektonTasks(contextName, namespace string) []TektonTaskInfo {
-	gvr, ok := m.tektonGVR(contextName, tektonTasksResource)
-	if !ok {
-		return []TektonTaskInfo{}
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]TektonTaskInfo, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extractTektonTask(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return out[i].Namespace, out[i].Name })
-	return out
+	return listServedRows(m, contextName, tektonGR(tektonTasksResource), namespace, extractTektonTask,
+		func(r TektonTaskInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetTektonTask(ctx context.Context, contextName, namespace, name string) (*TektonTaskDetail, error) {
-	gvr, ok := m.tektonGVR(contextName, tektonTasksResource)
-	if !ok {
-		return nil, fmt.Errorf("%s.%s is not served by this cluster", tektonTasksResource, tektonGroup)
-	}
-	obj, err := m.crForDetail(ctx, contextName, gvr, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, tektonGR(tektonTasksResource), namespace, name)
 	if err != nil {
 		return nil, err
 	}

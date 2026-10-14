@@ -12,42 +12,39 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Flux CD CR GVRs as of Flux v2.8.x. Kustomization and GitRepository have
-// settled on v1; HelmRelease moved to v2 in Flux 2.3 (v2beta2 is still
-// served on older installs but every release Klustr targets exposes v2).
+// Flux CD CR resources. Versions differ across Flux releases (HelmRelease
+// was v2beta* before Flux 2.3, Provider and Alert are still v1beta3 while
+// Receiver is v1), so each is read at the version the cluster serves.
 var (
-	fluxKustomizationGVR  = schema.GroupVersionResource{Group: "kustomize.toolkit.fluxcd.io", Version: "v1", Resource: "kustomizations"}
-	fluxHelmReleaseGVR    = schema.GroupVersionResource{Group: "helm.toolkit.fluxcd.io", Version: "v2", Resource: "helmreleases"}
-	fluxGitRepositoryGVR  = schema.GroupVersionResource{Group: "source.toolkit.fluxcd.io", Version: "v1", Resource: "gitrepositories"}
-	fluxHelmRepositoryGVR = schema.GroupVersionResource{Group: "source.toolkit.fluxcd.io", Version: "v1", Resource: "helmrepositories"}
-	fluxOCIRepositoryGVR  = schema.GroupVersionResource{Group: "source.toolkit.fluxcd.io", Version: "v1", Resource: "ocirepositories"}
-	fluxBucketGVR         = schema.GroupVersionResource{Group: "source.toolkit.fluxcd.io", Version: "v1", Resource: "buckets"}
-	// Notification toolkit hasn't graduated Provider and Alert to v1 yet —
-	// Receiver did. The storage version on the cluster is what we serve, so
-	// pin each to the right one rather than guessing a single shared version.
-	fluxProviderGVR = schema.GroupVersionResource{Group: "notification.toolkit.fluxcd.io", Version: "v1beta3", Resource: "providers"}
-	fluxAlertGVR    = schema.GroupVersionResource{Group: "notification.toolkit.fluxcd.io", Version: "v1beta3", Resource: "alerts"}
-	fluxReceiverGVR = schema.GroupVersionResource{Group: "notification.toolkit.fluxcd.io", Version: "v1", Resource: "receivers"}
+	fluxKustomizationGR  = schema.GroupResource{Group: "kustomize.toolkit.fluxcd.io", Resource: "kustomizations"}
+	fluxHelmReleaseGR    = schema.GroupResource{Group: "helm.toolkit.fluxcd.io", Resource: "helmreleases"}
+	fluxGitRepositoryGR  = schema.GroupResource{Group: "source.toolkit.fluxcd.io", Resource: "gitrepositories"}
+	fluxHelmRepositoryGR = schema.GroupResource{Group: "source.toolkit.fluxcd.io", Resource: "helmrepositories"}
+	fluxOCIRepositoryGR  = schema.GroupResource{Group: "source.toolkit.fluxcd.io", Resource: "ocirepositories"}
+	fluxBucketGR         = schema.GroupResource{Group: "source.toolkit.fluxcd.io", Resource: "buckets"}
+	fluxProviderGR       = schema.GroupResource{Group: "notification.toolkit.fluxcd.io", Resource: "providers"}
+	fluxAlertGR          = schema.GroupResource{Group: "notification.toolkit.fluxcd.io", Resource: "alerts"}
+	fluxReceiverGR       = schema.GroupResource{Group: "notification.toolkit.fluxcd.io", Resource: "receivers"}
 )
 
-// fluxKindGVR maps the Klustr-side Flux kind identifiers (used by the
-// frontend / Wails layer) to their canonical GVR. The "Flux" prefix keeps
+// fluxKindResource maps the Klustr-side Flux kind identifiers (used by the
+// frontend / Wails layer) to their resource. The "Flux" prefix keeps
 // the kind names from colliding with the helm v3 HelmRelease detail tab in
 // ResourceDetailPanel and disambiguates dispatch in the UI without a
 // special-case for every site.
-var fluxKindGVR = map[string]schema.GroupVersionResource{
-	"FluxImageRepository":       fluxImageRepositoryGVR,
-	"FluxImagePolicy":           fluxImagePolicyGVR,
-	"FluxImageUpdateAutomation": fluxImageUpdateAutomationGVR,
-	"FluxKustomization":         fluxKustomizationGVR,
-	"FluxHelmRelease":           fluxHelmReleaseGVR,
-	"FluxGitRepository":         fluxGitRepositoryGVR,
-	"FluxHelmRepository":        fluxHelmRepositoryGVR,
-	"FluxOCIRepository":         fluxOCIRepositoryGVR,
-	"FluxBucket":                fluxBucketGVR,
-	"FluxProvider":              fluxProviderGVR,
-	"FluxAlert":                 fluxAlertGVR,
-	"FluxReceiver":              fluxReceiverGVR,
+var fluxKindResource = map[string]schema.GroupResource{
+	"FluxImageRepository":       fluxImageRepositoryGR,
+	"FluxImagePolicy":           fluxImagePolicyGR,
+	"FluxImageUpdateAutomation": fluxImageUpdateAutomationGR,
+	"FluxKustomization":         fluxKustomizationGR,
+	"FluxHelmRelease":           fluxHelmReleaseGR,
+	"FluxGitRepository":         fluxGitRepositoryGR,
+	"FluxHelmRepository":        fluxHelmRepositoryGR,
+	"FluxOCIRepository":         fluxOCIRepositoryGR,
+	"FluxBucket":                fluxBucketGR,
+	"FluxProvider":              fluxProviderGR,
+	"FluxAlert":                 fluxAlertGR,
+	"FluxReceiver":              fluxReceiverGR,
 }
 
 // fluxReconcileAnnotation is the trigger Flux controllers watch for to
@@ -106,12 +103,12 @@ type FluxKustomizationDetail struct {
 }
 
 func (m *ClientManager) ListFluxKustomizations(contextName, namespace string) []FluxKustomizationInfo {
-	return listFluxRows(m, contextName, fluxKustomizationGVR, namespace, extractFluxKustomization,
+	return listServedRows(m, contextName, fluxKustomizationGR, namespace, extractFluxKustomization,
 		func(r FluxKustomizationInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxKustomization(ctx context.Context, contextName, namespace, name string) (*FluxKustomizationDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, fluxKustomizationGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, fluxKustomizationGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -195,12 +192,12 @@ type FluxHelmReleaseDetail struct {
 }
 
 func (m *ClientManager) ListFluxHelmReleases(contextName, namespace string) []FluxHelmReleaseInfo {
-	return listFluxRows(m, contextName, fluxHelmReleaseGVR, namespace, extractFluxHelmRelease,
+	return listServedRows(m, contextName, fluxHelmReleaseGR, namespace, extractFluxHelmRelease,
 		func(r FluxHelmReleaseInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxHelmRelease(ctx context.Context, contextName, namespace, name string) (*FluxHelmReleaseDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, fluxHelmReleaseGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, fluxHelmReleaseGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -307,12 +304,12 @@ type FluxGitRepositoryDetail struct {
 }
 
 func (m *ClientManager) ListFluxGitRepositories(contextName, namespace string) []FluxGitRepositoryInfo {
-	return listFluxRows(m, contextName, fluxGitRepositoryGVR, namespace, extractFluxGitRepository,
+	return listServedRows(m, contextName, fluxGitRepositoryGR, namespace, extractFluxGitRepository,
 		func(r FluxGitRepositoryInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxGitRepository(ctx context.Context, contextName, namespace, name string) (*FluxGitRepositoryDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, fluxGitRepositoryGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, fluxGitRepositoryGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -409,12 +406,12 @@ type FluxHelmRepositoryDetail struct {
 }
 
 func (m *ClientManager) ListFluxHelmRepositories(contextName, namespace string) []FluxHelmRepositoryInfo {
-	return listFluxRows(m, contextName, fluxHelmRepositoryGVR, namespace, extractFluxHelmRepository,
+	return listServedRows(m, contextName, fluxHelmRepositoryGR, namespace, extractFluxHelmRepository,
 		func(r FluxHelmRepositoryInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxHelmRepository(ctx context.Context, contextName, namespace, name string) (*FluxHelmRepositoryDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, fluxHelmRepositoryGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, fluxHelmRepositoryGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -495,12 +492,12 @@ type FluxOCIRepositoryDetail struct {
 }
 
 func (m *ClientManager) ListFluxOCIRepositories(contextName, namespace string) []FluxOCIRepositoryInfo {
-	return listFluxRows(m, contextName, fluxOCIRepositoryGVR, namespace, extractFluxOCIRepository,
+	return listServedRows(m, contextName, fluxOCIRepositoryGR, namespace, extractFluxOCIRepository,
 		func(r FluxOCIRepositoryInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxOCIRepository(ctx context.Context, contextName, namespace, name string) (*FluxOCIRepositoryDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, fluxOCIRepositoryGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, fluxOCIRepositoryGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -598,12 +595,12 @@ type FluxBucketDetail struct {
 }
 
 func (m *ClientManager) ListFluxBuckets(contextName, namespace string) []FluxBucketInfo {
-	return listFluxRows(m, contextName, fluxBucketGVR, namespace, extractFluxBucket,
+	return listServedRows(m, contextName, fluxBucketGR, namespace, extractFluxBucket,
 		func(r FluxBucketInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxBucket(ctx context.Context, contextName, namespace, name string) (*FluxBucketDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, fluxBucketGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, fluxBucketGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -683,12 +680,12 @@ type FluxProviderDetail struct {
 }
 
 func (m *ClientManager) ListFluxProviders(contextName, namespace string) []FluxProviderInfo {
-	return listFluxRows(m, contextName, fluxProviderGVR, namespace, extractFluxProvider,
+	return listServedRows(m, contextName, fluxProviderGR, namespace, extractFluxProvider,
 		func(r FluxProviderInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxProvider(ctx context.Context, contextName, namespace, name string) (*FluxProviderDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, fluxProviderGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, fluxProviderGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -779,12 +776,12 @@ type FluxAlertDetail struct {
 }
 
 func (m *ClientManager) ListFluxAlerts(contextName, namespace string) []FluxAlertInfo {
-	return listFluxRows(m, contextName, fluxAlertGVR, namespace, extractFluxAlert,
+	return listServedRows(m, contextName, fluxAlertGR, namespace, extractFluxAlert,
 		func(r FluxAlertInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxAlert(ctx context.Context, contextName, namespace, name string) (*FluxAlertDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, fluxAlertGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, fluxAlertGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -887,12 +884,12 @@ type FluxReceiverDetail struct {
 }
 
 func (m *ClientManager) ListFluxReceivers(contextName, namespace string) []FluxReceiverInfo {
-	return listFluxRows(m, contextName, fluxReceiverGVR, namespace, extractFluxReceiver,
+	return listServedRows(m, contextName, fluxReceiverGR, namespace, extractFluxReceiver,
 		func(r FluxReceiverInfo) (string, string) { return r.Namespace, r.Name })
 }
 
 func (m *ClientManager) GetFluxReceiver(ctx context.Context, contextName, namespace, name string) (*FluxReceiverDetail, error) {
-	obj, err := m.crForDetail(ctx, contextName, fluxReceiverGVR, namespace, name)
+	obj, err := m.getServedCR(ctx, contextName, fluxReceiverGR, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -1014,33 +1011,6 @@ func (m *ClientManager) SetFluxResourceSuspended(ctx context.Context, contextNam
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
-
-// listFluxRows reads the cached CRs for a Flux GVR, projects each through
-// extract, and returns the rows sorted by (namespace, name). Collapses the nine
-// otherwise-identical ListFlux* bodies.
-func listFluxRows[I any](
-	m *ClientManager,
-	contextName string,
-	gvr schema.GroupVersionResource,
-	namespace string,
-	extract func(*unstructured.Unstructured) I,
-	key func(I) (string, string),
-) []I {
-	if gvr.Group == fluxImageGroup {
-		served, ok := m.servedGVR(contextName, gvr.Group, gvr.Resource)
-		if !ok {
-			return []I{}
-		}
-		gvr = served
-	}
-	objs := listCachedCRs(m, contextName, gvr, namespace)
-	out := make([]I, 0, len(objs))
-	for _, obj := range objs {
-		out = append(out, extract(obj))
-	}
-	sortByNamespaceName(out, func(i int) (string, string) { return key(out[i]) })
-	return out
-}
 
 // nestedRefName reads the ".name" of a Flux object reference (secretRef,
 // certSecretRef, providerRef, …) at the given path, returning "" when absent.
