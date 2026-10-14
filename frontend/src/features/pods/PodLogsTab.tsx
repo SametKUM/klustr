@@ -10,7 +10,22 @@ import type { LogLine } from '@/features/_shared/logView'
 import { useLogTerminal } from '@/features/_shared/useLogTerminal'
 import { useUIStore } from '@/store/ui'
 
-const TAIL_LINES = 200
+// How far back a stream starts; 0 asks for the whole log. Scrolling still
+// reaches only the terminal's scrollback, the filter and Save the retained lines.
+const TAIL_OPTIONS = [
+  { value: '200', label: '200' },
+  { value: '1000', label: '1,000' },
+  { value: '10000', label: '10,000' },
+  { value: '0', label: 'All' },
+]
+const DEFAULT_TAIL_LINES = 200
+
+function streamHeader(container: string, previous: boolean, tailLines: number): string {
+  const span = tailLines > 0 ? `last ${tailLines} lines` : 'whole log'
+  return previous
+    ? `\x1b[2m# previous instance of ${container} (${span}${tailLines > 0 ? ' before termination' : ''})\x1b[0m`
+    : `\x1b[2m# streaming ${container} (${span})\x1b[0m`
+}
 
 type Props = {
   detail: PodDetail
@@ -38,9 +53,10 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
     return (c?.restartCount ?? 0) > 0
   }, [detail.containers, detail.initContainers, container])
   const showPrevious = previous && canPrevious
-  // A start failure belongs to the stream that failed; switching container or
-  // mode leaves it behind instead of resetting it from the effect.
-  const streamKey = JSON.stringify([selectedContext, detail.namespace, detail.name, container, showPrevious])
+  const [tailLines, setTailLines] = useState(DEFAULT_TAIL_LINES)
+  // A start failure belongs to the stream that failed; switching container,
+  // mode or tail leaves it behind instead of resetting it from the effect.
+  const streamKey = JSON.stringify([selectedContext, detail.namespace, detail.name, container, showPrevious, tailLines])
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null)
   const error = failure?.key === streamKey ? failure.message : null
   const [streaming, setStreaming] = useState(false)
@@ -81,11 +97,7 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
   useEffect(() => {
     if (!selectedContext || !container) return
 
-    reset(
-      showPrevious
-        ? `\x1b[2m# previous instance of ${container} (last ${TAIL_LINES} lines before termination)\x1b[0m`
-        : `\x1b[2m# streaming ${container} (last ${TAIL_LINES} lines)\x1b[0m`,
-    )
+    reset(streamHeader(container, showPrevious, tailLines))
 
     let cancelled = false
     let sessionId: string | null = null
@@ -93,7 +105,7 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
     let unsubClose: (() => void) | null = null
 
     api
-      .startPodLogs(selectedContext, detail.namespace, detail.name, container, !showPrevious, showPrevious, TAIL_LINES)
+      .startPodLogs(selectedContext, detail.namespace, detail.name, container, !showPrevious, showPrevious, tailLines)
       .then((id) => {
         if (cancelled) {
           api.stopPodLogs(id).catch(() => {})
@@ -124,7 +136,7 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
         EventsOff(`pod:logs:line:${sessionId}`, `pod:logs:close:${sessionId}`)
       }
     }
-  }, [selectedContext, detail.namespace, detail.name, container, showPrevious, streamKey, append, appendMarker, reset])
+  }, [selectedContext, detail.namespace, detail.name, container, showPrevious, tailLines, streamKey, append, appendMarker, reset])
 
   const saveLogs = () => {
     const lines = view.filteredText()
@@ -153,6 +165,14 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
           onChange={setContainer}
           ariaLabel="Select container"
           minWidth={140}
+        />
+        <label className="text-muted-foreground">Tail</label>
+        <InlinePicker
+          value={String(tailLines)}
+          options={TAIL_OPTIONS}
+          onChange={(v) => setTailLines(Number(v))}
+          ariaLabel="Select how many lines to load"
+          minWidth={72}
         />
         {/* The title sits on a wrapper because a disabled button gets no
             pointer events, so it would never show its own tooltip. */}
