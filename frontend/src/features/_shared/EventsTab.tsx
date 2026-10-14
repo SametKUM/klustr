@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react'
 import { api, type EventInfo } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { formatAge } from '@/lib/time'
+import { Copyable } from './Copyable'
 import { ErrorBox, Th, Td } from './DetailPrimitives'
 
 // Events have no informer, so the open tab polls on the overview feeds' interval.
@@ -96,7 +97,7 @@ export function EventsTab({ contextName, namespace, kind, name }: Props) {
                     <Td className="whitespace-nowrap text-muted-foreground">{formatAge(e.lastSeen)}</Td>
                     <Td className="text-muted-foreground">{e.source || '—'}</Td>
                     <Td className="font-mono">{e.count}</Td>
-                    <Td className="max-w-[28rem] whitespace-pre-wrap break-words">{e.message}</Td>
+                    <Td className="max-w-[28rem] whitespace-pre-wrap break-words"><Copyable value={e.message} /></Td>
                   </tr>
                 ))}
               </tbody>

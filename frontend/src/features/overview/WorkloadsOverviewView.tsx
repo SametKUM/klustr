@@ -11,6 +11,7 @@ import {
   type ReplicationControllerInfo,
   type StatefulSetInfo,
 } from '@/lib/api'
+import { Copyable } from '@/features/_shared/Copyable'
 import { selectsTextWithin } from '@/features/_shared/textSelection'
 import { onKubeChange } from '@/lib/events'
 import { formatAge } from '@/lib/time'
@@ -522,7 +523,7 @@ function EventsTable({ events, showContext }: { events: TaggedEvent[]; showConte
                 <td className="px-3 py-2 align-top font-mono text-[11px] text-muted-foreground">
                   {e.objectKind}: {e.objectName}
                 </td>
-                <td className="px-3 py-2 align-top text-foreground">{e.message}</td>
+                <td className="px-3 py-2 align-top text-foreground"><Copyable value={e.message} /></td>
                 <td className="px-3 py-2 align-top text-muted-foreground">{e.reason}</td>
                 <td className="px-3 py-2 align-top text-muted-foreground">{e.count}</td>
                 <td className="px-3 py-2 align-top text-muted-foreground">

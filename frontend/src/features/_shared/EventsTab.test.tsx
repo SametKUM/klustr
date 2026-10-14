@@ -76,6 +76,18 @@ describe('EventsTab', () => {
     expect(container.textContent).not.toContain('late event')
   })
 
+  it('copies an event message from its copy button', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    mocks.listEvents.mockResolvedValueOnce([event('e1', 'invalid capacity 0 on image filesystem')])
+    await render()
+
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('button[aria-label="Copy value"]')!.click()
+    })
+    expect(writeText).toHaveBeenCalledWith('invalid capacity 0 on image filesystem')
+  })
+
   it('keeps the last list when a poll fails and clears the error on the next success', async () => {
     mocks.listEvents.mockResolvedValueOnce([event('e1', 'first message')])
     await render()

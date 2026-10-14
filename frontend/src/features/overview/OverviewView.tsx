@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Copyable } from '@/features/_shared/Copyable'
 import { MetricsServerInstaller } from '@/features/_shared/MetricsServerInstaller'
 import { MetricsServerUninstaller } from '@/features/_shared/MetricsServerUninstaller'
 import { ProviderIcon } from '@/features/_shared/providerIcons'
@@ -716,7 +717,7 @@ function WarningsSection({
                         </span>
                       </td>
                     )}
-                    <td className="px-3 py-2 align-top text-foreground">{w.message}</td>
+                    <td className="px-3 py-2 align-top text-foreground"><Copyable value={w.message} /></td>
                     <td className="px-3 py-2 align-top font-mono text-[11px] text-muted-foreground">
                       {w.objectKind}/{w.objectName}
                       {w.namespace && (

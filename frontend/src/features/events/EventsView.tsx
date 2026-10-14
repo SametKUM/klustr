@@ -4,6 +4,7 @@ import { api, type EventInfo } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { formatAge } from '@/lib/time'
 import { namespaceQuery } from '@/lib/namespaceFilter'
+import { Copyable } from '@/features/_shared/Copyable'
 import { ErrorBox, Th, Td } from '@/features/_shared/DetailPrimitives'
 import { selectsTextWithin } from '@/features/_shared/textSelection'
 import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
@@ -280,7 +281,7 @@ export function EventsView() {
                       </Td>
                       <Td className="text-muted-foreground">{e.source || '—'}</Td>
                       <Td className="font-mono">{e.count}</Td>
-                      <Td className="max-w-[28rem] whitespace-pre-wrap break-words">{e.message}</Td>
+                      <Td className="max-w-[28rem] whitespace-pre-wrap break-words"><Copyable value={e.message} /></Td>
                     </tr>
                   )
                 })}
