@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { FilePlus2, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { ThemePicker } from '@/features/_shared/ThemePicker'
 import { ReadOnlyToggle } from '@/features/_shared/ReadOnlyToggle'
 import { ContextSwitcher } from '@/features/contexts/ContextSwitcher'
@@ -673,7 +673,9 @@ function App() {
           <div className="flex items-center gap-1">
             {/* Cluster session tools */}
             {!globalReadOnly && (
-              <Button variant="outline" size="sm" onClick={() => openResourceEditor()}>Create resource</Button>
+              <Button variant="outline" size="sm" onClick={() => openResourceEditor()}>
+                <FilePlus2 className="size-4" aria-hidden="true" /> Create resource
+              </Button>
             )}
             <TerminalButton />
             <PortForwardIndicator />

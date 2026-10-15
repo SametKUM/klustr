@@ -574,6 +574,7 @@ export default function ResourceEditor(props: ResourceEditorProps) {
                       create.mutate()
                     }}
                   >
+                    <FilePlus2 className="size-4" aria-hidden="true" />
                     Create {ready} {ready === 1 ? 'resource' : 'resources'}
                   </Button>
                 )}

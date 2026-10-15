@@ -20,6 +20,7 @@ import {
   ChevronRight,
   ChevronsUpDown,
   CircleCheck,
+  FilePlus2,
   Filter,
   MoveDownLeft,
   RotateCcw,
@@ -1049,7 +1050,7 @@ export function ResourceTable<T>({
           )}
         </div>
         <ColumnControls table={table} onReset={() => resetPrefs(kind)} />
-        {!readOnly && <Button variant="outline" size="xs" onClick={() => openResourceEditor({ contextName: resourceContexts.length === 1 ? resourceContexts[0] : undefined, kind: kind.startsWith('cr:') ? undefined : kind, group: kind.startsWith('cr:') ? kind.slice(3, kind.indexOf('/')) : undefined, resource: kind.startsWith('cr:') ? kind.slice(kind.indexOf('/') + 1) : undefined })}>Create</Button>}
+        {!readOnly && <Button variant="outline" size="xs" onClick={() => openResourceEditor({ contextName: resourceContexts.length === 1 ? resourceContexts[0] : undefined, kind: kind.startsWith('cr:') ? undefined : kind, group: kind.startsWith('cr:') ? kind.slice(3, kind.indexOf('/')) : undefined, resource: kind.startsWith('cr:') ? kind.slice(kind.indexOf('/') + 1) : undefined })}><FilePlus2 className="size-3" aria-hidden="true" /> Create</Button>}
       </div>
       {connectionWarnings.length > 0 && (
         <div
