@@ -212,6 +212,15 @@ describe('resource editor workflow', () => {
     expect(document.querySelector('textarea')!.value).toBe(source)
   })
 
+  it('clears the source and closes its confirmation dialog', async () => {
+    await render(); await edit(source)
+    await act(async () => button('Clear').click()); await flush()
+    expect(document.body.textContent).toContain('Clear this draft?')
+    await act(async () => button('Clear draft').click()); await flush()
+    expect(document.querySelector('textarea')!.value).toBe('')
+    expect(document.body.textContent).not.toContain('Clear this draft?')
+  })
+
   it('does not replace final results with an older progress event', async () => {
     await render()
     await edit(source)

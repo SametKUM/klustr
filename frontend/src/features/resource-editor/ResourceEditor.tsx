@@ -597,6 +597,7 @@ export default function ResourceEditor(props: ResourceEditorProps) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                setClearOpen(false)
                 changeSource('')
                 setSelected(0)
                 toast.success('Draft cleared')
