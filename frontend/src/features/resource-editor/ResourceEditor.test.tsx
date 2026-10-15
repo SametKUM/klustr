@@ -126,6 +126,14 @@ async function chooseNamespace(name: string) {
   if (!row) throw new Error(`Namespace missing: ${name}`)
   await act(async () => row.click())
 }
+async function chooseContext(name: string) {
+  await act(async () => (document.querySelector('[aria-label="Target context"]') as HTMLButtonElement).click())
+  await flush()
+  const row = [...document.querySelectorAll('[role="option"]')].find((item) => item.textContent === name) as HTMLElement
+  if (!row) throw new Error(`Context missing: ${name}`)
+  await act(async () => row.click())
+  await flush()
+}
 async function addNamespace(name: string) {
   await act(async () => (document.querySelector('[aria-label="Namespace"]') as HTMLButtonElement).click())
   await act(async () => button('New namespace…').click())
@@ -287,6 +295,12 @@ describe('resource editor workflow', () => {
     await edit(source)
     expect(button('Review resources').disabled).toBe(true)
     expect(mocks.getManifestCatalog).not.toHaveBeenCalled()
+    expect(document.querySelector('[aria-label="Target context"]')!.textContent).toBe('Select a context')
+    await chooseContext('cluster-b')
+    expect(mocks.getManifestCatalog).toHaveBeenCalledWith('cluster-b')
+    expect(button('Review resources').disabled).toBe(false)
+    await act(async () => button('Review resources').click()); await flush()
+    expect(mocks.reviewManifest).toHaveBeenCalledExactlyOnceWith('cluster-b', 'default', source)
   })
 
   it('disables creation if read-only mode changes after review', async () => {
@@ -370,7 +384,11 @@ describe('resource editor workflow', () => {
     await edit(source)
     await act(async () => button('Review resources').click())
     await render(true, { serial: 2, target: { contextName: 'other' } })
-    expect((document.querySelector('[aria-label="Target context"]') as HTMLSelectElement).value).toBe('ctx')
+    const target = document.querySelector('[aria-label="Target context"]') as HTMLButtonElement
+    expect(target.textContent).toBe('ctx')
+    expect(target.disabled).toBe(true)
+    await act(async () => target.click())
+    expect(document.querySelector('[aria-label="Filter target contexts"]')).toBeNull()
     await act(async () => resolve(reviewed()))
     await flush()
     expect(button('Create 1 resource').disabled).toBe(false)
@@ -426,9 +444,9 @@ describe('resource editor workflow', () => {
     await act(async () => (document.querySelector('[aria-label="Namespace"]') as HTMLButtonElement).click())
     expect([...document.querySelectorAll('[role="option"]')].map((item) => item.textContent)).toEqual(['default', 'staging'])
     await act(async () => document.querySelector('input[aria-label="Filter target namespaces"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
-    const context = document.querySelector('[aria-label="Target context"]') as HTMLSelectElement
-    await act(async () => { context.value = 'other'; context.dispatchEvent(new Event('change', { bubbles: true })) })
     await flush()
+    expect(document.querySelector('input[aria-label="Filter target namespaces"]')).toBeNull()
+    await chooseContext('other')
     await act(async () => (document.querySelector('[aria-label="Namespace"]') as HTMLButtonElement).click())
     expect([...document.querySelectorAll('[role="option"]')].map((item) => item.textContent)).toEqual(['default', 'other-only'])
   })
@@ -491,11 +509,13 @@ describe('resource editor workflow', () => {
     result.resources.push({ ...result.resources[0], index: 1, name: 'remaining', status: 'pending' })
     await act(async () => { mocks.events?.(result) })
     await render(true, { serial: 2, target: { contextName: 'other' } })
-    const target = document.querySelector('[aria-label="Target context"]') as HTMLSelectElement
+    const target = document.querySelector('[aria-label="Target context"]') as HTMLButtonElement
     const namespace = document.querySelector('[aria-label="Namespace"]') as HTMLButtonElement
     expect(target.disabled).toBe(true)
     expect(namespace.disabled).toBe(true)
-    expect(target.value).toBe('ctx')
+    expect(target.textContent).toBe('ctx')
+    await act(async () => target.click())
+    expect(document.querySelector('[aria-label="Filter target contexts"]')).toBeNull()
     await act(async () => namespace.click())
     expect(document.querySelector('[aria-label="Filter target namespaces"]')).toBeNull()
     expect(mocks.releaseManifest).not.toHaveBeenCalled()
@@ -513,15 +533,10 @@ describe('resource editor workflow', () => {
     mocks.contexts = ['ctx', 'other']
     await render(true, { serial: 1, target: { contextName: 'ctx' } })
     const modelPath = document.querySelector('[data-model-path]')!.getAttribute('data-model-path')
-    const select = document.querySelector('[aria-label="Target context"]') as HTMLSelectElement
-    const changeContext = async (value: string) => {
-      await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })) })
-      await flush()
-    }
     await edit(source)
-    await changeContext('other')
+    await chooseContext('other')
     await edit(source.replace('example', 'edited-in-other'))
-    await changeContext('ctx')
+    await chooseContext('ctx')
     expect(document.querySelector('[data-model-path]')!.getAttribute('data-model-path')).toBe(modelPath)
     expect(document.querySelector('textarea')!.value).toContain('edited-in-other')
     await act(async () => button('Review resources').click()); await flush()

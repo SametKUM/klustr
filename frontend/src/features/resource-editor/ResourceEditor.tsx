@@ -41,13 +41,12 @@ import { canCreateManifest, formatManifest, resourceTemplate } from './manifestM
 import { useManifestWorkspace, type ResourceEditorProps } from './useManifestWorkspace'
 import { ResourceKindPicker } from './ResourceKindPicker'
 import { ManifestNamespaceSelector } from './ManifestNamespaceSelector'
+import { ManifestContextSelector } from './ManifestContextSelector'
 
 const YAMLPane = lazy(() => import('./ManifestYAMLPane'))
 const DiffPane = lazy(() =>
   import('./ManifestYAMLPane').then((module) => ({ default: module.ManifestDiffPane })),
 )
-const selectClass =
-  'h-8 min-w-0 rounded-md border border-input bg-background px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50'
 export default function ResourceEditor(props: ResourceEditorProps) {
   const { open } = props
   const [dialogContent, setDialogContent] = useState<HTMLDivElement | null>(null)
@@ -143,26 +142,16 @@ export default function ResourceEditor(props: ResourceEditorProps) {
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2">
-              <label className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                Context
-                <select
-                  aria-label="Target context"
-                  className={`${selectClass} max-w-80`}
+              <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                <span>Context</span>
+                <ManifestContextSelector
+                  contexts={activeContexts}
                   value={contextName}
                   disabled={busy || targetLocked}
-                  onChange={(event) => changeTarget(event.target.value)}
-                >
-                  <option value="">Select a context</option>
-                  {contextName && !connected && (
-                    <option value={contextName}>{contextName} (disconnected)</option>
-                  )}
-                  {activeContexts.map((context) => (
-                    <option key={context} value={context}>
-                      {context}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onValueChange={changeTarget}
+                  container={dialogContent}
+                />
+              </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>Namespace</span>
                 <ManifestNamespaceSelector
