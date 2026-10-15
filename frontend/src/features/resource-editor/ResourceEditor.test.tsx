@@ -191,6 +191,31 @@ describe('resource editor workflow', () => {
     vi.unstubAllGlobals()
     if (scrollIntoView) Object.defineProperty(Element.prototype, 'scrollIntoView', scrollIntoView)
     else Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+    vi.restoreAllMocks()
+  })
+
+  it('keeps result leases alive while hidden and releases them when the workspace unmounts', async () => {
+    const interval = vi.spyOn(window, 'setInterval')
+    const clearInterval = vi.spyOn(window, 'clearInterval')
+    await render(); await edit(source)
+    await act(async () => button('Review resources').click()); await flush()
+    const result = reviewed(); result.phase = 'results'; result.revision = 5
+    result.resources[0].status = 'created'
+    mocks.getManifestOperation.mockResolvedValue(result)
+    await act(async () => { mocks.events?.(result) })
+    await render(false)
+    expect(mocks.releaseManifest).not.toHaveBeenCalled()
+    const lease = interval.mock.calls.filter(([, delay]) => delay === 5 * 60_000).at(-1)
+    expect(lease).toBeDefined()
+    const callback = lease?.[0]
+    if (typeof callback !== 'function') throw new Error('Missing lease callback')
+    mocks.getManifestOperation.mockClear()
+    await act(async () => { callback() })
+    expect(mocks.getManifestOperation).toHaveBeenCalledExactlyOnceWith('preview')
+    clearInterval.mockClear()
+    await act(async () => root.render(null))
+    expect(clearInterval).toHaveBeenCalledTimes(1)
+    expect(mocks.releaseManifest).toHaveBeenCalledExactlyOnceWith('preview')
   })
 
   it('allows wheel and touch scrolling in the resource picker while locking the background', async () => {

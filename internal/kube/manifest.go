@@ -98,22 +98,17 @@ func (s *manifestSession) snapshot() ManifestOperation {
 	return ManifestOperation{Revision: s.revision, ID: s.id, ContextName: s.contextName, Phase: s.phase, Resources: resources, Warnings: append([]string{}, s.warnings...)}
 }
 
-// Outcomes cannot be reconstructed from the original YAML, especially for
-// generateName resources. Keep them until the editor explicitly releases them.
-// The registry's session cap still bounds retained drafts in memory.
-func (s *manifestSession) shouldExpire(now time.Time) bool {
-	if s.phase == "expired" {
-		return true
-	}
-	if s.phase == "creating" || s.phase == "reviewing" {
-		return false
-	}
+func (s *manifestSession) hasOutcomes() bool {
 	for _, entry := range s.entries {
 		if entry.Status == "created" || entry.Status == "unknown" {
-			return false
+			return true
 		}
 	}
-	return now.After(s.expires)
+	return false
+}
+
+func (s *manifestSession) shouldExpire(now time.Time) bool {
+	return s.phase == "expired" || (now.After(s.expires) && s.phase != "creating" && s.phase != "reviewing")
 }
 
 func (m *ClientManager) manifestSession(id string) (*manifestSession, error) {
@@ -125,6 +120,11 @@ func (m *ClientManager) manifestSession(id string) (*manifestSession, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// Knowing the id allows a paused editor to resume after a long idle period.
+	// Live workspaces renew this lease; registry sweeps reclaim abandoned ones.
+	if s.hasOutcomes() && s.phase != "expired" {
+		s.expires = time.Now().Add(manifestTTL)
+	}
 	if s.shouldExpire(time.Now()) {
 		s.phase = "expired"
 		m.removeManifestSession(s)
@@ -220,7 +220,7 @@ func (m *ClientManager) registerManifestSession(s *manifestSession) error {
 	m.manifests.mu.Lock()
 	defer m.manifests.mu.Unlock()
 	if len(m.manifests.sessions) >= 16 {
-		return fmt.Errorf("too many open previews; close an earlier editor session")
+		return fmt.Errorf("too many open previews; close an earlier editor session or retry after inactive previews expire")
 	}
 	if m.manifests.sessions == nil {
 		m.manifests.sessions = make(map[string]*manifestSession)

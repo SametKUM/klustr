@@ -65,6 +65,10 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
   useEffect(() => {
     operationRef.current = operation
   }, [operation])
+  useEffect(() => () => {
+    const id = operationRef.current?.id
+    if (id) void api.releaseManifest(id).catch(() => {})
+  }, [])
   const modelId = useId().replace(/:/g, '')
   const path = `file:///klustr/resource-editor/${modelId}.yaml`
   const deferredSource = useDeferredValue(source)
@@ -297,8 +301,8 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
         setOperation((current) => mergeManifestOperation(current, incoming))
     }
     const unsubscribe = EventsOn('manifest:progress', accept)
-    // Progress events can arrive while the dialog is hidden. Recover a missed
-    // event on reopen/focus without polling the Kubernetes resource lists.
+    // Recover missed progress on reopen/focus. The lease keepalive only reads
+    // this in-memory operation, never the Kubernetes resource lists.
     const sync = () => {
       void api
         .getManifestOperation(operation.id)
@@ -306,9 +310,11 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
         .catch(() => {})
     }
     sync()
+    const keepalive = window.setInterval(sync, 5 * 60_000)
     window.addEventListener('focus', sync)
     return () => {
       cancelled = true
+      window.clearInterval(keepalive)
       unsubscribe()
       window.removeEventListener('focus', sync)
     }

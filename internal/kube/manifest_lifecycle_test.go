@@ -190,7 +190,7 @@ func TestManifestSessionsExpireAndEnforceCapacityBeforeDiscovery(t *testing.T) {
 	}
 }
 
-func TestManifestOutcomesSurviveExpiryAndSweepUntilReleased(t *testing.T) {
+func TestManifestOutcomesSurviveIdleAndSweepWithLiveLeaseUntilReleased(t *testing.T) {
 	for _, status := range []string{"created", "unknown"} {
 		t.Run(status, func(t *testing.T) {
 			dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
@@ -199,6 +199,9 @@ func TestManifestOutcomesSurviveExpiryAndSweepUntilReleased(t *testing.T) {
 			s.entries[0].Status = status
 			s.entries[1].Status = "failed"
 			s.expires = time.Now().Add(-2 * manifestTTL)
+			if _, err := m.GetManifestOperation(s.id); err != nil {
+				t.Fatal("known result could not renew its lease after an idle period", err)
+			}
 			if err := m.registerManifestSession(&manifestSession{id: "other", phase: "review", expires: time.Now().Add(time.Hour)}); err != nil {
 				t.Fatal(err)
 			}
@@ -234,6 +237,38 @@ func TestManifestOutcomesSurviveExpiryAndSweepUntilReleased(t *testing.T) {
 			}
 			if _, err := m.GetManifestOperation(s.id); err == nil {
 				t.Fatal("explicit release retained outcomes")
+			}
+		})
+	}
+}
+
+func TestManifestAbandonedOutcomesAreReclaimedAtCapacity(t *testing.T) {
+	for _, fresh := range []bool{false, true} {
+		t.Run(fmt.Sprint(fresh), func(t *testing.T) {
+			m := &ClientManager{}
+			for i := range 16 {
+				status := "created"
+				if i%2 != 0 {
+					status = "unknown"
+				}
+				if err := m.registerManifestSession(&manifestSession{id: fmt.Sprint(i), phase: "results", expires: time.Now().Add(manifestTTL), entries: []manifestEntry{{ManifestResource: ManifestResource{Status: status}}}}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			// Age the leases together after filling the registry.
+			for _, s := range m.manifestSessionList("") {
+				s.expires = time.Now().Add(-time.Minute)
+				if fresh {
+					s.expires = time.Now().Add(manifestTTL)
+				}
+			}
+			err := m.registerManifestSession(&manifestSession{id: "new", phase: "review", expires: time.Now().Add(manifestTTL)})
+			if fresh {
+				if err == nil || len(m.manifestSessionList("")) != 16 {
+					t.Fatal("capacity check evicted live outcomes")
+				}
+			} else if err != nil || len(m.manifestSessionList("")) != 1 {
+				t.Fatal("orphaned outcomes exhausted the registry", err)
 			}
 		})
 	}
