@@ -11,7 +11,8 @@ import { onKubeChange } from '@/lib/events'
 import { EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { useResources } from '@/store/resources'
 import { useActiveContexts, useUIStore } from '@/store/ui'
-import { buildManifestSchema, manifestSchemaInputs, manifestSchemaVersions } from './manifestSchema'
+import { buildManifestSchema, manifestSchemaVersions } from './manifestSchema'
+import { useManifestSchemaInputs } from './useManifestSchemaInputs'
 import { ManifestSchemaCache } from './manifestSchemaCache'
 import {
   addNamespaceToManifest,
@@ -68,15 +69,15 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
   const path = `file:///klustr/resource-editor/${modelId}.yaml`
   const deferredSource = useDeferredValue(source)
   const draft = useMemo(() => parseManifestDraft(deferredSource), [deferredSource])
-  const schemaInput = JSON.stringify(manifestSchemaInputs(draft.objects))
+  const schemaInputs = useManifestSchemaInputs(draft, !deferredSource.trim())
   const schemaVersionKey = JSON.stringify(
-    manifestSchemaVersions(draft.objects).filter(
+    manifestSchemaVersions(schemaInputs).filter(
       (version) => catalog?.resources.some((item) => item.apiVersion === version),
     ),
   )
   const schema = useMemo(
-    () => buildManifestSchema(JSON.parse(schemaInput), sources),
-    [schemaInput, sources],
+    () => buildManifestSchema(schemaInputs, sources),
+    [schemaInputs, sources],
   )
   const connected = activeContexts.includes(contextName)
   useEffect(() => {

@@ -1,9 +1,15 @@
 import path from 'node:path'
+import { act, createElement, useEffect, useMemo } from 'react'
+import { createRoot } from 'react-dom/client'
 import { build } from 'vite'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { CancellationTokenSource, editor, languages, Position, Uri } from 'monaco-editor/editor'
 import { stringify } from 'yaml'
 import { buildManifestSchema } from '@/features/resource-editor/manifestSchema'
+import { parseManifestDraft } from '@/features/resource-editor/manifestModel'
+import { useManifestSchemaInputs } from '@/features/resource-editor/useManifestSchemaInputs'
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 const state = vi.hoisted(() => ({ source: '', workers: [] as { terminate(): unknown }[], services: [] as { dispose(): void }[] }))
 vi.mock('monaco-yaml', async (importOriginal) => {
@@ -151,10 +157,25 @@ describe('YAML worker compatibility', () => {
     } } } } }
     const text = () => objects.map((object) => stringify(object).trimEnd()).join('\n\n---\n') + '\n'
     const model = editor.createModel(text(), 'yaml', uri)
-    let remove = registerYAMLSchema(path, buildManifestSchema(objects, sources))
     const diagnostics = () => editor.getModelMarkers({ resource: uri })
     const token = new CancellationTokenSource()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    function Registration({ source }: { source: string }) {
+      const draft = useMemo(() => parseManifestDraft(source), [source])
+      const inputs = useManifestSchemaInputs(draft, !source.trim())
+      const schema = useMemo(() => buildManifestSchema(inputs, sources), [inputs])
+      useEffect(() => registerYAMLSchema(path, schema), [schema])
+      return null
+    }
+    const renderSource = async (source: string) => {
+      await act(async () => {
+        model.setValue(source)
+        root.render(createElement(Registration, { source }))
+      })
+    }
     try {
+      await renderSource(text())
       await vi.waitFor(() => expect(diagnostics()).toHaveLength(2), { timeout: 3000 })
       expect(diagnostics()).toEqual(expect.arrayContaining([
         expect.objectContaining({ message: expect.stringContaining('string'), severity: 4 }),
@@ -164,21 +185,31 @@ describe('YAML worker compatibility', () => {
       const completion = await completionProvider.provideCompletionItems(model, position, { triggerKind: 0 }, token.token)
       expect(completion?.suggestions.map((item) => typeof item.label === 'string' ? item.label : item.label.label)).toContain('optionalField')
       const workers = state.workers.length
-      remove()
-      remove = registerYAMLSchema(path, buildManifestSchema(objects, sources))
+      await renderSource(text())
       await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)))
       expect(state.workers).toHaveLength(workers)
       objects[0].data!.message = 'valid'
-      model.setValue(text())
+      await renderSource(text())
+      await vi.waitFor(() => expect(diagnostics()).toHaveLength(1), { timeout: 3000 })
+      expect(state.workers).toHaveLength(workers)
+      const partial = text().replace('\n\n---\n', '\nopt\n\n---\n')
+      expect(parseManifestDraft(partial).error).toMatch(/Invalid YAML/)
+      await renderSource(partial)
+      await vi.waitFor(() => expect(diagnostics().some((item) => item.severity === 8)).toBe(true), { timeout: 3000 })
+      expect(diagnostics().some((item) => item.message.includes('integer'))).toBe(true)
+      const incompletePosition = new Position(stringify(objects[0]).trimEnd().split('\n').length + 1, 4)
+      const incompleteCompletion = await completionProvider.provideCompletionItems(model, incompletePosition, { triggerKind: 0 }, token.token)
+      expect(incompleteCompletion?.suggestions.map((item) => typeof item.label === 'string' ? item.label : item.label.label)).toContain('optionalField')
+      expect(state.workers).toHaveLength(workers)
+      await renderSource(partial.replace('\nopt\n', '\noptionalField: value\n'))
       await vi.waitFor(() => expect(diagnostics()).toHaveLength(1), { timeout: 3000 })
       expect(state.workers).toHaveLength(workers)
       objects[2].spec!.versions![0].schema.openAPIV3Schema.properties.spec.properties.count.type = 'string'
-      remove()
-      remove = registerYAMLSchema(path, buildManifestSchema(objects, sources))
+      await renderSource(text())
       await vi.waitFor(() => expect(diagnostics()).toHaveLength(0), { timeout: 3000 })
     } finally {
+      act(() => root.unmount())
       model.dispose()
-      remove()
       token.dispose()
     }
   })

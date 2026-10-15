@@ -518,6 +518,27 @@ describe('resource editor workflow', () => {
     expect(mocks.getManifestSchema).toHaveBeenCalledTimes(1)
   })
 
+  it('retains every document schema while typing incomplete keys and resets on clear', async () => {
+    mocks.getManifestCatalog.mockResolvedValue({ resources: [{ apiVersion: 'v1', kind: 'ConfigMap', resource: 'configmaps', namespaced: true }], warnings: [], defaultNamespace: 'default' })
+    mocks.getManifestSchema.mockResolvedValue('{"components":{"schemas":{}}}')
+    const original = `${source}---\n${source.replace('example', 'second')}`
+    await render(); await edit(original)
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
+    const schema = mocks.yamlPane.mock.lastCall![0]
+    expect(schema.schemaSequence).toHaveLength(2)
+    for (const key of ['lab', 'labels', 'labels: {}']) {
+      await edit(original.replace('---', `  ${key}\n---`))
+      expect(mocks.yamlPane.mock.lastCall![0]).toBe(schema)
+    }
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
+    expect(mocks.getManifestSchema).toHaveBeenCalledExactlyOnceWith('ctx', 'v1')
+    await edit('')
+    expect(mocks.yamlPane.mock.lastCall![0].schemaSequence).toEqual([])
+    await edit('apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test\n')
+    expect(mocks.yamlPane.mock.lastCall![0].schemaSequence).toHaveLength(1)
+    expect(mocks.yamlPane.mock.lastCall![0]).not.toBe(schema)
+  })
+
   it('does not restore a discarded result from a late snapshot after a remaining-review error', async () => {
     await render(); await edit(source)
     await act(async () => button('Review resources').click()); await flush()
