@@ -10,7 +10,7 @@ import {
 import { onKubeChange } from '@/lib/events'
 import { EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { useResources } from '@/store/resources'
-import { useActiveContexts, useUIStore, type ResourceKind } from '@/store/ui'
+import { useActiveContexts, useUIStore } from '@/store/ui'
 import { buildManifestSchema } from './manifestSchema'
 import {
   asObject,
@@ -20,6 +20,7 @@ import {
   resourceTemplate,
 } from './manifestModel'
 import type { ResourceEditorRequest } from './resourceEditorContext'
+import { manifestResourceTarget } from './manifestNavigation'
 
 export type ResourceEditorProps = {
   open: boolean
@@ -63,7 +64,7 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
     operationRef.current = operation
   }, [operation])
   const modelId = useId().replace(/:/g, '')
-  const path = `file:///klustr/resource-editor/${encodeURIComponent(contextName)}/${modelId}.yaml`
+  const path = `file:///klustr/resource-editor/${modelId}.yaml`
   const deferredSource = useDeferredValue(source)
   const draft = useMemo(() => parseManifestDraft(deferredSource), [deferredSource])
   const schema = useMemo(
@@ -90,7 +91,13 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
       setReveal(false)
       setError('')
     },
-    onError: (reason) => setError(String(reason)),
+    onError: (reason) => {
+      setError(String(reason))
+      const id = operationRef.current?.id
+      if (id) void api.getManifestOperation(id)
+        .then((next) => setOperation((current) => mergeManifestOperation(current, next)))
+        .catch(() => {})
+    },
   })
   const create = useMutation({
     mutationFn: () => api.createManifest(operation!.id),
@@ -111,7 +118,7 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
     remaining.isPending ||
     create.isPending ||
     editRemaining.isPending ||
-    operation?.phase === 'creating'
+    operation?.phase === 'creating' || operation?.phase === 'reviewing'
   const busyRef = useRef(busy)
   useEffect(() => {
     busyRef.current = busy
@@ -119,6 +126,7 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
   const ready = operation?.resources.filter((item) => item.status === 'ready').length ?? 0
   const created = operation?.resources.filter((item) => item.status === 'created').length ?? 0
   const blocked = operation?.resources.filter((item) => item.status === 'blocked').length ?? 0
+  const targetLocked = operation?.resources.some((item) => item.status === 'created' || item.status === 'unknown') ?? false
   const selectedResource = operation?.resources[selected]
   const previewKey = `${operation?.id}/${operation?.revision}/${selected}/${reveal}/${open}`
   const preview = previewState.key === previewKey ? previewState.value : null
@@ -139,6 +147,7 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
     setSource(value)
   }
   const changeTarget = (value: string) => {
+    if (busy || targetLocked) return
     discardPreview()
     setContextName(value)
     setNamespace('')
@@ -147,13 +156,18 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
     setCatalog(null)
     setCatalogError('')
   }
+  const changeNamespace = (value: string) => {
+    if (busy || targetLocked) return
+    discardPreview()
+    setNamespace(value)
+  }
 
   useEffect(() => {
     if (!open || serialRef.current === request.serial) return
     serialRef.current = request.serial
     const target =
       request.target.contextName ?? (activeContexts.length === 1 ? activeContexts[0] : '')
-    if (!busy) {
+    if (!busy && !targetLocked) {
       if (target && target !== contextName) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- An explicit external open request seeds this editor session.
         changeTarget(target)
@@ -331,17 +345,9 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
       .catch(() => setError('Could not export the manifest.'))
   }
   const navigate = (item: ManifestResource) => {
-    const gv = item.apiVersion.includes('/') ? item.apiVersion.split('/') : ['', item.apiVersion]
-    openResource(
-      {
-        context: operation!.contextName,
-        namespace: item.namespace,
-        name: item.name,
-        kind: item.kind as ResourceKind,
-        gvr: { group: gv[0], version: gv[1], resource: item.resource },
-      },
-      'yaml',
-    )
+    const target = manifestResourceTarget(item, operation!.contextName)
+    if (target.gvr) openResource(target, 'yaml')
+    else openResource(target)
     onOpenChange(false)
     setReveal(false)
   }
@@ -360,6 +366,8 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
     contextName,
     namespace,
     setNamespace,
+    changeNamespace,
+    targetLocked,
     source,
     catalog,
     catalogError,

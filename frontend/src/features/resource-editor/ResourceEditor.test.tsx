@@ -46,12 +46,14 @@ vi.mock('@/store/resources', () => ({
   useResources: (selector: (state: unknown) => unknown) => selector({ namespaces: {} }),
 }))
 vi.mock('./ManifestYAMLPane', () => ({
-  default: ({ source, onChange }: { source: string; onChange: (value: string) => void }) => (
+  default: ({ path, source, onChange }: { path: string; source: string; onChange: (value: string) => void }) => (
+    <div className="monaco-editor" data-model-path={path}>
     <textarea
       aria-label="Manifest YAML"
       value={source}
       onChange={(event) => onChange(event.target.value)}
     />
+    </div>
   ),
   ManifestDiffPane: ({ before, after }: { before: string; after: string }) => (
     <div data-testid="diff">
@@ -129,6 +131,7 @@ describe('resource editor workflow', () => {
   }
   beforeEach(() => {
     vi.clearAllMocks()
+    close.mockClear()
     mocks.readOnly = false
     mocks.contexts = ['ctx']
     mocks.events = null
@@ -309,5 +312,84 @@ describe('resource editor workflow', () => {
     })
     expect(mocks.releaseManifest).toHaveBeenCalledWith('preview')
     expect(document.body.textContent).not.toContain('Create 1 resource')
+  })
+
+  it.each(['created', 'unknown'])('preserves %s results when another entry point requests a different target', async (status) => {
+    mocks.contexts = ['ctx', 'other']
+    await render(true, { serial: 1, target: { contextName: 'ctx' } })
+    await edit(source)
+    await act(async () => button('Review resources').click()); await flush()
+    const result = reviewed()
+    result.phase = 'results'; result.revision = 5
+    result.resources[0].status = status
+    result.resources[0].generateName = 'example-'
+    result.resources.push({ ...result.resources[0], index: 1, name: 'remaining', status: 'pending' })
+    await act(async () => { mocks.events?.(result) })
+    await render(true, { serial: 2, target: { contextName: 'other' } })
+    const target = document.querySelector('[aria-label="Target context"]') as HTMLSelectElement
+    const namespace = document.querySelector('[aria-label="Default namespace"]') as HTMLInputElement
+    expect(target.disabled).toBe(true)
+    expect(namespace.disabled).toBe(true)
+    expect(target.value).toBe('ctx')
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(namespace, 'another')
+      namespace.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(mocks.releaseManifest).not.toHaveBeenCalled()
+    expect(document.querySelector('textarea')).toBeNull()
+    if (status === 'unknown') expect(button('Edit manifest').disabled).toBe(true)
+    else {
+      mocks.getRemainingManifest.mockResolvedValue(source.replace('example', 'remaining'))
+      await act(async () => button('Edit remaining').click()); await flush()
+      expect(target.disabled).toBe(false)
+      expect(document.querySelector('textarea')!.value).not.toContain('name: example')
+    }
+  })
+
+  it('keeps one model and submits the visible draft after switching context and back', async () => {
+    mocks.contexts = ['ctx', 'other']
+    await render(true, { serial: 1, target: { contextName: 'ctx' } })
+    const modelPath = document.querySelector('[data-model-path]')!.getAttribute('data-model-path')
+    const select = document.querySelector('[aria-label="Target context"]') as HTMLSelectElement
+    const changeContext = async (value: string) => {
+      await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })) })
+      await flush()
+    }
+    await edit(source)
+    await changeContext('other')
+    await edit(source.replace('example', 'edited-in-other'))
+    await changeContext('ctx')
+    expect(document.querySelector('[data-model-path]')!.getAttribute('data-model-path')).toBe(modelPath)
+    expect(document.querySelector('textarea')!.value).toContain('edited-in-other')
+    await act(async () => button('Review resources').click()); await flush()
+    expect(mocks.reviewManifest).toHaveBeenCalledWith('ctx', 'default', source.replace('example', 'edited-in-other'))
+  })
+
+  it('leaves Escape to Monaco while allowing Escape to close from other controls', async () => {
+    await render()
+    await act(async () => {
+      document.querySelector('textarea')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    })
+    expect(close).not.toHaveBeenCalled()
+    await act(async () => button('Close').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+    expect(close).toHaveBeenCalledWith(false)
+  })
+
+  it.each([
+    ['ConfigMap', 'v1', 'configmaps', undefined],
+    ['Secret', 'v1', 'secrets', undefined],
+    ['Deployment', 'apps/v1', 'deployments', undefined],
+    ['Service', 'serving.knative.dev/v1', 'services', { group: 'serving.knative.dev', version: 'v1', resource: 'services' }],
+    ['Widget', 'example.com/v2', 'widgets', { group: 'example.com', version: 'v2', resource: 'widgets' }],
+  ])('opens %s (%s) with its correct resource identity', async (kind, apiVersion, resource, gvr) => {
+    await render(); await edit(source)
+    await act(async () => button('Review resources').click()); await flush()
+    const result = reviewed(); result.phase = 'results'; result.revision = 4
+    Object.assign(result.resources[0], { kind, apiVersion, resource, status: 'created' })
+    await act(async () => { mocks.events?.(result) }); await flush()
+    await act(async () => button('Open resource').click())
+    const target = { context: 'ctx', namespace: 'default', name: 'example', kind }
+    if (gvr) expect(mocks.openResource).toHaveBeenCalledWith({ ...target, gvr }, 'yaml')
+    else expect(mocks.openResource).toHaveBeenCalledWith(target)
   })
 })

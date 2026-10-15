@@ -58,7 +58,8 @@ export default function ResourceEditor(props: ResourceEditorProps) {
     setSelectedNamespaces,
     contextName,
     namespace,
-    setNamespace,
+    changeNamespace,
+    targetLocked,
     source,
     catalog,
     catalogError,
@@ -116,7 +117,8 @@ export default function ResourceEditor(props: ResourceEditorProps) {
           showCloseButton={false}
           className="flex h-[90vh] min-h-[min(28rem,90vh)] max-h-[94vh] w-[94vw] max-w-[94vw] min-w-[min(36rem,94vw)] resize flex-col gap-0 overflow-hidden p-0 sm:max-w-[94vw]"
           onEscapeKeyDown={(event) => {
-            if (busy) event.preventDefault()
+            if (busy || (event.target instanceof Element && event.target.closest('.monaco-editor')))
+              event.preventDefault()
           }}
           onInteractOutside={(event) => event.preventDefault()}
         >
@@ -145,7 +147,7 @@ export default function ResourceEditor(props: ResourceEditorProps) {
                   aria-label="Target context"
                   className={`${selectClass} max-w-80`}
                   value={contextName}
-                  disabled={busy}
+                  disabled={busy || targetLocked}
                   onChange={(event) => changeTarget(event.target.value)}
                 >
                   <option value="">Select a context</option>
@@ -166,11 +168,8 @@ export default function ResourceEditor(props: ResourceEditorProps) {
                   className="h-8 w-44 text-xs"
                   value={namespace}
                   list={`${modelId}-namespaces`}
-                  disabled={busy}
-                  onChange={(event) => {
-                    discardPreview()
-                    setNamespace(event.target.value)
-                  }}
+                  disabled={busy || targetLocked}
+                  onChange={(event) => changeNamespace(event.target.value)}
                 />
                 <datalist id={`${modelId}-namespaces`}>
                   {(namespaces[contextName] ?? []).map((item) => (
@@ -188,6 +187,13 @@ export default function ResourceEditor(props: ResourceEditorProps) {
               {readOnly
                 ? 'Read-only mode is enabled. Creating resources is disabled.'
                 : 'The target context is disconnected. Reconnect it or select another context.'}
+            </Notice>
+          )}
+          {targetLocked && (
+            <Notice>
+              {operation?.resources.some((item) => item.status === 'unknown')
+                ? 'Check resources with unknown outcomes in the cluster before starting a new draft.'
+                : 'Edit remaining resources or start a new draft to change the target.'}
             </Notice>
           )}
           {catalogError && (
