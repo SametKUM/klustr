@@ -21,6 +21,17 @@ const operation = (revision: number, phase = 'review', status = 'ready') =>
   }) as unknown as ManifestOperation
 
 describe('manifest draft', () => {
+  it('converts scalar keys and rejects collisions after Kubernetes key conversion', () => {
+    expect(parseManifestDraft(`${manifest}data:\n  9000: service\n`).objects[0].data).toEqual({ '9000': 'service' })
+    for (const keys of ['9000: first\n  "9000": second', '0x10: first\n  "16": second', 'yes: first\n  "true": second'])
+      expect(parseManifestDraft(`${manifest}data:\n  ${keys}\n`).error).toMatch(/Invalid YAML/)
+  })
+
+  it('rejects complex keys and cyclic or deeply nested values without logging scalars', () => {
+    expect(parseManifestDraft(`${manifest}data:\n  ? [private, key]\n  : value\n`).error).toMatch(/Invalid YAML/)
+    expect(parseManifestDraft(`${manifest}data: &cycle\n  self: *cycle\n`).error).toMatch(/limit/)
+    expect(parseManifestDraft(`${manifest}data: ${'['.repeat(110)}value${']'.repeat(110)}\n`).error).toMatch(/limit/)
+  })
   it('keeps document offsets and flattens Kubernetes Lists for the outline', () => {
     const draft = parseManifestDraft(
       `${manifest}---\napiVersion: v1\nkind: List\nitems:\n  - apiVersion: v1\n    kind: Secret\n    metadata:\n      name: credentials\n`,

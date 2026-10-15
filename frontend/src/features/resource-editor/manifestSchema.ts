@@ -96,12 +96,44 @@ function matchingCRDSchema(objects: ManifestObject[], apiVersion: string, kind: 
   return undefined
 }
 
+// Ordinary field edits do not change the schema. Retain only the GVK sequence,
+// List shape and embedded CRD definitions when deciding whether to rebuild it.
+export function manifestSchemaInputs(objects: ManifestObject[]): ManifestObject[] {
+  return objects.map((object) => {
+    const result: ManifestObject = { apiVersion: object.apiVersion, kind: object.kind }
+    if (object.apiVersion === 'v1' && object.kind === 'List' && Array.isArray(object.items))
+      result.items = manifestSchemaInputs(object.items.map(asObject))
+    if (object.apiVersion === 'apiextensions.k8s.io/v1' && object.kind === 'CustomResourceDefinition') {
+      const spec = asObject(object.spec)
+      result.spec = {
+        group: spec.group,
+        names: { kind: asObject(spec.names).kind },
+        versions: Array.isArray(spec.versions) ? spec.versions.map((item) => {
+          const version = asObject(item)
+          return { name: version.name, served: version.served, schema: version.schema }
+        }) : [],
+      }
+    }
+    return result
+  })
+}
+
+export function manifestSchemaVersions(objects: ManifestObject[]): string[] {
+  const versions = new Set<string>()
+  const visit = (object: ManifestObject) => {
+    if (typeof object.apiVersion === 'string' && object.apiVersion) versions.add(object.apiVersion)
+    if (object.apiVersion === 'v1' && object.kind === 'List' && Array.isArray(object.items)) object.items.forEach((item) => visit(asObject(item)))
+  }
+  objects.forEach(visit)
+  return [...versions].sort()
+}
+
 export function buildManifestSchema(
   objects: ManifestObject[],
   sources: Record<string, unknown>,
 ): JSONSchema {
   const definitions: Record<string, JSONSchema> = {}
-  const resourceSchema = (object: ManifestObject, prefix: string): JSONSchema => {
+  const resourceSchema = (object: ManifestObject): JSONSchema => {
     const apiVersion = String(object.apiVersion ?? '')
     const kind = String(object.kind ?? '')
     if (apiVersion === 'v1' && kind === 'List')
@@ -114,9 +146,7 @@ export function buildManifestSchema(
             type: 'array',
             items: Array.isArray(object.items)
               ? {
-                  anyOf: object.items.map((item, index) =>
-                    resourceSchema(asObject(item), `${prefix}i${index}_`),
-                  ),
+                  anyOf: object.items.map((item) => resourceSchema(asObject(item))),
                 }
               : {},
           },
@@ -126,7 +156,7 @@ export function buildManifestSchema(
     const source = asObject(sources[apiVersion])
     const schemas = asObject(asObject(source.components).schemas ?? source.definitions)
     const collect = (name: string): string => {
-      const key = prefix + name
+      const key = `${apiVersion}:${name}`
       if (!(key in definitions)) {
         definitions[key] = {}
         definitions[key] = normalizeOpenAPISchema(schemas[name] ?? {}, collect) as JSONSchema
@@ -170,6 +200,6 @@ export function buildManifestSchema(
   }
   return {
     definitions,
-    schemaSequence: objects.map((object, index) => resourceSchema(object, `d${index}_`)),
+    schemaSequence: objects.map(resourceSchema),
   }
 }

@@ -10,15 +10,15 @@ import 'monaco-editor/features/register.all'
 import 'monaco-editor/languages/definitions/yaml/register'
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker'
 import YamlWorker from './yaml.worker?worker'
-import { configureMonacoYaml, type JSONSchema } from 'monaco-yaml'
+import { configureMonacoYaml } from 'monaco-yaml'
 import { createYAMLWebWorker } from './monacoYamlWorker'
+import { createYAMLSchemaRegistry } from './yamlSchemaRegistry'
 
 globalThis.MonacoEnvironment = {
   getWorker: (_moduleId, label) => (label === 'yaml' ? new YamlWorker() : new EditorWorker()),
 }
 loader.config({ monaco })
 
-const schemas = new Map<string, JSONSchema>()
 const yamlService = configureMonacoYaml({
   ...monaco,
   editor: { ...monaco.editor, createWebWorker: createYAMLWebWorker },
@@ -30,28 +30,11 @@ const yamlService = configureMonacoYaml({
   schemas: [],
 })
 
-export function registerYAMLSchema(path: string, schema: JSONSchema): () => void {
-  schemas.set(path, schema)
-  const update = () =>
-    yamlService.update({
-      enableSchemaRequest: false,
-      isKubernetes: true,
-      yamlVersion: '1.1',
-      format: { enable: false },
-      schemas: [...schemas].map(([path, schema]) => ({
-        uri: `${path}.schema.json`,
-        fileMatch: [path],
-        schema,
-      })),
-    })
-  update()
-  return () => {
-    if (schemas.get(path) === schema) {
-      schemas.delete(path)
-      update()
-    }
-  }
-}
+export const registerYAMLSchema = createYAMLSchemaRegistry(
+  (path) => monaco.Uri.parse(path).toString(),
+  (schemas) => yamlService.update({ schemas }),
+  () => console.warn('The YAML language service could not update its schemas.'),
+)
 
 export type { OnMount } from '@monaco-editor/react'
 

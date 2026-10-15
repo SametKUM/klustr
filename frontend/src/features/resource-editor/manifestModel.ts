@@ -1,4 +1,4 @@
-import { LineCounter, parseAllDocuments } from 'yaml'
+import { isScalar, LineCounter, parseAllDocuments } from 'yaml'
 import type { ManifestKind, ManifestOperation } from '@/lib/api'
 
 export const MAX_MANIFEST_BYTES = 2 * 1024 * 1024
@@ -13,6 +13,36 @@ export type OutlineResource = {
   kind: string
   name: string
   namespace: string
+}
+
+const uniqueManifestKeys = (a: unknown, b: unknown) =>
+  isScalar(a) && isScalar(b) ? String(a.value) === String(b.value) : a === b
+
+function manifestJSONValue(value: unknown, path = new Set<unknown>(), depth = 0): unknown {
+  if (depth > 100 || path.has(value)) throw new Error('limit')
+  if (!value || typeof value !== 'object') return value
+  path.add(value)
+  try {
+    if (Array.isArray(value)) return value.map((item) => manifestJSONValue(item, path, depth + 1))
+    if (value instanceof Map) {
+      const keys = new Set<string>()
+      return Object.fromEntries(
+        [...value].map(([key, item]) => {
+          if (
+            !['string', 'number', 'boolean'].includes(typeof key) ||
+            (typeof key === 'number' && !Number.isFinite(key))
+          ) throw new Error('keys')
+          const name = String(key)
+          if (keys.has(name)) throw new Error('keys')
+          keys.add(name)
+          return [name, manifestJSONValue(item, path, depth + 1)]
+        }),
+      )
+    }
+    return value
+  } finally {
+    path.delete(value)
+  }
 }
 
 export function asObject(value: unknown): ManifestObject {
@@ -33,7 +63,7 @@ export function parseManifestDraft(source: string): {
     version: '1.1',
     lineCounter,
     prettyErrors: false,
-    uniqueKeys: true,
+    uniqueKeys: uniqueManifestKeys,
   })
   const objects: ManifestObject[] = []
   const outline: OutlineResource[] = []
@@ -66,7 +96,7 @@ export function parseManifestDraft(source: string): {
           error: `Invalid YAML in document ${index + 1}, line ${position.line}, column ${position.col}.`,
         }
       }
-      const value: unknown = doc.toJS({ maxAliasCount: 100 })
+      const value = manifestJSONValue(doc.toJS({ maxAliasCount: 100, mapAsMap: true }))
       objects.push(asObject(value))
       if (value !== null)
         visit(
@@ -80,17 +110,19 @@ export function parseManifestDraft(source: string): {
       outline,
       error: outline.length ? null : 'Add a Kubernetes manifest to begin.',
     }
-  } catch {
+  } catch (reason) {
     return {
       objects: [],
       outline: [],
-      error: 'Manifest exceeds the resource, nesting or YAML alias limit.',
+      error: reason instanceof Error && reason.message === 'keys'
+        ? 'Invalid YAML: mapping keys must be unique scalar strings, numbers or booleans.'
+        : 'Manifest exceeds the resource, nesting or YAML alias limit.',
     }
   }
 }
 
 export function formatManifest(source: string): string {
-  const docs = parseAllDocuments(source, { version: '1.1', prettyErrors: false, uniqueKeys: true })
+  const docs = parseAllDocuments(source, { version: '1.1', prettyErrors: false, uniqueKeys: uniqueManifestKeys })
   if (docs.some((doc) => doc.errors.length)) throw new Error('Cannot format invalid YAML.')
   return docs
     .map((doc, index) => {

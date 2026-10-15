@@ -11,9 +11,9 @@ import { onKubeChange } from '@/lib/events'
 import { EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { useResources } from '@/store/resources'
 import { useActiveContexts, useUIStore } from '@/store/ui'
-import { buildManifestSchema } from './manifestSchema'
+import { buildManifestSchema, manifestSchemaInputs, manifestSchemaVersions } from './manifestSchema'
+import { ManifestSchemaCache } from './manifestSchemaCache'
 import {
-  asObject,
   MAX_MANIFEST_BYTES,
   mergeManifestOperation,
   parseManifestDraft,
@@ -55,7 +55,7 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
   const [sources, setSources] = useState<Record<string, unknown>>({})
   const [schemaUnavailable, setSchemaUnavailable] = useState<string[]>([])
   const [refresh, setRefresh] = useState(0)
-  const schemaCache = useRef(new Map<string, { promise: Promise<unknown>; expires: number }>())
+  const [schemaCache] = useState(() => new ManifestSchemaCache(api.getManifestSchema))
   const inputRef = useRef<HTMLInputElement>(null)
   const serialRef = useRef(0)
   const draftEpoch = useRef(0)
@@ -67,11 +67,20 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
   const path = `file:///klustr/resource-editor/${modelId}.yaml`
   const deferredSource = useDeferredValue(source)
   const draft = useMemo(() => parseManifestDraft(deferredSource), [deferredSource])
+  const schemaInput = JSON.stringify(manifestSchemaInputs(draft.objects))
+  const schemaVersionKey = JSON.stringify(
+    manifestSchemaVersions(draft.objects).filter(
+      (version) => catalog?.resources.some((item) => item.apiVersion === version),
+    ),
+  )
   const schema = useMemo(
-    () => buildManifestSchema(draft.objects, sources),
-    [draft.objects, sources],
+    () => buildManifestSchema(JSON.parse(schemaInput), sources),
+    [schemaInput, sources],
   )
   const connected = activeContexts.includes(contextName)
+  useEffect(() => {
+    if (!connected) schemaCache.clear()
+  }, [connected, schemaCache])
 
   const review = useMutation({
     mutationFn: (input: { contextName: string; namespace: string; source: string; epoch: number }) => api.reviewManifest(input.contextName, input.namespace, input.source),
@@ -87,16 +96,22 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
   const remaining = useMutation({
     mutationFn: () => api.reviewRemainingManifest(operation!.id),
     onSuccess: (next) => {
-      setOperation(next)
+      setOperation((current) =>
+        current?.id === next.id ? mergeManifestOperation(current, next) : current,
+      )
       setReveal(false)
       setError('')
     },
     onError: (reason) => {
       setError(String(reason))
       const id = operationRef.current?.id
-      if (id) void api.getManifestOperation(id)
-        .then((next) => setOperation((current) => mergeManifestOperation(current, next)))
-        .catch(() => {})
+      if (id) {
+        void api.getManifestOperation(id)
+          .then((next) => setOperation((current) =>
+            current?.id === id ? mergeManifestOperation(current, next) : current,
+          ))
+          .catch(() => {})
+      }
     },
   })
   const create = useMutation({
@@ -220,49 +235,31 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
     if (!open || !contextName) return
     return onKubeChange('_crds', (changed) => {
       if (changed !== contextName) return
-      schemaCache.current.clear()
+      schemaCache.clear()
       setRefresh((value) => value + 1)
     })
-  }, [open, contextName])
+  }, [open, contextName, schemaCache])
 
   useEffect(() => {
-    if (!open || !contextName) return
+    if (!open || !contextName || !connected) return
     let cancelled = false
     const timer = window.setTimeout(() => {
-      const versions = new Set<string>()
-      const visit = (object: Record<string, unknown>) => {
-        if (typeof object.apiVersion === 'string' && object.apiVersion)
-          versions.add(object.apiVersion)
-        if (object.kind === 'List' && Array.isArray(object.items))
-          object.items.forEach((item) => visit(asObject(item)))
-      }
-      draft.objects.forEach(visit)
+      const versions = JSON.parse(schemaVersionKey) as string[]
       void Promise.all(
-        [...versions].map(async (version) => {
-          const key = `${contextName}\n${version}`
-          try {
-            let cached = schemaCache.current.get(key)
-            if (!cached || cached.expires < Date.now()) {
-              const promise = api
-                .getManifestSchema(contextName, version)
-                .then((value) => JSON.parse(value) as unknown)
-                .catch(() => null)
-              cached = { promise, expires: Date.now() + 30_000 }
-              schemaCache.current.set(key, cached)
-            }
-            return { version, value: await cached.promise }
-          } catch {
-            return { version, value: null }
-          }
-        }),
+        versions.map(async (version) => ({
+          version,
+          value: await schemaCache.load(contextName, version),
+        })),
       ).then((results) => {
         if (cancelled) return
-        setSources(
-          Object.fromEntries(
-            results
-              .filter((result) => result.value)
-              .map((result) => [result.version, result.value]),
-          ),
+        const nextSources = Object.fromEntries(
+          results.filter((result) => result.value).map((result) => [result.version, result.value]),
+        )
+        setSources((previous) =>
+          Object.keys(previous).length === Object.keys(nextSources).length &&
+          Object.entries(nextSources).every(([key, value]) => previous[key] === value)
+            ? previous
+            : nextSources,
         )
         setSchemaUnavailable(
           results.filter((result) => !result.value).map((result) => result.version),
@@ -273,7 +270,7 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [open, contextName, draft.objects, refresh])
+  }, [open, contextName, connected, schemaVersionKey, refresh, schemaCache])
 
   useEffect(() => {
     if (!operation) return

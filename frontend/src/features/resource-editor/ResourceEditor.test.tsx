@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   cancelManifest: vi.fn(),
   saveTextFile: vi.fn(),
   openResource: vi.fn(),
+  yamlPane: vi.fn(),
 }))
 vi.mock('@/lib/api', () => ({ api: mocks }))
 vi.mock('@/lib/events', () => ({ onKubeChange: () => () => {} }))
@@ -46,7 +47,9 @@ vi.mock('@/store/resources', () => ({
   useResources: (selector: (state: unknown) => unknown) => selector({ namespaces: {} }),
 }))
 vi.mock('./ManifestYAMLPane', () => ({
-  default: ({ path, source, onChange }: { path: string; source: string; onChange: (value: string) => void }) => (
+  default: ({ path, source, schema, onChange }: { path: string; source: string; schema: unknown; onChange: (value: string) => void }) => {
+    mocks.yamlPane(schema)
+    return (
     <div className="monaco-editor" data-model-path={path}>
     <textarea
       aria-label="Manifest YAML"
@@ -54,7 +57,7 @@ vi.mock('./ManifestYAMLPane', () => ({
       onChange={(event) => onChange(event.target.value)}
     />
     </div>
-  ),
+  )},
   ManifestDiffPane: ({ before, after }: { before: string; after: string }) => (
     <div data-testid="diff">
       {before}|{after}
@@ -363,6 +366,39 @@ describe('resource editor workflow', () => {
     expect(document.querySelector('textarea')!.value).toContain('edited-in-other')
     await act(async () => button('Review resources').click()); await flush()
     expect(mocks.reviewManifest).toHaveBeenCalledWith('ctx', 'default', source.replace('example', 'edited-in-other'))
+  })
+
+  it('keeps schemas stable for value edits and does not fetch unserved draft API versions', async () => {
+    mocks.getManifestCatalog.mockResolvedValue({ resources: [{ apiVersion: 'v1', kind: 'ConfigMap', resource: 'configmaps', namespaced: true }], warnings: [], defaultNamespace: 'default' })
+    mocks.getManifestSchema.mockResolvedValue('{"components":{"schemas":{}}}')
+    await render(); await edit(source)
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
+    const schema = mocks.yamlPane.mock.lastCall![0]
+    await edit(source.replace('example', 'changed'))
+    expect(mocks.yamlPane.mock.lastCall![0]).toBe(schema)
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
+    expect(mocks.getManifestSchema).toHaveBeenCalledExactlyOnceWith('ctx', 'v1')
+    await edit(source.replace('v1', 'example.com/v99'))
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
+    expect(mocks.getManifestSchema).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not restore a discarded result from a late snapshot after a remaining-review error', async () => {
+    await render(); await edit(source)
+    await act(async () => button('Review resources').click()); await flush()
+    const result = reviewed(); result.phase = 'results'; result.revision = 5
+    result.resources[0].status = 'created'
+    result.resources.push({ ...result.resources[0], index: 1, name: 'remaining', status: 'blocked' })
+    await act(async () => { mocks.events?.(result) })
+    let resolve!: (value: ManifestOperation) => void
+    mocks.getManifestOperation.mockReturnValue(new Promise<ManifestOperation>((done) => { resolve = done }))
+    mocks.reviewRemainingManifest.mockRejectedValueOnce(new Error('disconnected'))
+    await act(async () => button('Review remaining').click()); await flush()
+    mocks.getRemainingManifest.mockResolvedValue(source.replace('example', 'remaining'))
+    await act(async () => button('Edit remaining').click()); await flush()
+    await act(async () => resolve(new kube.ManifestOperation({ ...result, revision: 7 })))
+    expect(document.querySelector('textarea')!.value).toContain('remaining')
+    expect(document.body.textContent).not.toContain('Open resource')
   })
 
   it('leaves Escape to Monaco while allowing Escape to close from other controls', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildManifestSchema, normalizeOpenAPISchema } from './manifestSchema'
+import { buildManifestSchema, manifestSchemaInputs, normalizeOpenAPISchema } from './manifestSchema'
 
 const openAPI = {
   components: {
@@ -30,10 +30,10 @@ describe('cluster schemas', () => {
       ],
       { v1: openAPI },
     )
-    expect(Object.keys(schema.definitions!)).toEqual(['d0_ConfigMap', 'd0_Metadata'])
-    expect(schema.schemaSequence?.[0].allOf?.[0]).toEqual({ $ref: '#/definitions/d0_ConfigMap' })
-    expect(schema.definitions?.d0_Metadata.properties?.owner).toEqual({
-      $ref: '#/definitions/d0_Metadata',
+    expect(Object.keys(schema.definitions!)).toEqual(['v1:ConfigMap', 'v1:Metadata'])
+    expect(schema.schemaSequence?.[0].allOf?.[0]).toEqual({ $ref: '#/definitions/v1:ConfigMap' })
+    expect(schema.definitions?.['v1:Metadata'].properties?.owner).toEqual({
+      $ref: '#/definitions/v1:Metadata',
     })
     expect(schema.schemaSequence?.[1].required).toContain('kind')
   })
@@ -62,7 +62,7 @@ describe('cluster schemas', () => {
     const v2 = buildManifestSchema([{ apiVersion: 'v1', kind: 'ConfigMap' }], {
       v1: { definitions: openAPI.components.schemas },
     })
-    expect(v2.definitions?.d0_ConfigMap).toBeDefined()
+    expect(v2.definitions?.['v1:ConfigMap']).toBeDefined()
   })
 
   it('normalizes nullable, int-or-string and preserve-unknown semantics', () => {
@@ -134,6 +134,20 @@ describe('cluster schemas', () => {
       [{ apiVersion: 'v1', kind: 'List', items: [{ apiVersion: 'v1', kind: 'ConfigMap' }] }],
       { v1: openAPI },
     )
-    expect(schema.definitions?.d0_i0_ConfigMap).toBeDefined()
+    expect(schema.definitions?.['v1:ConfigMap']).toBeDefined()
+  })
+
+  it('shares definitions across repeated documents and List items', () => {
+    const object = { apiVersion: 'v1', kind: 'ConfigMap' }
+    const schema = buildManifestSchema([...Array.from({ length: 50 }, () => object), { apiVersion: 'v1', kind: 'List', items: [object] }], { v1: openAPI })
+    expect(Object.keys(schema.definitions!)).toHaveLength(2)
+    expect(schema.schemaSequence).toHaveLength(51)
+  })
+
+  it('keeps schema inputs stable for ordinary edits and includes embedded CRD schema edits', () => {
+    const first = { apiVersion: 'v1', kind: 'ConfigMap', metadata: { name: 'first' }, data: { key: 'first' } }
+    expect(manifestSchemaInputs([first])).toEqual(manifestSchemaInputs([{ ...first, metadata: { name: 'second' }, data: { key: 'second' } }]))
+    const crd = { apiVersion: 'apiextensions.k8s.io/v1', kind: 'CustomResourceDefinition', spec: { group: 'example.com', names: { kind: 'Widget' }, versions: [{ name: 'v1', served: true, schema: { openAPIV3Schema: { type: 'object' } } }] } }
+    expect(manifestSchemaInputs([crd])[0].spec).toEqual(crd.spec)
   })
 })
