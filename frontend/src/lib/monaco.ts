@@ -11,6 +11,7 @@ import 'monaco-editor/languages/definitions/yaml/register'
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker'
 import YamlWorker from './yaml.worker?worker'
 import { configureMonacoYaml, type JSONSchema } from 'monaco-yaml'
+import { createYAMLWebWorker } from './monacoYamlWorker'
 
 globalThis.MonacoEnvironment = {
   getWorker: (_moduleId, label) => (label === 'yaml' ? new YamlWorker() : new EditorWorker()),
@@ -18,7 +19,10 @@ globalThis.MonacoEnvironment = {
 loader.config({ monaco })
 
 const schemas = new Map<string, JSONSchema>()
-const yamlService = configureMonacoYaml(monaco, {
+const yamlService = configureMonacoYaml({
+  ...monaco,
+  editor: { ...monaco.editor, createWebWorker: createYAMLWebWorker },
+}, {
   enableSchemaRequest: false,
   isKubernetes: true,
   yamlVersion: '1.1',

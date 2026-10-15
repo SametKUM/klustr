@@ -41,9 +41,10 @@ export default tseslint.config(
   },
   {
     // A direct import of the Monaco wrapper falls back to its CDN loader; the
-    // editors come from src/lib/monaco.ts, which bundles Monaco.
+    // editors come from src/lib/monaco.ts, which bundles Monaco. Its worker
+    // adapter and transport test also need the underlying editor API.
     files: ['**/*.{ts,tsx}'],
-    ignores: ['src/lib/monaco.ts'],
+    ignores: ['src/lib/monaco.ts', 'src/lib/monacoYamlWorker.ts', 'src/lib/monacoYamlWorker.test.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
