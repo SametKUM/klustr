@@ -672,7 +672,9 @@ function App() {
           </div>
           <div className="flex items-center gap-1">
             {/* Cluster session tools */}
-            <Button variant="outline" size="sm" disabled={globalReadOnly} onClick={() => openResourceEditor()}>Create resource</Button>
+            {!globalReadOnly && (
+              <Button variant="outline" size="sm" onClick={() => openResourceEditor()}>Create resource</Button>
+            )}
             <TerminalButton />
             <PortForwardIndicator />
             <ReadOnlyToggle />
