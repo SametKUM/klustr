@@ -251,31 +251,31 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
               </div>
             )}
           </div>
-          {resource && resource.kind !== 'HelmRelease' && (
+          {resource && (resource.kind !== 'HelmRelease' || resource.gvr) && (
             <div className="flex shrink-0 items-center gap-2 pt-1">
-              {!readOnly && resource.kind === 'Pod' && (
+              {!readOnly && !resource.gvr && resource.kind === 'Pod' && (
                 <ResizePodButton
                   contextName={contextName}
                   namespace={resource.namespace}
                   podName={resource.name}
                 />
               )}
-              {resource.kind === 'Pod' && (
+              {!resource.gvr && resource.kind === 'Pod' && (
                 <PortForwardButton contextName={contextName} resource={resource} />
               )}
-              {!readOnly && resource.kind === 'Node' && (
+              {!readOnly && !resource.gvr && resource.kind === 'Node' && (
                 <>
                   <CordonNodeButton contextName={contextName} resource={resource} />
                   <DrainNodeButton contextName={contextName} resource={resource} />
                 </>
               )}
-              {!readOnly && isPausable(resource.kind) && (
+              {!readOnly && !resource.gvr && isPausable(resource.kind) && (
                 <PauseDeploymentButton contextName={contextName} resource={resource} />
               )}
-              {!readOnly && isRestartable(resource.kind) && (
+              {!readOnly && !resource.gvr && isRestartable(resource.kind) && (
                 <RestartWorkloadButton contextName={contextName} resource={resource} />
               )}
-              {!readOnly && isScalable(resource.kind) && (
+              {!readOnly && !resource.gvr && isScalable(resource.kind) && (
                 <ScaleResourceButton contextName={contextName} resource={resource} />
               )}
               {!readOnly && isArgoApplication(resource) && (
@@ -377,7 +377,7 @@ const EVENT_BEARING_KINDS: ResourceKind[] = [
 ]
 
 function DetailContent({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
-  if (resource.kind === 'HelmRelease') {
+  if (resource.kind === 'HelmRelease' && !resource.gvr) {
     return <HelmReleaseTabs contextName={contextName} namespace={resource.namespace} name={resource.name} />
   }
   if (resource.gvr) {

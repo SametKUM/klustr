@@ -552,6 +552,7 @@ describe('resource editor workflow', () => {
     ['Deployment', 'apps/v1', 'deployments', undefined],
     ['Service', 'serving.knative.dev/v1', 'services', { group: 'serving.knative.dev', version: 'v1', resource: 'services' }],
     ['Widget', 'example.com/v2', 'widgets', { group: 'example.com', version: 'v2', resource: 'widgets' }],
+    ['HelmRelease', 'helm.toolkit.fluxcd.io/v2', 'helmreleases', { group: 'helm.toolkit.fluxcd.io', version: 'v2', resource: 'helmreleases' }],
   ])('opens %s (%s) with its correct resource identity', async (kind, apiVersion, resource, gvr) => {
     await render(); await edit(source)
     await act(async () => button('Review resources').click()); await flush()

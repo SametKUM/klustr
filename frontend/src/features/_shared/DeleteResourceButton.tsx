@@ -56,7 +56,8 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
   const del = useMutation({
     mutationFn: async () => {
       if (!contextName) throw new Error('no context')
-      await api.deleteResource(contextName, resource.kind, resource.namespace, resource.name)
+      const kind = resource.gvr ? `cr:${resource.gvr.group}/${resource.gvr.resource}` : resource.kind
+      await api.deleteResource(contextName, kind, resource.namespace, resource.name)
     },
     onSuccess: () => {
       toast.success(`Deleted ${resource.kind.toLowerCase()}/${resource.name}`)
