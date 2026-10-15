@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, Star, X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -17,6 +17,7 @@ import { namespaceLabel } from '@/lib/namespaceFilter'
 import { useResources } from '@/store/resources'
 import { selectFavorites, useNamespaceFavorites } from '@/store/namespaceFavorites'
 import { useActiveContexts, useUIStore } from '@/store/ui'
+import { NamespaceFavoriteButton } from './NamespaceFavoriteButton'
 
 export function NamespaceSelector() {
   const activeContexts = useActiveContexts()
@@ -196,7 +197,7 @@ function NamespaceRow({
           {ns.phase}
         </span>
       )}
-      <FavoriteButton name={ns.name} favorite={favorite} onToggle={onToggleFavorite} />
+      <NamespaceFavoriteButton name={ns.name} favorite={favorite} onToggle={onToggleFavorite} />
     </CommandItem>
   )
 }
@@ -239,36 +240,6 @@ function Checkbox({ checked, onToggle }: { checked: boolean; onToggle?: () => vo
       className="-m-1.5 shrink-0 rounded p-1.5 transition-colors hover:bg-muted"
     >
       {box}
-    </button>
-  )
-}
-
-function FavoriteButton({
-  name,
-  favorite,
-  onToggle,
-}: {
-  name: string
-  favorite: boolean
-  onToggle: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={favorite ? `Unfavorite ${name}` : `Favorite ${name}`}
-      title={favorite ? 'Unfavorite' : 'Favorite'}
-      onClick={(e) => {
-        e.stopPropagation()
-        onToggle()
-      }}
-      className={[
-        '-mr-1.5 inline-flex size-5 shrink-0 items-center justify-center rounded transition-colors',
-        favorite
-          ? 'text-amber-500 hover:bg-muted'
-          : 'text-muted-foreground/40 hover:bg-muted hover:text-foreground',
-      ].join(' ')}
-    >
-      <Star className={['size-3.5', favorite ? 'fill-current' : ''].join(' ')} />
     </button>
   )
 }

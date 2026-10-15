@@ -44,7 +44,10 @@ vi.mock('@/store/ui', () => ({
     }),
 }))
 vi.mock('@/store/resources', () => ({
-  useResources: (selector: (state: unknown) => unknown) => selector({ namespaces: {} }),
+  useResources: (selector: (state: unknown) => unknown) => selector({ namespaces: {
+    ctx: [{ name: 'default' }, { name: 'staging' }],
+    other: [{ name: 'other-only' }],
+  } }),
 }))
 vi.mock('./ManifestYAMLPane', () => ({
   default: ({ path, source, schema, onChange }: { path: string; source: string; schema: unknown; onChange: (value: string) => void }) => {
@@ -115,6 +118,13 @@ async function flush() {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 20))
   })
+}
+async function chooseNamespace(name: string) {
+  await act(async () => (document.querySelector('[aria-label="Default namespace"]') as HTMLButtonElement).click())
+  await flush()
+  const row = [...document.querySelectorAll('[role="option"]')].find((item) => item.textContent === name) as HTMLElement
+  if (!row) throw new Error(`Namespace missing: ${name}`)
+  await act(async () => row.click())
 }
 
 describe('resource editor workflow', () => {
@@ -367,13 +377,25 @@ describe('resource editor workflow', () => {
   it('cannot reuse a preview after the default namespace changes', async () => {
     await render(); await edit(source)
     await act(async () => button('Review resources').click()); await flush()
-    const namespace = document.querySelector('[aria-label="Default namespace"]')!
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(namespace, 'another')
-      namespace.dispatchEvent(new Event('input', { bubbles: true }))
-    })
+    await chooseNamespace('staging')
     expect(mocks.releaseManifest).toHaveBeenCalledWith('preview')
     expect(document.body.textContent).not.toContain('Create 1 resource')
+    expect(document.querySelector('textarea')!.value).toBe(source)
+    await act(async () => button('Review resources').click()); await flush()
+    expect(mocks.reviewManifest).toHaveBeenLastCalledWith('ctx', 'staging', source)
+  })
+
+  it('lists namespaces only from the chosen target context', async () => {
+    mocks.contexts = ['ctx', 'other']
+    await render(true, { serial: 1, target: { contextName: 'ctx' } })
+    await act(async () => (document.querySelector('[aria-label="Default namespace"]') as HTMLButtonElement).click())
+    expect([...document.querySelectorAll('[role="option"]')].map((item) => item.textContent)).toEqual(['default', 'staging'])
+    await act(async () => document.querySelector('input[aria-label="Filter target namespaces"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+    const context = document.querySelector('[aria-label="Target context"]') as HTMLSelectElement
+    await act(async () => { context.value = 'other'; context.dispatchEvent(new Event('change', { bubbles: true })) })
+    await flush()
+    await act(async () => (document.querySelector('[aria-label="Default namespace"]') as HTMLButtonElement).click())
+    expect([...document.querySelectorAll('[role="option"]')].map((item) => item.textContent)).toEqual(['default', 'other-only'])
   })
 
   it.each(['created', 'unknown'])('preserves %s results when another entry point requests a different target', async (status) => {
@@ -389,14 +411,12 @@ describe('resource editor workflow', () => {
     await act(async () => { mocks.events?.(result) })
     await render(true, { serial: 2, target: { contextName: 'other' } })
     const target = document.querySelector('[aria-label="Target context"]') as HTMLSelectElement
-    const namespace = document.querySelector('[aria-label="Default namespace"]') as HTMLInputElement
+    const namespace = document.querySelector('[aria-label="Default namespace"]') as HTMLButtonElement
     expect(target.disabled).toBe(true)
     expect(namespace.disabled).toBe(true)
     expect(target.value).toBe('ctx')
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(namespace, 'another')
-      namespace.dispatchEvent(new Event('input', { bubbles: true }))
-    })
+    await act(async () => namespace.click())
+    expect(document.querySelector('[aria-label="Filter target namespaces"]')).toBeNull()
     expect(mocks.releaseManifest).not.toHaveBeenCalled()
     expect(document.querySelector('textarea')).toBeNull()
     if (status === 'unknown') expect(button('Edit manifest').disabled).toBe(true)

@@ -17,7 +17,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import {
   Dialog,
@@ -41,6 +40,7 @@ import { api } from '@/lib/api'
 import { canCreateManifest, formatManifest, resourceTemplate } from './manifestModel'
 import { useManifestWorkspace, type ResourceEditorProps } from './useManifestWorkspace'
 import { ResourceKindPicker } from './ResourceKindPicker'
+import { ManifestNamespaceSelector } from './ManifestNamespaceSelector'
 
 const YAMLPane = lazy(() => import('./ManifestYAMLPane'))
 const DiffPane = lazy(() =>
@@ -80,7 +80,6 @@ export default function ResourceEditor(props: ResourceEditorProps) {
     schemaUnavailable,
     setRefresh,
     inputRef,
-    modelId,
     path,
     draft,
     schema,
@@ -163,22 +162,18 @@ export default function ResourceEditor(props: ResourceEditorProps) {
                   ))}
                 </select>
               </label>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                Default namespace
-                <Input
-                  aria-label="Default namespace"
-                  className="h-8 w-44 text-xs"
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Default namespace</span>
+                <ManifestNamespaceSelector
+                  key={contextName}
+                  contextName={contextName}
+                  namespaces={(namespaces[contextName] ?? []).map((item) => item.name)}
                   value={namespace}
-                  list={`${modelId}-namespaces`}
-                  disabled={busy || targetLocked}
-                  onChange={(event) => changeNamespace(event.target.value)}
+                  disabled={busy || targetLocked || !connected}
+                  onValueChange={changeNamespace}
+                  container={dialogContent}
                 />
-                <datalist id={`${modelId}-namespaces`}>
-                  {(namespaces[contextName] ?? []).map((item) => (
-                    <option key={item.name} value={item.name} />
-                  ))}
-                </datalist>
-              </label>
+              </div>
               <span className="text-[11px] text-muted-foreground">
                 Used only when metadata.namespace is absent
               </span>
