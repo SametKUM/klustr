@@ -6655,6 +6655,154 @@ export namespace kube {
 	    }
 	}
 	
+	export class ManifestKind {
+	    apiVersion: string;
+	    kind: string;
+	    resource: string;
+	    namespaced: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ManifestKind(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.apiVersion = source["apiVersion"];
+	        this.kind = source["kind"];
+	        this.resource = source["resource"];
+	        this.namespaced = source["namespaced"];
+	    }
+	}
+	export class ManifestCatalog {
+	    resources: ManifestKind[];
+	    defaultNamespace: string;
+	    warnings: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ManifestCatalog(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.resources = this.convertValues(source["resources"], ManifestKind);
+	        this.defaultNamespace = source["defaultNamespace"];
+	        this.warnings = source["warnings"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class ManifestResource {
+	    index: number;
+	    document: number;
+	    line: number;
+	    apiVersion: string;
+	    kind: string;
+	    resource: string;
+	    namespace: string;
+	    name: string;
+	    generateName: string;
+	    status: string;
+	    error: string;
+	    reason: string;
+	    warnings: string[];
+	    dependencies: number[];
+	    sensitive: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ManifestResource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.document = source["document"];
+	        this.line = source["line"];
+	        this.apiVersion = source["apiVersion"];
+	        this.kind = source["kind"];
+	        this.resource = source["resource"];
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	        this.generateName = source["generateName"];
+	        this.status = source["status"];
+	        this.error = source["error"];
+	        this.reason = source["reason"];
+	        this.warnings = source["warnings"];
+	        this.dependencies = source["dependencies"];
+	        this.sensitive = source["sensitive"];
+	    }
+	}
+	export class ManifestOperation {
+	    revision: number;
+	    id: string;
+	    contextName: string;
+	    phase: string;
+	    resources: ManifestResource[];
+	    warnings: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ManifestOperation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.revision = source["revision"];
+	        this.id = source["id"];
+	        this.contextName = source["contextName"];
+	        this.phase = source["phase"];
+	        this.resources = this.convertValues(source["resources"], ManifestResource);
+	        this.warnings = source["warnings"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ManifestPreview {
+	    before: string;
+	    after: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ManifestPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.before = source["before"];
+	        this.after = source["after"];
+	    }
+	}
+	
 	export class MutationDiff {
 	    kind: string;
 	    name: string;

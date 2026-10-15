@@ -92,6 +92,7 @@ type ClientManager struct {
 	creds       *credentialManager
 	appCtx      context.Context
 	credRewatch map[string]bool
+	manifests   manifestSessions
 }
 
 func NewClientManager() *ClientManager {
@@ -426,6 +427,7 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 // Shutdown stops every port-forward, stream, session and watcher the manager
 // owns. Wails calls it from the OnShutdown hook.
 func (m *ClientManager) Shutdown() {
+	m.cancelManifests("")
 	m.pf.stopAll()
 	m.logs.stopAll()
 	m.execs.stopAll()
@@ -443,6 +445,7 @@ func (m *ClientManager) Shutdown() {
 }
 
 func (m *ClientManager) StopWatch(contextName string) {
+	m.cancelManifests(contextName)
 	l := m.watchLock(contextName)
 	l.Lock()
 	defer l.Unlock()

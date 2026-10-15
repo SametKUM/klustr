@@ -212,6 +212,11 @@ export type LimitRangeInfo = kube.LimitRangeInfo
 export type ListenerSetListenerDetail = kube.ListenerSetListenerDetail
 export type ListenerSetDetail = kube.ListenerSetDetail
 export type ListenerSetInfo = kube.ListenerSetInfo
+export type ManifestKind = kube.ManifestKind
+export type ManifestCatalog = kube.ManifestCatalog
+export type ManifestResource = kube.ManifestResource
+export type ManifestOperation = kube.ManifestOperation
+export type ManifestPreview = kube.ManifestPreview
 export type MutationDiff = kube.MutationDiff
 export type NamespaceDetail = kube.NamespaceDetail
 export type NamespaceInfo = kube.NamespaceInfo
@@ -323,6 +328,7 @@ export const generatedApi = {
   addHelmRepo: bindings.AddHelmRepo,
   applyResourceYAML: bindings.ApplyResourceYAML,
   approveCertificateSigningRequest: bindings.ApproveCertificateSigningRequest,
+  cancelManifest: bindings.CancelManifest,
   cancelTektonPipelineRun: bindings.CancelTektonPipelineRun,
   cancelTektonTaskRun: bindings.CancelTektonTaskRun,
   captureCredentials: bindings.CaptureCredentials,
@@ -332,6 +338,7 @@ export const generatedApi = {
   checkForUpdate: bindings.CheckForUpdate,
   clearCredentialMapping: bindings.ClearCredentialMapping,
   cordonNode: bindings.CordonNode,
+  createManifest: bindings.CreateManifest,
   deleteArgoApplication: bindings.DeleteArgoApplication,
   deleteResource: bindings.DeleteResource,
   denyCertificateSigningRequest: bindings.DenyCertificateSigningRequest,
@@ -402,6 +409,10 @@ export const generatedApi = {
   getLease: bindings.GetLease,
   getLimitRange: bindings.GetLimitRange,
   getListenerSet: bindings.GetListenerSet,
+  getManifestCatalog: bindings.GetManifestCatalog,
+  getManifestOperation: bindings.GetManifestOperation,
+  getManifestPreview: bindings.GetManifestPreview,
+  getManifestSchema: bindings.GetManifestSchema,
   getMutatingAdmissionPolicy: bindings.GetMutatingAdmissionPolicy,
   getMutatingAdmissionPolicyBinding: bindings.GetMutatingAdmissionPolicyBinding,
   getMutatingWebhookConfiguration: bindings.GetMutatingWebhookConfiguration,
@@ -586,6 +597,7 @@ export const generatedApi = {
   recommendInsecureKubeletTLS: bindings.RecommendInsecureKubeletTLS,
   reconcileFluxResource: bindings.ReconcileFluxResource,
   refreshArgoApplication: bindings.RefreshArgoApplication,
+  releaseManifest: bindings.ReleaseManifest,
   removeHelmRepo: bindings.RemoveHelmRepo,
   renewCertificate: bindings.RenewCertificate,
   rerunTektonPipelineRun: bindings.RerunTektonPipelineRun,
@@ -594,6 +606,8 @@ export const generatedApi = {
   resizePodResources: bindings.ResizePodResources,
   restartWorkload: bindings.RestartWorkload,
   revealSecretValue: bindings.RevealSecretValue,
+  reviewManifest: bindings.ReviewManifest,
+  reviewRemainingManifest: bindings.ReviewRemainingManifest,
   rollbackArgoApplication: bindings.RollbackArgoApplication,
   rollbackDaemonSet: bindings.RollbackDaemonSet,
   rollbackDeployment: bindings.RollbackDeployment,

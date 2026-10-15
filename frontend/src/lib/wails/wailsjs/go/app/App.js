@@ -14,6 +14,10 @@ export function ApproveCertificateSigningRequest(arg1, arg2, arg3) {
   return window['go']['app']['App']['ApproveCertificateSigningRequest'](arg1, arg2, arg3);
 }
 
+export function CancelManifest(arg1) {
+  return window['go']['app']['App']['CancelManifest'](arg1);
+}
+
 export function CancelTektonPipelineRun(arg1, arg2, arg3) {
   return window['go']['app']['App']['CancelTektonPipelineRun'](arg1, arg2, arg3);
 }
@@ -48,6 +52,10 @@ export function ClearCredentialMapping(arg1) {
 
 export function CordonNode(arg1, arg2, arg3) {
   return window['go']['app']['App']['CordonNode'](arg1, arg2, arg3);
+}
+
+export function CreateManifest(arg1) {
+  return window['go']['app']['App']['CreateManifest'](arg1);
 }
 
 export function DeleteArgoApplication(arg1, arg2, arg3, arg4) {
@@ -328,6 +336,22 @@ export function GetLimitRange(arg1, arg2, arg3) {
 
 export function GetListenerSet(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetListenerSet'](arg1, arg2, arg3);
+}
+
+export function GetManifestCatalog(arg1) {
+  return window['go']['app']['App']['GetManifestCatalog'](arg1);
+}
+
+export function GetManifestOperation(arg1) {
+  return window['go']['app']['App']['GetManifestOperation'](arg1);
+}
+
+export function GetManifestPreview(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetManifestPreview'](arg1, arg2, arg3);
+}
+
+export function GetManifestSchema(arg1, arg2) {
+  return window['go']['app']['App']['GetManifestSchema'](arg1, arg2);
 }
 
 export function GetMutatingAdmissionPolicy(arg1, arg2) {
@@ -1066,6 +1090,10 @@ export function RefreshArgoApplication(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['RefreshArgoApplication'](arg1, arg2, arg3, arg4);
 }
 
+export function ReleaseManifest(arg1) {
+  return window['go']['app']['App']['ReleaseManifest'](arg1);
+}
+
 export function RemoveHelmRepo(arg1) {
   return window['go']['app']['App']['RemoveHelmRepo'](arg1);
 }
@@ -1096,6 +1124,14 @@ export function RestartWorkload(arg1, arg2, arg3, arg4) {
 
 export function RevealSecretValue(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['RevealSecretValue'](arg1, arg2, arg3, arg4);
+}
+
+export function ReviewManifest(arg1, arg2, arg3) {
+  return window['go']['app']['App']['ReviewManifest'](arg1, arg2, arg3);
+}
+
+export function ReviewRemainingManifest(arg1) {
+  return window['go']['app']['App']['ReviewRemainingManifest'](arg1);
 }
 
 export function RollbackArgoApplication(arg1, arg2, arg3, arg4, arg5) {

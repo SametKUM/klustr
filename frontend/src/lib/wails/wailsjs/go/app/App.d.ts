@@ -9,6 +9,8 @@ export function ApplyResourceYAML(arg1:string,arg2:string):Promise<void>;
 
 export function ApproveCertificateSigningRequest(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function CancelManifest(arg1:string):Promise<void>;
+
 export function CancelTektonPipelineRun(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function CancelTektonTaskRun(arg1:string,arg2:string,arg3:string):Promise<void>;
@@ -26,6 +28,8 @@ export function CheckForUpdate():Promise<update.Result>;
 export function ClearCredentialMapping(arg1:string):Promise<void>;
 
 export function CordonNode(arg1:string,arg2:string,arg3:boolean):Promise<void>;
+
+export function CreateManifest(arg1:string):Promise<kube.ManifestOperation>;
 
 export function DeleteArgoApplication(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
@@ -166,6 +170,14 @@ export function GetLease(arg1:string,arg2:string,arg3:string):Promise<kube.Lease
 export function GetLimitRange(arg1:string,arg2:string,arg3:string):Promise<kube.LimitRangeDetail>;
 
 export function GetListenerSet(arg1:string,arg2:string,arg3:string):Promise<kube.ListenerSetDetail>;
+
+export function GetManifestCatalog(arg1:string):Promise<kube.ManifestCatalog>;
+
+export function GetManifestOperation(arg1:string):Promise<kube.ManifestOperation>;
+
+export function GetManifestPreview(arg1:string,arg2:number,arg3:boolean):Promise<kube.ManifestPreview>;
+
+export function GetManifestSchema(arg1:string,arg2:string):Promise<string>;
 
 export function GetMutatingAdmissionPolicy(arg1:string,arg2:string):Promise<kube.AdmissionPolicyDetail>;
 
@@ -535,6 +547,8 @@ export function ReconcileFluxResource(arg1:string,arg2:string,arg3:string,arg4:s
 
 export function RefreshArgoApplication(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
+export function ReleaseManifest(arg1:string):Promise<void>;
+
 export function RemoveHelmRepo(arg1:string):Promise<void>;
 
 export function RenewCertificate(arg1:string,arg2:string,arg3:string):Promise<void>;
@@ -550,6 +564,10 @@ export function ResizePodResources(arg1:string,arg2:string,arg3:string,arg4:stri
 export function RestartWorkload(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function RevealSecretValue(arg1:string,arg2:string,arg3:string,arg4:string):Promise<kube.SecretValueResult>;
+
+export function ReviewManifest(arg1:string,arg2:string,arg3:string):Promise<kube.ManifestOperation>;
+
+export function ReviewRemainingManifest(arg1:string):Promise<kube.ManifestOperation>;
 
 export function RollbackArgoApplication(arg1:string,arg2:string,arg3:string,arg4:number,arg5:boolean):Promise<void>;
 
