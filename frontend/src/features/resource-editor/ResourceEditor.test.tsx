@@ -120,11 +120,21 @@ async function flush() {
   })
 }
 async function chooseNamespace(name: string) {
-  await act(async () => (document.querySelector('[aria-label="Default namespace"]') as HTMLButtonElement).click())
+  await act(async () => (document.querySelector('[aria-label="Namespace"]') as HTMLButtonElement).click())
   await flush()
   const row = [...document.querySelectorAll('[role="option"]')].find((item) => item.textContent === name) as HTMLElement
   if (!row) throw new Error(`Namespace missing: ${name}`)
   await act(async () => row.click())
+}
+async function addNamespace(name: string) {
+  await act(async () => (document.querySelector('[aria-label="Namespace"]') as HTMLButtonElement).click())
+  await act(async () => button('New namespace…').click())
+  const input = document.querySelector('form[aria-label="New namespace"] input')!
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, name)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await act(async () => button('Add namespace').click())
 }
 
 describe('resource editor workflow', () => {
@@ -388,14 +398,60 @@ describe('resource editor workflow', () => {
   it('lists namespaces only from the chosen target context', async () => {
     mocks.contexts = ['ctx', 'other']
     await render(true, { serial: 1, target: { contextName: 'ctx' } })
-    await act(async () => (document.querySelector('[aria-label="Default namespace"]') as HTMLButtonElement).click())
+    await act(async () => (document.querySelector('[aria-label="Namespace"]') as HTMLButtonElement).click())
     expect([...document.querySelectorAll('[role="option"]')].map((item) => item.textContent)).toEqual(['default', 'staging'])
     await act(async () => document.querySelector('input[aria-label="Filter target namespaces"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
     const context = document.querySelector('[aria-label="Target context"]') as HTMLSelectElement
     await act(async () => { context.value = 'other'; context.dispatchEvent(new Event('change', { bubbles: true })) })
     await flush()
-    await act(async () => (document.querySelector('[aria-label="Default namespace"]') as HTMLButtonElement).click())
+    await act(async () => (document.querySelector('[aria-label="Namespace"]') as HTMLButtonElement).click())
     expect([...document.querySelectorAll('[role="option"]')].map((item) => item.textContent)).toEqual(['default', 'other-only'])
+  })
+
+  it('stages a new namespace and reviews it with its dependent resources before creation', async () => {
+    const operation = reviewed()
+    const configMap = { ...operation.resources[0], index: 1, namespace: 'new-project', status: 'blocked', dependencies: [0] }
+    operation.resources = [
+      { ...operation.resources[0], kind: 'Namespace', resource: 'namespaces', name: 'new-project', namespace: '' },
+      configMap,
+    ]
+    mocks.reviewManifest.mockResolvedValue(operation)
+    mocks.getManifestOperation.mockResolvedValue(operation)
+    await render(); await edit(source)
+    expect(document.body.textContent).not.toContain('Default namespace')
+    await addNamespace('new-project')
+    const next = document.querySelector('textarea')!.value
+    expect(next).toContain('kind: Namespace\nmetadata:\n  name: "new-project"')
+    expect(next.endsWith(source)).toBe(true)
+    expect(document.querySelector('[aria-label="Namespace"]')!.textContent).toBe('new-project')
+    expect(mocks.reviewManifest).not.toHaveBeenCalled()
+    expect(mocks.createManifest).not.toHaveBeenCalled()
+    await act(async () => button('Review resources').click()); await flush()
+    expect(mocks.reviewManifest).toHaveBeenCalledExactlyOnceWith('ctx', 'new-project', next)
+    expect(document.body.textContent).toContain('Awaiting prerequisite')
+    expect(button('Create 1 resource').disabled).toBe(false)
+    expect(mocks.createManifest).not.toHaveBeenCalled()
+  })
+
+  it('preserves an invalid draft and its target when namespace staging fails', async () => {
+    await render(); await edit('data: [private-value')
+    await addNamespace('new-project')
+    expect(document.querySelector('textarea')!.value).toBe('data: [private-value')
+    expect(document.querySelector('[aria-label="Namespace"]')!.textContent).toBe('default')
+    expect(document.querySelector('form[aria-label="New namespace"]')).not.toBeNull()
+    expect(document.body.textContent).toContain('Fix manifest errors or resource limits')
+    expect(mocks.reviewManifest).not.toHaveBeenCalled()
+    expect(mocks.createManifest).not.toHaveBeenCalled()
+  })
+
+  it('can add the selected new namespace again after clearing the draft', async () => {
+    await render(); await addNamespace('new-project')
+    await act(async () => button('Clear').click())
+    await act(async () => button('Clear draft').click())
+    expect(document.querySelector('textarea')!.value).toBe('')
+    await addNamespace('new-project')
+    expect(document.querySelector('textarea')!.value).toContain('kind: Namespace\nmetadata:\n  name: "new-project"')
+    expect(mocks.createManifest).not.toHaveBeenCalled()
   })
 
   it.each(['created', 'unknown'])('preserves %s results when another entry point requests a different target', async (status) => {
@@ -411,7 +467,7 @@ describe('resource editor workflow', () => {
     await act(async () => { mocks.events?.(result) })
     await render(true, { serial: 2, target: { contextName: 'other' } })
     const target = document.querySelector('[aria-label="Target context"]') as HTMLSelectElement
-    const namespace = document.querySelector('[aria-label="Default namespace"]') as HTMLButtonElement
+    const namespace = document.querySelector('[aria-label="Namespace"]') as HTMLButtonElement
     expect(target.disabled).toBe(true)
     expect(namespace.disabled).toBe(true)
     expect(target.value).toBe('ctx')

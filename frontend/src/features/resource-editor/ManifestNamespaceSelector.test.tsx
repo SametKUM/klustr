@@ -10,15 +10,17 @@ describe('manifest namespace selection', () => {
   let container: HTMLDivElement
   let root: Root
   const onValueChange = vi.fn()
+  const onCreateNamespace = vi.fn(() => true)
   const scrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView')
   const render = async (props = {}) => {
     await act(async () => root.render(
-      <ManifestNamespaceSelector key="ctx" contextName="ctx" namespaces={['staging', 'default', 'staging', 'zebra']} value="default" disabled={false} container={container} onValueChange={onValueChange} {...props} />,
+      <ManifestNamespaceSelector key="ctx" contextName="ctx" namespaces={['staging', 'default', 'staging', 'zebra']} value="default" disabled={false} container={container} onValueChange={onValueChange} onCreateNamespace={onCreateNamespace} {...props} />,
     ))
   }
-  const trigger = () => container.querySelector('[aria-label="Default namespace"]') as HTMLButtonElement
+  const trigger = () => container.querySelector('[aria-label="Namespace"]') as HTMLButtonElement
   const options = () => [...container.querySelectorAll('[role="option"]')]
   const open = async () => { await act(async () => trigger().click()) }
+  const button = (text: string) => [...container.querySelectorAll('button')].find((item) => item.textContent?.trim() === text)!
   const search = async (value: string) => {
     const input = container.querySelector('input')!
     await act(async () => {
@@ -28,6 +30,7 @@ describe('manifest namespace selection', () => {
   }
   beforeEach(() => {
     onValueChange.mockClear()
+    onCreateNamespace.mockReset().mockReturnValue(true)
     useNamespaceFavorites.setState({ byContext: {} })
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
     Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
@@ -95,6 +98,56 @@ describe('manifest namespace selection', () => {
     expect(options().map((item) => item.textContent)).toEqual(['Use "new-project"'])
     await act(async () => (options()[0] as HTMLElement).click())
     expect(onValueChange).toHaveBeenCalledExactlyOnceWith('new-project')
+    expect(onCreateNamespace).not.toHaveBeenCalled()
+  })
+
+  it('always offers namespace creation and stages it only after explicit submission', async () => {
+    await render(); await open()
+    expect(button('New namespace…')).toBeDefined()
+    await search('new-project')
+    await act(async () => button('New namespace…').click())
+    expect(container.querySelector('input')!.value).toBe('new-project')
+    expect(container.textContent).toContain('Added to this draft and created after review.')
+    expect(onCreateNamespace).not.toHaveBeenCalled()
+    await act(async () => button('Add namespace').click())
+    expect(onCreateNamespace).toHaveBeenCalledExactlyOnceWith('new-project')
+    expect(onValueChange).not.toHaveBeenCalled()
+    expect(container.querySelector('[data-slot="popover-content"]')).toBeNull()
+  })
+
+  it('validates new namespace names and prevents adding an already listed namespace', async () => {
+    await render(); await open()
+    await act(async () => button('New namespace…').click())
+    for (const name of ['', 'Invalid_Name', '-invalid', 'a'.repeat(64), 'default']) {
+      await search(name)
+      expect(button('Add namespace').disabled).toBe(true)
+      await act(async () => container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+    }
+    expect(container.textContent).toContain('This namespace is already listed.')
+    expect(onCreateNamespace).not.toHaveBeenCalled()
+    expect(onValueChange).not.toHaveBeenCalled()
+    await act(async () => button('Back').click())
+    expect(options().map((item) => item.textContent)).toEqual(['default', 'staging', 'zebra'])
+  })
+
+  it('keeps the name and form open when adding to the draft fails', async () => {
+    onCreateNamespace.mockReturnValue(false)
+    await render(); await open()
+    await act(async () => button('New namespace…').click())
+    await search('new-project')
+    await act(async () => button('Add namespace').click())
+    expect(container.querySelector('input')!.value).toBe('new-project')
+    expect(container.querySelector('[role="alert"]')!.textContent).toContain('Check the manifest for errors.')
+    expect(onValueChange).not.toHaveBeenCalled()
+  })
+
+  it('can create a selected target that is absent from the namespace list', async () => {
+    await render({ namespaces: [], value: 'new-project' }); await open()
+    await act(async () => button('New namespace…').click())
+    expect(container.querySelector('input')!.value).toBe('new-project')
+    expect(button('Add namespace').disabled).toBe(false)
+    await act(async () => button('Add namespace').click())
+    expect(onCreateNamespace).toHaveBeenCalledExactlyOnceWith('new-project')
   })
 
   it.each(['Invalid_Name', '-invalid', 'a'.repeat(64), 'no spaces'])('rejects invalid custom namespace %s', async (name) => {

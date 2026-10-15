@@ -14,6 +14,7 @@ import { useActiveContexts, useUIStore } from '@/store/ui'
 import { buildManifestSchema, manifestSchemaInputs, manifestSchemaVersions } from './manifestSchema'
 import { ManifestSchemaCache } from './manifestSchemaCache'
 import {
+  addNamespaceToManifest,
   MAX_MANIFEST_BYTES,
   mergeManifestOperation,
   parseManifestDraft,
@@ -175,6 +176,21 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
     if (busy || targetLocked) return
     discardPreview()
     setNamespace(value)
+  }
+  const addNamespace = (name: string): boolean => {
+    if (busy || targetLocked || !connected) return false
+    try {
+      const next = addNamespaceToManifest(source, name)
+      discardPreview()
+      setSource(next)
+      setNamespace(name)
+      setSelected(0)
+      setEditorLocation({ line: 1 })
+      return true
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not add the namespace to the manifest.')
+      return false
+    }
   }
 
   useEffect(() => {
@@ -364,6 +380,7 @@ export function useManifestWorkspace({ open, onOpenChange, request }: ResourceEd
     namespace,
     setNamespace,
     changeNamespace,
+    addNamespace,
     targetLocked,
     source,
     catalog,

@@ -60,6 +60,7 @@ export default function ResourceEditor(props: ResourceEditorProps) {
     contextName,
     namespace,
     changeNamespace,
+    addNamespace,
     targetLocked,
     source,
     catalog,
@@ -163,19 +164,23 @@ export default function ResourceEditor(props: ResourceEditorProps) {
                 </select>
               </label>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Default namespace</span>
+                <span>Namespace</span>
                 <ManifestNamespaceSelector
                   key={contextName}
                   contextName={contextName}
-                  namespaces={(namespaces[contextName] ?? []).map((item) => item.name)}
+                  namespaces={[
+                    ...(namespaces[contextName] ?? []).map((item) => item.name),
+                    ...draft.outline.filter((item) => item.apiVersion === 'v1' && item.kind === 'Namespace').map((item) => item.name),
+                  ].filter(Boolean)}
                   value={namespace}
                   disabled={busy || targetLocked || !connected}
                   onValueChange={changeNamespace}
+                  onCreateNamespace={addNamespace}
                   container={dialogContent}
                 />
               </div>
               <span className="text-[11px] text-muted-foreground">
-                Used only when metadata.namespace is absent
+                Used when YAML does not specify a namespace
               </span>
             </div>
           </DialogHeader>

@@ -132,6 +132,24 @@ export function formatManifest(source: string): string {
     .join('')
 }
 
+export function isValidNamespaceName(name: string): boolean {
+  return name.length <= 63 && /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(name)
+}
+
+export function addNamespaceToManifest(source: string, name: string): string {
+  if (!isValidNamespaceName(name)) throw new Error('Enter a valid namespace name.')
+  const current = parseManifestDraft(source)
+  if (!current.error && current.outline.some((item) =>
+    item.apiVersion === 'v1' && item.kind === 'Namespace' && item.name === name,
+  )) return source
+  // Quote names such as "yes" and "123" to preserve YAML 1.1 string semantics.
+  const namespace = `apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ${JSON.stringify(name)}\n`
+  const next = source.trim() ? `${namespace}---\n${source}` : namespace
+  if (parseManifestDraft(next).error)
+    throw new Error('Fix manifest errors or resource limits before adding a namespace.')
+  return next
+}
+
 export function mergeManifestOperation(
   current: ManifestOperation | null,
   incoming: ManifestOperation,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ManifestOperation } from '@/lib/api'
 import {
+  addNamespaceToManifest,
   canCreateManifest,
   formatManifest,
   MAX_MANIFEST_BYTES,
@@ -72,6 +73,34 @@ describe('manifest draft', () => {
     expect(parseManifestDraft(`${manifest}data:\n  enabled: yes\n`).objects[0].data).toEqual({
       enabled: true,
     })
+  })
+
+  it.each(['new-project', 'yes', '123'])('adds a Namespace draft with the string name %s', (name) => {
+    const next = addNamespaceToManifest('', name)
+    const parsed = parseManifestDraft(next)
+    expect(parsed.error).toBeNull()
+    expect(parsed.objects[0]).toEqual({ apiVersion: 'v1', kind: 'Namespace', metadata: { name } })
+  })
+
+  it('prepends a namespace while preserving the original manifest and comments', () => {
+    const original = `# keep this\n${manifest}data:\n  message: hello\n`
+    const next = addNamespaceToManifest(original, 'new-project')
+    expect(next.endsWith(original)).toBe(true)
+    expect(parseManifestDraft(next).outline.map((item) => [item.kind, item.name])).toEqual([
+      ['Namespace', 'new-project'], ['ConfigMap', 'example'],
+    ])
+    expect(parseManifestDraft(addNamespaceToManifest('# comment only\n', 'new-project')).error).toBeNull()
+  })
+
+  it('reuses an existing Namespace even inside a Kubernetes List', () => {
+    const original = 'apiVersion: v1\nkind: List\nitems:\n  - apiVersion: v1\n    kind: Namespace\n    metadata:\n      name: new-project\n'
+    expect(addNamespaceToManifest(original, 'new-project')).toBe(original)
+  })
+
+  it('rejects invalid names, broken drafts and drafts at their resource limit', () => {
+    expect(() => addNamespaceToManifest(manifest, 'Invalid_Name')).toThrow('valid namespace name')
+    expect(() => addNamespaceToManifest('data: [private-value', 'new-project')).toThrow('Fix manifest errors')
+    expect(() => addNamespaceToManifest(Array.from({ length: 200 }, () => manifest).join('---\n'), 'new-project')).toThrow('resource limits')
   })
 
   it.each([
