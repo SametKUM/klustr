@@ -62,9 +62,10 @@ export function parseManifestDraft(source: string): {
   objects: ManifestObject[]
   outline: OutlineResource[]
   error: string | null
+  schemaIdentities: ManifestObject[]
 } {
   if (new TextEncoder().encode(source).length > MAX_MANIFEST_BYTES)
-    return { objects: [], outline: [], error: 'Manifest exceeds the 2 MiB limit.' }
+    return { objects: [], outline: [], schemaIdentities: [], error: 'Manifest exceeds the 2 MiB limit.' }
   const lineCounter = new LineCounter()
   const docs = parseAllDocuments(source, {
     version: '1.1',
@@ -75,6 +76,16 @@ export function parseManifestDraft(source: string): {
   })
   const objects: ManifestObject[] = []
   const outline: OutlineResource[] = []
+  // Reading scalar identity fields does not expand aliases or convert malformed
+  // document bodies. They are hints for completion, never input to creation.
+  const schemaIdentities = docs.slice(0, MAX_MANIFEST_RESOURCES).map((doc) => {
+    const apiVersion = doc.get('apiVersion')
+    const kind = doc.get('kind')
+    return {
+      apiVersion: typeof apiVersion === 'string' ? apiVersion : '',
+      kind: typeof kind === 'string' ? kind : '',
+    }
+  })
   const visit = (value: unknown, document: number, line: number, depth = 0) => {
     if (depth > 100) throw new Error('nesting')
     const obj = asObject(value)
@@ -101,6 +112,7 @@ export function parseManifestDraft(source: string): {
         return {
           objects,
           outline,
+          schemaIdentities,
           error: `Invalid YAML in document ${index + 1}, line ${position.line}, column ${position.col}.`,
         }
       }
@@ -116,12 +128,14 @@ export function parseManifestDraft(source: string): {
     return {
       objects,
       outline,
+      schemaIdentities,
       error: outline.length ? null : 'Add a Kubernetes manifest to begin.',
     }
   } catch (reason) {
     return {
       objects: [],
       outline: [],
+      schemaIdentities,
       error: reason instanceof Error && reason.message === 'keys'
         ? 'Invalid YAML: mapping keys must be unique scalar strings, numbers or booleans.'
         : 'Manifest exceeds the resource, nesting or YAML alias limit.',

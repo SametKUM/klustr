@@ -580,6 +580,20 @@ describe('resource editor workflow', () => {
     expect(mocks.yamlPane.mock.lastCall![0]).toBe(next)
   })
 
+  it('uses the partial document identity after replacing a draft with malformed YAML of another kind', async () => {
+    await render(); await edit(source)
+    const deployment = 'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test\nspec:\n  replicas: 1\n  sel\n'
+    await edit(deployment)
+    const schema = mocks.yamlPane.mock.lastCall![0]
+    expect(schema.schemaSequence).toHaveLength(1)
+    expect(schema.schemaSequence[0].properties.kind).toEqual({ const: 'Deployment' })
+    expect(schema.schemaSequence[0].properties.apiVersion).toEqual({ const: 'apps/v1' })
+    await edit(deployment.replace('  sel\n', '  selector: {}\n'))
+    expect(mocks.yamlPane.mock.lastCall![0]).toBe(schema)
+    await edit(`${deployment.replace('  sel\n', '  ? [complex, key]\n  : value\n')}`)
+    expect(mocks.yamlPane.mock.lastCall![0]).toBe(schema)
+  })
+
   it('does not restore a discarded result from a late snapshot after a remaining-review error', async () => {
     await render(); await edit(source)
     await act(async () => button('Review resources').click()); await flush()

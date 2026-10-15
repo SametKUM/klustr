@@ -54,6 +54,19 @@ describe('manifest draft', () => {
     expect(draft.objects).toHaveLength(2)
   })
 
+  it('extracts only scalar schema identities from malformed documents without relaxing errors', () => {
+    const source = 'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test\nspec:\n  replicas: 1\n  sel\n'
+    const draft = parseManifestDraft(source)
+    expect(draft.error).toMatch(/Invalid YAML/)
+    expect(draft.objects).toEqual([])
+    expect(draft.schemaIdentities).toEqual([{ apiVersion: 'apps/v1', kind: 'Deployment' }])
+    for (const value of ['*missing', '{ nested: private-value }', '[private-value]']) {
+      const partial = parseManifestDraft(`apiVersion: ${value}\nkind: Deployment\nspec: [broken\n`)
+      expect(partial.error).not.toBeNull()
+      expect(partial.schemaIdentities[0]).toEqual({ apiVersion: '', kind: 'Deployment' })
+    }
+  })
+
   it('does not echo sensitive scalars in syntax diagnostics', () => {
     const draft = parseManifestDraft('stringData: [top-secret')
     expect(draft.error).toMatch(/Invalid YAML.*line/)

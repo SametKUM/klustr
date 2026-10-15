@@ -8,8 +8,13 @@ export function useManifestSchemaInputs(draft: ReturnType<typeof parseManifestDr
   const [input, setInput] = useState('[]')
   const previous = useMemo(() => JSON.parse(input) as ManifestObject[], [input])
   const prefix = manifestSchemaInputs(draft.objects)
+  // A malformed paste can replace a document with a completely different GVK.
+  const suffix = draft.schemaIdentities.slice(prefix.length).map((identity, index) => {
+    const last = previous[prefix.length + index]
+    return last?.apiVersion === identity.apiVersion && last?.kind === identity.kind ? last : identity
+  })
   const next = JSON.stringify(draft.error && !empty
-    ? [...prefix, ...previous.slice(prefix.length)]
+    ? [...prefix, ...suffix]
     : prefix)
   if (next !== input) setInput(next)
   return previous
