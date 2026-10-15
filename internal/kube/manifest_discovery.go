@@ -48,18 +48,25 @@ func discoverManifestKinds(d discovery.DiscoveryInterface) ([]ManifestKind, []st
 		warnings = append(warnings, "Some API groups could not be discovered. Other resource types remain available.")
 	}
 	kinds := []ManifestKind{}
+	seen := make(map[schema.GroupVersionResource]bool)
 	preferred := map[string]bool{"v1": true}
 	for _, group := range groups {
 		preferred[group.PreferredVersion.GroupVersion] = true
 	}
 	for _, list := range lists {
-		if _, err := schema.ParseGroupVersion(list.GroupVersion); err != nil {
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
 			continue
 		}
 		for _, resource := range list.APIResources {
 			if resource.Kind == "" || strings.Contains(resource.Name, "/") || !slices.Contains(resource.Verbs, "create") {
 				continue
 			}
+			gvr := gv.WithResource(resource.Name)
+			if seen[gvr] {
+				continue
+			}
+			seen[gvr] = true
 			kinds = append(kinds, ManifestKind{APIVersion: list.GroupVersion, Kind: resource.Kind, Resource: resource.Name, Namespaced: resource.Namespaced})
 		}
 	}

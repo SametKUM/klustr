@@ -36,18 +36,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { api } from '@/lib/api'
 import { canCreateManifest, formatManifest, resourceTemplate } from './manifestModel'
 import { useManifestWorkspace, type ResourceEditorProps } from './useManifestWorkspace'
+import { ResourceKindPicker } from './ResourceKindPicker'
 
 const YAMLPane = lazy(() => import('./ManifestYAMLPane'))
 const DiffPane = lazy(() =>
@@ -258,34 +251,17 @@ export default function ResourceEditor(props: ResourceEditorProps) {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-96 max-w-[85vw] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Find a resource type…" />
-                      <CommandList>
-                        <CommandEmpty>No resource types found.</CommandEmpty>
-                        <CommandGroup>
-                          {catalog?.resources.map((mapping) => (
-                            <CommandItem
-                              key={`${mapping.apiVersion}/${mapping.resource}`}
-                              value={`${mapping.kind} ${mapping.apiVersion} ${mapping.resource}`}
-                              onSelect={() => {
-                                changeSource(
-                                  source.trim()
-                                    ? `${source.trimEnd()}\n---\n${resourceTemplate(mapping)}`
-                                    : resourceTemplate(mapping),
-                                )
-                                setPickerOpen(false)
-                              }}
-                            >
-                              <FilePlus2 className="size-4" />
-                              <span>{mapping.kind}</span>
-                              <span className="ml-auto text-[10px] text-muted-foreground">
-                                {mapping.apiVersion}
-                              </span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
+                    <ResourceKindPicker
+                      resources={catalog?.resources ?? []}
+                      onSelect={(mapping) => {
+                        changeSource(
+                          source.trim()
+                            ? `${source.trimEnd()}\n---\n${resourceTemplate(mapping)}`
+                            : resourceTemplate(mapping),
+                        )
+                        setPickerOpen(false)
+                      }}
+                    />
                   </PopoverContent>
                 </Popover>
                 <Button

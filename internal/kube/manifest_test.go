@@ -177,6 +177,31 @@ func TestManifestDiscoveryFiltersSubresources(t *testing.T) {
 	}
 }
 
+func TestManifestDiscoveryDeduplicatesEndpoints(t *testing.T) {
+	d := &discoveryfake.FakeDiscovery{Fake: &ktesting.Fake{}}
+	resource := metav1.APIResource{Name: "deployments", Kind: "Deployment", Namespaced: true, Verbs: []string{"create"}}
+	d.Resources = []*metav1.APIResourceList{
+		{GroupVersion: "apps/v1", APIResources: []metav1.APIResource{resource, resource}},
+		{GroupVersion: "apps/v1", APIResources: []metav1.APIResource{resource}},
+		{GroupVersion: "apps/v1beta1", APIResources: []metav1.APIResource{resource}},
+		{GroupVersion: "example.com/v1", APIResources: []metav1.APIResource{resource}},
+	}
+	kinds, _, err := discoverManifestKinds(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(kinds) != 3 {
+		t.Fatalf("expected three distinct endpoints, got %+v", kinds)
+	}
+	seen := make(map[string]bool)
+	for _, kind := range kinds {
+		if seen[kind.APIVersion] {
+			t.Fatalf("duplicate endpoint: %+v", kind)
+		}
+		seen[kind.APIVersion] = true
+	}
+}
+
 func manifestFixture(t *testing.T, dyn dynamic.Interface, source string) (*ClientManager, *manifestSession) {
 	t.Helper()
 	if fake, ok := dyn.(*dynamicfake.FakeDynamicClient); ok {
