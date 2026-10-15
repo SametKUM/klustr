@@ -8,6 +8,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
+      // monaco-worker-manager still imports the path from before Monaco 0.57.
+      'monaco-editor/esm/vs/editor/editor.worker.js': 'monaco-editor/editor/editor.worker',
     },
   },
   build: {
@@ -18,7 +20,7 @@ export default defineConfig({
       output: {
         manualChunks(id: string) {
           if (id.includes('/node_modules/')) {
-            if (id.includes('monaco-editor') || id.includes('@monaco-editor')) return 'monaco'
+            if (id.includes('monaco-editor') || id.includes('@monaco-editor') || id.includes('monaco-yaml')) return 'monaco'
             if (id.includes('@xterm')) return 'xterm'
             if (id.includes('radix-ui') || id.includes('@radix-ui')) return 'radix'
             if (id.includes('@tanstack')) return 'tanstack'

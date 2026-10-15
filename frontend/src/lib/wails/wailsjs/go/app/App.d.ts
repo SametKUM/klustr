@@ -207,6 +207,8 @@ export function GetPriorityLevelConfiguration(arg1:string,arg2:string):Promise<k
 
 export function GetReferenceGrant(arg1:string,arg2:string,arg3:string):Promise<kube.ReferenceGrantDetail>;
 
+export function GetRemainingManifest(arg1:string):Promise<string>;
+
 export function GetReplicaSet(arg1:string,arg2:string,arg3:string):Promise<kube.ReplicaSetDetail>;
 
 export function GetReplicationController(arg1:string,arg2:string,arg3:string):Promise<kube.ReplicationControllerDetail>;

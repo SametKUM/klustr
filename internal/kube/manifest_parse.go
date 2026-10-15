@@ -46,7 +46,7 @@ func parseManifest(source string) ([]manifestDocument, error) {
 			continue
 		}
 		root := node.Content[0]
-		if root.Tag == "!!null" && root.Value == "" {
+		if root.Tag == "!!null" {
 			continue
 		}
 		if err := validateManifestNode(root, 0, make(map[*yamlv3.Node]bool), new(int)); err != nil {
@@ -86,7 +86,7 @@ func validateManifestNode(node *yamlv3.Node, depth int, path map[*yamlv3.Node]bo
 	path[node] = true
 	defer delete(path, node)
 	if node.Kind == yamlv3.AliasNode {
-		*aliases++
+		*aliases += 1
 		if *aliases > 100 {
 			return fmt.Errorf("line %d: too many YAML aliases", node.Line)
 		}

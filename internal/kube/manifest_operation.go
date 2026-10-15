@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,15 +55,13 @@ func (m *ClientManager) CreateManifest(ctx context.Context, id string, progress 
 	if err := m.assertWritable(s.contextName); err != nil {
 		return nil, err
 	}
-	dyn, err := m.manifestDynamicClient(s.contextName)
-	if err != nil {
-		return nil, err
-	}
 	operationCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	s.cancel, s.phase = cancel, "creating"
 	s.revision++
 	s.expires = time.Now().Add(manifestTTL)
-	go m.runManifestCreate(operationCtx, s, dyn, progress)
+	// Keep the reviewed endpoint and transport. Editing kubeconfig between
+	// Review and Create must never redirect an approved write to another cluster.
+	go m.runManifestCreate(operationCtx, s, s.client, progress)
 	result := s.snapshot()
 	return &result, nil
 }
@@ -82,6 +81,11 @@ func (m *ClientManager) runManifestCreate(ctx context.Context, s *manifestSessio
 		s.cancel()
 		s.cancel = nil
 		s.phase = "results"
+		for i := range s.entries {
+			if s.entries[i].Status == "ready" {
+				s.entries[i].Status = "pending"
+			}
+		}
 		s.mu.Unlock()
 		publish()
 	}()
@@ -109,7 +113,11 @@ func (m *ClientManager) runManifestCreate(ctx context.Context, s *manifestSessio
 		requestCtx, warnings := manifestWarningContext(ctx)
 		created, err := client.Create(requestCtx, object, metav1.CreateOptions{FieldManager: "klustr", FieldValidation: metav1.FieldValidationStrict})
 		s.mu.Lock()
-		entry.Warnings = append(entry.Warnings, warnings.messages...)
+		for _, warning := range warnings.messages {
+			if !slices.Contains(entry.Warnings, warning) {
+				entry.Warnings = append(entry.Warnings, warning)
+			}
+		}
 		if err != nil {
 			entry.Error, entry.Reason = manifestError(err, true)
 			entry.Status = "failed"
@@ -173,14 +181,7 @@ func (m *ClientManager) ReviewRemainingManifest(ctx context.Context, id string) 
 		}
 		s.mu.Unlock()
 	}()
-	dyn, err := m.manifestDynamicClient(s.contextName)
-	if err != nil {
-		return nil, err
-	}
-	d, err := m.manifestDiscovery(s.contextName)
-	if err != nil {
-		return nil, err
-	}
+	dyn, d := s.client, s.discovery
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	// Discovery can lag a newly established CRD. Retry only reads, bounded by

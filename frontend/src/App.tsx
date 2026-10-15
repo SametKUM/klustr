@@ -10,6 +10,9 @@ import { ConnectionStatus } from '@/features/contexts/ConnectionStatus'
 import { ConnectionsScreen } from '@/features/contexts/ConnectionsScreen'
 import { CredentialSuggestionPrompt } from '@/features/contexts/CredentialSuggestionPrompt'
 import { NamespaceSelector } from '@/features/contexts/NamespaceSelector'
+import { ResourceEditorProvider } from '@/features/resource-editor/ResourceEditorProvider'
+import { useResourceEditor } from '@/features/resource-editor/resourceEditorContext'
+import { Button } from '@/components/ui/button'
 import { PodsView } from '@/features/pods/PodsView'
 import { DeploymentsView } from '@/features/deployments/DeploymentsView'
 import { ServicesView } from '@/features/services/ServicesView'
@@ -408,6 +411,7 @@ function groupViews(group: ResourceGroup): ResourceView[] {
 type NavEntry = { kind: 'view'; view: ResourceView } | { kind: 'crd'; key: string }
 
 function App() {
+  const openResourceEditor = useResourceEditor()
   const activeContexts = useActiveContexts()
   const globalReadOnly = useUIStore((s) => s.globalReadOnly)
   const selectedContext = useUIStore((s) => s.selectedContext)
@@ -668,6 +672,7 @@ function App() {
           </div>
           <div className="flex items-center gap-1">
             {/* Cluster session tools */}
+            <Button variant="outline" size="sm" disabled={globalReadOnly} onClick={() => openResourceEditor()}>Create resource</Button>
             <TerminalButton />
             <PortForwardIndicator />
             <ReadOnlyToggle />
@@ -797,4 +802,6 @@ function App() {
   )
 }
 
-export default App
+export default function KlustrApp() {
+  return <ResourceEditorProvider><App /></ResourceEditorProvider>
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -16,11 +17,14 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/yaml"
 )
 
 const manifestTTL = 30 * time.Minute
+
+var manifestUnknownFieldPattern = regexp.MustCompile(`unknown field "([a-zA-Z0-9_.\[\]-]+)"`)
 
 type ManifestResource struct {
 	Index        int      `json:"index"`
@@ -62,6 +66,8 @@ type manifestEntry struct {
 }
 
 type manifestSession struct {
+	client      dynamic.Interface
+	discovery   discovery.DiscoveryInterface
 	revision    int
 	mu          sync.Mutex
 	id          string
@@ -74,7 +80,7 @@ type manifestSession struct {
 }
 
 type manifestSessions struct {
-	client   func(string) (dynamic.Interface, error)
+	clients  func(string) (dynamic.Interface, discovery.DiscoveryInterface, error)
 	mu       sync.Mutex
 	sessions map[string]*manifestSession
 }
@@ -115,7 +121,7 @@ func (m *ClientManager) ReviewManifest(ctx context.Context, contextName, default
 	if err != nil {
 		return nil, err
 	}
-	d, err := m.manifestDiscovery(contextName)
+	dyn, d, err := m.manifestClients(contextName)
 	if err != nil {
 		return nil, err
 	}
@@ -127,15 +133,11 @@ func (m *ClientManager) ReviewManifest(ctx context.Context, contextName, default
 	if err != nil {
 		return nil, err
 	}
-	dyn, err := m.manifestDynamicClient(contextName)
-	if err != nil {
-		return nil, err
-	}
 	var id [16]byte
 	if _, err := rand.Read(id[:]); err != nil {
 		return nil, err
 	}
-	s := &manifestSession{id: hex.EncodeToString(id[:]), contextName: contextName, entries: entries, warnings: warnings, phase: "reviewing", expires: time.Now().Add(manifestTTL)}
+	s := &manifestSession{id: hex.EncodeToString(id[:]), contextName: contextName, client: dyn, discovery: d, entries: entries, warnings: warnings, phase: "reviewing", expires: time.Now().Add(manifestTTL)}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	reviewManifestEntries(ctx, s, dyn)
@@ -199,6 +201,9 @@ func prepareManifest(docs []manifestDocument, kinds []ManifestKind, defaultNames
 			return nil, fmt.Errorf("document %d, line %d: %s (%s) is not a served, creatable resource", doc.document, doc.line, obj.GetKind(), obj.GetAPIVersion())
 		}
 		if mapping.Namespaced {
+			if _, _, err := unstructured.NestedString(obj.Object, "metadata", "namespace"); err != nil {
+				return nil, fmt.Errorf("document %d: metadata.namespace must be a string", doc.document)
+			}
 			if obj.GetNamespace() == "" {
 				obj.SetNamespace(defaultNamespace)
 			}
@@ -288,6 +293,9 @@ func manifestError(err error, write bool) (string, string) {
 				}
 			}
 		}
+		for _, match := range manifestUnknownFieldPattern.FindAllStringSubmatch(err.Error(), -1) {
+			fields = append(fields, match[1])
+		}
 		if len(fields) > 0 {
 			return "The server rejected these fields: " + strings.Join(fields, ", "), "Invalid"
 		}
@@ -334,6 +342,33 @@ func (m *ClientManager) GetManifestPreview(id string, index int, reveal bool) (*
 		return nil, err
 	}
 	return &ManifestPreview{Before: before, After: after}, nil
+}
+
+func (m *ClientManager) GetRemainingManifest(id string) (string, error) {
+	s, err := m.manifestSession(id)
+	if err != nil {
+		return "", err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.phase == "creating" || s.phase == "reviewing" {
+		return "", fmt.Errorf("wait for the active operation to finish")
+	}
+	parts := []string{}
+	for _, entry := range s.entries {
+		if entry.Status == "unknown" {
+			return "", fmt.Errorf("check resources with unknown outcomes in the cluster before starting another creation attempt")
+		}
+		if entry.Status == "created" {
+			continue
+		}
+		body, err := manifestPreviewYAML(entry.object, false)
+		if err != nil {
+			return "", err
+		}
+		parts = append(parts, body)
+	}
+	return strings.Join(parts, "---\n"), nil
 }
 
 func manifestPreviewYAML(obj *unstructured.Unstructured, redact bool) (string, error) {

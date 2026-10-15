@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Boxes, ExternalLink, LayoutGrid, SquareTerminal } from 'lucide-react'
+import { Boxes, ExternalLink, FilePlus2, LayoutGrid, SquareTerminal } from 'lucide-react'
+import { useResourceEditor } from '@/features/resource-editor/resourceEditorContext'
 import { toast } from 'sonner'
 import { ProviderIcon } from '@/features/_shared/providerIcons'
 import { useTerminalStore } from '@/store/terminals'
@@ -19,6 +20,8 @@ import { groupByAPIGroup } from '@/features/crds/crdGrouping'
 import { useVisibleResourceGroups } from './useVisibleResourceGroups'
 
 export function CommandPalette() {
+  const openResourceEditor = useResourceEditor()
+  const readOnly = useUIStore((state) => state.globalReadOnly)
   const [open, setOpen] = useState(false)
   const activeContexts = useActiveContexts()
   const toggleAggregatedContext = useUIStore((s) => s.toggleAggregatedContext)
@@ -60,6 +63,7 @@ export function CommandPalette() {
       <CommandInput placeholder="Jump to view, toggle context…" />
       <CommandList>
         <CommandEmpty>No results.</CommandEmpty>
+        <CommandGroup heading="Resources"><CommandItem value="create new resource yaml manifest" disabled={readOnly || activeContexts.length === 0} onSelect={() => { setOpen(false); openResourceEditor() }}><FilePlus2 /><span>Create resource</span></CommandItem></CommandGroup>
 
         {groups.map((group, gi) => (
           <div key={group.label}>

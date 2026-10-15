@@ -9,6 +9,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/wailsapp/wails/v2 v2.16.0
+	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/sys v0.48.0
 	helm.sh/helm/v3 v3.22.0
 	k8s.io/api v0.37.1
@@ -120,7 +121,6 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect

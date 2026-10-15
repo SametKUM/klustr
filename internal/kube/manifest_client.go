@@ -2,10 +2,13 @@ package kube
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"sync"
 
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 )
 
 type manifestWarningKey struct{}
@@ -30,22 +33,31 @@ func (manifestWarningHandler) HandleWarningHeaderWithContext(ctx context.Context
 		summary = "This API version is deprecated. Use a newer served version when possible."
 	}
 	warnings.mu.Lock()
-	warnings.messages = append(warnings.messages, summary)
+	if !slices.Contains(warnings.messages, summary) {
+		warnings.messages = append(warnings.messages, summary)
+	}
 	warnings.mu.Unlock()
 }
 
-func (m *ClientManager) manifestDynamicClient(contextName string) (dynamic.Interface, error) {
-	if m.manifests.client != nil {
-		return m.manifests.client(contextName)
+func (m *ClientManager) manifestClients(contextName string) (dynamic.Interface, discovery.DiscoveryInterface, error) {
+	if m.manifests.clients != nil {
+		return m.manifests.clients(contextName)
 	}
 	cfg, err := m.restConfig(contextName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// The cloned REST client shares client-go's transport cache, but owns its
 	// warning handler so manifest content cannot escape through global logging.
 	cfg.WarningHandlerWithContext = manifestWarningHandler{}
-	return dynamic.NewForConfig(cfg)
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	discoveryConfig := rest.CopyConfig(cfg)
+	discoveryConfig.Timeout = discoveryTimeout
+	disco, err := discovery.NewDiscoveryClientForConfig(discoveryConfig)
+	return dyn, disco, err
 }
 
 func manifestWarningContext(ctx context.Context) (context.Context, *manifestWarnings) {

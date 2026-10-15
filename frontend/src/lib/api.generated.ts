@@ -427,6 +427,7 @@ export const generatedApi = {
   getPriorityClass: bindings.GetPriorityClass,
   getPriorityLevelConfiguration: bindings.GetPriorityLevelConfiguration,
   getReferenceGrant: bindings.GetReferenceGrant,
+  getRemainingManifest: bindings.GetRemainingManifest,
   getReplicaSet: bindings.GetReplicaSet,
   getReplicationController: bindings.GetReplicationController,
   getResourceClaim: bindings.GetResourceClaim,

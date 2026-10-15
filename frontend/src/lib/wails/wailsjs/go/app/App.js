@@ -410,6 +410,10 @@ export function GetReferenceGrant(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetReferenceGrant'](arg1, arg2, arg3);
 }
 
+export function GetRemainingManifest(arg1) {
+  return window['go']['app']['App']['GetRemainingManifest'](arg1);
+}
+
 export function GetReplicaSet(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetReplicaSet'](arg1, arg2, arg3);
 }

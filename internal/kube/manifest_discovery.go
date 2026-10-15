@@ -39,7 +39,7 @@ func (m *ClientManager) manifestDiscovery(contextName string) (discovery.Discove
 }
 
 func discoverManifestKinds(d discovery.DiscoveryInterface) ([]ManifestKind, []string, error) {
-	_, lists, err := d.ServerGroupsAndResources()
+	groups, lists, err := d.ServerGroupsAndResources()
 	warnings := []string{}
 	if len(lists) == 0 && err != nil {
 		return nil, warnings, fmt.Errorf("API discovery failed; check the connection and discovery permissions")
@@ -48,6 +48,10 @@ func discoverManifestKinds(d discovery.DiscoveryInterface) ([]ManifestKind, []st
 		warnings = append(warnings, "Some API groups could not be discovered. Other resource types remain available.")
 	}
 	kinds := []ManifestKind{}
+	preferred := map[string]bool{"v1": true}
+	for _, group := range groups {
+		preferred[group.PreferredVersion.GroupVersion] = true
+	}
 	for _, list := range lists {
 		if _, err := schema.ParseGroupVersion(list.GroupVersion); err != nil {
 			continue
@@ -59,7 +63,15 @@ func discoverManifestKinds(d discovery.DiscoveryInterface) ([]ManifestKind, []st
 			kinds = append(kinds, ManifestKind{APIVersion: list.GroupVersion, Kind: resource.Kind, Resource: resource.Name, Namespaced: resource.Namespaced})
 		}
 	}
-	slices.SortFunc(kinds, func(a, b ManifestKind) int { return strings.Compare(a.Kind+"/"+a.APIVersion, b.Kind+"/"+b.APIVersion) })
+	slices.SortFunc(kinds, func(a, b ManifestKind) int {
+		if a.Kind == b.Kind && preferred[a.APIVersion] != preferred[b.APIVersion] {
+			if preferred[a.APIVersion] {
+				return -1
+			}
+			return 1
+		}
+		return strings.Compare(a.Kind+"/"+a.APIVersion, b.Kind+"/"+b.APIVersion)
+	})
 	return kinds, warnings, nil
 }
 

@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	discoveryfake "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
@@ -39,6 +40,7 @@ func TestParseManifest(t *testing.T) {
 		errorContains string
 	}{
 		{"single", configMapManifest, 1, ""},
+		{"null documents", "null\n---\n" + configMapManifest + "---\n~\n", 1, ""},
 		{"multiple", "# comment\r\n---\r\n" + configMapManifest + "---\n" + strings.ReplaceAll(configMapManifest, "example", "second") + "---\n# tail\n", 2, ""},
 		{"JSON", `{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"team"}}`, 1, ""},
 		{"List", "apiVersion: v1\nkind: List\nitems:\n  - apiVersion: v1\n    kind: Namespace\n    metadata:\n      name: team\n", 1, ""},
@@ -85,6 +87,8 @@ func TestManifestNamespacesAndIdentity(t *testing.T) {
 		{"default", configMapManifest, "team", "team", ""},
 		{"explicit", strings.Replace(configMapManifest, "name: example", "name: example\n  namespace: explicit", 1), "team", "explicit", ""},
 		{"missing", configMapManifest, "", "", "default namespace"},
+		{"multiple namespace default", configMapManifest, "team-a,team-b", "", "single valid namespace"},
+		{"wrong namespace type", strings.Replace(configMapManifest, "name: example", "name: example\n  namespace: 123", 1), "default", "", "must be a string"},
 		{"cluster", "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: team", "default", "", ""},
 		{"cluster namespace", "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: team\n  namespace: wrong", "default", "", "cluster-scoped"},
 		{"duplicate", configMapManifest + "---\n" + configMapManifest, "default", "", "duplicate resource"},
@@ -196,7 +200,7 @@ func manifestFixture(t *testing.T, dyn dynamic.Interface, source string) (*Clien
 	reviewManifestEntries(context.Background(), s, dyn)
 	m := &ClientManager{watchers: map[string]*contextWatcher{"ctx": {dyn: dyn}}, readOnly: make(map[string]bool)}
 	m.manifests.sessions = map[string]*manifestSession{s.id: s}
-	m.manifests.client = func(string) (dynamic.Interface, error) { return dyn, nil }
+	s.client = dyn
 	return m, s
 }
 
@@ -286,7 +290,7 @@ func TestManifestCreateStopsAfterErrorAndRespectsReadOnly(t *testing.T) {
 			}
 			select {
 			case op := <-done:
-				if writes != 1 || op.Resources[0].Status != "failed" || op.Resources[1].Status != "ready" {
+				if writes != 1 || op.Resources[0].Status != "failed" || op.Resources[1].Status != "pending" {
 					t.Fatalf("unexpected result %+v; writes %d", op, writes)
 				}
 			case <-time.After(time.Second):
@@ -329,6 +333,10 @@ func TestManifestErrorsDoNotExposeServerValues(t *testing.T) {
 	_, reason := manifestError(context.DeadlineExceeded, true)
 	if reason != "Unknown" {
 		t.Fatal("uncertain write may be retried unsafely")
+	}
+	message, _ = manifestError(apierrors.NewBadRequest(`strict decoding error: unknown field "spec.replica"; password=do-not-expose`), false)
+	if !strings.Contains(message, "spec.replica") || strings.Contains(message, "do-not-expose") {
+		t.Fatal("field diagnostic was lost or leaked server values")
 	}
 }
 
@@ -397,5 +405,207 @@ func TestManifestGeneratedNameUsesActualResponse(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("operation did not complete")
+	}
+}
+
+func TestManifestRemainingOmitsCreatedAndRefusesUnknown(t *testing.T) {
+	m, s := manifestFixture(t, dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()), configMapManifest+"---\n"+strings.ReplaceAll(configMapManifest, "example", "second"))
+	s.entries[0].Status = "created"
+	remaining, err := m.GetRemainingManifest(s.id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(remaining, "example") || !strings.Contains(remaining, "second") {
+		t.Fatal("successful resources would be replayed")
+	}
+	s.entries[1].Status = "unknown"
+	if _, err := m.GetRemainingManifest(s.id); err == nil {
+		t.Fatal("unknown write could be repeated")
+	}
+}
+
+func TestManifestConcurrentCreateIsSingleUse(t *testing.T) {
+	dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+	m, s := manifestFixture(t, dyn, configMapManifest)
+	started, release := make(chan struct{}), make(chan struct{})
+	defer close(release)
+	dyn.PrependReactor("create", "*", func(action ktesting.Action) (bool, runtime.Object, error) {
+		close(started)
+		<-release
+		return true, action.(ktesting.CreateAction).GetObject(), nil
+	})
+	done := make(chan ManifestOperation, 1)
+	if _, err := m.CreateManifest(context.Background(), s.id, func(op ManifestOperation) {
+		if op.Phase == "results" {
+			done <- op
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("write not started")
+	}
+	for range 5 {
+		if op, err := m.CreateManifest(context.Background(), s.id, nil); err != nil || op.Phase != "creating" {
+			t.Fatalf("duplicate create: %+v %v", op, err)
+		}
+	}
+	release <- struct{}{}
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("operation did not finish")
+	}
+}
+
+func TestManifestReviewPinsEndpointAndInput(t *testing.T) {
+	first, second := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()), dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+	first.PrependReactor("create", "*", func(action ktesting.Action) (bool, runtime.Object, error) {
+		create := action.(ktesting.CreateActionImpl)
+		if len(create.CreateOptions.DryRun) > 0 {
+			return true, create.Object.DeepCopyObject(), nil
+		}
+		return false, nil, nil
+	})
+	disco := &discoveryfake.FakeDiscovery{Fake: &ktesting.Fake{}}
+	disco.Resources = []*metav1.APIResourceList{{GroupVersion: "v1", APIResources: []metav1.APIResource{{Name: "configmaps", Kind: "ConfigMap", Namespaced: true, Verbs: []string{"create"}}}}}
+	m := &ClientManager{}
+	m.manifests.clients = func(string) (dynamic.Interface, discovery.DiscoveryInterface, error) { return first, disco, nil }
+	operation, err := m.ReviewManifest(context.Background(), "ctx", "team", configMapManifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if operation.Resources[0].Status != "ready" {
+		t.Fatalf("review failed: %+v", operation)
+	}
+	m.manifests.clients = func(string) (dynamic.Interface, discovery.DiscoveryInterface, error) { return second, disco, nil }
+	done := make(chan ManifestOperation, 1)
+	_, err = m.CreateManifest(context.Background(), operation.ID, func(op ManifestOperation) {
+		if op.Phase == "results" {
+			done <- op
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("operation did not finish")
+	}
+	if len(second.Actions()) != 0 {
+		t.Fatal("reviewed operation was redirected to a new endpoint")
+	}
+	if len(first.Actions()) != 2 {
+		t.Fatalf("expected one dry-run and one create, got %d actions", len(first.Actions()))
+	}
+	created := first.Actions()[1].(ktesting.CreateAction).GetObject().(*unstructured.Unstructured)
+	if created.GetName() != "example" || created.GetNamespace() != "team" {
+		t.Fatal("reviewed identity was not preserved")
+	}
+}
+
+func TestManifestCancelTracksUncertainWrite(t *testing.T) {
+	started := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var obj map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&obj)
+		if r.URL.Query().Get("dryRun") != "" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(obj)
+			return
+		}
+		close(started)
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+	dyn, _ := dynamic.NewForConfig(&rest.Config{Host: server.URL})
+	m, s := manifestFixture(t, dyn, configMapManifest)
+	done := make(chan ManifestOperation, 1)
+	_, err := m.CreateManifest(context.Background(), s.id, func(op ManifestOperation) {
+		if op.Phase == "results" {
+			done <- op
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("write not started")
+	}
+	if err := m.CancelManifest(s.id); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case op := <-done:
+		if op.Resources[0].Status != "unknown" {
+			t.Fatalf("uncertain request marked safe to retry: %+v", op)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("cancel did not stop the request")
+	}
+}
+
+func TestManifestWarningHandlerDoesNotEchoAdmissionValues(t *testing.T) {
+	ctx, sink := manifestWarningContext(context.Background())
+	handler := manifestWarningHandler{}
+	handler.HandleWarningHeaderWithContext(ctx, 299, "server", "admission warning password=do-not-expose")
+	handler.HandleWarningHeaderWithContext(ctx, 299, "server", "this API is deprecated")
+	if len(sink.messages) != 2 || strings.Contains(strings.Join(sink.messages, " "), "do-not-expose") {
+		t.Fatal("warning contents escaped")
+	}
+	if !strings.Contains(sink.messages[1], "deprecated") {
+		t.Fatal("deprecation warning lost")
+	}
+}
+
+func TestManifestSchemaUsesClusterOpenAPIAndV2Fallback(t *testing.T) {
+	for _, v3 := range []bool{true, false} {
+		t.Run(fmt.Sprint(v3), func(t *testing.T) {
+			requests := []string{}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests = append(requests, r.URL.Path)
+				w.Header().Set("Content-Type", "application/json")
+				switch r.URL.Path {
+				case "/openapi/v3":
+					if !v3 {
+						http.Error(w, "unavailable", http.StatusNotFound)
+						return
+					}
+					_, _ = w.Write([]byte(`{"paths":{"api/v1":{"serverRelativeURL":"/openapi/v3/api/v1?hash=local"}}}`))
+				case "/openapi/v3/api/v1":
+					_, _ = w.Write([]byte(`{"openapi":"3.0.0","components":{"schemas":{}}}`))
+				case "/openapi/v2":
+					_, _ = w.Write([]byte(`{"swagger":"2.0","definitions":{}}`))
+				default:
+					t.Errorf("unexpected schema request: %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer server.Close()
+			d, _ := discovery.NewDiscoveryClientForConfig(&rest.Config{Host: server.URL})
+			m := &ClientManager{watchers: map[string]*contextWatcher{"ctx": {disco: d}}}
+			body, err := m.ManifestSchema(context.Background(), "ctx", "v1")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if v3 && !strings.Contains(body, "components") {
+				t.Fatal("v3 schema missing")
+			}
+			if !v3 && !strings.Contains(body, "definitions") {
+				t.Fatal("v2 fallback missing")
+			}
+			count := len(requests)
+			if _, err := m.ManifestSchema(context.Background(), "ctx", "../../secrets"); err == nil {
+				t.Fatal("invalid apiVersion accepted")
+			}
+			if len(requests) != count {
+				t.Fatal("invalid apiVersion caused a network request")
+			}
+		})
 	}
 }

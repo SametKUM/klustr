@@ -1,0 +1,179 @@
+import { LineCounter, parseAllDocuments } from 'yaml'
+import type { ManifestKind, ManifestOperation } from '@/lib/api'
+
+export const MAX_MANIFEST_BYTES = 2 * 1024 * 1024
+export const MAX_MANIFEST_RESOURCES = 200
+
+export type ManifestObject = Record<string, unknown>
+export type OutlineResource = {
+  index: number
+  document: number
+  line: number
+  apiVersion: string
+  kind: string
+  name: string
+  namespace: string
+}
+
+export function asObject(value: unknown): ManifestObject {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as ManifestObject)
+    : {}
+}
+
+export function parseManifestDraft(source: string): {
+  objects: ManifestObject[]
+  outline: OutlineResource[]
+  error: string | null
+} {
+  if (new TextEncoder().encode(source).length > MAX_MANIFEST_BYTES)
+    return { objects: [], outline: [], error: 'Manifest exceeds the 2 MiB limit.' }
+  const lineCounter = new LineCounter()
+  const docs = parseAllDocuments(source, {
+    version: '1.1',
+    lineCounter,
+    prettyErrors: false,
+    uniqueKeys: true,
+  })
+  const objects: ManifestObject[] = []
+  const outline: OutlineResource[] = []
+  const visit = (value: unknown, document: number, line: number, depth = 0) => {
+    if (depth > 100) throw new Error('nesting')
+    const obj = asObject(value)
+    if (obj.apiVersion === 'v1' && obj.kind === 'List' && Array.isArray(obj.items)) {
+      for (const item of obj.items) visit(item, document, line, depth + 1)
+      return
+    }
+    if (outline.length >= MAX_MANIFEST_RESOURCES) throw new Error('count')
+    const metadata = asObject(obj.metadata)
+    outline.push({
+      index: outline.length,
+      document,
+      line,
+      apiVersion: typeof obj.apiVersion === 'string' ? obj.apiVersion : '',
+      kind: typeof obj.kind === 'string' ? obj.kind : '',
+      name: String(metadata.name ?? metadata.generateName ?? ''),
+      namespace: typeof metadata.namespace === 'string' ? metadata.namespace : '',
+    })
+  }
+  try {
+    for (const [index, doc] of docs.entries()) {
+      if (doc.errors.length) {
+        const position = lineCounter.linePos(doc.errors[0].pos[0])
+        return {
+          objects,
+          outline,
+          error: `Invalid YAML in document ${index + 1}, line ${position.line}, column ${position.col}.`,
+        }
+      }
+      const value: unknown = doc.toJS({ maxAliasCount: 100 })
+      objects.push(asObject(value))
+      if (value !== null)
+        visit(
+          value,
+          index + 1,
+          lineCounter.linePos(doc.contents?.range?.[0] ?? doc.range?.[0] ?? 0).line,
+        )
+    }
+    return {
+      objects,
+      outline,
+      error: outline.length ? null : 'Add a Kubernetes manifest to begin.',
+    }
+  } catch {
+    return {
+      objects: [],
+      outline: [],
+      error: 'Manifest exceeds the resource, nesting or YAML alias limit.',
+    }
+  }
+}
+
+export function formatManifest(source: string): string {
+  const docs = parseAllDocuments(source, { version: '1.1', prettyErrors: false, uniqueKeys: true })
+  if (docs.some((doc) => doc.errors.length)) throw new Error('Cannot format invalid YAML.')
+  return docs
+    .map((doc, index) => {
+      if (index > 0) doc.directives.docStart = true
+      return doc.toString({ indent: 2 })
+    })
+    .join('')
+}
+
+export function mergeManifestOperation(
+  current: ManifestOperation | null,
+  incoming: ManifestOperation,
+): ManifestOperation {
+  if (current && (current.id !== incoming.id || current.revision > incoming.revision))
+    return current
+  return incoming
+}
+
+export function canCreateManifest(operation: ManifestOperation | null, readOnly: boolean): boolean {
+  return (
+    !!operation &&
+    !readOnly &&
+    operation.phase === 'review' &&
+    operation.resources.some((item) => item.status === 'ready') &&
+    !operation.resources.some((item) => item.status === 'failed' || item.status === 'unknown')
+  )
+}
+
+export function resourceTemplate(mapping: ManifestKind): string {
+  const header = `apiVersion: ${mapping.apiVersion}\nkind: ${mapping.kind}\nmetadata:\n  name: example\n`
+  switch (mapping.kind) {
+    case 'Deployment':
+      return (
+        header +
+        'spec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: example\n  template:\n    metadata:\n      labels:\n        app: example\n    spec:\n      containers:\n        - name: app\n          image: nginx:stable\n          ports:\n            - containerPort: 80\n'
+      )
+    case 'Pod':
+      return header + 'spec:\n  containers:\n    - name: app\n      image: nginx:stable\n'
+    case 'Service':
+      return (
+        header +
+        'spec:\n  selector:\n    app: example\n  ports:\n    - port: 80\n      targetPort: 80\n'
+      )
+    case 'ConfigMap':
+      return header + 'data:\n  key: value\n'
+    case 'Secret':
+      return header + 'type: Opaque\nstringData:\n  key: value\n'
+    case 'Job':
+      return (
+        header +
+        'spec:\n  template:\n    spec:\n      restartPolicy: Never\n      containers:\n        - name: task\n          image: busybox:stable\n          command: ["echo", "hello"]\n'
+      )
+    case 'CronJob':
+      return (
+        header +
+        'spec:\n  schedule: "0 * * * *"\n  jobTemplate:\n    spec:\n      template:\n        spec:\n          restartPolicy: Never\n          containers:\n            - name: task\n              image: busybox:stable\n              command: ["echo", "hello"]\n'
+      )
+    case 'PersistentVolumeClaim':
+      return (
+        header +
+        'spec:\n  accessModes: [ReadWriteOnce]\n  resources:\n    requests:\n      storage: 1Gi\n'
+      )
+    case 'Role':
+      return (
+        header +
+        'rules:\n  - apiGroups: [""]\n    resources: ["pods"]\n    verbs: ["get", "list", "watch"]\n'
+      )
+    case 'RoleBinding':
+      return (
+        header +
+        'subjects:\n  - kind: ServiceAccount\n    name: example\nroleRef:\n  apiGroup: rbac.authorization.k8s.io\n  kind: Role\n  name: example\n'
+      )
+    case 'NetworkPolicy':
+      return (
+        header +
+        'spec:\n  podSelector:\n    matchLabels:\n      app: example\n  policyTypes: [Ingress]\n  ingress:\n    - from:\n        - podSelector: {}\n'
+      )
+    case 'Ingress':
+      return (
+        header +
+        'spec:\n  rules:\n    - host: example.com\n      http:\n        paths:\n          - path: /\n            pathType: Prefix\n            backend:\n              service:\n                name: example\n                port:\n                  number: 80\n'
+      )
+    default:
+      return header
+  }
+}

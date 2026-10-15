@@ -65,6 +65,7 @@ import { applyHeaderFilters, headerFilterOptions } from './headerFilter'
 import { parseSearch, rowMatchesSearch } from './rowSearch'
 import { KLUSTR_CTX, resolveResourceContexts, type Tagged } from './resourceContext'
 import { resourcePageCount } from './pagination'
+import { useResourceEditor } from '@/features/resource-editor/resourceEditorContext'
 
 type RowIdentity = { namespace?: string; name?: string }
 
@@ -292,6 +293,7 @@ export function ResourceTable<T>({
   applyDelta,
   headerFilters,
 }: ResourceTableProps<T>) {
+  const openResourceEditor = useResourceEditor()
   const activeContexts = useActiveContexts()
   const resourceContexts = resolveResourceContexts(activeContexts, contexts)
   const isAggregated = useIsAggregated()
@@ -1047,6 +1049,7 @@ export function ResourceTable<T>({
           )}
         </div>
         <ColumnControls table={table} onReset={() => resetPrefs(kind)} />
+        {!readOnly && <Button variant="outline" size="xs" onClick={() => openResourceEditor({ contextName: resourceContexts.length === 1 ? resourceContexts[0] : undefined, kind: kind.startsWith('cr:') ? undefined : kind, group: kind.startsWith('cr:') ? kind.slice(3, kind.indexOf('/')) : undefined, resource: kind.startsWith('cr:') ? kind.slice(kind.indexOf('/') + 1) : undefined })}>Create</Button>}
       </div>
       {connectionWarnings.length > 0 && (
         <div

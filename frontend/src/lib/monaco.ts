@@ -9,8 +9,46 @@ import * as monaco from 'monaco-editor/editor'
 import 'monaco-editor/features/register.all'
 import 'monaco-editor/languages/definitions/yaml/register'
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker'
+import YamlWorker from './yaml.worker?worker'
+import { configureMonacoYaml, type JSONSchema } from 'monaco-yaml'
 
-globalThis.MonacoEnvironment = { getWorker: () => new EditorWorker() }
+globalThis.MonacoEnvironment = {
+  getWorker: (_moduleId, label) => (label === 'yaml' ? new YamlWorker() : new EditorWorker()),
+}
 loader.config({ monaco })
+
+const schemas = new Map<string, JSONSchema>()
+const yamlService = configureMonacoYaml(monaco, {
+  enableSchemaRequest: false,
+  isKubernetes: true,
+  yamlVersion: '1.1',
+  format: { enable: false },
+  schemas: [],
+})
+
+export function registerYAMLSchema(path: string, schema: JSONSchema): () => void {
+  schemas.set(path, schema)
+  const update = () =>
+    yamlService.update({
+      enableSchemaRequest: false,
+      isKubernetes: true,
+      yamlVersion: '1.1',
+      format: { enable: false },
+      schemas: [...schemas].map(([path, schema]) => ({
+        uri: `${path}.schema.json`,
+        fileMatch: [path],
+        schema,
+      })),
+    })
+  update()
+  return () => {
+    if (schemas.get(path) === schema) {
+      schemas.delete(path)
+      update()
+    }
+  }
+}
+
+export type { OnMount } from '@monaco-editor/react'
 
 export { DiffEditor, Editor } from '@monaco-editor/react'

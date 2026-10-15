@@ -30,6 +30,10 @@ func (a *App) GetManifestPreview(id string, index int, reveal bool) (*kube.Manif
 	return a.clients.GetManifestPreview(id, index, reveal)
 }
 
+func (a *App) GetRemainingManifest(id string) (string, error) {
+	return a.clients.GetRemainingManifest(id)
+}
+
 func (a *App) CancelManifest(id string) error { return a.clients.CancelManifest(id) }
 
 func (a *App) ReleaseManifest(id string) error { return a.clients.ReleaseManifest(id) }
