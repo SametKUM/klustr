@@ -123,6 +123,9 @@ func manifestKeyString(key *yamlv3.Node) (string, error) {
 		return "", fmt.Errorf("non-scalar key")
 	}
 	switch key.Tag {
+	case "!!timestamp":
+		// Kubernetes' YAML v2 conversion keeps timestamps as literal strings.
+		return key.Value, nil
 	case "!!merge":
 		return key.Value, nil
 	case "!!str":

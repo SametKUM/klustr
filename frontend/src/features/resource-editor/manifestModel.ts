@@ -1,4 +1,4 @@
-import { isScalar, LineCounter, parseAllDocuments } from 'yaml'
+import { isScalar, LineCounter, parseAllDocuments, type Tags } from 'yaml'
 import type { ManifestKind, ManifestOperation } from '@/lib/api'
 
 export const MAX_MANIFEST_BYTES = 2 * 1024 * 1024
@@ -17,6 +17,13 @@ export type OutlineResource = {
 
 const uniqueManifestKeys = (a: unknown, b: unknown) =>
   isScalar(a) && isScalar(b) ? String(a.value) === String(b.value) : a === b
+
+// Match Kubernetes' YAML v2 conversion: dates are literal strings, including keys.
+const kubernetesYAMLTags = (tags: Tags): Tags => tags.map((tag) =>
+  typeof tag !== 'string' && !tag.collection && tag.tag === 'tag:yaml.org,2002:timestamp'
+    ? { ...tag, resolve: (value: string) => value, stringify: undefined }
+    : tag,
+)
 
 function manifestJSONValue(value: unknown, path = new Set<unknown>(), depth = 0): unknown {
   if (depth > 100 || path.has(value)) throw new Error('limit')
@@ -64,6 +71,7 @@ export function parseManifestDraft(source: string): {
     lineCounter,
     prettyErrors: false,
     uniqueKeys: uniqueManifestKeys,
+    customTags: kubernetesYAMLTags,
   })
   const objects: ManifestObject[] = []
   const outline: OutlineResource[] = []
@@ -122,7 +130,7 @@ export function parseManifestDraft(source: string): {
 }
 
 export function formatManifest(source: string): string {
-  const docs = parseAllDocuments(source, { version: '1.1', prettyErrors: false, uniqueKeys: uniqueManifestKeys })
+  const docs = parseAllDocuments(source, { version: '1.1', prettyErrors: false, uniqueKeys: uniqueManifestKeys, customTags: kubernetesYAMLTags })
   if (docs.some((doc) => doc.errors.length)) throw new Error('Cannot format invalid YAML.')
   return docs
     .map((doc, index) => {

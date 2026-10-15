@@ -28,6 +28,15 @@ describe('manifest draft', () => {
       expect(parseManifestDraft(`${manifest}data:\n  ${keys}\n`).error).toMatch(/Invalid YAML/)
   })
 
+  it('keeps timestamp keys and values as literal strings before and after formatting', () => {
+    const source = `${manifest}data:\n  2024-01-01: 2001-12-15T02:59:43.1Z\n  2024-01-01T00:00:00Z: other\n`
+    const expected = { '2024-01-01': '2001-12-15T02:59:43.1Z', '2024-01-01T00:00:00Z': 'other' }
+    expect(parseManifestDraft(source).error).toBeNull()
+    expect(parseManifestDraft(source).objects[0].data).toEqual(expected)
+    expect(parseManifestDraft(formatManifest(source)).objects[0].data).toEqual(expected)
+    expect(parseManifestDraft(`${manifest}data:\n  2024-01-01: first\n  "2024-01-01": second\n`).error).toMatch(/Invalid YAML/)
+  })
+
   it('rejects complex keys and cyclic or deeply nested values without logging scalars', () => {
     expect(parseManifestDraft(`${manifest}data:\n  ? [private, key]\n  : value\n`).error).toMatch(/Invalid YAML/)
     expect(parseManifestDraft(`${manifest}data: &cycle\n  self: *cycle\n`).error).toMatch(/limit/)

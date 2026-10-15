@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 )
@@ -117,16 +118,17 @@ func TestManifestSchemaCacheCancellationExpiryAndFailures(t *testing.T) {
 }
 
 func TestManifestScalarKeysUseKubernetesConversionAndRejectCollisions(t *testing.T) {
-	for _, key := range []string{"9000", "0x10", "true", "yes"} {
+	for key, expected := range map[string]string{"9000": "9000", "0x10": "16", "true": "true", "yes": "true", "2024-01-01": "2024-01-01", "2001-12-15T02:59:43.1Z": "2001-12-15T02:59:43.1Z"} {
 		docs, err := parseManifest(configMapManifest + "  " + key + ": service\n")
 		if err != nil {
 			t.Fatalf("valid scalar key %s: %v", key, err)
 		}
-		if docs[0].object.Object["data"] == nil {
-			t.Fatal("data lost")
+		data, _, _ := unstructured.NestedStringMap(docs[0].object.Object, "data")
+		if data[expected] != "service" {
+			t.Fatalf("literal key changed: %+v", data)
 		}
 	}
-	for _, keys := range []string{"9000: first\n  \"9000\": second", "0x10: first\n  \"16\": second", "true: first\n  \"true\": second", "yes: first\n  \"true\": second"} {
+	for _, keys := range []string{"9000: first\n  \"9000\": second", "0x10: first\n  \"16\": second", "true: first\n  \"true\": second", "yes: first\n  \"true\": second", "2024-01-01: first\n  \"2024-01-01\": second"} {
 		if _, err := parseManifest(configMapManifest + "  " + keys + "\n"); err == nil {
 			t.Fatalf("canonical key collision accepted: %s", keys)
 		}
