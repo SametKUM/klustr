@@ -98,6 +98,24 @@ func (s *manifestSession) snapshot() ManifestOperation {
 	return ManifestOperation{Revision: s.revision, ID: s.id, ContextName: s.contextName, Phase: s.phase, Resources: resources, Warnings: append([]string{}, s.warnings...)}
 }
 
+// Outcomes cannot be reconstructed from the original YAML, especially for
+// generateName resources. Keep them until the editor explicitly releases them.
+// The registry's session cap still bounds retained drafts in memory.
+func (s *manifestSession) shouldExpire(now time.Time) bool {
+	if s.phase == "expired" {
+		return true
+	}
+	if s.phase == "creating" || s.phase == "reviewing" {
+		return false
+	}
+	for _, entry := range s.entries {
+		if entry.Status == "created" || entry.Status == "unknown" {
+			return false
+		}
+	}
+	return now.After(s.expires)
+}
+
 func (m *ClientManager) manifestSession(id string) (*manifestSession, error) {
 	m.manifests.mu.Lock()
 	s := m.manifests.sessions[id]
@@ -107,8 +125,7 @@ func (m *ClientManager) manifestSession(id string) (*manifestSession, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	expired := time.Now().After(s.expires) && s.phase != "creating" && s.phase != "reviewing"
-	if expired || s.phase == "expired" {
+	if s.shouldExpire(time.Now()) {
 		s.phase = "expired"
 		m.removeManifestSession(s)
 		return nil, fmt.Errorf("preview expired; review the manifest again")
@@ -194,7 +211,7 @@ func (m *ClientManager) removeManifestSession(s *manifestSession) {
 func (m *ClientManager) registerManifestSession(s *manifestSession) error {
 	for _, old := range m.manifestSessionList("") {
 		old.mu.Lock()
-		if time.Now().After(old.expires) && old.phase != "creating" && old.phase != "reviewing" {
+		if old.shouldExpire(time.Now()) {
 			old.phase = "expired"
 			m.removeManifestSession(old)
 		}

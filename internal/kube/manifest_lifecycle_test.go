@@ -190,6 +190,55 @@ func TestManifestSessionsExpireAndEnforceCapacityBeforeDiscovery(t *testing.T) {
 	}
 }
 
+func TestManifestOutcomesSurviveExpiryAndSweepUntilReleased(t *testing.T) {
+	for _, status := range []string{"created", "unknown"} {
+		t.Run(status, func(t *testing.T) {
+			dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+			m, s := manifestFixture(t, dyn, configMapManifest+"---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: remaining\n")
+			s.phase = "results"
+			s.entries[0].Status = status
+			s.entries[1].Status = "failed"
+			s.expires = time.Now().Add(-2 * manifestTTL)
+			if err := m.registerManifestSession(&manifestSession{id: "other", phase: "review", expires: time.Now().Add(time.Hour)}); err != nil {
+				t.Fatal(err)
+			}
+			op, err := m.GetManifestOperation(s.id)
+			if err != nil || op.Resources[0].Status != status {
+				t.Fatalf("outcome expired during sweep or lookup: %v, %+v", err, op)
+			}
+			if _, err := m.GetManifestPreview(s.id, 0, false); err != nil {
+				t.Fatal("result preview expired", err)
+			}
+			remaining, err := m.GetRemainingManifest(s.id)
+			if status == "unknown" {
+				if err == nil || !strings.Contains(err.Error(), "unknown outcomes") {
+					t.Fatal("unknown outcome guard lost", err)
+				}
+			} else {
+				docs, parseErr := parseManifest(remaining)
+				if err != nil || parseErr != nil || len(docs) != 1 || docs[0].object.GetName() != "remaining" {
+					t.Fatalf("remainder unavailable: %v, %v, %s", err, parseErr, remaining)
+				}
+				s.discovery = manifestDiscoveryFixture()
+				op, err = m.ReviewRemainingManifest(context.Background(), s.id)
+				if err != nil || op.Resources[0].Status != "created" || op.Resources[1].Status != "ready" {
+					t.Fatalf("cannot resume after TTL: %v, %+v", err, op)
+				}
+				s.expires = time.Now().Add(-2 * manifestTTL)
+				if _, err := m.GetRemainingManifest(s.id); err != nil {
+					t.Fatal("created entries expired in review phase", err)
+				}
+			}
+			if err := m.ReleaseManifest(s.id); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := m.GetManifestOperation(s.id); err == nil {
+				t.Fatal("explicit release retained outcomes")
+			}
+		})
+	}
+}
+
 func TestManifestRemainingReviewPreservesCreatedPrerequisites(t *testing.T) {
 	dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
 	m, s := manifestFixture(t, dyn, configMapManifest+"---\napiVersion: v1\nkind: Namespace\nmetadata:\n  name: team\n")
