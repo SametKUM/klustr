@@ -539,6 +539,22 @@ describe('resource editor workflow', () => {
     expect(mocks.yamlPane.mock.lastCall![0]).not.toBe(schema)
   })
 
+  it('updates valid leading documents while a later document has a syntax error', async () => {
+    const original = `${source}---\n${source.replace('example', 'second')}`
+    await render(); await edit(original)
+    const schema = mocks.yamlPane.mock.lastCall![0]
+    const invalid = `${original}  lab\n`
+    await edit(invalid)
+    expect(mocks.yamlPane.mock.lastCall![0]).toBe(schema)
+    await edit(invalid.replace('apiVersion: v1\nkind: ConfigMap', 'apiVersion: apps/v1\nkind: Deployment'))
+    const next = mocks.yamlPane.mock.lastCall![0]
+    expect(next.schemaSequence[0].properties.kind).toEqual({ const: 'Deployment' })
+    expect(next.schemaSequence[0].properties.apiVersion).toEqual({ const: 'apps/v1' })
+    expect(next.schemaSequence[1]).toEqual(schema.schemaSequence[1])
+    await edit(invalid.replace('apiVersion: v1\nkind: ConfigMap', 'apiVersion: apps/v1\nkind: Deployment').replace('  lab\n', '  labels: {}\n'))
+    expect(mocks.yamlPane.mock.lastCall![0]).toBe(next)
+  })
+
   it('does not restore a discarded result from a late snapshot after a remaining-review error', async () => {
     await render(); await edit(source)
     await act(async () => button('Review resources').click()); await flush()
