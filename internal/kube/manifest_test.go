@@ -594,6 +594,8 @@ func TestManifestSchemaUsesClusterOpenAPIAndV2Fallback(t *testing.T) {
 				requests = append(requests, r.URL.Path)
 				w.Header().Set("Content-Type", "application/json")
 				switch r.URL.Path {
+				case "/api/v1":
+					_, _ = w.Write([]byte(`{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"v1","resources":[]}`))
 				case "/openapi/v3":
 					if !v3 {
 						http.Error(w, "unavailable", http.StatusNotFound)

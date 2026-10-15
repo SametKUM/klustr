@@ -11,6 +11,7 @@ import (
 )
 
 func (m *ClientManager) cancelManifests(contextName string) {
+	m.manifestSchemas.invalidate(contextName)
 	for _, s := range m.manifestSessionList(contextName) {
 		s.mu.Lock()
 		s.invalidated = true

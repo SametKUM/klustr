@@ -72,27 +72,28 @@ type ContextChange struct {
 // subsystem: clientsets, the watcher pool, logs/exec sessions, port-forwards,
 // helm and the metrics cache.
 type ClientManager struct {
-	mu          sync.Mutex
-	rules       *clientcmd.ClientConfigLoadingRules
-	cache       map[string]*kubernetes.Clientset
-	watchers    map[string]*contextWatcher
-	watchLocks  map[string]*sync.Mutex
-	logs        *logSessionManager
-	execs       *execSessionManager
-	terms       *terminalSessionManager
-	pf          *pfManager
-	metrics     *metricsCache
-	helm        *helmManager
-	onChange    func(ContextChange)
-	readOnly    map[string]bool
-	drainMu     sync.Mutex
-	draining    map[string]bool
-	envReady    chan struct{}
-	envOnce     sync.Once
-	creds       *credentialManager
-	appCtx      context.Context
-	credRewatch map[string]bool
-	manifests   manifestSessions
+	mu              sync.Mutex
+	rules           *clientcmd.ClientConfigLoadingRules
+	cache           map[string]*kubernetes.Clientset
+	watchers        map[string]*contextWatcher
+	watchLocks      map[string]*sync.Mutex
+	logs            *logSessionManager
+	execs           *execSessionManager
+	terms           *terminalSessionManager
+	pf              *pfManager
+	metrics         *metricsCache
+	helm            *helmManager
+	onChange        func(ContextChange)
+	readOnly        map[string]bool
+	drainMu         sync.Mutex
+	draining        map[string]bool
+	envReady        chan struct{}
+	envOnce         sync.Once
+	creds           *credentialManager
+	appCtx          context.Context
+	credRewatch     map[string]bool
+	manifests       manifestSessions
+	manifestSchemas manifestSchemaCache
 }
 
 func NewClientManager() *ClientManager {

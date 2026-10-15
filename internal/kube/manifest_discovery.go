@@ -121,13 +121,22 @@ func (m *ClientManager) ManifestSchema(ctx context.Context, contextName, apiVers
 			if data, err := group.Schema("application/json"); err == nil {
 				return string(data), nil
 			}
+		} else {
+			return "", fmt.Errorf("schema unavailable for %s; this API version is not served", apiVersion)
 		}
+	}
+	if _, err := d.ServerResourcesForGroupVersion(apiVersion); err != nil {
+		return "", fmt.Errorf("schema unavailable for %s; check discovery permissions and the served API version", apiVersion)
 	}
 	client := d.RESTClient()
 	if client != nil {
-		if data, err := client.Get().AbsPath("/openapi/v2").Do(ctx).Raw(); err == nil {
+		return m.manifestSchemas.load(ctx, contextName, func() (string, error) {
+			data, err := client.Get().AbsPath("/openapi/v2").Do(ctx).Raw()
+			if err != nil {
+				return "", fmt.Errorf("schema unavailable for %s; server-side validation is still available", apiVersion)
+			}
 			return string(data), nil
-		}
+		})
 	}
 	return "", fmt.Errorf("schema unavailable for %s; server-side validation is still available", apiVersion)
 }

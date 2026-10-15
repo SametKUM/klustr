@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 
 	yamlv3 "go.yaml.in/yaml/v3"
@@ -96,13 +97,14 @@ func validateManifestNode(node *yamlv3.Node, depth int, path map[*yamlv3.Node]bo
 		keys := make(map[string]bool)
 		for i := 0; i < len(node.Content); i += 2 {
 			key := node.Content[i]
-			if key.Kind != yamlv3.ScalarNode || (key.Tag != "!!str" && key.Tag != "!!merge") {
-				return fmt.Errorf("line %d: object keys must be strings", key.Line)
+			canonical, err := manifestKeyString(key)
+			if err != nil {
+				return fmt.Errorf("line %d: object keys must be strings, numbers or booleans", key.Line)
 			}
-			if keys[key.Value] {
+			if keys[canonical] {
 				return fmt.Errorf("line %d, column %d: duplicate object key", key.Line, key.Column)
 			}
-			keys[key.Value] = true
+			keys[canonical] = true
 		}
 	}
 	if node.Tag != "" && !strings.HasPrefix(node.Tag, "!!") {
@@ -114,6 +116,40 @@ func validateManifestNode(node *yamlv3.Node, depth int, path map[*yamlv3.Node]bo
 		}
 	}
 	return nil
+}
+
+func manifestKeyString(key *yamlv3.Node) (string, error) {
+	if key.Kind != yamlv3.ScalarNode {
+		return "", fmt.Errorf("non-scalar key")
+	}
+	switch key.Tag {
+	case "!!merge":
+		return key.Value, nil
+	case "!!str":
+		// YAML 1.1 also resolves plain yes/no/on/off keys as booleans.
+		if key.Style != 0 || !slices.Contains([]string{"y", "n", "yes", "no", "on", "off"}, strings.ToLower(key.Value)) {
+			return key.Value, nil
+		}
+	case "!!int", "!!float", "!!bool":
+	default:
+		return "", fmt.Errorf("unsupported key")
+	}
+	encoded, err := yamlv3.Marshal(&yamlv3.Node{Kind: yamlv3.MappingNode, Content: []*yamlv3.Node{key, {Kind: yamlv3.ScalarNode, Tag: "!!null", Value: "null"}}})
+	if err != nil {
+		return "", err
+	}
+	data, err := yaml.YAMLToJSONStrict(encoded)
+	if err != nil {
+		return "", err
+	}
+	var object map[string]any
+	if err := json.Unmarshal(data, &object); err != nil {
+		return "", err
+	}
+	for name := range object {
+		return name, nil
+	}
+	return "", fmt.Errorf("invalid key")
 }
 
 func appendManifestObject(items *[]manifestDocument, object map[string]any, document, line, depth int) error {
