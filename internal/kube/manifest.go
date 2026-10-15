@@ -66,17 +66,19 @@ type manifestEntry struct {
 }
 
 type manifestSession struct {
-	client      dynamic.Interface
-	discovery   discovery.DiscoveryInterface
-	revision    int
-	mu          sync.Mutex
-	id          string
-	contextName string
-	phase       string
-	entries     []manifestEntry
-	warnings    []string
-	expires     time.Time
-	cancel      context.CancelFunc
+	client        dynamic.Interface
+	discovery     discovery.DiscoveryInterface
+	revision      int
+	mu            sync.Mutex
+	id            string
+	contextName   string
+	phase         string
+	entries       []manifestEntry
+	warnings      []string
+	expires       time.Time
+	cancel        context.CancelFunc
+	stopRequested bool
+	invalidated   bool
 }
 
 type manifestSessions struct {
@@ -98,16 +100,17 @@ func (s *manifestSession) snapshot() ManifestOperation {
 
 func (m *ClientManager) manifestSession(id string) (*manifestSession, error) {
 	m.manifests.mu.Lock()
-	defer m.manifests.mu.Unlock()
 	s := m.manifests.sessions[id]
+	m.manifests.mu.Unlock()
 	if s == nil {
 		return nil, fmt.Errorf("preview expired; review the manifest again")
 	}
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	expired := time.Now().After(s.expires) && s.phase != "creating" && s.phase != "reviewing"
-	s.mu.Unlock()
-	if expired {
-		delete(m.manifests.sessions, id)
+	if expired || s.phase == "expired" {
+		s.phase = "expired"
+		m.removeManifestSession(s)
 		return nil, fmt.Errorf("preview expired; review the manifest again")
 	}
 	return s, nil
@@ -121,6 +124,22 @@ func (m *ClientManager) ReviewManifest(ctx context.Context, contextName, default
 	if err != nil {
 		return nil, err
 	}
+	var id [16]byte
+	if _, err := rand.Read(id[:]); err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	s := &manifestSession{id: hex.EncodeToString(id[:]), contextName: contextName, phase: "reviewing", expires: time.Now().Add(manifestTTL), cancel: cancel}
+	if err := m.registerManifestSession(s); err != nil {
+		return nil, err
+	}
+	complete := false
+	defer func() {
+		if !complete {
+			m.removeManifestSession(s)
+		}
+	}()
 	dyn, d, err := m.manifestClients(contextName)
 	if err != nil {
 		return nil, err
@@ -133,32 +152,76 @@ func (m *ClientManager) ReviewManifest(ctx context.Context, contextName, default
 	if err != nil {
 		return nil, err
 	}
-	var id [16]byte
-	if _, err := rand.Read(id[:]); err != nil {
-		return nil, err
+	working := &manifestSession{entries: entries, warnings: warnings}
+	reviewManifestEntries(ctx, working, dyn)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if ctx.Err() != nil || s.invalidated {
+		return nil, fmt.Errorf("review cancelled; reconnect and review the manifest again")
 	}
-	s := &manifestSession{id: hex.EncodeToString(id[:]), contextName: contextName, client: dyn, discovery: d, entries: entries, warnings: warnings, phase: "reviewing", expires: time.Now().Add(manifestTTL)}
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	reviewManifestEntries(ctx, s, dyn)
+	s.client, s.discovery = dyn, d
+	s.entries, s.warnings = working.entries, working.warnings
+	s.phase, s.cancel = "review", nil
+	s.revision++
+	s.expires = time.Now().Add(manifestTTL)
+	complete = true
+	result := s.snapshot()
+	return &result, nil
+}
+
+// Registry locks never cover session locks or network calls. Session pointers
+// are immutable; operations claim their phase under the session's own lock.
+func (m *ClientManager) manifestSessionList(contextName string) []*manifestSession {
 	m.manifests.mu.Lock()
 	defer m.manifests.mu.Unlock()
-	if m.manifests.sessions == nil {
-		m.manifests.sessions = make(map[string]*manifestSession)
+	sessions := make([]*manifestSession, 0, len(m.manifests.sessions))
+	for _, s := range m.manifests.sessions {
+		if contextName == "" || s.contextName == contextName {
+			sessions = append(sessions, s)
+		}
 	}
-	for key, old := range m.manifests.sessions {
+	return sessions
+}
+
+func (m *ClientManager) removeManifestSession(s *manifestSession) {
+	m.manifests.mu.Lock()
+	defer m.manifests.mu.Unlock()
+	if m.manifests.sessions[s.id] == s {
+		delete(m.manifests.sessions, s.id)
+	}
+}
+
+func (m *ClientManager) registerManifestSession(s *manifestSession) error {
+	for _, old := range m.manifestSessionList("") {
 		old.mu.Lock()
 		if time.Now().After(old.expires) && old.phase != "creating" && old.phase != "reviewing" {
-			delete(m.manifests.sessions, key)
+			old.phase = "expired"
+			m.removeManifestSession(old)
 		}
 		old.mu.Unlock()
 	}
+	m.manifests.mu.Lock()
+	defer m.manifests.mu.Unlock()
 	if len(m.manifests.sessions) >= 16 {
-		return nil, fmt.Errorf("too many open previews; close an earlier editor session")
+		return fmt.Errorf("too many open previews; close an earlier editor session")
+	}
+	if m.manifests.sessions == nil {
+		m.manifests.sessions = make(map[string]*manifestSession)
 	}
 	m.manifests.sessions[s.id] = s
-	result := s.snapshot()
-	return &result, nil
+	return nil
+}
+
+func cloneManifestEntries(entries []manifestEntry) []manifestEntry {
+	cloned := append([]manifestEntry{}, entries...)
+	for i := range cloned {
+		entry := &cloned[i]
+		entry.Dependencies = append([]int{}, entry.Dependencies...)
+		entry.Warnings = append([]string{}, entry.Warnings...)
+		entry.object = entry.object.DeepCopy()
+		entry.predicted = entry.predicted.DeepCopy()
+	}
+	return cloned
 }
 
 func prepareManifest(docs []manifestDocument, kinds []ManifestKind, defaultNamespace string) ([]manifestEntry, error) {

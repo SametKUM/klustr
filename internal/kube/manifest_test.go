@@ -532,7 +532,7 @@ func TestManifestReviewPinsEndpointAndInput(t *testing.T) {
 	}
 }
 
-func TestManifestCancelTracksUncertainWrite(t *testing.T) {
+func TestManifestDisconnectTracksUncertainWrite(t *testing.T) {
 	started := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var obj map[string]any
@@ -562,9 +562,7 @@ func TestManifestCancelTracksUncertainWrite(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("write not started")
 	}
-	if err := m.CancelManifest(s.id); err != nil {
-		t.Fatal(err)
-	}
+	m.cancelManifests("ctx")
 	select {
 	case op := <-done:
 		if op.Resources[0].Status != "unknown" {
