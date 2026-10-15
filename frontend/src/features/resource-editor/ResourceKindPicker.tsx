@@ -18,14 +18,14 @@ export function ResourceKindPicker({ resources, onSelect }: {
   const [search, setSearch] = useState('')
   const matches = filterResourceKinds(resources, search)
   return (
-    <Command shouldFilter={false}>
+    <Command shouldFilter={false} className="max-h-[var(--radix-popover-content-available-height)]">
       <CommandInput
         aria-label="Find a resource type"
         placeholder="Find a resource type…"
         value={search}
         onValueChange={setSearch}
       />
-      <CommandList>
+      <CommandList hideScrollbar={false} className="min-h-0 overscroll-contain">
         <CommandEmpty>No resource types found.</CommandEmpty>
         <CommandGroup>
           {matches.map((mapping) => (

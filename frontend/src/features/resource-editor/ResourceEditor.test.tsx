@@ -122,6 +122,7 @@ describe('resource editor workflow', () => {
   let root: Root
   let queryClient: QueryClient
   const close = vi.fn()
+  const scrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView')
   const render = async (open = true, request: { serial: number; target: ResourceEditorRequest } = { serial: 1, target: {} }) => {
     await act(async () => {
       root.render(
@@ -133,6 +134,12 @@ describe('resource editor workflow', () => {
     await flush()
   }
   beforeEach(() => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
     vi.clearAllMocks()
     close.mockClear()
     mocks.readOnly = false
@@ -161,6 +168,49 @@ describe('resource editor workflow', () => {
     document
       .querySelectorAll('[data-radix-popper-content-wrapper]')
       .forEach((element) => element.remove())
+    vi.unstubAllGlobals()
+    if (scrollIntoView) Object.defineProperty(Element.prototype, 'scrollIntoView', scrollIntoView)
+    else Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+  })
+
+  it('allows wheel and touch scrolling in the resource picker while locking the background', async () => {
+    mocks.getManifestCatalog.mockResolvedValue({
+      resources: Array.from({ length: 100 }, (_, index) => ({
+        apiVersion: 'example.com/v1', kind: `Widget${index}`, resource: `widgets${index}`, namespaced: true,
+      })),
+      defaultNamespace: 'default', warnings: [],
+    })
+    await render()
+    await act(async () => button('Add resource').click()); await flush()
+    const list = document.querySelector('[data-slot="command-list"]') as HTMLElement
+    const row = list.querySelector('[role="option"]')!
+    // jsdom has no layout; supply the overflowing viewport that the browser renders.
+    Object.defineProperties(list, { scrollHeight: { value: 3200 }, clientHeight: { value: 288 } })
+    list.style.overflowY = 'auto'
+    const wheel = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true })
+    row.dispatchEvent(wheel)
+    expect(wheel.defaultPrevented).toBe(false)
+
+    const touch = (type: string, clientY: number) => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      Object.defineProperties(event, {
+        touches: { value: [{ clientX: 0, clientY }] },
+        changedTouches: { value: [{ clientX: 0, clientY }] },
+      })
+      row.dispatchEvent(event)
+      return event
+    }
+    touch('touchstart', 200)
+    expect(touch('touchmove', 100).defaultPrevented).toBe(false)
+    const backgroundWheel = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true })
+    document.body.dispatchEvent(backgroundWheel)
+    expect(backgroundWheel.defaultPrevented).toBe(true)
+    expect(list.querySelectorAll('[role="option"]')).toHaveLength(100)
+
+    await act(async () => row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+    expect(close).not.toHaveBeenCalled()
+    expect(document.querySelector('[data-slot="popover-content"]')).toBeNull()
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull()
   })
 
   it('requires an explicit review and a separate create action', async () => {

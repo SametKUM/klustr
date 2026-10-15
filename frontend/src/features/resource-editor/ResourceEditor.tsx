@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import {
   AlertCircle,
   ArrowLeft,
@@ -50,6 +50,7 @@ const selectClass =
   'h-8 min-w-0 rounded-md border border-input bg-background px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50'
 export default function ResourceEditor(props: ResourceEditorProps) {
   const { open } = props
+  const [dialogContent, setDialogContent] = useState<HTMLDivElement | null>(null)
   const {
     activeContexts,
     selectedNamespaces,
@@ -114,6 +115,7 @@ export default function ResourceEditor(props: ResourceEditorProps) {
         }}
       >
         <DialogContent
+          ref={setDialogContent}
           showCloseButton={false}
           className="flex h-[90vh] min-h-[min(28rem,90vh)] max-h-[94vh] w-[94vw] max-w-[94vw] min-w-[min(36rem,94vw)] resize flex-col gap-0 overflow-hidden p-0 sm:max-w-[94vw]"
           onEscapeKeyDown={(event) => {
@@ -256,7 +258,14 @@ export default function ResourceEditor(props: ResourceEditorProps) {
                       <Plus className="size-3" /> Add resource <ChevronDown className="size-3" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-96 max-w-[85vw] p-0" align="start">
+                  {/* Keep the portal inside the dialog's scroll-lock boundary. */}
+                  <PopoverContent
+                    container={dialogContent}
+                    collisionBoundary={dialogContent}
+                    collisionPadding={8}
+                    className="w-96 max-w-[85vw] p-0"
+                    align="start"
+                  >
                     <ResourceKindPicker
                       resources={catalog?.resources ?? []}
                       onSelect={(mapping) => {
