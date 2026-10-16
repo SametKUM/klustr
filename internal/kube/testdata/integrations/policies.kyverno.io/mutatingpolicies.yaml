@@ -1,0 +1,46 @@
+apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
+metadata:
+  name: add-default-team
+  creationTimestamp: "2026-10-05T08:14:02Z"
+  generation: 1
+spec:
+  failurePolicy: Ignore
+  reinvocationPolicy: IfNeeded
+  evaluation:
+    admission: {enabled: true}
+    mutateExisting: {enabled: true}
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [apps]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [deployments]
+  matchConditions:
+    - name: no-team-label
+      expression: "!has(object.metadata.labels) || !('team' in object.metadata.labels)"
+  targetMatchConstraints:
+    resourceRules:
+      - apiGroups: [apps]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [deployments]
+  mutations:
+    - patchType: ApplyConfiguration
+      applyConfiguration:
+        expression: >-
+          Object{metadata: Object.metadata{labels: {"team": "platform"}}}
+    - patchType: JSONPatch
+      jsonPatch:
+        expression: >-
+          [JSONPatch{op: "add", path: "/metadata/annotations/policies.kyverno.io~1mutated", value: "true"}]
+status:
+  conditionStatus:
+    ready: true
+    conditions:
+      - lastTransitionTime: "2026-10-05T08:14:05Z"
+        message: Webhook configured.
+        reason: Succeeded
+        status: "True"
+        type: WebhookConfigured
+  generated: false

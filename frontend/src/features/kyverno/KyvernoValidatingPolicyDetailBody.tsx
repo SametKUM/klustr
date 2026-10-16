@@ -1,10 +1,11 @@
 import { useCallback } from 'react'
-import { api, type KyvernoCELExpression, type KyvernoValidatingPolicyDetail } from '@/lib/api'
+import { api, type KyvernoValidatingPolicyDetail } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 import { ReadyPill } from '@/features/_shared/ReadyPill'
-import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { ErrorBox, Field, Section } from '@/features/_shared/DetailPrimitives'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
+import { ExpressionsTable } from './KyvernoCELShared'
 import { failureActionClass } from './kyvernoFormat'
 
 type Props = {
@@ -108,39 +109,5 @@ export function KyvernoValidatingPolicyDetailBody({ contextName, namespace, name
 
       <ConditionsSection conditions={detail.conditions} hideWhenEmpty />
     </div>
-  )
-}
-
-function ExpressionsTable({
-  title,
-  rows,
-  nameHeader,
-}: {
-  title: string
-  rows: KyvernoCELExpression[]
-  nameHeader: string
-}) {
-  if (rows.length === 0) return null
-  return (
-    <Section title={`${title} (${rows.length})`}>
-      <div className="overflow-hidden rounded border border-border">
-        <table className="w-full text-xs">
-          <thead className="bg-muted/40 text-muted-foreground">
-            <tr>
-              <Th>{nameHeader}</Th>
-              <Th>Expression</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={`${r.name}-${i}`} className="border-t border-border align-top">
-                <Td className="whitespace-nowrap font-mono">{r.name || '—'}</Td>
-                <Td className="font-mono break-all">{r.expression}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Section>
   )
 }

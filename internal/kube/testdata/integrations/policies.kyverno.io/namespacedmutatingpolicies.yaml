@@ -1,0 +1,24 @@
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedMutatingPolicy
+metadata:
+  name: default-resources
+  namespace: shop
+  creationTimestamp: "2026-10-05T08:20:40Z"
+spec:
+  evaluation:
+    admission: {enabled: true}
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE]
+        resources: [pods]
+  mutations:
+    - patchType: ApplyConfiguration
+      applyConfiguration:
+        expression: >-
+          Object{spec: Object.spec{containers: object.spec.containers.map(c,
+          Object.spec.containers{name: c.name, resources: Object.spec.containers.resources{requests: {"cpu": "50m"}}})}}
+status:
+  conditionStatus:
+    ready: true

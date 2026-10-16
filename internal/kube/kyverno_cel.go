@@ -9,9 +9,11 @@ import (
 )
 
 // Kyverno's CEL policy family (policies.kyverno.io, v1 since Kyverno 1.16)
-// mirrors Kubernetes ValidatingAdmissionPolicy. Klustr covers the validating
-// kinds: the cluster-scoped ValidatingPolicy and NamespacedValidatingPolicy,
-// which applies only within its own namespace.
+// mirrors Kubernetes ValidatingAdmissionPolicy. This file covers the
+// validating kinds: the cluster-scoped ValidatingPolicy and
+// NamespacedValidatingPolicy, which applies only within its own namespace.
+// The mutating, generating, deleting and image-validating kinds are in
+// kyverno_cel_policies.go.
 const (
 	kyvernoCELGroup                             = "policies.kyverno.io"
 	kyvernoValidatingPoliciesResource           = "validatingpolicies"

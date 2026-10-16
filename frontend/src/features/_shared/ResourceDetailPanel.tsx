@@ -499,8 +499,14 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
   const hasKEDAJobs = kedaKind === 'ScaledJob'
   const kyvernoKind = kyvernoKindOf(resource)
   const isClassicKyvernoPolicy = kyvernoKind === 'ClusterPolicy' || kyvernoKind === 'Policy'
+  // Every policy kind Kyverno writes report results for has a Violations tab;
+  // DeletingPolicies do not report.
   const isKyvernoPolicy =
-    isClassicKyvernoPolicy || kyvernoKind === 'ValidatingPolicy' || kyvernoKind === 'NamespacedValidatingPolicy'
+    kyvernoKind !== null &&
+    kyvernoKind !== 'PolicyException' &&
+    kyvernoKind !== 'PolicyReport' &&
+    kyvernoKind !== 'ClusterPolicyReport' &&
+    !kyvernoKind.endsWith('DeletingPolicy')
   const reportsServed = useCRDStore((s) =>
     contextName ? findCRD(s.byContext, contextName, POLICY_REPORT_GROUP, POLICYREPORT_RESOURCE) !== null : false,
   )

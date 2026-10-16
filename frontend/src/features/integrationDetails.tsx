@@ -41,6 +41,12 @@ import {
 } from '@/features/keda/KEDADetailBodies'
 import { KyvernoPolicyDetailBody } from '@/features/kyverno/KyvernoPolicyDetailBody'
 import { KyvernoValidatingPolicyDetailBody } from '@/features/kyverno/KyvernoValidatingPolicyDetailBody'
+import {
+  KyvernoDeletingPolicyDetailBody,
+  KyvernoGeneratingPolicyDetailBody,
+  KyvernoImageValidatingPolicyDetailBody,
+  KyvernoMutatingPolicyDetailBody,
+} from '@/features/kyverno/KyvernoCELPolicyDetailBodies'
 import { KyvernoPolicyExceptionDetailBody } from '@/features/kyverno/KyvernoPolicyExceptionDetailBody'
 import { PolicyReportDetailBody } from '@/features/kyverno/PolicyReportDetailBody'
 import { TektonPipelineRunDetailBody } from '@/features/tekton/TektonPipelineRunDetailBody'
@@ -124,6 +130,14 @@ export const INTEGRATION_DETAIL_BODIES: Record<IntegrationView, DetailBody | nul
   kyvernopolicies: (p) => <KyvernoPolicyDetailBody {...p} cluster={false} />,
   kyvernovalidatingpolicies: (p) => <KyvernoValidatingPolicyDetailBody {...p} namespaced={false} />,
   kyvernonamespacedvalidatingpolicies: (p) => <KyvernoValidatingPolicyDetailBody {...p} namespaced />,
+  kyvernomutatingpolicies: (p) => <KyvernoMutatingPolicyDetailBody {...p} namespaced={false} />,
+  kyvernonamespacedmutatingpolicies: (p) => <KyvernoMutatingPolicyDetailBody {...p} namespaced />,
+  kyvernogeneratingpolicies: (p) => <KyvernoGeneratingPolicyDetailBody {...p} namespaced={false} />,
+  kyvernonamespacedgeneratingpolicies: (p) => <KyvernoGeneratingPolicyDetailBody {...p} namespaced />,
+  kyvernodeletingpolicies: (p) => <KyvernoDeletingPolicyDetailBody {...p} namespaced={false} />,
+  kyvernonamespaceddeletingpolicies: (p) => <KyvernoDeletingPolicyDetailBody {...p} namespaced />,
+  kyvernoimagevalidatingpolicies: (p) => <KyvernoImageValidatingPolicyDetailBody {...p} namespaced={false} />,
+  kyvernonamespacedimagevalidatingpolicies: (p) => <KyvernoImageValidatingPolicyDetailBody {...p} namespaced />,
   kyvernopolicyexceptions: (p) => <KyvernoPolicyExceptionDetailBody {...p} />,
   policyreports: (p) => <PolicyReportDetailBody {...p} cluster={false} />,
   clusterpolicyreports: (p) => <PolicyReportDetailBody {...p} cluster />,

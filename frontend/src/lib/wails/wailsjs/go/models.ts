@@ -7177,6 +7177,38 @@ export namespace kube {
 		    return a;
 		}
 	}
+	export class KyvernoAttestation {
+	    name: string;
+	    kind: string;
+	    type: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoAttestation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.type = source["type"];
+	    }
+	}
+	export class KyvernoAttestor {
+	    name: string;
+	    type: string;
+	    details: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoAttestor(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.details = source["details"];
+	    }
+	}
 	export class KyvernoAutogenRule {
 	    name: string;
 	    kinds: string[];
@@ -7205,6 +7237,36 @@ export namespace kube {
 	        this.expression = source["expression"];
 	    }
 	}
+	export class KyvernoCELGeneration {
+	    expression: string;
+	    template: string;
+	    interpolate: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoCELGeneration(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.expression = source["expression"];
+	        this.template = source["template"];
+	        this.interpolate = source["interpolate"];
+	    }
+	}
+	export class KyvernoCELMutation {
+	    patchType: string;
+	    expression: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoCELMutation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.patchType = source["patchType"];
+	        this.expression = source["expression"];
+	    }
+	}
 	export class KyvernoCELValidation {
 	    expression: string;
 	    message: string;
@@ -7223,6 +7285,98 @@ export namespace kube {
 	        this.reason = source["reason"];
 	    }
 	}
+	export class KyvernoDeletingPolicyDetail {
+	    name: string;
+	    namespace: string;
+	    resources: string[];
+	    ready: string;
+	    createdAt: string;
+	    schedule: string;
+	    lastExecution: string;
+	    nextExecution: string;
+	    propagation: string;
+	    reportKey: string;
+	    failurePolicy: string;
+	    mode: string;
+	    namespaceSelector: string;
+	    objectSelector: string;
+	    matchConditions: KyvernoCELExpression[];
+	    variables: KyvernoCELExpression[];
+	    conditions: ConditionDetail[];
+	    deleteConditions: KyvernoCELExpression[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoDeletingPolicyDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.resources = source["resources"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	        this.schedule = source["schedule"];
+	        this.lastExecution = source["lastExecution"];
+	        this.nextExecution = source["nextExecution"];
+	        this.propagation = source["propagation"];
+	        this.reportKey = source["reportKey"];
+	        this.failurePolicy = source["failurePolicy"];
+	        this.mode = source["mode"];
+	        this.namespaceSelector = source["namespaceSelector"];
+	        this.objectSelector = source["objectSelector"];
+	        this.matchConditions = this.convertValues(source["matchConditions"], KyvernoCELExpression);
+	        this.variables = this.convertValues(source["variables"], KyvernoCELExpression);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.deleteConditions = this.convertValues(source["deleteConditions"], KyvernoCELExpression);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KyvernoDeletingPolicyInfo {
+	    name: string;
+	    namespace: string;
+	    resources: string[];
+	    ready: string;
+	    createdAt: string;
+	    schedule: string;
+	    lastExecution: string;
+	    nextExecution: string;
+	    propagation: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoDeletingPolicyInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.resources = source["resources"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	        this.schedule = source["schedule"];
+	        this.lastExecution = source["lastExecution"];
+	        this.nextExecution = source["nextExecution"];
+	        this.propagation = source["propagation"];
+	    }
+	}
 	export class KyvernoExceptionTarget {
 	    policyName: string;
 	    ruleNames: string[];
@@ -7235,6 +7389,308 @@ export namespace kube {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.policyName = source["policyName"];
 	        this.ruleNames = source["ruleNames"];
+	    }
+	}
+	export class KyvernoGeneratingPolicyDetail {
+	    name: string;
+	    namespace: string;
+	    resources: string[];
+	    ready: string;
+	    createdAt: string;
+	    generations: number;
+	    synchronize: boolean;
+	    generateExisting: boolean;
+	    reportKey: string;
+	    failurePolicy: string;
+	    mode: string;
+	    namespaceSelector: string;
+	    objectSelector: string;
+	    matchConditions: KyvernoCELExpression[];
+	    variables: KyvernoCELExpression[];
+	    conditions: ConditionDetail[];
+	    generationList: KyvernoCELGeneration[];
+	    orphanOnDelete: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoGeneratingPolicyDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.resources = source["resources"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	        this.generations = source["generations"];
+	        this.synchronize = source["synchronize"];
+	        this.generateExisting = source["generateExisting"];
+	        this.reportKey = source["reportKey"];
+	        this.failurePolicy = source["failurePolicy"];
+	        this.mode = source["mode"];
+	        this.namespaceSelector = source["namespaceSelector"];
+	        this.objectSelector = source["objectSelector"];
+	        this.matchConditions = this.convertValues(source["matchConditions"], KyvernoCELExpression);
+	        this.variables = this.convertValues(source["variables"], KyvernoCELExpression);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.generationList = this.convertValues(source["generationList"], KyvernoCELGeneration);
+	        this.orphanOnDelete = source["orphanOnDelete"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KyvernoGeneratingPolicyInfo {
+	    name: string;
+	    namespace: string;
+	    resources: string[];
+	    ready: string;
+	    createdAt: string;
+	    generations: number;
+	    synchronize: boolean;
+	    generateExisting: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoGeneratingPolicyInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.resources = source["resources"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	        this.generations = source["generations"];
+	        this.synchronize = source["synchronize"];
+	        this.generateExisting = source["generateExisting"];
+	    }
+	}
+	export class KyvernoImageValidatingPolicyDetail {
+	    name: string;
+	    namespace: string;
+	    resources: string[];
+	    ready: string;
+	    createdAt: string;
+	    images: string[];
+	    attestors: string[];
+	    actions: string[];
+	    admission: boolean;
+	    background: boolean;
+	    reportKey: string;
+	    failurePolicy: string;
+	    mode: string;
+	    namespaceSelector: string;
+	    objectSelector: string;
+	    matchConditions: KyvernoCELExpression[];
+	    variables: KyvernoCELExpression[];
+	    conditions: ConditionDetail[];
+	    attestorList: KyvernoAttestor[];
+	    attestations: KyvernoAttestation[];
+	    validationRules: KyvernoCELValidation[];
+	    imageExtractors: KyvernoCELExpression[];
+	    mutateDigest: boolean;
+	    verifyDigest: boolean;
+	    required: boolean;
+	    credentialProviders: string[];
+	    credentialSecrets: string[];
+	    allowInsecure: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoImageValidatingPolicyDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.resources = source["resources"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	        this.images = source["images"];
+	        this.attestors = source["attestors"];
+	        this.actions = source["actions"];
+	        this.admission = source["admission"];
+	        this.background = source["background"];
+	        this.reportKey = source["reportKey"];
+	        this.failurePolicy = source["failurePolicy"];
+	        this.mode = source["mode"];
+	        this.namespaceSelector = source["namespaceSelector"];
+	        this.objectSelector = source["objectSelector"];
+	        this.matchConditions = this.convertValues(source["matchConditions"], KyvernoCELExpression);
+	        this.variables = this.convertValues(source["variables"], KyvernoCELExpression);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.attestorList = this.convertValues(source["attestorList"], KyvernoAttestor);
+	        this.attestations = this.convertValues(source["attestations"], KyvernoAttestation);
+	        this.validationRules = this.convertValues(source["validationRules"], KyvernoCELValidation);
+	        this.imageExtractors = this.convertValues(source["imageExtractors"], KyvernoCELExpression);
+	        this.mutateDigest = source["mutateDigest"];
+	        this.verifyDigest = source["verifyDigest"];
+	        this.required = source["required"];
+	        this.credentialProviders = source["credentialProviders"];
+	        this.credentialSecrets = source["credentialSecrets"];
+	        this.allowInsecure = source["allowInsecure"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KyvernoImageValidatingPolicyInfo {
+	    name: string;
+	    namespace: string;
+	    resources: string[];
+	    ready: string;
+	    createdAt: string;
+	    images: string[];
+	    attestors: string[];
+	    actions: string[];
+	    admission: boolean;
+	    background: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoImageValidatingPolicyInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.resources = source["resources"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	        this.images = source["images"];
+	        this.attestors = source["attestors"];
+	        this.actions = source["actions"];
+	        this.admission = source["admission"];
+	        this.background = source["background"];
+	    }
+	}
+	export class KyvernoMutatingPolicyDetail {
+	    name: string;
+	    namespace: string;
+	    resources: string[];
+	    ready: string;
+	    createdAt: string;
+	    mutations: number;
+	    patchTypes: string[];
+	    admission: boolean;
+	    mutateExisting: boolean;
+	    reportKey: string;
+	    failurePolicy: string;
+	    mode: string;
+	    namespaceSelector: string;
+	    objectSelector: string;
+	    matchConditions: KyvernoCELExpression[];
+	    variables: KyvernoCELExpression[];
+	    conditions: ConditionDetail[];
+	    mutationList: KyvernoCELMutation[];
+	    targetResources: string[];
+	    targetMatchConditions: KyvernoCELExpression[];
+	    reinvocationPolicy: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoMutatingPolicyDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.resources = source["resources"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	        this.mutations = source["mutations"];
+	        this.patchTypes = source["patchTypes"];
+	        this.admission = source["admission"];
+	        this.mutateExisting = source["mutateExisting"];
+	        this.reportKey = source["reportKey"];
+	        this.failurePolicy = source["failurePolicy"];
+	        this.mode = source["mode"];
+	        this.namespaceSelector = source["namespaceSelector"];
+	        this.objectSelector = source["objectSelector"];
+	        this.matchConditions = this.convertValues(source["matchConditions"], KyvernoCELExpression);
+	        this.variables = this.convertValues(source["variables"], KyvernoCELExpression);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.mutationList = this.convertValues(source["mutationList"], KyvernoCELMutation);
+	        this.targetResources = source["targetResources"];
+	        this.targetMatchConditions = this.convertValues(source["targetMatchConditions"], KyvernoCELExpression);
+	        this.reinvocationPolicy = source["reinvocationPolicy"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KyvernoMutatingPolicyInfo {
+	    name: string;
+	    namespace: string;
+	    resources: string[];
+	    ready: string;
+	    createdAt: string;
+	    mutations: number;
+	    patchTypes: string[];
+	    admission: boolean;
+	    mutateExisting: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new KyvernoMutatingPolicyInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.resources = source["resources"];
+	        this.ready = source["ready"];
+	        this.createdAt = source["createdAt"];
+	        this.mutations = source["mutations"];
+	        this.patchTypes = source["patchTypes"];
+	        this.admission = source["admission"];
+	        this.mutateExisting = source["mutateExisting"];
 	    }
 	}
 	export class KyvernoRule {

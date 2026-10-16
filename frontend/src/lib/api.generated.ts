@@ -224,10 +224,22 @@ export type KarpenterEC2NodeClassInfo = kube.KarpenterEC2NodeClassInfo
 export type KarpenterNodeClaimInfo = kube.KarpenterNodeClaimInfo
 export type KarpenterNodePoolInfo = kube.KarpenterNodePoolInfo
 export type Kubeconfig = kube.Kubeconfig
+export type KyvernoAttestation = kube.KyvernoAttestation
+export type KyvernoAttestor = kube.KyvernoAttestor
 export type KyvernoAutogenRule = kube.KyvernoAutogenRule
 export type KyvernoCELExpression = kube.KyvernoCELExpression
+export type KyvernoCELGeneration = kube.KyvernoCELGeneration
+export type KyvernoCELMutation = kube.KyvernoCELMutation
 export type KyvernoCELValidation = kube.KyvernoCELValidation
+export type KyvernoDeletingPolicyDetail = kube.KyvernoDeletingPolicyDetail
+export type KyvernoDeletingPolicyInfo = kube.KyvernoDeletingPolicyInfo
 export type KyvernoExceptionTarget = kube.KyvernoExceptionTarget
+export type KyvernoGeneratingPolicyDetail = kube.KyvernoGeneratingPolicyDetail
+export type KyvernoGeneratingPolicyInfo = kube.KyvernoGeneratingPolicyInfo
+export type KyvernoImageValidatingPolicyDetail = kube.KyvernoImageValidatingPolicyDetail
+export type KyvernoImageValidatingPolicyInfo = kube.KyvernoImageValidatingPolicyInfo
+export type KyvernoMutatingPolicyDetail = kube.KyvernoMutatingPolicyDetail
+export type KyvernoMutatingPolicyInfo = kube.KyvernoMutatingPolicyInfo
 export type KyvernoRule = kube.KyvernoRule
 export type KyvernoPolicyDetail = kube.KyvernoPolicyDetail
 export type KyvernoPolicyExceptionDetail = kube.KyvernoPolicyExceptionDetail
@@ -453,6 +465,14 @@ export const generatedApi = {
   getKarpenterDisruption: bindings.GetKarpenterDisruption,
   getKarpenterEC2NodeClass: bindings.GetKarpenterEC2NodeClass,
   getKyvernoClusterPolicy: bindings.GetKyvernoClusterPolicy,
+  getKyvernoDeletingPolicy: bindings.GetKyvernoDeletingPolicy,
+  getKyvernoGeneratingPolicy: bindings.GetKyvernoGeneratingPolicy,
+  getKyvernoImageValidatingPolicy: bindings.GetKyvernoImageValidatingPolicy,
+  getKyvernoMutatingPolicy: bindings.GetKyvernoMutatingPolicy,
+  getKyvernoNamespacedDeletingPolicy: bindings.GetKyvernoNamespacedDeletingPolicy,
+  getKyvernoNamespacedGeneratingPolicy: bindings.GetKyvernoNamespacedGeneratingPolicy,
+  getKyvernoNamespacedImageValidatingPolicy: bindings.GetKyvernoNamespacedImageValidatingPolicy,
+  getKyvernoNamespacedMutatingPolicy: bindings.GetKyvernoNamespacedMutatingPolicy,
   getKyvernoNamespacedValidatingPolicy: bindings.GetKyvernoNamespacedValidatingPolicy,
   getKyvernoPolicy: bindings.GetKyvernoPolicy,
   getKyvernoPolicyException: bindings.GetKyvernoPolicyException,
@@ -593,6 +613,14 @@ export const generatedApi = {
   listKarpenterNodeClaims: bindings.ListKarpenterNodeClaims,
   listKarpenterNodePools: bindings.ListKarpenterNodePools,
   listKyvernoClusterPolicies: bindings.ListKyvernoClusterPolicies,
+  listKyvernoDeletingPolicies: bindings.ListKyvernoDeletingPolicies,
+  listKyvernoGeneratingPolicies: bindings.ListKyvernoGeneratingPolicies,
+  listKyvernoImageValidatingPolicies: bindings.ListKyvernoImageValidatingPolicies,
+  listKyvernoMutatingPolicies: bindings.ListKyvernoMutatingPolicies,
+  listKyvernoNamespacedDeletingPolicies: bindings.ListKyvernoNamespacedDeletingPolicies,
+  listKyvernoNamespacedGeneratingPolicies: bindings.ListKyvernoNamespacedGeneratingPolicies,
+  listKyvernoNamespacedImageValidatingPolicies: bindings.ListKyvernoNamespacedImageValidatingPolicies,
+  listKyvernoNamespacedMutatingPolicies: bindings.ListKyvernoNamespacedMutatingPolicies,
   listKyvernoNamespacedValidatingPolicies: bindings.ListKyvernoNamespacedValidatingPolicies,
   listKyvernoPolicies: bindings.ListKyvernoPolicies,
   listKyvernoPolicyExceptions: bindings.ListKyvernoPolicyExceptions,

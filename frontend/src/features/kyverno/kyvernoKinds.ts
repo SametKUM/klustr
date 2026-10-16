@@ -16,14 +16,34 @@ export const KYVERNO_NAMESPACEDVALIDATINGPOLICY_RESOURCE = 'namespacedvalidating
 export const POLICYREPORT_RESOURCE = 'policyreports'
 export const CLUSTERPOLICYREPORT_RESOURCE = 'clusterpolicyreports'
 
+// The rest of the CEL policy family; each has a Namespaced variant whose
+// resource is the same name prefixed with "namespaced".
+export const KYVERNO_CEL_POLICY_KINDS = {
+  MutatingPolicy: 'mutatingpolicies',
+  GeneratingPolicy: 'generatingpolicies',
+  DeletingPolicy: 'deletingpolicies',
+  ImageValidatingPolicy: 'imagevalidatingpolicies',
+} as const
+
+export type KyvernoCELPolicyKind = keyof typeof KYVERNO_CEL_POLICY_KINDS
+
 export type KyvernoKind =
   | 'ClusterPolicy'
   | 'Policy'
   | 'PolicyException'
   | 'ValidatingPolicy'
   | 'NamespacedValidatingPolicy'
+  | KyvernoCELPolicyKind
+  | `Namespaced${KyvernoCELPolicyKind}`
   | 'PolicyReport'
   | 'ClusterPolicyReport'
+
+const CEL_POLICY_REFS = Object.fromEntries(
+  (Object.entries(KYVERNO_CEL_POLICY_KINDS) as [KyvernoCELPolicyKind, string][]).flatMap(([kind, resource]) => [
+    [kind, { group: KYVERNO_CEL_GROUP, resource }],
+    [`Namespaced${kind}`, { group: KYVERNO_CEL_GROUP, resource: `namespaced${resource}` }],
+  ]),
+) as Record<KyvernoCELPolicyKind | `Namespaced${KyvernoCELPolicyKind}`, { group: string; resource: string }>
 
 export const KYVERNO_KIND_REF: Record<KyvernoKind, { group: string; resource: string }> = {
   ClusterPolicy: { group: KYVERNO_GROUP, resource: KYVERNO_CLUSTERPOLICY_RESOURCE },
@@ -34,6 +54,7 @@ export const KYVERNO_KIND_REF: Record<KyvernoKind, { group: string; resource: st
     group: KYVERNO_CEL_GROUP,
     resource: KYVERNO_NAMESPACEDVALIDATINGPOLICY_RESOURCE,
   },
+  ...CEL_POLICY_REFS,
   PolicyReport: { group: POLICY_REPORT_GROUP, resource: POLICYREPORT_RESOURCE },
   ClusterPolicyReport: { group: POLICY_REPORT_GROUP, resource: CLUSTERPOLICYREPORT_RESOURCE },
 }

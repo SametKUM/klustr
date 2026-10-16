@@ -1,0 +1,38 @@
+apiVersion: policies.kyverno.io/v1
+kind: GeneratingPolicy
+metadata:
+  name: default-deny-networkpolicy
+  creationTimestamp: "2026-10-05T09:01:12Z"
+spec:
+  evaluation:
+    admission: {enabled: true}
+    synchronize: {enabled: true}
+    generateExisting: {enabled: true}
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE]
+        resources: [namespaces]
+  matchConditions:
+    - name: not-system
+      expression: "!object.metadata.name.startsWith('kube-')"
+  variables:
+    - name: nsName
+      expression: object.metadata.name
+    - name: netpol
+      expression: >-
+        [{"kind": dyn("NetworkPolicy"), "apiVersion": dyn("networking.k8s.io/v1"),
+        "metadata": dyn({"name": "default-deny", "namespace": string(variables.nsName)}),
+        "spec": dyn({"podSelector": dyn({}), "policyTypes": dyn(["Ingress", "Egress"])})}]
+  generate:
+    - expression: generator.Apply(variables.nsName, variables.netpol)
+status:
+  conditionStatus:
+    ready: true
+    conditions:
+      - lastTransitionTime: "2026-10-05T09:01:15Z"
+        message: Policy is ready for reporting.
+        reason: Succeeded
+        status: "True"
+        type: RBACPermissionsGranted

@@ -1,0 +1,20 @@
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedDeletingPolicy
+metadata:
+  name: expire-preview-pods
+  namespace: shop
+  creationTimestamp: "2026-10-05T10:05:00Z"
+spec:
+  schedule: "*/30 * * * *"
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        resources: [pods]
+  conditions:
+    - name: preview
+      expression: "object.metadata.?labels['env'].orValue('') == 'preview'"
+status:
+  lastExecutionTime: "2026-10-16T09:30:00Z"
+  conditionStatus:
+    ready: true

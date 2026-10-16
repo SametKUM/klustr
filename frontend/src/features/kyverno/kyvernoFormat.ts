@@ -1,4 +1,4 @@
-import type { KyvernoKind } from './kyvernoKinds'
+import type { KyvernoCELPolicyKind, KyvernoKind } from './kyvernoKinds'
 
 export type PolicyResult = 'fail' | 'error' | 'warn' | 'skip' | 'pass'
 
@@ -62,5 +62,14 @@ export function policyRefFromResult(
   if (source === 'KyvernoValidatingPolicy') {
     return { kind: namespace ? 'NamespacedValidatingPolicy' : 'ValidatingPolicy', namespace, name }
   }
+  const cel = REPORT_SOURCE_KIND[source]
+  if (cel) return { kind: namespace ? `Namespaced${cel}` : cel, namespace, name }
   return null
+}
+
+// The report sources Kyverno writes for the other CEL policy kinds.
+const REPORT_SOURCE_KIND: Record<string, KyvernoCELPolicyKind> = {
+  KyvernoMutatingPolicy: 'MutatingPolicy',
+  KyvernoGeneratingPolicy: 'GeneratingPolicy',
+  KyvernoImageValidatingPolicy: 'ImageValidatingPolicy',
 }

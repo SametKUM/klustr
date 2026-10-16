@@ -1,0 +1,38 @@
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedImageValidatingPolicy
+metadata:
+  name: notary-signed
+  namespace: shop
+  creationTimestamp: "2026-10-05T11:10:00Z"
+spec:
+  validationActions: [Audit]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE]
+        resources: [pods]
+  matchImageReferences:
+    - glob: "ghcr.io/example/*"
+  validationConfigurations:
+    mutateDigest: false
+  attestors:
+    - name: notary
+      notary:
+        certs:
+          value: |
+            -----BEGIN CERTIFICATE-----
+            MIIBexample
+            -----END CERTIFICATE-----
+  validations:
+    - expression: "images.containers.map(image, verifyImageSignatures(image, [attestors.notary])).all(e, e > 0)"
+      message: Images must be signed with Notary.
+status:
+  conditionStatus:
+    ready: false
+    conditions:
+      - lastTransitionTime: "2026-10-05T11:10:02Z"
+        message: Webhook not configured yet.
+        reason: Failed
+        status: "False"
+        type: WebhookConfigured

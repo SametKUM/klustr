@@ -40,6 +40,12 @@ import { KarpenterNodeClaimsView } from '@/features/karpenter-nodeclaims/Karpent
 import { KarpenterEC2NodeClassesView } from '@/features/karpenter-nodeclasses/KarpenterEC2NodeClassesView'
 import { KyvernoPoliciesView } from '@/features/kyverno/KyvernoPoliciesView'
 import { KyvernoValidatingPoliciesView } from '@/features/kyverno/KyvernoValidatingPoliciesView'
+import {
+  KyvernoDeletingPoliciesView,
+  KyvernoGeneratingPoliciesView,
+  KyvernoImageValidatingPoliciesView,
+  KyvernoMutatingPoliciesView,
+} from '@/features/kyverno/KyvernoCELPolicyViews'
 import { KyvernoPolicyExceptionsView } from '@/features/kyverno/KyvernoPolicyExceptionsView'
 import { PolicyReportsView } from '@/features/kyverno/PolicyReportsView'
 import { TektonPipelineRunsView } from '@/features/tekton/TektonPipelineRunsView'
@@ -111,6 +117,14 @@ export const INTEGRATION_LIST_VIEWS: Record<IntegrationView, () => ReactNode> = 
   kyvernopolicies: () => <KyvernoPoliciesView cluster={false} />,
   kyvernovalidatingpolicies: () => <KyvernoValidatingPoliciesView namespaced={false} />,
   kyvernonamespacedvalidatingpolicies: () => <KyvernoValidatingPoliciesView namespaced />,
+  kyvernomutatingpolicies: () => <KyvernoMutatingPoliciesView namespaced={false} />,
+  kyvernonamespacedmutatingpolicies: () => <KyvernoMutatingPoliciesView namespaced />,
+  kyvernogeneratingpolicies: () => <KyvernoGeneratingPoliciesView namespaced={false} />,
+  kyvernonamespacedgeneratingpolicies: () => <KyvernoGeneratingPoliciesView namespaced />,
+  kyvernodeletingpolicies: () => <KyvernoDeletingPoliciesView namespaced={false} />,
+  kyvernonamespaceddeletingpolicies: () => <KyvernoDeletingPoliciesView namespaced />,
+  kyvernoimagevalidatingpolicies: () => <KyvernoImageValidatingPoliciesView namespaced={false} />,
+  kyvernonamespacedimagevalidatingpolicies: () => <KyvernoImageValidatingPoliciesView namespaced />,
   kyvernopolicyexceptions: () => <KyvernoPolicyExceptionsView />,
   policyreports: () => <PolicyReportsView cluster={false} />,
   clusterpolicyreports: () => <PolicyReportsView cluster />,

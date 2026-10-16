@@ -342,6 +342,38 @@ export function GetKyvernoClusterPolicy(arg1, arg2) {
   return window['go']['app']['App']['GetKyvernoClusterPolicy'](arg1, arg2);
 }
 
+export function GetKyvernoDeletingPolicy(arg1, arg2) {
+  return window['go']['app']['App']['GetKyvernoDeletingPolicy'](arg1, arg2);
+}
+
+export function GetKyvernoGeneratingPolicy(arg1, arg2) {
+  return window['go']['app']['App']['GetKyvernoGeneratingPolicy'](arg1, arg2);
+}
+
+export function GetKyvernoImageValidatingPolicy(arg1, arg2) {
+  return window['go']['app']['App']['GetKyvernoImageValidatingPolicy'](arg1, arg2);
+}
+
+export function GetKyvernoMutatingPolicy(arg1, arg2) {
+  return window['go']['app']['App']['GetKyvernoMutatingPolicy'](arg1, arg2);
+}
+
+export function GetKyvernoNamespacedDeletingPolicy(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKyvernoNamespacedDeletingPolicy'](arg1, arg2, arg3);
+}
+
+export function GetKyvernoNamespacedGeneratingPolicy(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKyvernoNamespacedGeneratingPolicy'](arg1, arg2, arg3);
+}
+
+export function GetKyvernoNamespacedImageValidatingPolicy(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKyvernoNamespacedImageValidatingPolicy'](arg1, arg2, arg3);
+}
+
+export function GetKyvernoNamespacedMutatingPolicy(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKyvernoNamespacedMutatingPolicy'](arg1, arg2, arg3);
+}
+
 export function GetKyvernoNamespacedValidatingPolicy(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetKyvernoNamespacedValidatingPolicy'](arg1, arg2, arg3);
 }
@@ -900,6 +932,38 @@ export function ListKarpenterNodePools(arg1) {
 
 export function ListKyvernoClusterPolicies(arg1) {
   return window['go']['app']['App']['ListKyvernoClusterPolicies'](arg1);
+}
+
+export function ListKyvernoDeletingPolicies(arg1) {
+  return window['go']['app']['App']['ListKyvernoDeletingPolicies'](arg1);
+}
+
+export function ListKyvernoGeneratingPolicies(arg1) {
+  return window['go']['app']['App']['ListKyvernoGeneratingPolicies'](arg1);
+}
+
+export function ListKyvernoImageValidatingPolicies(arg1) {
+  return window['go']['app']['App']['ListKyvernoImageValidatingPolicies'](arg1);
+}
+
+export function ListKyvernoMutatingPolicies(arg1) {
+  return window['go']['app']['App']['ListKyvernoMutatingPolicies'](arg1);
+}
+
+export function ListKyvernoNamespacedDeletingPolicies(arg1, arg2) {
+  return window['go']['app']['App']['ListKyvernoNamespacedDeletingPolicies'](arg1, arg2);
+}
+
+export function ListKyvernoNamespacedGeneratingPolicies(arg1, arg2) {
+  return window['go']['app']['App']['ListKyvernoNamespacedGeneratingPolicies'](arg1, arg2);
+}
+
+export function ListKyvernoNamespacedImageValidatingPolicies(arg1, arg2) {
+  return window['go']['app']['App']['ListKyvernoNamespacedImageValidatingPolicies'](arg1, arg2);
+}
+
+export function ListKyvernoNamespacedMutatingPolicies(arg1, arg2) {
+  return window['go']['app']['App']['ListKyvernoNamespacedMutatingPolicies'](arg1, arg2);
 }
 
 export function ListKyvernoNamespacedValidatingPolicies(arg1, arg2) {

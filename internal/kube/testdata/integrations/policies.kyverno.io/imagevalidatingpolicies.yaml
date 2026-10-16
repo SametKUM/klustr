@@ -1,0 +1,58 @@
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: verify-signed-images
+  creationTimestamp: "2026-10-05T11:00:00Z"
+spec:
+  validationActions: [Deny]
+  failurePolicy: Fail
+  evaluation:
+    background: {enabled: true}
+  webhookConfiguration:
+    timeoutSeconds: 15
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  matchImageReferences:
+    - glob: "registry.example.com/shop/*"
+  credentials:
+    providers: [amazon]
+    secrets: [registry-pull]
+  attestors:
+    - name: release-key
+      cosign:
+        key:
+          data: |
+            -----BEGIN PUBLIC KEY-----
+            MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEexample
+            -----END PUBLIC KEY-----
+        ctlog:
+          url: https://rekor.sigstore.dev
+    - name: github-actions
+      cosign:
+        keyless:
+          identities:
+            - issuer: https://token.actions.githubusercontent.com
+              subjectRegExp: "https://github.com/example/shop/.*"
+  attestations:
+    - name: sbom
+      intoto:
+        type: https://spdx.dev/Document
+  validations:
+    - expression: >-
+        images.containers.map(image, verifyImageSignatures(image, [attestors.release-key])).all(e, e > 0)
+      message: Images must be signed with the release key.
+status:
+  conditionStatus:
+    ready: true
+    conditions:
+      - lastTransitionTime: "2026-10-05T11:00:04Z"
+        message: Webhook configured.
+        reason: Succeeded
+        status: "True"
+        type: WebhookConfigured
+  autogen:
+    configs: {}

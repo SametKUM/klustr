@@ -22,6 +22,17 @@ describe('policyRefFromResult', () => {
     )
   })
 
+  it('maps mutating, generating and image-validating results to their kinds', () => {
+    expect(policyRefFromResult('verify-signed', 'KyvernoImageValidatingPolicy')?.kind).toBe('ImageValidatingPolicy')
+    expect(policyRefFromResult('shop/notary', 'KyvernoImageValidatingPolicy')).toEqual({
+      kind: 'NamespacedImageValidatingPolicy',
+      namespace: 'shop',
+      name: 'notary',
+    })
+    expect(policyRefFromResult('add-team', 'KyvernoMutatingPolicy')?.kind).toBe('MutatingPolicy')
+    expect(policyRefFromResult('shop/netpol', 'KyvernoGeneratingPolicy')?.kind).toBe('NamespacedGeneratingPolicy')
+  })
+
   it('has nothing to open for other tools or an empty policy', () => {
     expect(policyRefFromResult('pod-privileged', 'kubewarden')).toBeNull()
     expect(policyRefFromResult('', 'kyverno')).toBeNull()

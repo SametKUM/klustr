@@ -1,0 +1,28 @@
+apiVersion: policies.kyverno.io/v1
+kind: DeletingPolicy
+metadata:
+  name: cleanup-finished-jobs
+  creationTimestamp: "2026-10-05T10:00:00Z"
+spec:
+  schedule: "0 */6 * * *"
+  deletionPropagationPolicy: Background
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [batch]
+        apiVersions: [v1]
+        resources: [jobs]
+  conditions:
+    - name: finished-a-day-ago
+      expression: >-
+        has(object.status.completionTime) &&
+        timestamp(object.status.completionTime) < now() - duration('24h')
+status:
+  lastExecutionTime: "2026-10-16T06:00:00Z"
+  conditionStatus:
+    ready: true
+    conditions:
+      - lastTransitionTime: "2026-10-05T10:00:03Z"
+        message: Policy is ready for reporting.
+        reason: Succeeded
+        status: "True"
+        type: RBACPermissionsGranted

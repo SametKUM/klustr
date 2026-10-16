@@ -28,6 +28,30 @@ describe('kyvernoKindOf', () => {
     ).toBe('ClusterPolicyReport')
   })
 
+  it('knows the rest of the CEL policy family and its namespaced variants', () => {
+    const gvr = (resource: string) => ({ group: 'policies.kyverno.io', version: 'v1', resource })
+    expect(kyvernoKindOf({ kind: 'MutatingPolicy', namespace: '', name: 'm', gvr: gvr('mutatingpolicies') })).toBe(
+      'MutatingPolicy',
+    )
+    expect(
+      kyvernoKindOf({
+        kind: 'NamespacedDeletingPolicy',
+        namespace: 'shop',
+        name: 'd',
+        gvr: gvr('namespaceddeletingpolicies'),
+      }),
+    ).toBe('NamespacedDeletingPolicy')
+    // Another group's MutatingPolicy is not Kyverno's.
+    expect(
+      kyvernoKindOf({
+        kind: 'MutatingPolicy',
+        namespace: '',
+        name: 'm',
+        gvr: { group: 'example.com', version: 'v1', resource: 'mutatingpolicies' },
+      }),
+    ).toBeNull()
+  })
+
   it('rejects built-ins and other kinds', () => {
     expect(kyvernoKindOf({ kind: 'Deployment', namespace: 'a', name: 'd' })).toBeNull()
     expect(kyvernoKindOf(null)).toBeNull()

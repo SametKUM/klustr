@@ -366,6 +366,62 @@ var integrationCatalog = append([]integrationResource{
 		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*KyvernoValidatingPolicyDetail, error) {
 			return m.GetKyvernoNamespacedValidatingPolicy(ctx, "ctx", ns, name)
 		})},
+	{view: "kyvernomutatingpolicies", gr: kyvernoCELGR(kyvernoMutatingPoliciesResource), kind: "MutatingPolicy",
+		list: listOf(func(m *ClientManager, _ string) []KyvernoMutatingPolicyInfo {
+			return m.ListKyvernoMutatingPolicies("ctx")
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, _, name string) (*KyvernoMutatingPolicyDetail, error) {
+			return m.GetKyvernoMutatingPolicy(ctx, "ctx", name)
+		})},
+	{view: "kyvernonamespacedmutatingpolicies", gr: kyvernoCELGR(kyvernoNamespacedMutatingPoliciesResource), kind: "NamespacedMutatingPolicy", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []KyvernoMutatingPolicyInfo {
+			return m.ListKyvernoNamespacedMutatingPolicies("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*KyvernoMutatingPolicyDetail, error) {
+			return m.GetKyvernoNamespacedMutatingPolicy(ctx, "ctx", ns, name)
+		})},
+	{view: "kyvernogeneratingpolicies", gr: kyvernoCELGR(kyvernoGeneratingPoliciesResource), kind: "GeneratingPolicy",
+		list: listOf(func(m *ClientManager, _ string) []KyvernoGeneratingPolicyInfo {
+			return m.ListKyvernoGeneratingPolicies("ctx")
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, _, name string) (*KyvernoGeneratingPolicyDetail, error) {
+			return m.GetKyvernoGeneratingPolicy(ctx, "ctx", name)
+		})},
+	{view: "kyvernonamespacedgeneratingpolicies", gr: kyvernoCELGR(kyvernoNamespacedGeneratingPoliciesResource), kind: "NamespacedGeneratingPolicy", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []KyvernoGeneratingPolicyInfo {
+			return m.ListKyvernoNamespacedGeneratingPolicies("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*KyvernoGeneratingPolicyDetail, error) {
+			return m.GetKyvernoNamespacedGeneratingPolicy(ctx, "ctx", ns, name)
+		})},
+	{view: "kyvernodeletingpolicies", gr: kyvernoCELGR(kyvernoDeletingPoliciesResource), kind: "DeletingPolicy",
+		list: listOf(func(m *ClientManager, _ string) []KyvernoDeletingPolicyInfo {
+			return m.ListKyvernoDeletingPolicies("ctx")
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, _, name string) (*KyvernoDeletingPolicyDetail, error) {
+			return m.GetKyvernoDeletingPolicy(ctx, "ctx", name)
+		})},
+	{view: "kyvernonamespaceddeletingpolicies", gr: kyvernoCELGR(kyvernoNamespacedDeletingPoliciesResource), kind: "NamespacedDeletingPolicy", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []KyvernoDeletingPolicyInfo {
+			return m.ListKyvernoNamespacedDeletingPolicies("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*KyvernoDeletingPolicyDetail, error) {
+			return m.GetKyvernoNamespacedDeletingPolicy(ctx, "ctx", ns, name)
+		})},
+	{view: "kyvernoimagevalidatingpolicies", gr: kyvernoCELGR(kyvernoImageValidatingPoliciesResource), kind: "ImageValidatingPolicy",
+		list: listOf(func(m *ClientManager, _ string) []KyvernoImageValidatingPolicyInfo {
+			return m.ListKyvernoImageValidatingPolicies("ctx")
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, _, name string) (*KyvernoImageValidatingPolicyDetail, error) {
+			return m.GetKyvernoImageValidatingPolicy(ctx, "ctx", name)
+		})},
+	{view: "kyvernonamespacedimagevalidatingpolicies", gr: kyvernoCELGR(kyvernoNamespacedImageValidatingPoliciesResource), kind: "NamespacedImageValidatingPolicy", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []KyvernoImageValidatingPolicyInfo {
+			return m.ListKyvernoNamespacedImageValidatingPolicies("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*KyvernoImageValidatingPolicyDetail, error) {
+			return m.GetKyvernoNamespacedImageValidatingPolicy(ctx, "ctx", ns, name)
+		})},
 	{view: "policyreports", gr: policyReportGR(policyReportsResource), kind: "PolicyReport", namespaced: true,
 		list: listOf(func(m *ClientManager, ns string) []PolicyReportInfo { return m.ListPolicyReports("ctx", ns) }),
 		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*PolicyReportDetail, error) {

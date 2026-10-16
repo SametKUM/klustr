@@ -173,6 +173,22 @@ export function GetKarpenterEC2NodeClass(arg1:string,arg2:string):Promise<kube.K
 
 export function GetKyvernoClusterPolicy(arg1:string,arg2:string):Promise<kube.KyvernoPolicyDetail>;
 
+export function GetKyvernoDeletingPolicy(arg1:string,arg2:string):Promise<kube.KyvernoDeletingPolicyDetail>;
+
+export function GetKyvernoGeneratingPolicy(arg1:string,arg2:string):Promise<kube.KyvernoGeneratingPolicyDetail>;
+
+export function GetKyvernoImageValidatingPolicy(arg1:string,arg2:string):Promise<kube.KyvernoImageValidatingPolicyDetail>;
+
+export function GetKyvernoMutatingPolicy(arg1:string,arg2:string):Promise<kube.KyvernoMutatingPolicyDetail>;
+
+export function GetKyvernoNamespacedDeletingPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.KyvernoDeletingPolicyDetail>;
+
+export function GetKyvernoNamespacedGeneratingPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.KyvernoGeneratingPolicyDetail>;
+
+export function GetKyvernoNamespacedImageValidatingPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.KyvernoImageValidatingPolicyDetail>;
+
+export function GetKyvernoNamespacedMutatingPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.KyvernoMutatingPolicyDetail>;
+
 export function GetKyvernoNamespacedValidatingPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.KyvernoValidatingPolicyDetail>;
 
 export function GetKyvernoPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.KyvernoPolicyDetail>;
@@ -452,6 +468,22 @@ export function ListKarpenterNodeClaims(arg1:string):Promise<Array<kube.Karpente
 export function ListKarpenterNodePools(arg1:string):Promise<Array<kube.KarpenterNodePoolInfo>>;
 
 export function ListKyvernoClusterPolicies(arg1:string):Promise<Array<kube.KyvernoPolicyInfo>>;
+
+export function ListKyvernoDeletingPolicies(arg1:string):Promise<Array<kube.KyvernoDeletingPolicyInfo>>;
+
+export function ListKyvernoGeneratingPolicies(arg1:string):Promise<Array<kube.KyvernoGeneratingPolicyInfo>>;
+
+export function ListKyvernoImageValidatingPolicies(arg1:string):Promise<Array<kube.KyvernoImageValidatingPolicyInfo>>;
+
+export function ListKyvernoMutatingPolicies(arg1:string):Promise<Array<kube.KyvernoMutatingPolicyInfo>>;
+
+export function ListKyvernoNamespacedDeletingPolicies(arg1:string,arg2:string):Promise<Array<kube.KyvernoDeletingPolicyInfo>>;
+
+export function ListKyvernoNamespacedGeneratingPolicies(arg1:string,arg2:string):Promise<Array<kube.KyvernoGeneratingPolicyInfo>>;
+
+export function ListKyvernoNamespacedImageValidatingPolicies(arg1:string,arg2:string):Promise<Array<kube.KyvernoImageValidatingPolicyInfo>>;
+
+export function ListKyvernoNamespacedMutatingPolicies(arg1:string,arg2:string):Promise<Array<kube.KyvernoMutatingPolicyInfo>>;
 
 export function ListKyvernoNamespacedValidatingPolicies(arg1:string,arg2:string):Promise<Array<kube.KyvernoValidatingPolicyInfo>>;
 
