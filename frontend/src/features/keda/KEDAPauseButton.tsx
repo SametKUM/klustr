@@ -29,8 +29,9 @@ const PAUSE_EFFECT: Record<Props['kind'], string> = {
 }
 
 // KEDAPauseButton pauses or resumes a ScaledObject or ScaledJob through
-// KEDA's pause annotations. Resume shows while a pause annotation is set, so
-// it can also clear a pause someone else applied.
+// KEDA's pause annotations. Resume shows while any pause is in effect, a
+// one-direction one included, so it can also clear a pause someone else
+// applied.
 export function KEDAPauseButton({ contextName, kind, namespace, name }: Props) {
   const load = useCallback(
     async (ctx: string) => {
@@ -38,7 +39,11 @@ export function KEDAPauseButton({ contextName, kind, namespace, name }: Props) {
         kind === 'ScaledObject'
           ? await api.getKEDAScaledObject(ctx, namespace, name)
           : await api.getKEDAScaledJob(ctx, namespace, name)
-      return { paused: d.paused, annotated: d.annotated, minReplicas: d.minReplicas }
+      return {
+        paused: d.paused || d.scaleInPaused || d.scaleOutPaused,
+        annotated: d.annotated,
+        minReplicas: d.minReplicas,
+      }
     },
     [kind, namespace, name],
   )

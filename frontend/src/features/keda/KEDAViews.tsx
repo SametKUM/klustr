@@ -6,6 +6,7 @@ import { CustomResourceTable } from '@/features/_shared/CustomResourceTable'
 import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { COL_MD, COL_SM, COL_XS } from '@/features/_shared/columnSizes'
 import { KEDAActivityPill, KEDAFallbackPill, KEDAPausedPill } from './KEDAPills'
+import { kedaPauseLabel } from './kedaPause'
 import {
   KEDA_CLUSTERTRIGGERAUTHENTICATION_RESOURCE,
   KEDA_GROUP,
@@ -53,10 +54,11 @@ export function KEDAScaledObjectsView() {
         size: COL_SM,
         cell: (i) => <KEDAFallbackPill status={i.getValue()} />,
       }),
-      soColumns.accessor('paused', {
+      soColumns.accessor((r) => kedaPauseLabel(r), {
+        id: 'paused',
         header: 'Paused',
-        size: 110,
-        cell: (i) => <KEDAPausedPill paused={i.getValue()} replicas={i.row.original.pausedReplicas} />,
+        size: 130,
+        cell: (i) => <KEDAPausedPill state={i.row.original} />,
       }),
       soColumns.accessor('createdAt', {
         header: 'Age',
@@ -114,7 +116,7 @@ export function KEDAScaledJobsView() {
       sjColumns.accessor('paused', {
         header: 'Paused',
         size: COL_SM,
-        cell: (i) => <KEDAPausedPill paused={i.getValue()} replicas="" />,
+        cell: (i) => <KEDAPausedPill state={i.row.original} />,
       }),
       sjColumns.accessor('lastActiveTime', {
         header: 'Last active',

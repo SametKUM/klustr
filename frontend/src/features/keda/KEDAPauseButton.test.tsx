@@ -70,6 +70,13 @@ it('resumes a ScaledObject that carries a pause annotation', async () => {
   expect(mocks.resume).toHaveBeenCalledWith('dev', 'shop', 'orders')
 })
 
+it('resumes a ScaledObject paused in one direction only', async () => {
+  mocks.getSO.mockResolvedValue({ paused: false, scaleInPaused: false, scaleOutPaused: true, annotated: false, minReplicas: 1 })
+  await render('ScaledObject')
+  await act(async () => button('Resume').click())
+  expect(mocks.resume).toHaveBeenCalledWith('dev', 'shop', 'orders')
+})
+
 it('pauses a ScaledObject at its current replica count by default', async () => {
   mocks.getSO.mockResolvedValue({ paused: false, annotated: false, minReplicas: 2 })
   await render('ScaledObject')

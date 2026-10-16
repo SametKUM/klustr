@@ -1,3 +1,5 @@
+import { type KEDAPauseFields, kedaPauseLabel } from './kedaPause'
+
 // KEDAActivityPill shows the Active condition: whether any trigger currently
 // asks for replicas above the minimum.
 export function KEDAActivityPill({ status }: { status: string }) {
@@ -11,14 +13,10 @@ export function KEDAActivityPill({ status }: { status: string }) {
   return <Pill className={cls} label={label} />
 }
 
-export function KEDAPausedPill({ paused, replicas }: { paused: boolean; replicas: string }) {
-  if (!paused) return <span className="text-muted-foreground/70">—</span>
-  return (
-    <Pill
-      className="bg-amber-500/15 text-amber-700 dark:text-amber-300"
-      label={replicas ? `Paused at ${replicas}` : 'Paused'}
-    />
-  )
+export function KEDAPausedPill({ state }: { state: KEDAPauseFields }) {
+  const label = kedaPauseLabel(state)
+  if (!label) return <span className="text-muted-foreground/70">—</span>
+  return <Pill className="bg-amber-500/15 text-amber-700 dark:text-amber-300" label={label} />
 }
 
 // KEDAFallbackPill marks a ScaledObject running on its fallback replica count

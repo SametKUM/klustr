@@ -10,6 +10,7 @@ import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { humanizeTrigger } from '@/features/hpas/triggers'
 import type { IntegrationDetailProps } from '@/features/integrationDetails'
 import { KEDAActivityPill, KEDAFallbackPill, KEDAPausedPill } from './KEDAPills'
+import { kedaPauseLabel } from './kedaPause'
 import {
   KEDA_CLUSTERTRIGGERAUTHENTICATION_RESOURCE,
   KEDA_GROUP,
@@ -46,9 +47,9 @@ export function KEDAScaledObjectDetailBody({ contextName, namespace, name }: Int
             <KEDAFallbackPill status={d.fallback} />
           </Field>
         )}
-        {d.paused && (
+        {kedaPauseLabel(d) && (
           <Field label="Paused">
-            <KEDAPausedPill paused={d.paused} replicas={d.pausedReplicas} />
+            <KEDAPausedPill state={d} />
           </Field>
         )}
         <Field label="Target">
@@ -140,9 +141,9 @@ export function KEDAScaledJobDetailBody({ contextName, namespace, name }: Integr
         <Field label="Active">
           <KEDAActivityPill status={d.active} />
         </Field>
-        {d.paused && (
+        {kedaPauseLabel(d) && (
           <Field label="Paused">
-            <KEDAPausedPill paused={d.paused} replicas="" />
+            <KEDAPausedPill state={d} />
           </Field>
         )}
         <Field label="Last active">{d.lastActiveTime ? formatAge(d.lastActiveTime) : '—'}</Field>
@@ -348,8 +349,10 @@ export function KEDATriggerAuthenticationDetailBody({
   )
 }
 
-// UsersField links each user. A ClusterTriggerAuthentication's users come as
-// "<namespace>/<name>", a TriggerAuthentication's share its namespace.
+// UsersField links each user. A TriggerAuthentication's users share its
+// namespace; a ClusterTriggerAuthentication's come as "<namespace>/<name>",
+// or as a bare name when the cache could not place them, which has nothing to
+// link to.
 function UsersField({
   label,
   names,
@@ -373,6 +376,13 @@ function UsersField({
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           {names.map((n) => {
             const [ns, objName] = n.includes('/') ? n.split('/', 2) : [namespace, n]
+            if (!ns) {
+              return (
+                <span key={n} className="font-mono text-xs">
+                  {n}
+                </span>
+              )
+            }
             return (
               <CustomResourceReference
                 key={n}

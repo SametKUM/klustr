@@ -5814,6 +5814,8 @@ export namespace kube {
 	    status: string;
 	    paused: boolean;
 	    pausedReplicas: string;
+	    scaleInPaused: boolean;
+	    scaleOutPaused: boolean;
 	    annotated: boolean;
 	    lastActiveTime: string;
 	    createdAt: string;
@@ -5848,6 +5850,8 @@ export namespace kube {
 	        this.status = source["status"];
 	        this.paused = source["paused"];
 	        this.pausedReplicas = source["pausedReplicas"];
+	        this.scaleInPaused = source["scaleInPaused"];
+	        this.scaleOutPaused = source["scaleOutPaused"];
 	        this.annotated = source["annotated"];
 	        this.lastActiveTime = source["lastActiveTime"];
 	        this.createdAt = source["createdAt"];
@@ -5896,6 +5900,8 @@ export namespace kube {
 	    status: string;
 	    paused: boolean;
 	    pausedReplicas: string;
+	    scaleInPaused: boolean;
+	    scaleOutPaused: boolean;
 	    annotated: boolean;
 	    lastActiveTime: string;
 	    createdAt: string;
@@ -5917,6 +5923,8 @@ export namespace kube {
 	        this.status = source["status"];
 	        this.paused = source["paused"];
 	        this.pausedReplicas = source["pausedReplicas"];
+	        this.scaleInPaused = source["scaleInPaused"];
+	        this.scaleOutPaused = source["scaleOutPaused"];
 	        this.annotated = source["annotated"];
 	        this.lastActiveTime = source["lastActiveTime"];
 	        this.createdAt = source["createdAt"];
@@ -5938,6 +5946,8 @@ export namespace kube {
 	    hpaName: string;
 	    paused: boolean;
 	    pausedReplicas: string;
+	    scaleInPaused: boolean;
+	    scaleOutPaused: boolean;
 	    annotated: boolean;
 	    createdAt: string;
 	    envSourceContainer: string;
@@ -5978,6 +5988,8 @@ export namespace kube {
 	        this.hpaName = source["hpaName"];
 	        this.paused = source["paused"];
 	        this.pausedReplicas = source["pausedReplicas"];
+	        this.scaleInPaused = source["scaleInPaused"];
+	        this.scaleOutPaused = source["scaleOutPaused"];
 	        this.annotated = source["annotated"];
 	        this.createdAt = source["createdAt"];
 	        this.envSourceContainer = source["envSourceContainer"];
@@ -6032,6 +6044,8 @@ export namespace kube {
 	    hpaName: string;
 	    paused: boolean;
 	    pausedReplicas: string;
+	    scaleInPaused: boolean;
+	    scaleOutPaused: boolean;
 	    annotated: boolean;
 	    createdAt: string;
 	
@@ -6056,6 +6070,8 @@ export namespace kube {
 	        this.hpaName = source["hpaName"];
 	        this.paused = source["paused"];
 	        this.pausedReplicas = source["pausedReplicas"];
+	        this.scaleInPaused = source["scaleInPaused"];
+	        this.scaleOutPaused = source["scaleOutPaused"];
 	        this.annotated = source["annotated"];
 	        this.createdAt = source["createdAt"];
 	    }

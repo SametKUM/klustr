@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, type JobInfo, type OwnerRef } from '@/lib/api'
 import { onKubeChange } from '@/lib/events'
+import { useNowTick } from '@/lib/nowTick'
 import { formatAge } from '@/lib/time'
 import { ErrorBox, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { OwnerLink } from '@/features/_shared/OwnerLink'
@@ -25,6 +26,9 @@ type Props = {
 // KEDAScaledJobJobsTab lists the Jobs a ScaledJob created, newest first, and
 // follows the Job informer so new and finishing Jobs show without a refresh.
 export function KEDAScaledJobJobsTab({ contextName, namespace, name }: Props) {
+  // A running Job's duration and every Age cell are relative to now; the
+  // heartbeat keeps them moving between Job events.
+  useNowTick()
   const [rows, setRows] = useState<JobInfo[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -76,7 +80,7 @@ export function KEDAScaledJobJobsTab({ contextName, namespace, name }: Props) {
                   </Td>
                   <Td className={jobStatusClass(j.status)}>{j.status || '—'}</Td>
                   <Td className="tabular-nums">{j.completions || '—'}</Td>
-                  <Td>{j.duration || '—'}</Td>
+                  <Td>{j.duration || (j.startTime ? formatAge(j.startTime) : '—')}</Td>
                   <Td>{formatAge(j.createdAt)}</Td>
                 </tr>
               ))}

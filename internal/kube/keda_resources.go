@@ -23,10 +23,14 @@ var (
 
 // KEDA's pause annotations. paused-replicas scales the target to that count
 // and holds it there; paused freezes it at the current count. When both are
-// set, paused-replicas wins.
+// set, paused-replicas wins. paused-scale-in and paused-scale-out block one
+// direction while KEDA keeps scaling the other, and set the same Paused
+// condition. A ScaledJob honors only paused.
 const (
 	kedaPausedAnnotation         = "autoscaling.keda.sh/paused"
 	kedaPausedReplicasAnnotation = "autoscaling.keda.sh/paused-replicas"
+	kedaPausedScaleInAnnotation  = "autoscaling.keda.sh/paused-scale-in"
+	kedaPausedScaleOutAnnotation = "autoscaling.keda.sh/paused-scale-out"
 	kedaScaledJobLabel           = "scaledjob.keda.sh/name"
 )
 
@@ -62,12 +66,15 @@ type KEDAMetricHealth struct {
 	Failures int64  `json:"failures"`
 }
 
-// KEDAPauseState is what the pause annotations say. Paused also reflects the
-// Paused condition, which is how the operator confirms it.
+// KEDAPauseState is what the pause annotations say. Paused is a full pause;
+// it also reflects the Paused condition, which is how the operator confirms
+// it, when no one-direction annotation explains that condition.
 type KEDAPauseState struct {
 	Paused bool `json:"paused"`
 	// PausedReplicas is the paused-replicas annotation, "" when unset.
 	PausedReplicas string `json:"pausedReplicas"`
+	ScaleInPaused  bool   `json:"scaleInPaused"`
+	ScaleOutPaused bool   `json:"scaleOutPaused"`
 	// Annotated reports that a pause annotation is set, so Resume has
 	// something to remove.
 	Annotated bool `json:"annotated"`
@@ -296,10 +303,15 @@ func (m *ClientManager) PauseKEDAScaledObject(ctx context.Context, contextName, 
 	return m.patchKEDAAnnotations(ctx, contextName, kedaScaledObjectGR, namespace, name, annotations)
 }
 
-// ResumeKEDAScaledObject removes both pause annotations.
+// ResumeKEDAScaledObject removes every pause annotation, the one-direction
+// ones included, since any of them keeps the Paused condition set.
 func (m *ClientManager) ResumeKEDAScaledObject(ctx context.Context, contextName, namespace, name string) error {
-	return m.patchKEDAAnnotations(ctx, contextName, kedaScaledObjectGR, namespace, name,
-		map[string]any{kedaPausedAnnotation: nil, kedaPausedReplicasAnnotation: nil})
+	return m.patchKEDAAnnotations(ctx, contextName, kedaScaledObjectGR, namespace, name, map[string]any{
+		kedaPausedAnnotation:         nil,
+		kedaPausedReplicasAnnotation: nil,
+		kedaPausedScaleInAnnotation:  nil,
+		kedaPausedScaleOutAnnotation: nil,
+	})
 }
 
 // SetKEDAScaledJobPaused stops or restarts a ScaledJob creating Jobs. Jobs
@@ -320,16 +332,43 @@ func (m *ClientManager) patchKEDAAnnotations(ctx context.Context, contextName st
 	return nil
 }
 
-func kedaPauseState(obj *unstructured.Unstructured, conds []ConditionDetail) KEDAPauseState {
+// kedaPauseState reads the pause annotations the way the operator does;
+// scaledObject is false for a ScaledJob, which honors only paused.
+func kedaPauseState(obj *unstructured.Unstructured, conds []ConditionDetail, scaledObject bool) KEDAPauseState {
 	annotations := obj.GetAnnotations()
-	replicas, hasReplicas := annotations[kedaPausedReplicasAnnotation]
-	flag, hasFlag := annotations[kedaPausedAnnotation]
-	annotated := hasReplicas || hasFlag
-	return KEDAPauseState{
-		Paused:         (hasReplicas && replicas != "") || strings.EqualFold(flag, "true") || conditionStatusByType(conds, "Paused") == "True",
-		PausedReplicas: replicas,
-		Annotated:      annotated,
+	keys := []string{kedaPausedAnnotation}
+	if scaledObject {
+		keys = append(keys, kedaPausedReplicasAnnotation, kedaPausedScaleInAnnotation, kedaPausedScaleOutAnnotation)
 	}
+	var s KEDAPauseState
+	for _, k := range keys {
+		if _, ok := annotations[k]; ok {
+			s.Annotated = true
+		}
+	}
+	s.Paused = kedaBoolAnnotation(annotations, kedaPausedAnnotation)
+	if scaledObject {
+		if replicas, ok := annotations[kedaPausedReplicasAnnotation]; ok {
+			s.Paused, s.PausedReplicas = true, replicas
+		}
+		s.ScaleInPaused = kedaBoolAnnotation(annotations, kedaPausedScaleInAnnotation)
+		s.ScaleOutPaused = kedaBoolAnnotation(annotations, kedaPausedScaleOutAnnotation)
+	}
+	if !s.ScaleInPaused && !s.ScaleOutPaused && conditionStatusByType(conds, "Paused") == "True" {
+		s.Paused = true
+	}
+	return s
+}
+
+// kedaBoolAnnotation mirrors the operator, which treats a value that does not
+// parse as a bool as true.
+func kedaBoolAnnotation(annotations map[string]string, key string) bool {
+	v, ok := annotations[key]
+	if !ok {
+		return false
+	}
+	b, err := strconv.ParseBool(v)
+	return err != nil || b
 }
 
 // kedaReadyStatus is the Ready condition's status and the message to show
@@ -429,7 +468,7 @@ func extractKEDAScaledObject(obj *unstructured.Unstructured) KEDAScaledObjectInf
 		Fallback:         conditionStatusByType(conds, "Fallback"),
 		Status:           status,
 		HPAName:          hpaName,
-		KEDAPauseState:   kedaPauseState(obj, conds),
+		KEDAPauseState:   kedaPauseState(obj, conds, true),
 		CreatedAt:        crCreatedAt(obj),
 	}
 }
@@ -488,7 +527,7 @@ func extractKEDAScaledJob(obj *unstructured.Unstructured) KEDAScaledJobInfo {
 		Ready:           ready,
 		Active:          conditionStatusByType(conds, "Active"),
 		Status:          status,
-		KEDAPauseState:  kedaPauseState(obj, conds),
+		KEDAPauseState:  kedaPauseState(obj, conds, false),
 		LastActiveTime:  lastActive,
 		CreatedAt:       crCreatedAt(obj),
 	}
@@ -580,27 +619,33 @@ func (m *ClientManager) extractKEDATriggerAuthentication(contextName string, obj
 }
 
 // kedaAuthUsers lists the ScaledObjects and ScaledJobs that reference an
-// authentication: the names the operator records in status, plus any cached
-// scaler whose trigger points at it (status lags a new reference). A
-// ClusterTriggerAuthentication's users are "<namespace>/<name>".
+// authentication: any cached scaler whose trigger points at it, plus the
+// names the operator records in status (status lags a new reference). The
+// operator records bare names even for a ClusterTriggerAuthentication, whose
+// users span namespaces, so those come from the cache as
+// "<namespace>/<name>"; a status name the cache cannot place stays bare.
 func (m *ClientManager) kedaAuthUsers(contextName string, auth *unstructured.Unstructured, kind string) (scaledObjects, scaledJobs []string) {
+	cluster := kind == "ClusterTriggerAuthentication"
 	collect := func(statusKey string, gr schema.GroupResource) []string {
 		seen := map[string]bool{}
-		if s, _, _ := unstructured.NestedString(auth.Object, "status", statusKey); s != "" {
-			for _, name := range strings.Split(s, ",") {
-				if name = strings.TrimSpace(name); name != "" {
-					seen[name] = true
+		placed := map[string]bool{}
+		for _, obj := range m.listServedCRs(contextName, gr, auth.GetNamespace()) {
+			for _, t := range extractKEDATriggers(obj) {
+				if t.AuthKind != kind || t.AuthName != auth.GetName() {
+					continue
+				}
+				if cluster {
+					seen[obj.GetNamespace()+"/"+obj.GetName()] = true
+					placed[obj.GetName()] = true
+				} else {
+					seen[obj.GetName()] = true
 				}
 			}
 		}
-		for _, obj := range m.listServedCRs(contextName, gr, auth.GetNamespace()) {
-			for _, t := range extractKEDATriggers(obj) {
-				if t.AuthKind == kind && t.AuthName == auth.GetName() {
-					if kind == "ClusterTriggerAuthentication" {
-						seen[obj.GetNamespace()+"/"+obj.GetName()] = true
-					} else {
-						seen[obj.GetName()] = true
-					}
+		if s, _, _ := unstructured.NestedString(auth.Object, "status", statusKey); s != "" {
+			for _, name := range strings.Split(s, ",") {
+				if name = strings.TrimSpace(name); name != "" && !placed[name] {
+					seen[name] = true
 				}
 			}
 		}

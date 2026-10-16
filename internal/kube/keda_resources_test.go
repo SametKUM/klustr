@@ -83,6 +83,7 @@ spec:
 func TestKEDAPauseState(t *testing.T) {
 	cases := []struct {
 		name        string
+		scaledJob   bool
 		annotations map[string]string
 		condition   string
 		want        KEDAPauseState
@@ -94,9 +95,23 @@ func TestKEDAPauseState(t *testing.T) {
 			want: KEDAPauseState{Paused: true, PausedReplicas: "0", Annotated: true}},
 		{name: "annotation set to false", annotations: map[string]string{kedaPausedAnnotation: "false"},
 			want: KEDAPauseState{Annotated: true}},
+		{name: "non-bool value counts as set", annotations: map[string]string{kedaPausedAnnotation: "yes"},
+			want: KEDAPauseState{Paused: true, Annotated: true}},
 		// The operator confirms through the condition, which also covers a
 		// pause applied by a newer annotation Klustr does not know.
 		{name: "paused condition", condition: "True", want: KEDAPauseState{Paused: true}},
+		// A one-direction pause sets the same condition but KEDA keeps
+		// scaling the other way, so it is not a full pause.
+		{name: "scale-in paused", annotations: map[string]string{kedaPausedScaleInAnnotation: "true"}, condition: "True",
+			want: KEDAPauseState{ScaleInPaused: true, Annotated: true}},
+		{name: "scale-out paused", annotations: map[string]string{kedaPausedScaleOutAnnotation: "true"}, condition: "True",
+			want: KEDAPauseState{ScaleOutPaused: true, Annotated: true}},
+		{name: "scale-in set to false", annotations: map[string]string{kedaPausedScaleInAnnotation: "false"},
+			want: KEDAPauseState{Annotated: true}},
+		{name: "scaledjob paused", scaledJob: true, annotations: map[string]string{kedaPausedAnnotation: "true"},
+			want: KEDAPauseState{Paused: true, Annotated: true}},
+		{name: "scaledjob ignores scaledobject annotations", scaledJob: true,
+			annotations: map[string]string{kedaPausedReplicasAnnotation: "0", kedaPausedScaleInAnnotation: "true"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -106,7 +121,7 @@ func TestKEDAPauseState(t *testing.T) {
 			if tc.condition != "" {
 				conds = []ConditionDetail{{Type: "Paused", Status: tc.condition}}
 			}
-			if got := kedaPauseState(obj, conds); got != tc.want {
+			if got := kedaPauseState(obj, conds, !tc.scaledJob); got != tc.want {
 				t.Fatalf("state = %+v, want %+v", got, tc.want)
 			}
 		})
@@ -163,7 +178,10 @@ func TestKEDAPausePatches(t *testing.T) {
 		}, map[string]any{kedaPausedAnnotation: nil, kedaPausedReplicasAnnotation: "0"}},
 		{"resume", "ScaledObject", func(m *ClientManager) error {
 			return m.ResumeKEDAScaledObject(ctx, "ctx", "apps", "one")
-		}, map[string]any{kedaPausedAnnotation: nil, kedaPausedReplicasAnnotation: nil}},
+		}, map[string]any{
+			kedaPausedAnnotation: nil, kedaPausedReplicasAnnotation: nil,
+			kedaPausedScaleInAnnotation: nil, kedaPausedScaleOutAnnotation: nil,
+		}},
 		{"pause scaledjob", "ScaledJob", func(m *ClientManager) error {
 			return m.SetKEDAScaledJobPaused(ctx, "ctx", "apps", "one", true)
 		}, map[string]any{kedaPausedAnnotation: "true"}},
@@ -249,6 +267,35 @@ spec:
 	}
 	if !reflect.DeepEqual(info.Sources, []string{"Secret", "Pod identity (aws)"}) {
 		t.Fatalf("sources = %v", info.Sources)
+	}
+}
+
+// The operator records a ClusterTriggerAuthentication's users by bare name.
+// The cache places them in their namespace; a name it cannot place stays bare
+// rather than becoming a reference with an empty namespace.
+func TestKEDAClusterTriggerAuthenticationUsers(t *testing.T) {
+	sjGVR := kedaScaledJobGR.WithVersion("v1alpha1")
+	user := mustUnstructured(t, `
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata: {name: invoice-renderer, namespace: jobs}
+spec:
+  jobTargetRef: {template: {spec: {containers: [{name: run, image: busybox}]}}}
+  triggers:
+    - {type: rabbitmq, metadata: {queueName: invoices}, authenticationRef: {name: rabbitmq-conn, kind: ClusterTriggerAuthentication}}
+`)
+	auth := kedaFixture(t, "clustertriggerauthentications")
+	crds := []fakeCRD{{gvr: sjGVR, kind: "ScaledJob", namespaced: true}}
+
+	cold, _ := fakeCRDManager(t, crds)
+	if got := cold.extractKEDATriggerAuthentication("ctx", auth, "ClusterTriggerAuthentication").ScaledJobs; !reflect.DeepEqual(got, []string{"invoice-renderer"}) {
+		t.Fatalf("cold cache scaledJobs = %v, want the bare status name", got)
+	}
+
+	warm, _ := fakeCRDManager(t, crds)
+	startFakeCRWatch(t, warm, sjGVR, user)
+	if got := warm.extractKEDATriggerAuthentication("ctx", auth, "ClusterTriggerAuthentication").ScaledJobs; !reflect.DeepEqual(got, []string{"jobs/invoice-renderer"}) {
+		t.Fatalf("warm cache scaledJobs = %v, want only the qualified name", got)
 	}
 }
 
