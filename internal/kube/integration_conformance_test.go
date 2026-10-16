@@ -299,6 +299,41 @@ var integrationCatalog = append([]integrationResource{
 			return m.GetTektonTask(ctx, "ctx", ns, name)
 		})},
 
+	// Tekton Triggers
+	{view: "tektoneventlisteners", gr: tektonEventListenerGR, kind: "EventListener", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []TektonEventListenerInfo {
+			return m.ListTektonEventListeners("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*TektonEventListenerDetail, error) {
+			return m.GetTektonEventListener(ctx, "ctx", ns, name)
+		})},
+	{view: "tektontriggers", gr: tektonTriggerGR, kind: "Trigger", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []TektonTriggerInfo { return m.ListTektonTriggers("ctx", ns) }),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*TektonTriggerDetail, error) {
+			return m.GetTektonTrigger(ctx, "ctx", ns, name)
+		})},
+	{view: "tektontriggertemplates", gr: tektonTriggerTemplateGR, kind: "TriggerTemplate", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []TektonTriggerTemplateInfo {
+			return m.ListTektonTriggerTemplates("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*TektonTriggerTemplateDetail, error) {
+			return m.GetTektonTriggerTemplate(ctx, "ctx", ns, name)
+		})},
+	{view: "tektontriggerbindings", gr: tektonTriggerBindingGR, kind: "TriggerBinding", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []TektonTriggerBindingInfo {
+			return m.ListTektonTriggerBindings("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*TektonTriggerBindingDetail, error) {
+			return m.GetTektonTriggerBinding(ctx, "ctx", ns, name)
+		})},
+	{view: "tektonclustertriggerbindings", gr: tektonClusterTriggerBindingGR, kind: "ClusterTriggerBinding",
+		list: listOf(func(m *ClientManager, _ string) []TektonTriggerBindingInfo {
+			return m.ListTektonClusterTriggerBindings("ctx")
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, _, name string) (*TektonTriggerBindingDetail, error) {
+			return m.GetTektonClusterTriggerBinding(ctx, "ctx", name)
+		})},
+
 	// Kyverno and policy reports
 	{view: "kyvernoclusterpolicies", gr: kyvernoGR(kyvernoClusterPoliciesResource), kind: "ClusterPolicy",
 		list: listOf(func(m *ClientManager, _ string) []KyvernoPolicyInfo { return m.ListKyvernoClusterPolicies("ctx") }),

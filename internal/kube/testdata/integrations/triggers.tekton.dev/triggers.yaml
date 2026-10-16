@@ -1,0 +1,18 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: Trigger
+metadata:
+  name: pull-request
+  namespace: ci
+  creationTimestamp: "2026-09-25T09:10:02Z"
+spec:
+  serviceAccountName: tekton-triggers
+  interceptors:
+    - ref:
+        name: github
+      params:
+        - name: eventTypes
+          value: [pull_request]
+  bindings:
+    - ref: github-pr
+  template:
+    ref: pr-checks

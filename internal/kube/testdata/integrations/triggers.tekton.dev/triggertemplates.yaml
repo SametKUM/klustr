@@ -1,0 +1,34 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: build-and-deploy
+  namespace: ci
+  creationTimestamp: "2026-09-25T09:08:31Z"
+spec:
+  params:
+    - name: git-revision
+      description: Commit to build
+    - name: git-url
+    - name: environment
+      default: dev
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: build-and-deploy-
+      spec:
+        pipelineRef:
+          name: build-and-deploy
+        params:
+          - name: revision
+            value: $(tt.params.git-revision)
+          - name: url
+            value: $(tt.params.git-url)
+        workspaces:
+          - name: source
+            volumeClaimTemplate:
+              spec:
+                accessModes: [ReadWriteOnce]
+                resources:
+                  requests:
+                    storage: 1Gi

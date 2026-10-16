@@ -1,0 +1,66 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: github
+  namespace: ci
+  creationTimestamp: "2026-09-25T09:12:40Z"
+  generation: 3
+spec:
+  serviceAccountName: tekton-triggers
+  namespaceSelector:
+    matchNames: [ci]
+  resources:
+    kubernetesResource:
+      replicas: 2
+      serviceType: ClusterIP
+      servicePort: 8080
+  triggers:
+    - name: push
+      interceptors:
+        - name: verify
+          ref:
+            name: github
+            kind: ClusterInterceptor
+          params:
+            - name: secretRef
+              value:
+                secretName: github-webhook
+                secretKey: token
+            - name: eventTypes
+              value: [push]
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: body.ref == 'refs/heads/main'
+      bindings:
+        - ref: github-push
+        - ref: git-defaults
+          kind: ClusterTriggerBinding
+        - name: environment
+          value: dev
+      template:
+        ref: build-and-deploy
+    - triggerRef: pull-request
+status:
+  observedGeneration: 3
+  address:
+    url: http://el-github.ci.svc.cluster.local:8080
+  configuration:
+    generatedName: el-github
+  conditions:
+    - type: Deployment
+      status: "True"
+      reason: MinimumReplicasAvailable
+      message: Deployment has minimum availability.
+      lastTransitionTime: "2026-09-25T09:13:05Z"
+    - type: Ready
+      status: "True"
+      reason: MinimumReplicasAvailable
+      message: Deployment has minimum availability.
+      lastTransitionTime: "2026-09-25T09:13:05Z"
+    - type: Service
+      status: "True"
+      reason: ServiceReady
+      message: Service is ready.
+      lastTransitionTime: "2026-09-25T09:12:41Z"

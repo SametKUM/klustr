@@ -10312,6 +10312,24 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class TektonBindingRef {
+	    ref: string;
+	    kind: string;
+	    name: string;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonBindingRef(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ref = source["ref"];
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	        this.value = source["value"];
+	    }
+	}
 	export class TektonParam {
 	    name: string;
 	    value: string;
@@ -10326,6 +10344,176 @@ export namespace kube {
 	        this.value = source["value"];
 	    }
 	}
+	export class TektonInterceptor {
+	    name: string;
+	    ref: string;
+	    kind: string;
+	    webhook: string;
+	    params: TektonParam[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonInterceptor(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.ref = source["ref"];
+	        this.kind = source["kind"];
+	        this.webhook = source["webhook"];
+	        this.params = this.convertValues(source["params"], TektonParam);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonTriggerSpec {
+	    name: string;
+	    triggerRef: string;
+	    template: string;
+	    templateInline: boolean;
+	    bindings: TektonBindingRef[];
+	    interceptors: TektonInterceptor[];
+	    serviceAccount: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTriggerSpec(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.triggerRef = source["triggerRef"];
+	        this.template = source["template"];
+	        this.templateInline = source["templateInline"];
+	        this.bindings = this.convertValues(source["bindings"], TektonBindingRef);
+	        this.interceptors = this.convertValues(source["interceptors"], TektonInterceptor);
+	        this.serviceAccount = source["serviceAccount"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonEventListenerDetail {
+	    name: string;
+	    namespace: string;
+	    ready: string;
+	    status: string;
+	    address: string;
+	    triggers: number;
+	    serviceAccount: string;
+	    createdAt: string;
+	    triggerList: TektonTriggerSpec[];
+	    triggerGroups: string[];
+	    namespaceSelector: string[];
+	    labelSelector: Record<string, string>;
+	    generatedName: string;
+	    serviceType: string;
+	    servicePort: number;
+	    replicas: number;
+	    conditions: ConditionDetail[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonEventListenerDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.address = source["address"];
+	        this.triggers = source["triggers"];
+	        this.serviceAccount = source["serviceAccount"];
+	        this.createdAt = source["createdAt"];
+	        this.triggerList = this.convertValues(source["triggerList"], TektonTriggerSpec);
+	        this.triggerGroups = source["triggerGroups"];
+	        this.namespaceSelector = source["namespaceSelector"];
+	        this.labelSelector = source["labelSelector"];
+	        this.generatedName = source["generatedName"];
+	        this.serviceType = source["serviceType"];
+	        this.servicePort = source["servicePort"];
+	        this.replicas = source["replicas"];
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonEventListenerInfo {
+	    name: string;
+	    namespace: string;
+	    ready: string;
+	    status: string;
+	    address: string;
+	    triggers: number;
+	    serviceAccount: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonEventListenerInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.ready = source["ready"];
+	        this.status = source["status"];
+	        this.address = source["address"];
+	        this.triggers = source["triggers"];
+	        this.serviceAccount = source["serviceAccount"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	
 	export class TektonParamSpec {
 	    name: string;
 	    type: string;
@@ -11013,6 +11201,211 @@ export namespace kube {
 	    }
 	}
 	
+	export class TektonTemplateResource {
+	    apiVersion: string;
+	    kind: string;
+	    name: string;
+	    pipelineRef: string;
+	    taskRef: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTemplateResource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.apiVersion = source["apiVersion"];
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	        this.pipelineRef = source["pipelineRef"];
+	        this.taskRef = source["taskRef"];
+	    }
+	}
+	export class TektonTriggerBindingDetail {
+	    name: string;
+	    namespace: string;
+	    params: number;
+	    createdAt: string;
+	    paramList: TektonParam[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTriggerBindingDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.params = source["params"];
+	        this.createdAt = source["createdAt"];
+	        this.paramList = this.convertValues(source["paramList"], TektonParam);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonTriggerBindingInfo {
+	    name: string;
+	    namespace: string;
+	    params: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTriggerBindingInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.params = source["params"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class TektonTriggerDetail {
+	    name: string;
+	    namespace: string;
+	    template: string;
+	    bindings: number;
+	    interceptors: string[];
+	    createdAt: string;
+	    spec: TektonTriggerSpec;
+	    eventListeners: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTriggerDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.template = source["template"];
+	        this.bindings = source["bindings"];
+	        this.interceptors = source["interceptors"];
+	        this.createdAt = source["createdAt"];
+	        this.spec = this.convertValues(source["spec"], TektonTriggerSpec);
+	        this.eventListeners = source["eventListeners"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonTriggerInfo {
+	    name: string;
+	    namespace: string;
+	    template: string;
+	    bindings: number;
+	    interceptors: string[];
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTriggerInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.template = source["template"];
+	        this.bindings = source["bindings"];
+	        this.interceptors = source["interceptors"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	export class TektonTriggerTemplateDetail {
+	    name: string;
+	    namespace: string;
+	    params: number;
+	    creates: string[];
+	    createdAt: string;
+	    paramSpecs: TektonParamSpec[];
+	    resources: TektonTemplateResource[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTriggerTemplateDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.params = source["params"];
+	        this.creates = source["creates"];
+	        this.createdAt = source["createdAt"];
+	        this.paramSpecs = this.convertValues(source["paramSpecs"], TektonParamSpec);
+	        this.resources = this.convertValues(source["resources"], TektonTemplateResource);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TektonTriggerTemplateInfo {
+	    name: string;
+	    namespace: string;
+	    params: number;
+	    creates: string[];
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonTriggerTemplateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.params = source["params"];
+	        this.creates = source["creates"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	
 	
 	export class UDPRouteDetail {

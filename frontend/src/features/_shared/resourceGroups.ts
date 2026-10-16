@@ -66,6 +66,7 @@ import {
   Waypoints,
   Webhook,
   Workflow,
+  Zap,
 } from 'lucide-react'
 import { Cilium, Karpenter, Kyverno, SiArgo, SiHelm, SiIstio, SiTekton } from './brandIcons'
 
@@ -352,6 +353,11 @@ export const TEKTON_GROUP_NAV: ResourceGroup = {
     { label: 'TaskRuns', view: 'tektontaskruns', icon: ListChecks },
     { label: 'Pipelines', view: 'tektonpipelines', icon: Workflow },
     { label: 'Tasks', view: 'tektontasks', icon: SquareTerminal },
+    { label: 'EventListeners', view: 'tektoneventlisteners', icon: Webhook },
+    { label: 'Triggers', view: 'tektontriggers', icon: Zap },
+    { label: 'TriggerTemplates', view: 'tektontriggertemplates', icon: FileText },
+    { label: 'TriggerBindings', view: 'tektontriggerbindings', icon: Link2 },
+    { label: 'ClusterTriggerBindings', view: 'tektonclustertriggerbindings', icon: Link2 },
   ],
 }
 

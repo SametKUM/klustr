@@ -47,6 +47,12 @@ import { TektonPipelineRunDetailBody } from '@/features/tekton/TektonPipelineRun
 import { TektonTaskRunDetailBody } from '@/features/tekton/TektonTaskRunDetailBody'
 import { TektonPipelineDetailBody } from '@/features/tekton/TektonPipelineDetailBody'
 import { TektonTaskDetailBody } from '@/features/tekton/TektonTaskDetailBody'
+import {
+  TektonEventListenerDetailBody,
+  TektonTriggerBindingDetailBody,
+  TektonTriggerDetailBody,
+  TektonTriggerTemplateDetailBody,
+} from '@/features/tekton/TektonTriggersDetailBodies'
 
 export type IntegrationDetailProps = {
   contextName: string | null
@@ -109,6 +115,11 @@ export const INTEGRATION_DETAIL_BODIES: Record<IntegrationView, DetailBody | nul
   tektontaskruns: (p) => <TektonTaskRunDetailBody {...p} />,
   tektonpipelines: (p) => <TektonPipelineDetailBody {...p} />,
   tektontasks: (p) => <TektonTaskDetailBody {...p} />,
+  tektoneventlisteners: (p) => <TektonEventListenerDetailBody {...p} />,
+  tektontriggers: (p) => <TektonTriggerDetailBody {...p} />,
+  tektontriggertemplates: (p) => <TektonTriggerTemplateDetailBody {...p} />,
+  tektontriggerbindings: (p) => <TektonTriggerBindingDetailBody {...p} cluster={false} />,
+  tektonclustertriggerbindings: (p) => <TektonTriggerBindingDetailBody {...p} cluster />,
   kyvernoclusterpolicies: (p) => <KyvernoPolicyDetailBody {...p} cluster />,
   kyvernopolicies: (p) => <KyvernoPolicyDetailBody {...p} cluster={false} />,
   kyvernovalidatingpolicies: (p) => <KyvernoValidatingPolicyDetailBody {...p} namespaced={false} />,

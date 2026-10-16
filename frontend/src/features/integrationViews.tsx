@@ -46,6 +46,12 @@ import { TektonPipelineRunsView } from '@/features/tekton/TektonPipelineRunsView
 import { TektonTaskRunsView } from '@/features/tekton/TektonTaskRunsView'
 import { TektonPipelinesView } from '@/features/tekton/TektonPipelinesView'
 import { TektonTasksView } from '@/features/tekton/TektonTasksView'
+import {
+  TektonEventListenersView,
+  TektonTriggerBindingsView,
+  TektonTriggerTemplatesView,
+  TektonTriggersView,
+} from '@/features/tekton/TektonTriggersViews'
 
 const CILIUM_LIST_VIEWS = Object.fromEntries(
   (Object.keys(CILIUM_RESOURCES) as CiliumView[]).map((view) => [view, () => <CiliumResourcesView resource={view} />]),
@@ -96,6 +102,11 @@ export const INTEGRATION_LIST_VIEWS: Record<IntegrationView, () => ReactNode> = 
   tektontaskruns: () => <TektonTaskRunsView />,
   tektonpipelines: () => <TektonPipelinesView />,
   tektontasks: () => <TektonTasksView />,
+  tektoneventlisteners: () => <TektonEventListenersView />,
+  tektontriggers: () => <TektonTriggersView />,
+  tektontriggertemplates: () => <TektonTriggerTemplatesView />,
+  tektontriggerbindings: () => <TektonTriggerBindingsView cluster={false} />,
+  tektonclustertriggerbindings: () => <TektonTriggerBindingsView cluster />,
   kyvernoclusterpolicies: () => <KyvernoPoliciesView cluster />,
   kyvernopolicies: () => <KyvernoPoliciesView cluster={false} />,
   kyvernovalidatingpolicies: () => <KyvernoValidatingPoliciesView namespaced={false} />,

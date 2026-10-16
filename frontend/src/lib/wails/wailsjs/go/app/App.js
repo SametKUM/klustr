@@ -506,6 +506,14 @@ export function GetTLSRoute(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetTLSRoute'](arg1, arg2, arg3);
 }
 
+export function GetTektonClusterTriggerBinding(arg1, arg2) {
+  return window['go']['app']['App']['GetTektonClusterTriggerBinding'](arg1, arg2);
+}
+
+export function GetTektonEventListener(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTektonEventListener'](arg1, arg2, arg3);
+}
+
 export function GetTektonPipeline(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetTektonPipeline'](arg1, arg2, arg3);
 }
@@ -520,6 +528,18 @@ export function GetTektonTask(arg1, arg2, arg3) {
 
 export function GetTektonTaskRun(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetTektonTaskRun'](arg1, arg2, arg3);
+}
+
+export function GetTektonTrigger(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTektonTrigger'](arg1, arg2, arg3);
+}
+
+export function GetTektonTriggerBinding(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTektonTriggerBinding'](arg1, arg2, arg3);
+}
+
+export function GetTektonTriggerTemplate(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetTektonTriggerTemplate'](arg1, arg2, arg3);
 }
 
 export function GetUDPRoute(arg1, arg2, arg3) {
@@ -1062,6 +1082,14 @@ export function ListTLSRoutes(arg1, arg2) {
   return window['go']['app']['App']['ListTLSRoutes'](arg1, arg2);
 }
 
+export function ListTektonClusterTriggerBindings(arg1) {
+  return window['go']['app']['App']['ListTektonClusterTriggerBindings'](arg1);
+}
+
+export function ListTektonEventListeners(arg1, arg2) {
+  return window['go']['app']['App']['ListTektonEventListeners'](arg1, arg2);
+}
+
 export function ListTektonPipelineRuns(arg1, arg2) {
   return window['go']['app']['App']['ListTektonPipelineRuns'](arg1, arg2);
 }
@@ -1076,6 +1104,18 @@ export function ListTektonTaskRuns(arg1, arg2) {
 
 export function ListTektonTasks(arg1, arg2) {
   return window['go']['app']['App']['ListTektonTasks'](arg1, arg2);
+}
+
+export function ListTektonTriggerBindings(arg1, arg2) {
+  return window['go']['app']['App']['ListTektonTriggerBindings'](arg1, arg2);
+}
+
+export function ListTektonTriggerTemplates(arg1, arg2) {
+  return window['go']['app']['App']['ListTektonTriggerTemplates'](arg1, arg2);
+}
+
+export function ListTektonTriggers(arg1, arg2) {
+  return window['go']['app']['App']['ListTektonTriggers'](arg1, arg2);
 }
 
 export function ListUDPRoutes(arg1, arg2) {

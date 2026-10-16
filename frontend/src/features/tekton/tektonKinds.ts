@@ -10,6 +10,13 @@ export const TEKTON_TASKRUN_RESOURCE = 'taskruns'
 export const TEKTON_PIPELINE_RESOURCE = 'pipelines'
 export const TEKTON_TASK_RESOURCE = 'tasks'
 
+export const TEKTON_TRIGGERS_GROUP = 'triggers.tekton.dev'
+export const TEKTON_EVENTLISTENER_RESOURCE = 'eventlisteners'
+export const TEKTON_TRIGGER_RESOURCE = 'triggers'
+export const TEKTON_TRIGGERTEMPLATE_RESOURCE = 'triggertemplates'
+export const TEKTON_TRIGGERBINDING_RESOURCE = 'triggerbindings'
+export const TEKTON_CLUSTERTRIGGERBINDING_RESOURCE = 'clustertriggerbindings'
+
 export type TektonKind = 'PipelineRun' | 'TaskRun' | 'Pipeline' | 'Task'
 
 export const TEKTON_RESOURCE_BY_KIND: Record<TektonKind, string> = {
