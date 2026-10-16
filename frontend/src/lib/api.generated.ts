@@ -336,6 +336,9 @@ export type TektonWorkspaceBinding = kube.TektonWorkspaceBinding
 export type TektonTaskCounts = kube.TektonTaskCounts
 export type TektonPipelineRunDetail = kube.TektonPipelineRunDetail
 export type TektonPipelineRunInfo = kube.TektonPipelineRunInfo
+export type TektonStartWorkspace = kube.TektonStartWorkspace
+export type TektonStartParam = kube.TektonStartParam
+export type TektonStartOptions = kube.TektonStartOptions
 export type TektonStep = kube.TektonStep
 export type TektonTaskStep = kube.TektonTaskStep
 export type TektonTaskDetail = kube.TektonTaskDetail
@@ -670,6 +673,7 @@ export const generatedApi = {
   startPodDebug: bindings.StartPodDebug,
   startPodLogs: bindings.StartPodLogs,
   startPortForward: bindings.StartPortForward,
+  startTektonPipeline: bindings.StartTektonPipeline,
   startWatch: bindings.StartWatch,
   stopExec: bindings.StopExec,
   stopLocalTerminal: bindings.StopLocalTerminal,

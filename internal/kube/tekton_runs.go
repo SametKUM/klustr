@@ -41,6 +41,7 @@ type TektonPipelineRunTask struct {
 	DisplayName    string   `json:"displayName"`
 	TaskRef        string   `json:"taskRef"`
 	RunAfter       []string `json:"runAfter"`
+	DependsOn      []string `json:"dependsOn"`
 	Finally        bool     `json:"finally"`
 	TaskRunName    string   `json:"taskRunName"`
 	State          string   `json:"state"`
@@ -251,6 +252,7 @@ func buildTektonPipelineRunTasks(pr *unstructured.Unstructured, children []*unst
 			DisplayName: displayName,
 			TaskRef:     tektonPipelineTaskRef(task),
 			RunAfter:    append([]string{}, runAfter...),
+			DependsOn:   tektonTaskDependencies(task, runAfter),
 			Finally:     finally,
 		}
 		runs := runsByTask[name]
@@ -289,10 +291,11 @@ func buildTektonPipelineRunTasks(pr *unstructured.Unstructured, children []*unst
 	for _, task := range unlisted {
 		for _, tr := range runsByTask[task] {
 			out = append(out, tektonTaskRow(TektonPipelineRunTask{
-				Name:     task,
-				TaskRef:  tektonTaskRunRef(tr),
-				RunAfter: []string{},
-				Finally:  tr.GetLabels()["tekton.dev/memberOf"] == "finally",
+				Name:      task,
+				TaskRef:   tektonTaskRunRef(tr),
+				RunAfter:  []string{},
+				DependsOn: []string{},
+				Finally:   tr.GetLabels()["tekton.dev/memberOf"] == "finally",
 			}, tr))
 		}
 	}

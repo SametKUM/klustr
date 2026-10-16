@@ -61,6 +61,41 @@ func tektonGR(resource string) schema.GroupResource {
 	return schema.GroupResource{Group: tektonGroup, Resource: resource}
 }
 
+// tektonTaskRefPattern finds "$(tasks.<name>.results...)" and
+// "$(tasks.<name>.status)": a pipeline task that reads another's result or
+// status runs after it even without runAfter.
+var tektonTaskRefPattern = regexp.MustCompile(`\$\(tasks\.([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.(results|status)`)
+
+// tektonTaskDependencies is a pipeline task's runAfter plus the tasks its
+// params, when expressions and matrix reference, in first-seen order.
+func tektonTaskDependencies(task map[string]any, runAfter []string) []string {
+	out := []string{}
+	seen := map[string]bool{}
+	add := func(name string) {
+		if name != "" && !seen[name] {
+			seen[name] = true
+			out = append(out, name)
+		}
+	}
+	for _, name := range runAfter {
+		add(name)
+	}
+	for _, field := range []string{"params", "when", "matrix"} {
+		v, ok := task[field]
+		if !ok {
+			continue
+		}
+		data, err := json.Marshal(v)
+		if err != nil {
+			continue
+		}
+		for _, m := range tektonTaskRefPattern.FindAllStringSubmatch(string(data), -1) {
+			add(m[1])
+		}
+	}
+	return out
+}
+
 // TektonParam is a name/value pair: a run's resolved param or a result.
 // Array and object values are flattened to text.
 type TektonParam struct {

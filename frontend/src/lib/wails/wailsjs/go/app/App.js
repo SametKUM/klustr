@@ -1270,6 +1270,10 @@ export function StartPortForward(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['StartPortForward'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function StartTektonPipeline(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['StartTektonPipeline'](arg1, arg2, arg3, arg4);
+}
+
 export function StartWatch(arg1) {
   return window['go']['app']['App']['StartWatch'](arg1);
 }

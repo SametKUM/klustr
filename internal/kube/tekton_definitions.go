@@ -13,6 +13,10 @@ type TektonParamSpec struct {
 	Default     string `json:"default"`
 	HasDefault  bool   `json:"hasDefault"`
 	Description string `json:"description"`
+	// DefaultValues and DefaultObject keep an array or object default
+	// structured, for the Start form to prefill.
+	DefaultValues []string          `json:"defaultValues"`
+	DefaultObject map[string]string `json:"defaultObject"`
 }
 
 // TektonWorkspaceSpec is a declared workspace of a Pipeline or Task.
@@ -49,13 +53,26 @@ func extractTektonParamSpecs(spec map[string]any) []TektonParamSpec {
 		}
 		description, _ := m["description"].(string)
 		def, hasDefault := m["default"]
-		out = append(out, TektonParamSpec{
-			Name:        name,
-			Type:        typ,
-			Default:     tektonValueString(def),
-			HasDefault:  hasDefault,
-			Description: description,
-		})
+		p := TektonParamSpec{
+			Name:          name,
+			Type:          typ,
+			Default:       tektonValueString(def),
+			HasDefault:    hasDefault,
+			Description:   description,
+			DefaultValues: []string{},
+			DefaultObject: map[string]string{},
+		}
+		switch d := def.(type) {
+		case []any:
+			for _, item := range d {
+				p.DefaultValues = append(p.DefaultValues, tektonValueString(item))
+			}
+		case map[string]any:
+			for k, v := range d {
+				p.DefaultObject[k] = tektonValueString(v)
+			}
+		}
+		out = append(out, p)
 	}
 	return out
 }
@@ -138,8 +155,11 @@ type TektonPipelineTaskSpec struct {
 	TaskRef     string   `json:"taskRef"`
 	TaskRefName string   `json:"taskRefName"`
 	RunAfter    []string `json:"runAfter"`
-	When        int      `json:"when"`
-	Finally     bool     `json:"finally"`
+	// DependsOn is runAfter plus the tasks whose results the task reads,
+	// which Tekton orders before it just the same.
+	DependsOn []string `json:"dependsOn"`
+	When      int      `json:"when"`
+	Finally   bool     `json:"finally"`
 }
 
 type TektonPipelineDetail struct {
@@ -219,6 +239,7 @@ func extractTektonPipelineTaskSpecs(spec map[string]any) []TektonPipelineTaskSpe
 				TaskRef:     tektonPipelineTaskRef(task),
 				TaskRefName: refName,
 				RunAfter:    append([]string{}, runAfter...),
+				DependsOn:   tektonTaskDependencies(task, runAfter),
 				When:        len(when),
 				Finally:     field == "finally",
 			})

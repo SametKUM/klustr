@@ -1292,6 +1292,10 @@ func (a *App) RerunTektonPipelineRun(contextName, namespace, name string) (strin
 	return a.clients.RerunTektonPipelineRun(a.ctx, contextName, namespace, name)
 }
 
+func (a *App) StartTektonPipeline(contextName, namespace, pipeline string, opts kube.TektonStartOptions) (string, error) {
+	return a.clients.StartTektonPipeline(a.ctx, contextName, namespace, pipeline, opts)
+}
+
 // ---------------------------------------------------------------------------
 // Kyverno and policy report bindings.
 // ---------------------------------------------------------------------------

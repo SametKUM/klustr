@@ -102,6 +102,7 @@ import { INTEGRATION_DETAIL_BODIES } from '@/features/integrationDetails'
 import { integrationFor } from '@/lib/integrations'
 import { TektonPipelineRunsTab } from '@/features/tekton/TektonPipelineRunsTab'
 import { TektonRunHeaderActions } from '@/features/tekton/TektonRunHeaderActions'
+import { StartTektonPipelineButton } from '@/features/tekton/StartTektonPipelineButton'
 import { tektonKindOf } from '@/features/tekton/tektonKinds'
 import { KEDAPauseButton } from '@/features/keda/KEDAPauseButton'
 import { KEDAScaledJobJobsTab } from '@/features/keda/KEDAScaledJobJobsTab'
@@ -291,6 +292,9 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
                   namespace={resource.namespace}
                   name={resource.name}
                 />
+              )}
+              {!readOnly && tektonKindOf(resource) === 'Pipeline' && (
+                <StartTektonPipelineButton contextName={contextName} namespace={resource.namespace} name={resource.name} />
               )}
               {!readOnly &&
                 (tektonKindOf(resource) === 'PipelineRun' || tektonKindOf(resource) === 'TaskRun') && (

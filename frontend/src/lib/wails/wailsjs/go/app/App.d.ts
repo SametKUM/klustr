@@ -637,6 +637,8 @@ export function StartPodLogs(arg1:string,arg2:string,arg3:string,arg4:string,arg
 
 export function StartPortForward(arg1:string,arg2:string,arg3:string,arg4:number,arg5:number):Promise<kube.PortForwardInfo>;
 
+export function StartTektonPipeline(arg1:string,arg2:string,arg3:string,arg4:kube.TektonStartOptions):Promise<string>;
+
 export function StartWatch(arg1:string):Promise<void>;
 
 export function StopExec(arg1:string):Promise<void>;

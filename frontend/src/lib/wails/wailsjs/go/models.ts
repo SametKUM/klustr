@@ -10332,6 +10332,8 @@ export namespace kube {
 	    default: string;
 	    hasDefault: boolean;
 	    description: string;
+	    defaultValues: string[];
+	    defaultObject: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new TektonParamSpec(source);
@@ -10344,6 +10346,8 @@ export namespace kube {
 	        this.default = source["default"];
 	        this.hasDefault = source["hasDefault"];
 	        this.description = source["description"];
+	        this.defaultValues = source["defaultValues"];
+	        this.defaultObject = source["defaultObject"];
 	    }
 	}
 	export class TektonPipelineTaskSpec {
@@ -10352,6 +10356,7 @@ export namespace kube {
 	    taskRef: string;
 	    taskRefName: string;
 	    runAfter: string[];
+	    dependsOn: string[];
 	    when: number;
 	    finally: boolean;
 	
@@ -10366,6 +10371,7 @@ export namespace kube {
 	        this.taskRef = source["taskRef"];
 	        this.taskRefName = source["taskRefName"];
 	        this.runAfter = source["runAfter"];
+	        this.dependsOn = source["dependsOn"];
 	        this.when = source["when"];
 	        this.finally = source["finally"];
 	    }
@@ -10487,6 +10493,7 @@ export namespace kube {
 	    displayName: string;
 	    taskRef: string;
 	    runAfter: string[];
+	    dependsOn: string[];
 	    finally: boolean;
 	    taskRunName: string;
 	    state: string;
@@ -10506,6 +10513,7 @@ export namespace kube {
 	        this.displayName = source["displayName"];
 	        this.taskRef = source["taskRef"];
 	        this.runAfter = source["runAfter"];
+	        this.dependsOn = source["dependsOn"];
 	        this.finally = source["finally"];
 	        this.taskRunName = source["taskRunName"];
 	        this.state = source["state"];
@@ -10671,6 +10679,86 @@ export namespace kube {
 		}
 	}
 	
+	
+	
+	export class TektonStartWorkspace {
+	    name: string;
+	    kind: string;
+	    source: string;
+	    subPath: string;
+	    size: string;
+	    storageClass: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonStartWorkspace(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.source = source["source"];
+	        this.subPath = source["subPath"];
+	        this.size = source["size"];
+	        this.storageClass = source["storageClass"];
+	    }
+	}
+	export class TektonStartParam {
+	    name: string;
+	    type: string;
+	    value: string;
+	    values: string[];
+	    object: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonStartParam(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.value = source["value"];
+	        this.values = source["values"];
+	        this.object = source["object"];
+	    }
+	}
+	export class TektonStartOptions {
+	    params: TektonStartParam[];
+	    workspaces: TektonStartWorkspace[];
+	    serviceAccount: string;
+	    timeout: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TektonStartOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.params = this.convertValues(source["params"], TektonStartParam);
+	        this.workspaces = this.convertValues(source["workspaces"], TektonStartWorkspace);
+	        this.serviceAccount = source["serviceAccount"];
+	        this.timeout = source["timeout"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	
 	
 	export class TektonStep {
