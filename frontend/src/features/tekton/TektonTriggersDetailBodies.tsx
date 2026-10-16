@@ -9,6 +9,7 @@ import { ReadyPill } from '@/features/_shared/ReadyPill'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import type { IntegrationDetailProps } from '@/features/integrationDetails'
 import { ParamSpecsTable, ValuesTable } from './TektonDetailPrimitives'
+import { templateRunRef } from './tektonFormat'
 import {
   TEKTON_CLUSTERTRIGGERBINDING_RESOURCE,
   TEKTON_EVENTLISTENER_RESOURCE,
@@ -238,38 +239,36 @@ export function TektonTriggerTemplateDetailBody({ contextName, namespace, name }
                 </tr>
               </thead>
               <tbody>
-                {d.resources.map((r, i) => (
-                  <tr key={i} className="border-t border-border align-top">
-                    <Td>
-                      {r.kind}
-                      <div className="text-muted-foreground">{r.apiVersion}</div>
-                    </Td>
-                    <Td className="font-mono">{r.name || '—'}</Td>
-                    <Td className="font-mono">
-                      {r.pipelineRef ? (
-                        <CustomResourceReference
-                          contextName={contextName}
-                          group={TEKTON_GROUP}
-                          resource={TEKTON_PIPELINE_RESOURCE}
-                          kind="Pipeline"
-                          namespace={namespace}
-                          name={r.pipelineRef}
-                        />
-                      ) : r.taskRef ? (
-                        <CustomResourceReference
-                          contextName={contextName}
-                          group={TEKTON_GROUP}
-                          resource={TEKTON_TASK_RESOURCE}
-                          kind="Task"
-                          namespace={namespace}
-                          name={r.taskRef}
-                        />
-                      ) : (
-                        '—'
-                      )}
-                    </Td>
-                  </tr>
-                ))}
+                {d.resources.map((r, i) => {
+                  const ref = templateRunRef(r, namespace)
+                  return (
+                    <tr key={i} className="border-t border-border align-top">
+                      <Td>
+                        {r.kind}
+                        <div className="text-muted-foreground">{r.apiVersion}</div>
+                      </Td>
+                      <Td className="font-mono">
+                        {r.name ? `${r.namespace ? `${r.namespace}/` : ''}${r.name}` : '—'}
+                      </Td>
+                      <Td className="font-mono">
+                        {!ref ? (
+                          '—'
+                        ) : ref.linkable ? (
+                          <CustomResourceReference
+                            contextName={contextName}
+                            group={TEKTON_GROUP}
+                            resource={ref.kind === 'Pipeline' ? TEKTON_PIPELINE_RESOURCE : TEKTON_TASK_RESOURCE}
+                            kind={ref.kind}
+                            namespace={ref.namespace}
+                            name={ref.name}
+                          />
+                        ) : (
+                          ref.name
+                        )}
+                      </Td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

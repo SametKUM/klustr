@@ -105,6 +105,10 @@ type TektonTemplateResource struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
 	Name       string `json:"name"`
+	// Namespace is the template's own metadata.namespace, possibly a
+	// $(tt.params...) placeholder. Empty means Triggers creates the resource
+	// in the EventListener's namespace, where the refs below also resolve.
+	Namespace string `json:"namespace"`
 	// PipelineRef or TaskRef is the Pipeline or Task a templated run starts.
 	PipelineRef string `json:"pipelineRef"`
 	TaskRef     string `json:"taskRef"`
@@ -349,6 +353,7 @@ func tektonTemplateResources(obj *unstructured.Unstructured) []TektonTemplateRes
 		res.Kind, _ = r["kind"].(string)
 		meta := nestedMap(r, "metadata")
 		res.Name, _ = meta["name"].(string)
+		res.Namespace, _ = meta["namespace"].(string)
 		if res.Name == "" {
 			if gen, _ := meta["generateName"].(string); gen != "" {
 				res.Name = gen + "…"

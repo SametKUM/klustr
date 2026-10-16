@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Play } from 'lucide-react'
 import { toast } from 'sonner'
@@ -11,8 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { api, type TektonPipelineDetail } from '@/lib/api'
+import { api, type TektonPipelineDetail, type TektonWorkspaceSpec } from '@/lib/api'
 import { ContextBadge } from '@/features/_shared/ContextBadge'
+import { ensureWatchUntilSynced } from '@/features/_shared/customResourceModel'
 import { ErrorBox } from '@/features/_shared/DetailPrimitives'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { findCRD, useCRDStore } from '@/store/crds'
@@ -21,8 +22,10 @@ import { TEKTON_GROUP, TEKTON_PIPELINERUN_RESOURCE } from './tektonKinds'
 import {
   WORKSPACE_KINDS,
   buildStartOptions,
-  initialStartForm,
+  emptyStartForm,
+  paramText,
   startProblems,
+  workspaceForm,
   type StartForm,
   type WorkspaceForm,
   type WorkspaceKind,
@@ -92,32 +95,52 @@ function StartFormBody({
   const crd = useCRDStore((s) =>
     contextName ? findCRD(s.byContext, contextName, TEKTON_GROUP, TEKTON_PIPELINERUN_RESOURCE) : null,
   )
-  const [form, setForm] = useState<StartForm>(() => initialStartForm(detail.params, detail.workspaces))
+  const [form, setForm] = useState<StartForm>(emptyStartForm)
   const problems = startProblems(detail.params, detail.workspaces, form)
+  const closedRef = useRef(false)
+  useEffect(() => {
+    closedRef.current = false
+    return () => {
+      closedRef.current = true
+    }
+  }, [])
 
   const start = useMutation({
     mutationFn: async () => {
       if (!contextName) throw new Error('no context')
       return api.startTektonPipeline(contextName, namespace, detail.name, buildStartOptions(detail.params, detail.workspaces, form))
     },
-    onSuccess: (created) => {
+    // The new run opens in the detail panel, which only updates while a
+    // PipelineRun watch runs, and nothing may have started one yet. The
+    // dialog stays pending until it syncs; closing it meanwhile skips the open.
+    onSuccess: async (created) => {
       toast.success(`Started PipelineRun ${created}`)
-      onDone()
-      if (contextName && crd) {
-        openResource({
-          kind: 'PipelineRun',
-          namespace,
-          name: created,
-          context: contextName,
-          gvr: { group: crd.group, version: crd.version, resource: crd.resource },
-        })
+      if (!contextName || !crd) return onDone()
+      try {
+        await ensureWatchUntilSynced(
+          () => api.ensureCustomResourceWatch(contextName, crd.group, crd.version, crd.resource),
+          () => closedRef.current,
+        )
+      } catch (e) {
+        if (closedRef.current) return
+        toast.error(`Could not open PipelineRun ${created}: ${String(e)}`)
+        return onDone()
       }
+      if (closedRef.current) return
+      onDone()
+      openResource({
+        kind: 'PipelineRun',
+        namespace,
+        name: created,
+        context: contextName,
+        gvr: { group: crd.group, version: crd.version, resource: crd.resource },
+      })
     },
   })
 
   const setParam = (key: string, value: string) => setForm((f) => ({ ...f, params: { ...f.params, [key]: value } }))
-  const setWorkspace = (key: string, patch: Partial<WorkspaceForm>) =>
-    setForm((f) => ({ ...f, workspaces: { ...f.workspaces, [key]: { ...f.workspaces[key], ...patch } } }))
+  const setWorkspace = (w: TektonWorkspaceSpec, patch: Partial<WorkspaceForm>) =>
+    setForm((f) => ({ ...f, workspaces: { ...f.workspaces, [w.name]: { ...workspaceForm(f, w), ...patch } } }))
 
   return (
     <>
@@ -144,7 +167,7 @@ function StartFormBody({
                       id={id}
                       rows={3}
                       spellCheck={false}
-                      value={form.params[p.name] ?? ''}
+                      value={paramText(form, p)}
                       onChange={(e) => setParam(p.name, e.target.value)}
                       className={INPUT}
                     />
@@ -155,7 +178,7 @@ function StartFormBody({
                       spellCheck={false}
                       autoCorrect="off"
                       autoCapitalize="off"
-                      value={form.params[p.name] ?? ''}
+                      value={paramText(form, p)}
                       onChange={(e) => setParam(p.name, e.target.value)}
                       className={INPUT}
                     />
@@ -172,7 +195,7 @@ function StartFormBody({
               Workspaces
             </legend>
             {detail.workspaces.map((w) => {
-              const b = form.workspaces[w.name]
+              const b = workspaceForm(form, w)
               const kind = WORKSPACE_KINDS.find((k) => k.value === b.kind)
               return (
                 <div key={w.name} className="space-y-1">
@@ -184,7 +207,7 @@ function StartFormBody({
                     <select
                       aria-label={`Workspace ${w.name} source`}
                       value={b.kind}
-                      onChange={(e) => setWorkspace(w.name, { kind: e.target.value as WorkspaceKind })}
+                      onChange={(e) => setWorkspace(w, { kind: e.target.value as WorkspaceKind })}
                       className="rounded border border-border bg-background px-2 py-1.5 text-xs"
                     >
                       {w.optional && <option value="none">Not bound</option>}
@@ -199,7 +222,7 @@ function StartFormBody({
                         aria-label={`Workspace ${w.name} ${kind.source}`}
                         placeholder={kind.source}
                         value={b.source}
-                        onChange={(e) => setWorkspace(w.name, { source: e.target.value })}
+                        onChange={(e) => setWorkspace(w, { source: e.target.value })}
                         className={INPUT}
                       />
                     )}
@@ -209,14 +232,14 @@ function StartFormBody({
                           aria-label={`Workspace ${w.name} size`}
                           placeholder="Size"
                           value={b.size}
-                          onChange={(e) => setWorkspace(w.name, { size: e.target.value })}
+                          onChange={(e) => setWorkspace(w, { size: e.target.value })}
                           className={INPUT}
                         />
                         <input
                           aria-label={`Workspace ${w.name} storage class`}
                           placeholder="Storage class"
                           value={b.storageClass}
-                          onChange={(e) => setWorkspace(w.name, { storageClass: e.target.value })}
+                          onChange={(e) => setWorkspace(w, { storageClass: e.target.value })}
                           className={INPUT}
                         />
                       </div>

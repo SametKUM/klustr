@@ -11205,6 +11205,7 @@ export namespace kube {
 	    apiVersion: string;
 	    kind: string;
 	    name: string;
+	    namespace: string;
 	    pipelineRef: string;
 	    taskRef: string;
 	
@@ -11217,6 +11218,7 @@ export namespace kube {
 	        this.apiVersion = source["apiVersion"];
 	        this.kind = source["kind"];
 	        this.name = source["name"];
+	        this.namespace = source["namespace"];
 	        this.pipelineRef = source["pipelineRef"];
 	        this.taskRef = source["taskRef"];
 	    }

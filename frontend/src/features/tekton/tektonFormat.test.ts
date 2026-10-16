@@ -6,6 +6,7 @@ import {
   tektonElapsed,
   tektonStateLabel,
   tektonTaskSummary,
+  templateRunRef,
 } from './tektonFormat'
 
 function step(name: string, state: string, exitCode = 0): TektonStep {
@@ -98,5 +99,41 @@ describe('isTektonRunActive', () => {
     expect(isTektonRunActive('pending')).toBe(true)
     expect(isTektonRunActive('succeeded')).toBe(false)
     expect(isTektonRunActive('cancelled')).toBe(false)
+  })
+})
+
+describe('templateRunRef', () => {
+  const tr = (over: { namespace?: string; pipelineRef?: string; taskRef?: string }) => ({
+    namespace: '',
+    pipelineRef: '',
+    taskRef: '',
+    ...over,
+  })
+
+  it('resolves in the template namespace when the resource sets none', () => {
+    expect(templateRunRef(tr({ pipelineRef: 'build' }), 'ci')).toEqual({
+      kind: 'Pipeline',
+      namespace: 'ci',
+      name: 'build',
+      linkable: true,
+    })
+  })
+
+  it('resolves in the namespace the resource template names', () => {
+    expect(templateRunRef(tr({ namespace: 'builds', taskRef: 'lint' }), 'ci')).toEqual({
+      kind: 'Task',
+      namespace: 'builds',
+      name: 'lint',
+      linkable: true,
+    })
+  })
+
+  it('does not link a placeholder name or namespace', () => {
+    expect(templateRunRef(tr({ namespace: '$(tt.params.ns)', pipelineRef: 'build' }), 'ci')?.linkable).toBe(false)
+    expect(templateRunRef(tr({ pipelineRef: '$(tt.params.pipeline)' }), 'ci')?.linkable).toBe(false)
+  })
+
+  it('is null for a resource that starts nothing', () => {
+    expect(templateRunRef(tr({}), 'ci')).toBeNull()
   })
 })

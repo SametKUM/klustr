@@ -103,3 +103,35 @@ func TestTektonTriggerTemplateResources(t *testing.T) {
 		t.Fatalf("resources = %+v", got)
 	}
 }
+
+func TestTektonTemplateResourceNamespace(t *testing.T) {
+	for _, tc := range []struct {
+		name, metadata, want string
+	}{
+		{"default", "generateName: build-", ""},
+		{"explicit", "generateName: build-\n        namespace: builds", "builds"},
+		{"templated", "generateName: build-\n        namespace: $(tt.params.namespace)", "$(tt.params.namespace)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tt := mustUnstructured(t, `apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: build
+  namespace: ci
+spec:
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        `+tc.metadata+`
+      spec:
+        pipelineRef:
+          name: build
+`)
+			got := tektonTemplateResources(tt)
+			if len(got) != 1 || got[0].Namespace != tc.want || got[0].PipelineRef != "build" {
+				t.Fatalf("resources = %+v, want namespace %q", got, tc.want)
+			}
+		})
+	}
+}

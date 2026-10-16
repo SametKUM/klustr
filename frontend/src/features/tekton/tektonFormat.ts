@@ -1,4 +1,4 @@
-import type { TektonStep, TektonTaskCounts } from '@/lib/api'
+import type { TektonStep, TektonTaskCounts, TektonTemplateResource } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 
 // Run states from the backend (tekton.go), bucketed from the Succeeded
@@ -83,4 +83,28 @@ export function stepContainer(steps: TektonStep[]): string | undefined {
   const ran = steps.filter((s) => s.state === 'terminated')
   if (ran.length > 0) return container(ran[ran.length - 1])
   return steps[0] ? container(steps[0]) : undefined
+}
+
+export type TemplateRunRef = {
+  kind: 'Pipeline' | 'Task'
+  namespace: string
+  name: string
+  // linkable is false while the name or namespace is a $(tt.params...)
+  // placeholder, which only a fired trigger fills in.
+  linkable: boolean
+}
+
+// templateRunRef is the Pipeline or Task a TriggerTemplate resource starts.
+// The ref resolves where the run is created: the template's own namespace
+// field, else the EventListener's namespace, which is the TriggerTemplate's
+// unless a listener selects triggers from other namespaces.
+export function templateRunRef(
+  r: Pick<TektonTemplateResource, 'namespace' | 'pipelineRef' | 'taskRef'>,
+  templateNamespace: string,
+): TemplateRunRef | null {
+  const kind = r.pipelineRef ? 'Pipeline' : r.taskRef ? 'Task' : null
+  if (!kind) return null
+  const name = r.pipelineRef || r.taskRef
+  const namespace = r.namespace || templateNamespace
+  return { kind, namespace, name, linkable: !name.includes('$(') && !namespace.includes('$(') }
 }
