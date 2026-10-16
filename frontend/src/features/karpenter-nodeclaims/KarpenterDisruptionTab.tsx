@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CircleCheck, RefreshCcw, TriangleAlert } from 'lucide-react'
+import { CircleCheck, CircleHelp, RefreshCcw, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { api, type KarpenterBlocker, type KarpenterDisruption, type OwnerRef } from '@/lib/api'
-import { formatAge } from '@/lib/time'
+import { api, type KarpenterBlocker, type KarpenterBudget, type KarpenterDisruption, type OwnerRef } from '@/lib/api'
+import { formatAge, formatExpiry } from '@/lib/time'
 import { ConditionsSection } from '@/features/_shared/ConditionsTable'
 import { CustomResourceReference } from '@/features/_shared/CustomResourceReference'
 import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
@@ -62,6 +62,18 @@ export function KarpenterDisruptionTab({ contextName, nodeName, nodeClaimName }:
           Refresh
         </Button>
       </div>
+      {report.incomplete.length > 0 && (
+        <Section title="Not visible">
+          <ul className="space-y-1.5 text-sm">
+            {report.incomplete.map((gap) => (
+              <li key={gap} className="flex items-start gap-2">
+                <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 break-words">{gap}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
       {report.blockers.length > 0 && (
         <Section title={`Blocking now (${report.blockers.length})`}>
           <ul className="space-y-1.5 text-sm">
@@ -70,6 +82,7 @@ export function KarpenterDisruptionTab({ contextName, nodeName, nodeClaimName }:
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
                 <span className="min-w-0 break-words">
                   {b.message} <BlockerLink contextName={contextName} blocker={b} />
+                  <BlockerScope blocker={b} />
                 </span>
               </li>
             ))}
@@ -122,12 +135,8 @@ export function KarpenterDisruptionTab({ contextName, nodeName, nodeClaimName }:
                   <Td>{b.reasons.length ? b.reasons.join(', ') : 'All'}</Td>
                   <Td className="font-mono">{b.schedule || 'Always'}</Td>
                   <Td className="font-mono">{b.duration || '—'}</Td>
-                  <Td className={b.active && b.allowed === 0 ? 'text-destructive' : undefined}>
-                    {b.error
-                      ? `Invalid: ${b.error}`
-                      : b.active
-                        ? `Active, allows ${b.allowed}`
-                        : 'Inactive'}
+                  <Td className={b.active && b.remaining === 0 ? 'text-destructive' : undefined}>
+                    {budgetState(b)}
                   </Td>
                 </tr>
               ))}
@@ -136,6 +145,8 @@ export function KarpenterDisruptionTab({ contextName, nodeName, nodeClaimName }:
         </div>
         <p className="text-xs text-muted-foreground">
           When several budgets are active, Karpenter applies the most restrictive one.
+          {report.poolDisrupting > 0 &&
+            ` ${report.poolDisrupting} of the pool's nodes are NotReady or already being disrupted, and count against every budget.`}
         </p>
       </Section>
       {report.pods.length > 0 && (
@@ -223,7 +234,15 @@ function Verdict({ report }: { report: KarpenterDisruption }) {
       </p>
     )
   }
-  if (report.blockers.length === 0) {
+  if (report.blocked.length === 0) {
+    if (report.incomplete.length > 0) {
+      return (
+        <p className="flex items-center gap-2 text-sm">
+          <CircleHelp className="size-4 text-muted-foreground" />
+          No blocker found, but Klustr cannot see everything that could block this node.
+        </p>
+      )
+    }
     return (
       <p className="flex items-center gap-2 text-sm">
         <CircleCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
@@ -235,9 +254,57 @@ function Verdict({ report }: { report: KarpenterDisruption }) {
   return (
     <p className="flex items-center gap-2 text-sm">
       <TriangleAlert className="size-4 text-amber-600 dark:text-amber-400" />
-      Karpenter will not voluntarily disrupt this node.
+      {verdictText(report.blocked, report.incomplete.length > 0)}
     </p>
   )
+}
+
+const DISRUPTIONS = ['Empty', 'Underutilized', 'Drifted'] as const
+
+// verdictText names what the blockers hold back, since a blocker can stop
+// consolidation while drift replacement still goes ahead, or the reverse.
+function verdictText(blocked: string[], incomplete: boolean): string {
+  const isBlocked = (r: string) => blocked.includes(r)
+  if (DISRUPTIONS.every(isBlocked)) return 'Karpenter will not voluntarily disrupt this node.'
+  const stopped = disruptionPhrases(DISRUPTIONS.filter(isBlocked), 'this node')
+  const still = disruptionPhrases(
+    DISRUPTIONS.filter((r) => !isBlocked(r)),
+    'it',
+  )
+  const text = `Karpenter will not ${stopped.join(' or ')}.`
+  return incomplete ? text : `${text} It can still ${still.join(' and ')}.`
+}
+
+function disruptionPhrases(reasons: readonly string[], object: string): string[] {
+  const out: string[] = []
+  if (reasons.includes('Empty') && reasons.includes('Underutilized')) out.push(`consolidate ${object}`)
+  else if (reasons.includes('Empty')) out.push(`remove ${object} once it is empty`)
+  else if (reasons.includes('Underutilized')) out.push(`consolidate ${object} while it runs pods`)
+  if (reasons.includes('Drifted')) out.push(`replace ${object} when it drifts`)
+  return out
+}
+
+function blockerScope(reasons: string[]): string {
+  if (DISRUPTIONS.every((r) => reasons.includes(r))) return ''
+  if (reasons.length === 2 && reasons.includes('Empty') && reasons.includes('Underutilized')) return 'consolidation'
+  if (reasons.length === 1 && reasons[0] === 'Drifted') return 'drift'
+  return reasons.join(', ')
+}
+
+function BlockerScope({ blocker }: { blocker: KarpenterBlocker }) {
+  const scope = blockerScope(blocker.reasons)
+  const expiry = blocker.until ? formatExpiry(blocker.until) : null
+  const lifts = expiry && expiry.tone !== 'expired' ? `lifts ${expiry.label}` : ''
+  const note = [scope && `Blocks ${scope}`, lifts].filter(Boolean).join(', ')
+  if (!note) return null
+  return <span className="text-xs text-muted-foreground"> {note.charAt(0).toUpperCase() + note.slice(1)}.</span>
+}
+
+function budgetState(b: KarpenterBudget): string {
+  if (b.error) return `Invalid: ${b.error}`
+  if (!b.active) return 'Inactive'
+  if (b.remaining < b.allowed) return `Active, allows ${b.allowed}, ${b.remaining} left`
+  return `Active, allows ${b.allowed}`
 }
 
 function BlockerLink({ contextName, blocker }: { contextName: string | null; blocker: KarpenterBlocker }) {

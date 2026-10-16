@@ -6148,6 +6148,8 @@ export namespace kube {
 	export class KarpenterBlocker {
 	    kind: string;
 	    message: string;
+	    reasons: string[];
+	    until: string;
 	    objectKind: string;
 	    namespace: string;
 	    name: string;
@@ -6160,6 +6162,8 @@ export namespace kube {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.kind = source["kind"];
 	        this.message = source["message"];
+	        this.reasons = source["reasons"];
+	        this.until = source["until"];
 	        this.objectKind = source["objectKind"];
 	        this.namespace = source["namespace"];
 	        this.name = source["name"];
@@ -6172,6 +6176,7 @@ export namespace kube {
 	    duration: string;
 	    active: boolean;
 	    allowed: number;
+	    remaining: number;
 	    error: string;
 	
 	    static createFrom(source: any = {}) {
@@ -6186,6 +6191,7 @@ export namespace kube {
 	        this.duration = source["duration"];
 	        this.active = source["active"];
 	        this.allowed = source["allowed"];
+	        this.remaining = source["remaining"];
 	        this.error = source["error"];
 	    }
 	}
@@ -6220,7 +6226,10 @@ export namespace kube {
 	    disrupting: boolean;
 	    disruptionReason: string;
 	    blockers: KarpenterBlocker[];
+	    blocked: string[];
+	    incomplete: string[];
 	    budgets: KarpenterBudget[];
+	    poolDisrupting: number;
 	    conditions: ConditionDetail[];
 	    events: EventInfo[];
 	    pods: KarpenterDisruptPod[];
@@ -6243,7 +6252,10 @@ export namespace kube {
 	        this.disrupting = source["disrupting"];
 	        this.disruptionReason = source["disruptionReason"];
 	        this.blockers = this.convertValues(source["blockers"], KarpenterBlocker);
+	        this.blocked = source["blocked"];
+	        this.incomplete = source["incomplete"];
 	        this.budgets = this.convertValues(source["budgets"], KarpenterBudget);
+	        this.poolDisrupting = source["poolDisrupting"];
 	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.events = this.convertValues(source["events"], EventInfo);
 	        this.pods = this.convertValues(source["pods"], KarpenterDisruptPod);

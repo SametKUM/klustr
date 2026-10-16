@@ -27,7 +27,10 @@ function report(over: Partial<KarpenterDisruption>): KarpenterDisruption {
     disrupting: false,
     disruptionReason: '',
     blockers: [],
-    budgets: [{ nodes: '10%', reasons: [], schedule: '', duration: '', active: true, allowed: 1, error: '' }],
+    blocked: [],
+    incomplete: [],
+    budgets: [{ nodes: '10%', reasons: [], schedule: '', duration: '', active: true, allowed: 1, remaining: 1, error: '' }],
+    poolDisrupting: 0,
     conditions: [],
     events: [],
     pods: [],
@@ -50,13 +53,32 @@ async function render(nodeName = 'ip-10-0-1-5', nodeClaimName = '') {
   )
 }
 
+const ALL = ['Empty', 'Underutilized', 'Drifted']
+
+function blocker(message: string, reasons: string[], until = ''): KarpenterDisruption['blockers'][number] {
+  return { kind: 'state', message, reasons, until, objectKind: '', namespace: '', name: '' }
+}
+
 it('lists what blocks the node and the budget state', async () => {
   mocks.get.mockResolvedValue(
     report({
       blockers: [
-        { kind: 'pdb', message: 'PDB shop/db allows no disruptions, so pod db-0 cannot be evicted.', objectKind: 'PodDisruptionBudget', namespace: 'shop', name: 'db' },
+        {
+          kind: 'pdb',
+          message: 'PDB shop/db allows no disruptions, so pod db-0 cannot be evicted.',
+          reasons: ALL,
+          until: '',
+          objectKind: 'PodDisruptionBudget',
+          namespace: 'shop',
+          name: 'db',
+        },
       ],
-      budgets: [{ nodes: '0', reasons: ['Drifted'], schedule: '0 9 * * mon-fri', duration: '8h', active: true, allowed: 0, error: '' }],
+      blocked: ALL,
+      budgets: [
+        { nodes: '0', reasons: ['Drifted'], schedule: '0 9 * * mon-fri', duration: '8h', active: true, allowed: 0, remaining: 0, error: '' },
+        { nodes: '2', reasons: [], schedule: '', duration: '', active: true, allowed: 2, remaining: 1, error: '' },
+      ],
+      poolDisrupting: 1,
     }),
   )
   await render()
@@ -64,6 +86,65 @@ it('lists what blocks the node and the budget state', async () => {
   expect(container.textContent).toContain('Karpenter will not voluntarily disrupt this node.')
   expect(container.textContent).toContain('PDB shop/db allows no disruptions')
   expect(container.textContent).toContain('Active, allows 0')
+  expect(container.textContent).toContain('Active, allows 2, 1 left')
+  expect(container.textContent).toContain("1 of the pool's nodes are NotReady or already being disrupted")
+})
+
+it('scopes the verdict to consolidation when drift is still possible', async () => {
+  mocks.get.mockResolvedValue(
+    report({
+      blockers: [
+        blocker(
+          'consolidateAfter (10m) has not passed since pods last changed on the node, so Karpenter does not consolidate the node yet.',
+          ['Empty', 'Underutilized'],
+          new Date(Date.now() + 5 * 60_000).toISOString(),
+        ),
+      ],
+      blocked: ['Empty', 'Underutilized'],
+    }),
+  )
+  await render()
+  expect(container.textContent).toContain(
+    'Karpenter will not consolidate this node. It can still replace it when it drifts.',
+  )
+  expect(container.textContent).not.toContain('voluntarily')
+  expect(container.textContent).toMatch(/Blocks consolidation, lifts in [45]m\./)
+})
+
+it('scopes the verdict to drift when consolidation is still possible', async () => {
+  mocks.get.mockResolvedValue(
+    report({
+      blockers: [blocker('A disruption budget (nodes: 0) is active and allows no disruptions for Drifted.', ['Drifted'])],
+      blocked: ['Drifted'],
+    }),
+  )
+  await render()
+  expect(container.textContent).toContain(
+    'Karpenter will not replace this node when it drifts. It can still consolidate it.',
+  )
+  expect(container.textContent).toContain('Blocks drift.')
+})
+
+it('does not claim nothing blocks when it cannot see everything', async () => {
+  const gap = 'PodDisruptionBudgets are not readable cluster-wide, so PDBs that block eviction can be missing.'
+  mocks.get.mockResolvedValue(report({ incomplete: [gap] }))
+  await render()
+  expect(container.textContent).not.toContain('Nothing blocks')
+  expect(container.textContent).toContain('Klustr cannot see everything that could block this node')
+  expect(container.textContent).toContain(gap)
+})
+
+it('leaves out what is still possible when it cannot see everything', async () => {
+  mocks.get.mockResolvedValue(
+    report({
+      blockers: [blocker('The NodePool sets consolidateAfter: Never.', ['Empty', 'Underutilized'])],
+      blocked: ['Empty', 'Underutilized'],
+      incomplete: ['Pods are not readable cluster-wide.'],
+    }),
+  )
+  await render()
+  expect(container.textContent).toContain('Karpenter will not consolidate this node.')
+  expect(container.textContent).not.toContain('It can still')
 })
 
 it('says when nothing blocks the node', async () => {
