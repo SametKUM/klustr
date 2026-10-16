@@ -56,7 +56,10 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
   const del = useMutation({
     mutationFn: async () => {
       if (!contextName) throw new Error('no context')
-      await api.deleteResource(contextName, resource.kind, resource.namespace, resource.name)
+      // A CR is addressed by group and resource: its kind can match a
+      // built-in one (Istio's Gateway and the Gateway API's).
+      const kind = resource.gvr ? `cr:${resource.gvr.group}/${resource.gvr.resource}` : resource.kind
+      await api.deleteResource(contextName, kind, resource.namespace, resource.name)
     },
     onSuccess: () => {
       toast.success(`Deleted ${resource.kind.toLowerCase()}/${resource.name}`)
