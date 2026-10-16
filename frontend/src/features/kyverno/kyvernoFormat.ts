@@ -29,6 +29,15 @@ export function failureActionClass(action: string): string {
   }
 }
 
+// generatedOnPolicyDelete says what deleting a GeneratingPolicy does to the
+// objects it generated. Kyverno only removes synchronized generations, and
+// never clones, whose lifecycle follows their source.
+export function generatedOnPolicyDelete(synchronize: boolean, orphanOnDelete: boolean): string {
+  if (!synchronize) return 'keep generated objects (not synchronized)'
+  if (orphanOnDelete) return 'keep generated objects'
+  return 'delete generated objects (clones are kept)'
+}
+
 // ruleSummary renders a policy's rule counts, e.g. "2 validate, 1 mutate".
 export function ruleSummary(counts: {
   validate: number

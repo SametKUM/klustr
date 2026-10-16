@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { policyRefFromResult, ruleSummary } from './kyvernoFormat'
+import { generatedOnPolicyDelete, policyRefFromResult, ruleSummary } from './kyvernoFormat'
+
+describe('generatedOnPolicyDelete', () => {
+  it('keeps the objects of a policy that does not synchronize, whatever the orphan setting', () => {
+    expect(generatedOnPolicyDelete(false, false)).toBe('keep generated objects (not synchronized)')
+    expect(generatedOnPolicyDelete(false, true)).toBe('keep generated objects (not synchronized)')
+  })
+
+  it('follows the orphan setting once the policy synchronizes', () => {
+    expect(generatedOnPolicyDelete(true, true)).toBe('keep generated objects')
+    expect(generatedOnPolicyDelete(true, false)).toBe('delete generated objects (clones are kept)')
+  })
+})
 
 describe('policyRefFromResult', () => {
   it('maps classic Kyverno results to a ClusterPolicy or a namespaced Policy', () => {

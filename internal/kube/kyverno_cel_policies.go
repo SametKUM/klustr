@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/robfig/cron/v3"
+	"github.com/aptible/supercronic/cronexpr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -113,8 +113,11 @@ type KyvernoCELMutation struct {
 type KyvernoMutatingPolicyDetail struct {
 	KyvernoMutatingPolicyInfo
 	KyvernoCELPolicyDetailBase
-	MutationList          []KyvernoCELMutation   `json:"mutationList"`
-	TargetResources       []string               `json:"targetResources"`
+	MutationList    []KyvernoCELMutation `json:"mutationList"`
+	TargetResources []string             `json:"targetResources"`
+	// TargetExpression resolves the target objects from the trigger request;
+	// the target resource rules still apply alongside it.
+	TargetExpression      string                 `json:"targetExpression"`
 	TargetMatchConditions []KyvernoCELExpression `json:"targetMatchConditions"`
 	ReinvocationPolicy    string                 `json:"reinvocationPolicy"`
 }
@@ -182,11 +185,13 @@ func extractKyvernoMutatingPolicy(obj *unstructured.Unstructured) KyvernoMutatin
 
 func extractKyvernoMutatingPolicyDetail(obj *unstructured.Unstructured) *KyvernoMutatingPolicyDetail {
 	reinvocation, _, _ := unstructured.NestedString(obj.Object, "spec", "reinvocationPolicy")
+	targetExpression, _, _ := unstructured.NestedString(obj.Object, "spec", "targetMatchConstraints", "expression")
 	return &KyvernoMutatingPolicyDetail{
 		KyvernoMutatingPolicyInfo:  extractKyvernoMutatingPolicy(obj),
 		KyvernoCELPolicyDetailBase: kyvernoCELDetailBase(obj),
 		MutationList:               kyvernoMutations(obj),
 		TargetResources:            summarizeResourceRules(nestedField(obj.Object, "spec", "targetMatchConstraints", "resourceRules")),
+		TargetExpression:           targetExpression,
 		TargetMatchConditions:      extractCELExpressions(obj, "name", "expression", "spec", "targetMatchConditions"),
 		ReinvocationPolicy:         reinvocation,
 	}
@@ -338,8 +343,13 @@ func kyvernoDeletingPolicyAt(obj *unstructured.Unstructured, now time.Time) Kyve
 	last, _, _ := unstructured.NestedString(obj.Object, "status", "lastExecutionTime")
 	propagation, _, _ := unstructured.NestedString(obj.Object, "spec", "deletionPropagationPolicy")
 	next := ""
-	if s, err := cron.ParseStandard(schedule); err == nil && schedule != "" {
-		next = s.Next(now).UTC().Format(time.RFC3339)
+	// Kyverno parses the schedule with cronexpr (day-of-week 7, L, W, #,
+	// seconds and years) and evaluates it in the controller's clock, which is
+	// UTC unless its pod sets TZ, not in this desktop's zone.
+	if expr, err := cronexpr.Parse(schedule); err == nil && schedule != "" {
+		if t := expr.Next(now.UTC()); !t.IsZero() {
+			next = t.Format(time.RFC3339)
+		}
 	}
 	return KyvernoDeletingPolicyInfo{
 		KyvernoCELPolicyBase: kyvernoCELBase(obj),
@@ -523,7 +533,6 @@ func kyvernoCosignDetails(c map[string]any) []string {
 }
 
 func extractKyvernoImageValidatingPolicy(obj *unstructured.Unstructured) KyvernoImageValidatingPolicyInfo {
-	actions, _, _ := unstructured.NestedStringSlice(obj.Object, "spec", "validationActions")
 	attestors := kyvernoAttestors(obj)
 	names := make([]string, 0, len(attestors))
 	for _, a := range attestors {
@@ -537,7 +546,7 @@ func extractKyvernoImageValidatingPolicy(obj *unstructured.Unstructured) Kyverno
 		KyvernoCELPolicyBase: kyvernoCELBase(obj),
 		Images:               kyvernoImageReferences(obj),
 		Attestors:            names,
-		Actions:              append([]string{}, actions...),
+		Actions:              kyvernoValidationActions(obj),
 		Admission:            nestedBoolOrTrue(obj.Object, "spec", "evaluation", "admission", "enabled"),
 		Background:           nestedBoolOrTrue(obj.Object, "spec", "evaluation", "background", "enabled"),
 	}

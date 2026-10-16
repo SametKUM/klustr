@@ -31,6 +31,39 @@ func TestKyvernoMutatingPolicy(t *testing.T) {
 	if !strings.Contains(d.MutationList[1].Expression, "JSONPatch{op") || !reflect.DeepEqual(d.TargetResources, []string{"deployments.apps (CREATE, UPDATE)"}) {
 		t.Fatalf("detail = %+v", d)
 	}
+	if d.TargetExpression != "" {
+		t.Fatalf("target expression = %q", d.TargetExpression)
+	}
+	// Targets picked by an expression alone have no resource rules to show.
+	byExpression := extractKyvernoMutatingPolicyDetail(mustUnstructured(t, `apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
+metadata: {name: x}
+spec:
+  evaluation: {mutateExisting: {enabled: true}}
+  targetMatchConstraints:
+    expression: resource.List("apps/v1", "deployments", object.metadata.namespace).items`))
+	if byExpression.TargetExpression != `resource.List("apps/v1", "deployments", object.metadata.namespace).items` ||
+		byExpression.TargetResources == nil || len(byExpression.TargetResources) != 0 {
+		t.Fatalf("expression targets = %q %v", byExpression.TargetExpression, byExpression.TargetResources)
+	}
+}
+
+func TestKyvernoValidationActionsDefaultToDeny(t *testing.T) {
+	for _, kind := range []string{"ValidatingPolicy", "NamespacedValidatingPolicy", "ImageValidatingPolicy", "NamespacedImageValidatingPolicy"} {
+		obj := mustUnstructured(t, "apiVersion: policies.kyverno.io/v1\nkind: "+kind+"\nmetadata: {name: x, namespace: shop}\nspec: {}")
+		var got []string
+		if strings.Contains(kind, "Image") {
+			got = extractKyvernoImageValidatingPolicy(obj).Actions
+		} else {
+			got = extractKyvernoValidatingPolicy(obj).Actions
+		}
+		if !reflect.DeepEqual(got, []string{"Deny"}) {
+			t.Fatalf("%s without validationActions = %v, want [Deny]", kind, got)
+		}
+	}
+	if got := extractKyvernoImageValidatingPolicy(kyvernoCELFixture(t, "namespacedimagevalidatingpolicies")).Actions; !reflect.DeepEqual(got, []string{"Audit"}) {
+		t.Fatalf("explicit actions = %v", got)
+	}
 }
 
 func TestKyvernoGeneratingPolicy(t *testing.T) {
@@ -63,6 +96,27 @@ func TestKyvernoDeletingPolicySchedule(t *testing.T) {
 	bad := mustUnstructured(t, "apiVersion: policies.kyverno.io/v1\nkind: DeletingPolicy\nmetadata: {name: x}\nspec: {schedule: never}")
 	if next := kyvernoDeletingPolicyAt(bad, now).NextExecution; next != "" {
 		t.Fatalf("unparseable schedule next = %q", next)
+	}
+}
+
+func TestKyvernoDeletingPolicyScheduleMatchesController(t *testing.T) {
+	at := func(schedule string, now time.Time) string {
+		obj := mustUnstructured(t, "apiVersion: policies.kyverno.io/v1\nkind: DeletingPolicy\nmetadata: {name: x}\nspec: {schedule: '"+schedule+"'}")
+		return kyvernoDeletingPolicyAt(obj, now).NextExecution
+	}
+	// 10:30 in Istanbul is 07:30 on the controller's UTC clock.
+	istanbul := time.Date(2026, 10, 16, 10, 30, 0, 0, time.FixedZone("TRT", 3*3600))
+	for _, tc := range []struct{ schedule, want string }{
+		{"0 */6 * * *", "2026-10-16T12:00:00Z"},
+		{"0 0 * * *", "2026-10-17T00:00:00Z"},
+		// Schedules Kyverno's parser accepts beyond the standard five fields:
+		// Sunday as 7 and the last day of the month.
+		{"0 0 * * 7", "2026-10-18T00:00:00Z"},
+		{"0 0 L * *", "2026-10-31T00:00:00Z"},
+	} {
+		if got := at(tc.schedule, istanbul); got != tc.want {
+			t.Errorf("next run of %q = %q, want %q", tc.schedule, got, tc.want)
+		}
 	}
 }
 

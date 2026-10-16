@@ -7615,6 +7615,7 @@ export namespace kube {
 	    conditions: ConditionDetail[];
 	    mutationList: KyvernoCELMutation[];
 	    targetResources: string[];
+	    targetExpression: string;
 	    targetMatchConditions: KyvernoCELExpression[];
 	    reinvocationPolicy: string;
 	
@@ -7643,6 +7644,7 @@ export namespace kube {
 	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
 	        this.mutationList = this.convertValues(source["mutationList"], KyvernoCELMutation);
 	        this.targetResources = source["targetResources"];
+	        this.targetExpression = source["targetExpression"];
 	        this.targetMatchConditions = this.convertValues(source["targetMatchConditions"], KyvernoCELExpression);
 	        this.reinvocationPolicy = source["reinvocationPolicy"];
 	    }

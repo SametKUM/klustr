@@ -11,7 +11,7 @@ import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimi
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import type { IntegrationDetailProps } from '@/features/integrationDetails'
 import { CodeBlock, ExpressionsTable, MatchesSection, ValidationRules } from './KyvernoCELShared'
-import { failureActionClass } from './kyvernoFormat'
+import { failureActionClass, generatedOnPolicyDelete } from './kyvernoFormat'
 
 type Props = IntegrationDetailProps & { namespaced: boolean }
 
@@ -106,11 +106,12 @@ export function KyvernoMutatingPolicyDetailBody({ contextName, namespace, name, 
       {d.mutateExisting && (
         <Section title="Existing objects">
           <Field label="Targets">
-            {d.targetResources.length ? (
-              <div className="font-mono text-xs">
+            {d.targetResources.length || d.targetExpression ? (
+              <div className="space-y-1 font-mono text-xs">
                 {d.targetResources.map((r) => (
                   <div key={r}>{r}</div>
                 ))}
+                {d.targetExpression && <div className="whitespace-pre-wrap break-all">{d.targetExpression}</div>}
               </div>
             ) : (
               'the matched resources'
@@ -148,7 +149,7 @@ export function KyvernoGeneratingPolicyDetailBody({ contextName, namespace, name
         <>
           <Field label="Synchronize">{yesNo(d.synchronize)}</Field>
           <Field label="Generate existing">{yesNo(d.generateExisting)}</Field>
-          <Field label="On policy delete">{d.orphanOnDelete ? 'keep generated objects' : 'delete generated objects'}</Field>
+          <Field label="On policy delete">{generatedOnPolicyDelete(d.synchronize, d.orphanOnDelete)}</Field>
           <Common ready={d.ready} createdAt={d.createdAt} />
         </>
       }
