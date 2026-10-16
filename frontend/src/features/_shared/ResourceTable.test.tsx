@@ -125,6 +125,45 @@ describe('ResourceTable load failures', () => {
     return button
   }
 
+  it('keeps slash in Monaco inputs and open dialogs while retaining the table shortcut', async () => {
+    await act(async () => root.render(<Harness fetch={async () => []} />))
+    const filter = container.querySelector<HTMLInputElement>('input[placeholder^="Filter pods"]')!
+    const panel = document.createElement('div')
+    const input = document.createElement('div')
+    input.tabIndex = 0
+    panel.className = 'monaco-editor'
+    panel.append(input)
+    document.body.append(panel)
+    const slash = (target: HTMLElement) => {
+      const event = new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true })
+      target.dispatchEvent(event)
+      return event
+    }
+    try {
+      input.focus()
+      expect(slash(input).defaultPrevented).toBe(false)
+      expect(document.activeElement).toBe(input)
+
+      panel.className = ''
+      panel.setAttribute('role', 'dialog')
+      panel.setAttribute('data-state', 'open')
+      expect(slash(input).defaultPrevented).toBe(false)
+      expect(document.activeElement).toBe(input)
+
+      panel.removeAttribute('data-state')
+      expect(slash(input).defaultPrevented).toBe(true)
+      expect(document.activeElement).toBe(filter)
+
+      input.focus()
+      const handled = new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true })
+      handled.preventDefault()
+      input.dispatchEvent(handled)
+      expect(document.activeElement).toBe(input)
+    } finally {
+      panel.remove()
+    }
+  })
+
   it('preserves cached rows and healthy contexts, then retries only the failed context', async () => {
     const load = vi.fn(async (ctx: string) => [{ name: `${ctx}-pod`, namespace: 'default' }])
     await act(async () => root.render(<Harness fetch={load} />))

@@ -11,11 +11,16 @@ import { useManifestSchemaInputs } from '@/features/resource-editor/useManifestS
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-const state = vi.hoisted(() => ({ source: '', workers: [] as { terminate(): unknown }[], services: [] as { dispose(): void }[] }))
+const state = vi.hoisted(() => ({ source: '', updates: 0, workers: [] as { terminate(): unknown }[], services: [] as { dispose(): void }[] }))
 vi.mock('monaco-yaml', async (importOriginal) => {
   const actual = await importOriginal<typeof import('monaco-yaml')>()
   return { ...actual, configureMonacoYaml: (...args: Parameters<typeof actual.configureMonacoYaml>) => {
     const service = actual.configureMonacoYaml(...args)
+    const update = service.update.bind(service)
+    service.update = async (...options: Parameters<typeof update>) => {
+      await update(...options)
+      state.updates++
+    }
     // monaco-types loses the inherited IDisposable on Monaco 0.57, although
     // monaco-yaml still implements dispose at runtime.
     state.services.push(service as typeof service & { dispose(): void })
@@ -62,9 +67,16 @@ interface YAMLProxy {
   }>
 }
 
+let completionProvider: languages.CompletionItemProvider
+
 beforeAll(async () => {
   vi.stubGlobal('Worker', YamlWorker)
   vi.stubGlobal('matchMedia', (media: string) => ({ media, matches: false, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent() { return true } }))
+  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+    measureText: (text: string) => ({ width: text.length * 7 }),
+    clearRect() {}, fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
+  } as unknown as CanvasRenderingContext2D)
   const result = await build({
     configFile: false,
     logLevel: 'silent',
@@ -99,10 +111,15 @@ beforeAll(async () => {
     });
     ${chunk.code}
   `
+  const completionSpy = vi.spyOn(languages, 'registerCompletionItemProvider')
+  await import('./monaco')
+  completionProvider = completionSpy.mock.calls.find(([language]) => language === 'yaml')![1]
+  completionSpy.mockRestore()
 })
 afterAll(async () => {
   state.services.forEach((service) => service.dispose())
   await Promise.all(state.workers.map((worker) => worker.terminate()))
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
@@ -137,10 +154,7 @@ describe('YAML worker compatibility', () => {
   })
 
   it('runs production schema registration, multi-document validation, completion and updates', async () => {
-    const completionSpy = vi.spyOn(languages, 'registerCompletionItemProvider')
     const { registerYAMLSchema } = await import('./monaco')
-    const completionProvider = completionSpy.mock.calls.find(([language]) => language === 'yaml')![1]
-    completionSpy.mockRestore()
     const path = `file:///klustr/resource-editor/${encodeURIComponent('arn:aws:eks:eu-central-1:111122223333:cluster/prod')}/test.yaml`
     const uri = Uri.parse(path)
     const objects = [
@@ -219,6 +233,55 @@ describe('YAML worker compatibility', () => {
       act(() => root.unmount())
       model.dispose()
       token.dispose()
+    }
+  })
+
+  it.each([false, true])('refreshes schema suggestions without a second request (pending: %s) and respects dismissal', async (pending) => {
+    const { registerYAMLSchema } = await import('./monaco')
+    const path = `file:///klustr/resource-editor/discovery-${pending}.yaml`
+    const uri = Uri.parse(path)
+    const model = editor.createModel('apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test\nspec:\n  ', 'yaml', uri)
+    const domNode = document.createElement('div')
+    document.body.append(domNode)
+    // Only YAML's worker uses the Node bridge; stand in for the browser's word
+    // worker while keeping Monaco's real suggestion controller and registry.
+    const fallback = languages.registerCompletionItemProvider('*', {
+      provideCompletionItems: (_model, position) => ({ suggestions: [{
+        label: 'wordFallback', kind: languages.CompletionItemKind.Text, insertText: 'wordFallback',
+        range: { startLineNumber: position.lineNumber, endLineNumber: position.lineNumber, startColumn: position.column, endColumn: position.column },
+      }] }),
+    })
+    const instance = editor.create(domNode, { model, dimension: { width: 800, height: 600 }, minimap: { enabled: false }, wordBasedSuggestions: 'off' })
+    instance.setPosition(new Position(6, 3))
+    instance.focus()
+    const suggestions = () => domNode.querySelector('.suggest-widget')
+    const labels = () => suggestions()?.querySelector('.monaco-list-rows')?.textContent ?? ''
+    const updates = state.updates
+    let unregister = registerYAMLSchema(path, { type: 'object', properties: { spec: { type: 'object' } } })
+    try {
+      await vi.waitFor(() => expect(state.updates).toBeGreaterThan(updates), { timeout: 3000 })
+      instance.trigger('test', 'editor.action.triggerSuggest', {})
+      if (!pending) {
+        await vi.waitFor(() => expect(labels()).toContain('wordFallback'), { timeout: 3000 })
+        expect(labels()).not.toContain('replicas')
+      }
+      unregister()
+      unregister = registerYAMLSchema(path, {
+        type: 'object', properties: { spec: { type: 'object', properties: { replicas: { type: 'integer' } } } },
+      })
+      await vi.waitFor(() => expect(labels()).toContain('replicas'), { timeout: 3000 })
+
+      instance.trigger('test', 'hideSuggestWidget', {})
+      unregister()
+      unregister = registerYAMLSchema(path, { type: 'object', required: ['missing'] })
+      await vi.waitFor(() => expect(editor.getModelMarkers({ resource: uri }).some((item) => item.message.includes('missing'))).toBe(true), { timeout: 3000 })
+      expect(suggestions()?.classList.contains('visible')).toBe(false)
+    } finally {
+      unregister()
+      instance.dispose()
+      fallback.dispose()
+      domNode.remove()
+      model.dispose()
     }
   })
 })

@@ -19,8 +19,27 @@ globalThis.MonacoEnvironment = {
 }
 loader.config({ monaco })
 
+let refreshYAMLCompletions: (() => void) | undefined
 const yamlService = configureMonacoYaml({
   ...monaco,
+  languages: {
+    ...monaco.languages,
+    registerCompletionItemProvider(languageId: string, provider: monaco.languages.CompletionItemProvider) {
+      let registration = monaco.languages.registerCompletionItemProvider(languageId, provider)
+      refreshYAMLCompletions = () => {
+        const previous = registration
+        // Keep a provider registered throughout the swap so the session survives.
+        registration = monaco.languages.registerCompletionItemProvider(languageId, provider)
+        previous.dispose()
+      }
+      return {
+        dispose() {
+          refreshYAMLCompletions = undefined
+          registration.dispose()
+        },
+      }
+    },
+  },
   editor: { ...monaco.editor, createWebWorker: createYAMLWebWorker },
 }, {
   enableSchemaRequest: false,
@@ -32,7 +51,12 @@ const yamlService = configureMonacoYaml({
 
 export const registerYAMLSchema = createYAMLSchemaRegistry(
   (path) => monaco.Uri.parse(path).toString(),
-  (schemas) => yamlService.update({ schemas }),
+  async (schemas) => {
+    await yamlService.update({ schemas })
+    // Invalidate active suggestions, including requests still loading when the
+    // schema arrives. Updating the worker alone leaves word completions cached.
+    refreshYAMLCompletions?.()
+  },
   () => console.warn('The YAML language service could not update its schemas.'),
 )
 

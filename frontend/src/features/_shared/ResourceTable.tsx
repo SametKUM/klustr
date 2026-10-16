@@ -474,7 +474,9 @@ export function ResourceTable<T>({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.defaultPrevented) return
       if (isEditableTarget(e.target)) return
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return
       e.preventDefault()
       filterRef.current?.focus()
       filterRef.current?.select()
