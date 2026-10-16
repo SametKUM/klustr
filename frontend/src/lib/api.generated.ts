@@ -253,6 +253,7 @@ export type ResourceClaimDetail = kube.ResourceClaimDetail
 export type ResourceClaimInfo = kube.ResourceClaimInfo
 export type ResourceClaimTemplateDetail = kube.ResourceClaimTemplateDetail
 export type ResourceClaimTemplateInfo = kube.ResourceClaimTemplateInfo
+export type ResourceManager = kube.ResourceManager
 export type ResourceQuotaEntry = kube.ResourceQuotaEntry
 export type ResourceQuotaDetail = kube.ResourceQuotaDetail
 export type ResourceQuotaInfo = kube.ResourceQuotaInfo
@@ -417,6 +418,7 @@ export const generatedApi = {
   getReplicationController: bindings.GetReplicationController,
   getResourceClaim: bindings.GetResourceClaim,
   getResourceClaimTemplate: bindings.GetResourceClaimTemplate,
+  getResourceManagers: bindings.GetResourceManagers,
   getResourceQuota: bindings.GetResourceQuota,
   getResourceSlice: bindings.GetResourceSlice,
   getResourceYAML: bindings.GetResourceYAML,

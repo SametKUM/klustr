@@ -8004,6 +8004,40 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class ResourceManager {
+	    tool: string;
+	    kind: string;
+	    group: string;
+	    resource: string;
+	    context: string;
+	    namespace: string;
+	    name: string;
+	    resolved: boolean;
+	    suspended: boolean;
+	    revertsDrift: boolean;
+	    revertReason: string;
+	    ignoredFields: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ResourceManager(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.kind = source["kind"];
+	        this.group = source["group"];
+	        this.resource = source["resource"];
+	        this.context = source["context"];
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	        this.resolved = source["resolved"];
+	        this.suspended = source["suspended"];
+	        this.revertsDrift = source["revertsDrift"];
+	        this.revertReason = source["revertReason"];
+	        this.ignoredFields = source["ignoredFields"];
+	    }
+	}
 	export class ResourceQuotaEntry {
 	    resource: string;
 	    used: string;

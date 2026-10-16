@@ -203,6 +203,8 @@ export function GetResourceClaim(arg1:string,arg2:string,arg3:string):Promise<ku
 
 export function GetResourceClaimTemplate(arg1:string,arg2:string,arg3:string):Promise<kube.ResourceClaimTemplateDetail>;
 
+export function GetResourceManagers(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Array<kube.ResourceManager>>;
+
 export function GetResourceQuota(arg1:string,arg2:string,arg3:string):Promise<kube.ResourceQuotaDetail>;
 
 export function GetResourceSlice(arg1:string,arg2:string):Promise<kube.ResourceSliceDetail>;

@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, type PodDetail } from '@/lib/api'
 import { useUIStore, type DetailTab, type SelectedResource } from '@/store/ui'
 import { useResourceDetail } from './useResourceDetail'
+import { ResourceManagersContext, useResourceManagers } from './useResourceManagers'
+import { ManagedByChips } from './ManagedByChips'
 import { CopyButton } from './Copyable'
 import { ContextBadge } from './ContextBadge'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -165,6 +167,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
   const goBackResource = useUIStore((s) => s.goBackResource)
   const canGoBack = useUIStore((s) => s.resourceNavStack.length > 0)
   const readOnly = useUIStore((s) => s.globalReadOnly)
+  const managers = useResourceManagers(contextName, resource)
   const open = resource !== null
 
   return (
@@ -215,6 +218,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
                     />
                   </div>
                 )}
+                <ManagedByChips contextName={contextName} managers={managers} />
               </div>
             )}
           </div>
@@ -314,7 +318,9 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
               />
             )}
           >
-            <DetailContent contextName={contextName} resource={resource} />
+            <ResourceManagersContext.Provider value={managers}>
+              <DetailContent contextName={contextName} resource={resource} />
+            </ResourceManagersContext.Provider>
           </ErrorBoundary>
         )}
       </DialogContent>
