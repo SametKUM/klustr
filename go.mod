@@ -8,6 +8,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/creack/pty v1.1.24
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/wailsapp/wails/v2 v2.16.0
 	golang.org/x/sys v0.49.0
 	helm.sh/helm/v3 v3.22.0

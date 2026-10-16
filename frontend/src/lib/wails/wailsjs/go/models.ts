@@ -6145,6 +6145,128 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class KarpenterBlocker {
+	    kind: string;
+	    message: string;
+	    objectKind: string;
+	    namespace: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KarpenterBlocker(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.message = source["message"];
+	        this.objectKind = source["objectKind"];
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	    }
+	}
+	export class KarpenterBudget {
+	    nodes: string;
+	    reasons: string[];
+	    schedule: string;
+	    duration: string;
+	    active: boolean;
+	    allowed: number;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KarpenterBudget(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.nodes = source["nodes"];
+	        this.reasons = source["reasons"];
+	        this.schedule = source["schedule"];
+	        this.duration = source["duration"];
+	        this.active = source["active"];
+	        this.allowed = source["allowed"];
+	        this.error = source["error"];
+	    }
+	}
+	export class KarpenterDisruptPod {
+	    namespace: string;
+	    name: string;
+	    doNotDisrupt: boolean;
+	    blockingPDBs: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KarpenterDisruptPod(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	        this.doNotDisrupt = source["doNotDisrupt"];
+	        this.blockingPDBs = source["blockingPDBs"];
+	    }
+	}
+	export class KarpenterDisruption {
+	    nodeName: string;
+	    nodeClaim: string;
+	    nodePool: string;
+	    managed: boolean;
+	    capacityType: string;
+	    consolidationPolicy: string;
+	    consolidateAfter: string;
+	    expireAfter: string;
+	    lastPodEventTime: string;
+	    disrupting: boolean;
+	    disruptionReason: string;
+	    blockers: KarpenterBlocker[];
+	    budgets: KarpenterBudget[];
+	    conditions: ConditionDetail[];
+	    events: EventInfo[];
+	    pods: KarpenterDisruptPod[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KarpenterDisruption(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.nodeName = source["nodeName"];
+	        this.nodeClaim = source["nodeClaim"];
+	        this.nodePool = source["nodePool"];
+	        this.managed = source["managed"];
+	        this.capacityType = source["capacityType"];
+	        this.consolidationPolicy = source["consolidationPolicy"];
+	        this.consolidateAfter = source["consolidateAfter"];
+	        this.expireAfter = source["expireAfter"];
+	        this.lastPodEventTime = source["lastPodEventTime"];
+	        this.disrupting = source["disrupting"];
+	        this.disruptionReason = source["disruptionReason"];
+	        this.blockers = this.convertValues(source["blockers"], KarpenterBlocker);
+	        this.budgets = this.convertValues(source["budgets"], KarpenterBudget);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	        this.events = this.convertValues(source["events"], EventInfo);
+	        this.pods = this.convertValues(source["pods"], KarpenterDisruptPod);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class KarpenterResolvedRequirement {
 	    key: string;
 	    operator: string;

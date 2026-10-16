@@ -310,6 +310,10 @@ export function GetKEDATriggerAuthentication(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetKEDATriggerAuthentication'](arg1, arg2, arg3);
 }
 
+export function GetKarpenterDisruption(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKarpenterDisruption'](arg1, arg2, arg3);
+}
+
 export function GetKarpenterEC2NodeClass(arg1, arg2) {
   return window['go']['app']['App']['GetKarpenterEC2NodeClass'](arg1, arg2);
 }

@@ -194,6 +194,10 @@ export type KEDAScaledObjectDetail = kube.KEDAScaledObjectDetail
 export type KEDAScaledObjectInfo = kube.KEDAScaledObjectInfo
 export type KEDATriggerAuthenticationDetail = kube.KEDATriggerAuthenticationDetail
 export type KEDATriggerAuthenticationInfo = kube.KEDATriggerAuthenticationInfo
+export type KarpenterBlocker = kube.KarpenterBlocker
+export type KarpenterBudget = kube.KarpenterBudget
+export type KarpenterDisruptPod = kube.KarpenterDisruptPod
+export type KarpenterDisruption = kube.KarpenterDisruption
 export type KarpenterResolvedRequirement = kube.KarpenterResolvedRequirement
 export type KarpenterResolvedResource = kube.KarpenterResolvedResource
 export type KarpenterEC2NodeClassDetail = kube.KarpenterEC2NodeClassDetail
@@ -407,6 +411,7 @@ export const generatedApi = {
   getKEDAScaledJob: bindings.GetKEDAScaledJob,
   getKEDAScaledObject: bindings.GetKEDAScaledObject,
   getKEDATriggerAuthentication: bindings.GetKEDATriggerAuthentication,
+  getKarpenterDisruption: bindings.GetKarpenterDisruption,
   getKarpenterEC2NodeClass: bindings.GetKarpenterEC2NodeClass,
   getKyvernoClusterPolicy: bindings.GetKyvernoClusterPolicy,
   getKyvernoNamespacedValidatingPolicy: bindings.GetKyvernoNamespacedValidatingPolicy,

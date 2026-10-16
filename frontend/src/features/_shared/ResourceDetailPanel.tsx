@@ -86,6 +86,7 @@ import { NodeDetailBody } from '@/features/nodes/NodeDetailBody'
 import { CordonNodeButton } from '@/features/nodes/CordonNodeButton'
 import { DrainNodeButton } from '@/features/nodes/DrainNodeButton'
 import { KarpenterNodesTab } from '@/features/karpenter-nodepools/KarpenterNodesTab'
+import { KarpenterDisruptionTab } from '@/features/karpenter-nodeclaims/KarpenterDisruptionTab'
 import { NamespaceDetailBody } from '@/features/namespaces/NamespaceDetailBody'
 import { ServiceAccountDetailBody } from '@/features/serviceaccounts/ServiceAccountDetailBody'
 import { RoleDetailBody } from '@/features/roles/RoleDetailBody'
@@ -518,6 +519,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
   if (hasOverview) allowedTabs.push('overview')
   if (isArgoApp) allowedTabs.push('resources', 'history')
   if (hasKarpenterNodes) allowedTabs.push('nodes')
+  if (isKarpenterNodeClaim) allowedTabs.push('disruption')
   if (isCertManagerCert) allowedTabs.push('requests')
   if (isCertManagerRequest) allowedTabs.push('orders')
   if (isCertManagerOrder) allowedTabs.push('challenges')
@@ -545,6 +547,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
         {hasKarpenterNodes && (
           <TabsTrigger value="nodes">{isKarpenterNodeClaim ? 'Node' : 'Nodes'}</TabsTrigger>
         )}
+        {isKarpenterNodeClaim && <TabsTrigger value="disruption">Disruption</TabsTrigger>}
         {isCertManagerCert && <TabsTrigger value="requests">Requests</TabsTrigger>}
         {isCertManagerRequest && <TabsTrigger value="orders">Orders</TabsTrigger>}
         {isCertManagerOrder && <TabsTrigger value="challenges">Challenges</TabsTrigger>}
@@ -662,6 +665,11 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
           />
         </TabsContent>
       )}
+      {isKarpenterNodeClaim && (
+        <TabsContent value="disruption" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <KarpenterDisruptionTab contextName={contextName} nodeName="" nodeClaimName={resource.name} />
+        </TabsContent>
+      )}
       {hasTektonLogs && (
         <TabsContent value="logs" className="min-h-0 flex-1 p-0">
           <Suspense fallback={<TerminalFallback />}>
@@ -723,11 +731,17 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
   // The node shell works through a temporary privileged pod, so it is a
   // mutation and stays hidden in read-only mode.
   const hasNodeShell = resource.kind === 'Node' && !readOnly
+  // Shown on every node of a cluster running Karpenter; the tab says when a
+  // node is not one of Karpenter's.
+  const hasDisruption = useCRDStore((s) =>
+    resource.kind === 'Node' && contextName ? findCRD(s.byContext, contextName, 'karpenter.sh', 'nodeclaims') !== null : false,
+  )
   const policyReport = useResourcePolicyReport(contextName, resource.kind, resource.namespace, resource.name)
   const requestedTab = useUIStore((s) => s.requestedTab)
   const allowed: DetailTab[] = ['overview']
   if (hasAggregatedLogs) allowed.push('logs')
   if (hasNodeShell) allowed.push('shell')
+  if (hasDisruption) allowed.push('disruption')
   if (hasEvents) allowed.push('events')
   if (hasHistory) allowed.push('history')
   if (policyReport) allowed.push('policy')
@@ -748,6 +762,7 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
         <TabsTrigger value="overview">Overview</TabsTrigger>
         {hasAggregatedLogs && <TabsTrigger value="logs">Logs</TabsTrigger>}
         {hasNodeShell && <TabsTrigger value="shell">Shell</TabsTrigger>}
+        {hasDisruption && <TabsTrigger value="disruption">Disruption</TabsTrigger>}
         {hasEvents && <TabsTrigger value="events">Events</TabsTrigger>}
         {hasHistory && <TabsTrigger value="history">History</TabsTrigger>}
         {policyReport && (
@@ -775,6 +790,11 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
           <Suspense fallback={<TerminalFallback />}>
             <NodeShellTab contextName={contextName} nodeName={resource.name} />
           </Suspense>
+        </TabsContent>
+      )}
+      {hasDisruption && (
+        <TabsContent value="disruption" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <KarpenterDisruptionTab contextName={contextName} nodeName={resource.name} nodeClaimName="" />
         </TabsContent>
       )}
       {hasEvents && (

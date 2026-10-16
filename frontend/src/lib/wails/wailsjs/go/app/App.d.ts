@@ -157,6 +157,8 @@ export function GetKEDAScaledObject(arg1:string,arg2:string,arg3:string):Promise
 
 export function GetKEDATriggerAuthentication(arg1:string,arg2:string,arg3:string):Promise<kube.KEDATriggerAuthenticationDetail>;
 
+export function GetKarpenterDisruption(arg1:string,arg2:string,arg3:string):Promise<kube.KarpenterDisruption>;
+
 export function GetKarpenterEC2NodeClass(arg1:string,arg2:string):Promise<kube.KarpenterEC2NodeClassDetail>;
 
 export function GetKyvernoClusterPolicy(arg1:string,arg2:string):Promise<kube.KyvernoPolicyDetail>;
