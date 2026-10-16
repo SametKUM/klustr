@@ -1,0 +1,29 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: public
+  namespace: istio-ingress
+  creationTimestamp: "2026-09-18T07:44:20Z"
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - name: http
+      port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "shop/*.example.com"
+      tls:
+        httpsRedirect: true
+    - name: https
+      port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - "shop/*.example.com"
+      tls:
+        mode: SIMPLE
+        credentialName: wildcard-example-com

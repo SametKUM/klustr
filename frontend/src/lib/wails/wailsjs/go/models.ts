@@ -5307,9 +5307,165 @@ export namespace kube {
 	
 	
 	
+	export class IstioObjectRef {
+	    namespace: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioObjectRef(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	    }
+	}
+	export class IstioWorkloads {
+	    pods: IstioObjectRef[];
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioWorkloads(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pods = this.convertValues(source["pods"], IstioObjectRef);
+	        this.total = source["total"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class IstioAuthorizationRule {
+	    from: string[];
+	    to: string[];
+	    when: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioAuthorizationRule(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.from = source["from"];
+	        this.to = source["to"];
+	        this.when = source["when"];
+	    }
+	}
+	export class IstioAuthorizationPolicyDetail {
+	    name: string;
+	    namespace: string;
+	    action: string;
+	    scope: string;
+	    rules: number;
+	    effect: string;
+	    createdAt: string;
+	    selectorLabels: Record<string, string>;
+	    targetRefs: string[];
+	    provider: string;
+	    ruleList: IstioAuthorizationRule[];
+	    workloads: IstioWorkloads;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioAuthorizationPolicyDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.action = source["action"];
+	        this.scope = source["scope"];
+	        this.rules = source["rules"];
+	        this.effect = source["effect"];
+	        this.createdAt = source["createdAt"];
+	        this.selectorLabels = source["selectorLabels"];
+	        this.targetRefs = source["targetRefs"];
+	        this.provider = source["provider"];
+	        this.ruleList = this.convertValues(source["ruleList"], IstioAuthorizationRule);
+	        this.workloads = this.convertValues(source["workloads"], IstioWorkloads);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class IstioAuthorizationPolicyInfo {
+	    name: string;
+	    namespace: string;
+	    action: string;
+	    scope: string;
+	    rules: number;
+	    effect: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioAuthorizationPolicyInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.action = source["action"];
+	        this.scope = source["scope"];
+	        this.rules = source["rules"];
+	        this.effect = source["effect"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	export class IstioServiceRef {
+	    host: string;
+	    namespace: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioServiceRef(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.namespace = source["namespace"];
+	        this.name = source["name"];
+	    }
+	}
 	export class IstioSubset {
 	    name: string;
 	    labels: Record<string, string>;
+	    workloads: IstioWorkloads;
 	
 	    static createFrom(source: any = {}) {
 	        return new IstioSubset(source);
@@ -5319,7 +5475,26 @@ export namespace kube {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.labels = source["labels"];
+	        this.workloads = this.convertValues(source["workloads"], IstioWorkloads);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class IstioDestinationRuleDetail {
 	    name: string;
@@ -5330,6 +5505,7 @@ export namespace kube {
 	    createdAt: string;
 	    subsetDetails: IstioSubset[];
 	    loadBalancer: string;
+	    service: IstioServiceRef;
 	
 	    static createFrom(source: any = {}) {
 	        return new IstioDestinationRuleDetail(source);
@@ -5345,6 +5521,7 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	        this.subsetDetails = this.convertValues(source["subsetDetails"], IstioSubset);
 	        this.loadBalancer = source["loadBalancer"];
+	        this.service = this.convertValues(source["service"], IstioServiceRef);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -5392,6 +5569,8 @@ export namespace kube {
 	    subset: string;
 	    port: number;
 	    weight: number;
+	    serviceNamespace: string;
+	    serviceName: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new IstioDestinationWeight(source);
@@ -5403,8 +5582,170 @@ export namespace kube {
 	        this.subset = source["subset"];
 	        this.port = source["port"];
 	        this.weight = source["weight"];
+	        this.serviceNamespace = source["serviceNamespace"];
+	        this.serviceName = source["serviceName"];
 	    }
 	}
+	export class IstioPort {
+	    number: number;
+	    protocol: string;
+	    name: string;
+	    targetPort: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioPort(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.number = source["number"];
+	        this.protocol = source["protocol"];
+	        this.name = source["name"];
+	        this.targetPort = source["targetPort"];
+	    }
+	}
+	export class IstioGatewayServer {
+	    name: string;
+	    port: IstioPort;
+	    bind: string;
+	    hosts: string[];
+	    tlsMode: string;
+	    credentialName: string;
+	    httpsRedirect: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioGatewayServer(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.port = this.convertValues(source["port"], IstioPort);
+	        this.bind = source["bind"];
+	        this.hosts = source["hosts"];
+	        this.tlsMode = source["tlsMode"];
+	        this.credentialName = source["credentialName"];
+	        this.httpsRedirect = source["httpsRedirect"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class IstioGatewayDetail {
+	    name: string;
+	    namespace: string;
+	    selector: string;
+	    ports: string;
+	    hosts: string[];
+	    createdAt: string;
+	    selectorLabels: Record<string, string>;
+	    servers: IstioGatewayServer[];
+	    workloads: IstioWorkloads;
+	    virtualServices: IstioObjectRef[];
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioGatewayDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.selector = source["selector"];
+	        this.ports = source["ports"];
+	        this.hosts = source["hosts"];
+	        this.createdAt = source["createdAt"];
+	        this.selectorLabels = source["selectorLabels"];
+	        this.servers = this.convertValues(source["servers"], IstioGatewayServer);
+	        this.workloads = this.convertValues(source["workloads"], IstioWorkloads);
+	        this.virtualServices = this.convertValues(source["virtualServices"], IstioObjectRef);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class IstioGatewayInfo {
+	    name: string;
+	    namespace: string;
+	    selector: string;
+	    ports: string;
+	    hosts: string[];
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioGatewayInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.selector = source["selector"];
+	        this.ports = source["ports"];
+	        this.hosts = source["hosts"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	export class IstioJWTRule {
+	    issuer: string;
+	    audiences: string[];
+	    jwksUri: string;
+	    inlineJwks: boolean;
+	    fromHeaders: string[];
+	    fromParams: string[];
+	    fromCookies: string[];
+	    forwardOriginalToken: boolean;
+	    outputPayloadHeader: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioJWTRule(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.issuer = source["issuer"];
+	        this.audiences = source["audiences"];
+	        this.jwksUri = source["jwksUri"];
+	        this.inlineJwks = source["inlineJwks"];
+	        this.fromHeaders = source["fromHeaders"];
+	        this.fromParams = source["fromParams"];
+	        this.fromCookies = source["fromCookies"];
+	        this.forwardOriginalToken = source["forwardOriginalToken"];
+	        this.outputPayloadHeader = source["outputPayloadHeader"];
+	    }
+	}
+	
 	export class IstioPortMTLS {
 	    port: number;
 	    mode: string;
@@ -5482,6 +5823,73 @@ export namespace kube {
 	    }
 	}
 	
+	
+	export class IstioRequestAuthenticationDetail {
+	    name: string;
+	    namespace: string;
+	    scope: string;
+	    issuers: string[];
+	    createdAt: string;
+	    selectorLabels: Record<string, string>;
+	    targetRefs: string[];
+	    jwtRules: IstioJWTRule[];
+	    workloads: IstioWorkloads;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioRequestAuthenticationDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.scope = source["scope"];
+	        this.issuers = source["issuers"];
+	        this.createdAt = source["createdAt"];
+	        this.selectorLabels = source["selectorLabels"];
+	        this.targetRefs = source["targetRefs"];
+	        this.jwtRules = this.convertValues(source["jwtRules"], IstioJWTRule);
+	        this.workloads = this.convertValues(source["workloads"], IstioWorkloads);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class IstioRequestAuthenticationInfo {
+	    name: string;
+	    namespace: string;
+	    scope: string;
+	    issuers: string[];
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioRequestAuthenticationInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.scope = source["scope"];
+	        this.issuers = source["issuers"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class IstioRouteRule {
 	    match: string;
 	    destinations: IstioDestinationWeight[];
@@ -5514,6 +5922,223 @@ export namespace kube {
 		    return a;
 		}
 	}
+	export class IstioServiceEntryEndpoint {
+	    address: string;
+	    ports: string;
+	    labels: Record<string, string>;
+	    network: string;
+	    locality: string;
+	    weight: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioServiceEntryEndpoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.address = source["address"];
+	        this.ports = source["ports"];
+	        this.labels = source["labels"];
+	        this.network = source["network"];
+	        this.locality = source["locality"];
+	        this.weight = source["weight"];
+	    }
+	}
+	export class IstioServiceEntryDetail {
+	    name: string;
+	    namespace: string;
+	    hosts: string[];
+	    location: string;
+	    resolution: string;
+	    ports: string;
+	    endpoints: number;
+	    createdAt: string;
+	    addresses: string[];
+	    portList: IstioPort[];
+	    endpointList: IstioServiceEntryEndpoint[];
+	    workloadSelector: Record<string, string>;
+	    exportTo: string[];
+	    subjectAltNames: string[];
+	    conditions: ConditionDetail[];
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioServiceEntryDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.hosts = source["hosts"];
+	        this.location = source["location"];
+	        this.resolution = source["resolution"];
+	        this.ports = source["ports"];
+	        this.endpoints = source["endpoints"];
+	        this.createdAt = source["createdAt"];
+	        this.addresses = source["addresses"];
+	        this.portList = this.convertValues(source["portList"], IstioPort);
+	        this.endpointList = this.convertValues(source["endpointList"], IstioServiceEntryEndpoint);
+	        this.workloadSelector = source["workloadSelector"];
+	        this.exportTo = source["exportTo"];
+	        this.subjectAltNames = source["subjectAltNames"];
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class IstioServiceEntryInfo {
+	    name: string;
+	    namespace: string;
+	    hosts: string[];
+	    location: string;
+	    resolution: string;
+	    ports: string;
+	    endpoints: number;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioServiceEntryInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.hosts = source["hosts"];
+	        this.location = source["location"];
+	        this.resolution = source["resolution"];
+	        this.ports = source["ports"];
+	        this.endpoints = source["endpoints"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	export class IstioSidecarListener {
+	    port: IstioPort;
+	    bind: string;
+	    captureMode: string;
+	    defaultEndpoint: string;
+	    hosts: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioSidecarListener(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.port = this.convertValues(source["port"], IstioPort);
+	        this.bind = source["bind"];
+	        this.captureMode = source["captureMode"];
+	        this.defaultEndpoint = source["defaultEndpoint"];
+	        this.hosts = source["hosts"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class IstioSidecarDetail {
+	    name: string;
+	    namespace: string;
+	    selector: string;
+	    egressHosts: string[];
+	    outboundPolicy: string;
+	    createdAt: string;
+	    selectorLabels: Record<string, string>;
+	    ingress: IstioSidecarListener[];
+	    egress: IstioSidecarListener[];
+	    workloads: IstioWorkloads;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioSidecarDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.selector = source["selector"];
+	        this.egressHosts = source["egressHosts"];
+	        this.outboundPolicy = source["outboundPolicy"];
+	        this.createdAt = source["createdAt"];
+	        this.selectorLabels = source["selectorLabels"];
+	        this.ingress = this.convertValues(source["ingress"], IstioSidecarListener);
+	        this.egress = this.convertValues(source["egress"], IstioSidecarListener);
+	        this.workloads = this.convertValues(source["workloads"], IstioWorkloads);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class IstioSidecarInfo {
+	    name: string;
+	    namespace: string;
+	    selector: string;
+	    egressHosts: string[];
+	    outboundPolicy: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IstioSidecarInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.selector = source["selector"];
+	        this.egressHosts = source["egressHosts"];
+	        this.outboundPolicy = source["outboundPolicy"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
 	
 	export class IstioVirtualServiceDetail {
 	    name: string;
@@ -5527,6 +6152,8 @@ export namespace kube {
 	    httpRoutes: IstioRouteRule[];
 	    tlsRoutes: IstioRouteRule[];
 	    tcpRoutes: IstioRouteRule[];
+	    hostServices: IstioServiceRef[];
+	    gatewayRefs: IstioObjectRef[];
 	
 	    static createFrom(source: any = {}) {
 	        return new IstioVirtualServiceDetail(source);
@@ -5545,6 +6172,8 @@ export namespace kube {
 	        this.httpRoutes = this.convertValues(source["httpRoutes"], IstioRouteRule);
 	        this.tlsRoutes = this.convertValues(source["tlsRoutes"], IstioRouteRule);
 	        this.tcpRoutes = this.convertValues(source["tcpRoutes"], IstioRouteRule);
+	        this.hostServices = this.convertValues(source["hostServices"], IstioServiceRef);
+	        this.gatewayRefs = this.convertValues(source["gatewayRefs"], IstioObjectRef);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -5591,6 +6220,7 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	
 	export class JobDetail {
 	    name: string;
 	    namespace: string;

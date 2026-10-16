@@ -27,6 +27,13 @@ import { FluxReceiversView } from '@/features/flux/FluxReceiversView'
 import { IstioVirtualServicesView } from '@/features/istio/IstioVirtualServicesView'
 import { IstioDestinationRulesView } from '@/features/istio/IstioDestinationRulesView'
 import { IstioPeerAuthenticationsView } from '@/features/istio/IstioPeerAuthenticationsView'
+import {
+  IstioAuthorizationPoliciesView,
+  IstioGatewaysView,
+  IstioRequestAuthenticationsView,
+  IstioServiceEntriesView,
+  IstioSidecarsView,
+} from '@/features/istio/IstioViews'
 import { KEDAScaledJobsView, KEDAScaledObjectsView, KEDATriggerAuthenticationsView } from '@/features/keda/KEDAViews'
 import { KarpenterNodePoolsView } from '@/features/karpenter-nodepools/KarpenterNodePoolsView'
 import { KarpenterNodeClaimsView } from '@/features/karpenter-nodeclaims/KarpenterNodeClaimsView'
@@ -80,6 +87,11 @@ export const INTEGRATION_LIST_VIEWS: Record<IntegrationView, () => ReactNode> = 
   istiovirtualservices: () => <IstioVirtualServicesView />,
   istiodestinationrules: () => <IstioDestinationRulesView />,
   istiopeerauthentications: () => <IstioPeerAuthenticationsView />,
+  istiogateways: () => <IstioGatewaysView />,
+  istioserviceentries: () => <IstioServiceEntriesView />,
+  istiosidecars: () => <IstioSidecarsView />,
+  istioauthorizationpolicies: () => <IstioAuthorizationPoliciesView />,
+  istiorequestauthentications: () => <IstioRequestAuthenticationsView />,
   tektonpipelineruns: () => <TektonPipelineRunsView />,
   tektontaskruns: () => <TektonTaskRunsView />,
   tektonpipelines: () => <TektonPipelinesView />,

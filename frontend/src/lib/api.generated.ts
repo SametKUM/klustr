@@ -170,14 +170,33 @@ export type IngressPathDetail = kube.IngressPathDetail
 export type IngressRuleDetail = kube.IngressRuleDetail
 export type IngressDetail = kube.IngressDetail
 export type IngressInfo = kube.IngressInfo
+export type IstioObjectRef = kube.IstioObjectRef
+export type IstioWorkloads = kube.IstioWorkloads
+export type IstioAuthorizationRule = kube.IstioAuthorizationRule
+export type IstioAuthorizationPolicyDetail = kube.IstioAuthorizationPolicyDetail
+export type IstioAuthorizationPolicyInfo = kube.IstioAuthorizationPolicyInfo
+export type IstioServiceRef = kube.IstioServiceRef
 export type IstioSubset = kube.IstioSubset
 export type IstioDestinationRuleDetail = kube.IstioDestinationRuleDetail
 export type IstioDestinationRuleInfo = kube.IstioDestinationRuleInfo
 export type IstioDestinationWeight = kube.IstioDestinationWeight
+export type IstioPort = kube.IstioPort
+export type IstioGatewayServer = kube.IstioGatewayServer
+export type IstioGatewayDetail = kube.IstioGatewayDetail
+export type IstioGatewayInfo = kube.IstioGatewayInfo
+export type IstioJWTRule = kube.IstioJWTRule
 export type IstioPortMTLS = kube.IstioPortMTLS
 export type IstioPeerAuthenticationDetail = kube.IstioPeerAuthenticationDetail
 export type IstioPeerAuthenticationInfo = kube.IstioPeerAuthenticationInfo
+export type IstioRequestAuthenticationDetail = kube.IstioRequestAuthenticationDetail
+export type IstioRequestAuthenticationInfo = kube.IstioRequestAuthenticationInfo
 export type IstioRouteRule = kube.IstioRouteRule
+export type IstioServiceEntryEndpoint = kube.IstioServiceEntryEndpoint
+export type IstioServiceEntryDetail = kube.IstioServiceEntryDetail
+export type IstioServiceEntryInfo = kube.IstioServiceEntryInfo
+export type IstioSidecarListener = kube.IstioSidecarListener
+export type IstioSidecarDetail = kube.IstioSidecarDetail
+export type IstioSidecarInfo = kube.IstioSidecarInfo
 export type IstioVirtualServiceDetail = kube.IstioVirtualServiceDetail
 export type IstioVirtualServiceInfo = kube.IstioVirtualServiceInfo
 export type JobDetail = kube.JobDetail
@@ -403,8 +422,13 @@ export const generatedApi = {
   getIPAddress: bindings.GetIPAddress,
   getIngress: bindings.GetIngress,
   getIngressClass: bindings.GetIngressClass,
+  getIstioAuthorizationPolicy: bindings.GetIstioAuthorizationPolicy,
   getIstioDestinationRule: bindings.GetIstioDestinationRule,
+  getIstioGateway: bindings.GetIstioGateway,
   getIstioPeerAuthentication: bindings.GetIstioPeerAuthentication,
+  getIstioRequestAuthentication: bindings.GetIstioRequestAuthentication,
+  getIstioServiceEntry: bindings.GetIstioServiceEntry,
+  getIstioSidecar: bindings.GetIstioSidecar,
   getIstioVirtualService: bindings.GetIstioVirtualService,
   getJob: bindings.GetJob,
   getKEDAClusterTriggerAuthentication: bindings.GetKEDAClusterTriggerAuthentication,
@@ -531,8 +555,13 @@ export const generatedApi = {
   listIPAddresses: bindings.ListIPAddresses,
   listIngressClasses: bindings.ListIngressClasses,
   listIngresses: bindings.ListIngresses,
+  listIstioAuthorizationPolicies: bindings.ListIstioAuthorizationPolicies,
   listIstioDestinationRules: bindings.ListIstioDestinationRules,
+  listIstioGateways: bindings.ListIstioGateways,
   listIstioPeerAuthentications: bindings.ListIstioPeerAuthentications,
+  listIstioRequestAuthentications: bindings.ListIstioRequestAuthentications,
+  listIstioServiceEntries: bindings.ListIstioServiceEntries,
+  listIstioSidecars: bindings.ListIstioSidecars,
   listIstioVirtualServices: bindings.ListIstioVirtualServices,
   listJobs: bindings.ListJobs,
   listKEDAClusterTriggerAuthentications: bindings.ListKEDAClusterTriggerAuthentications,

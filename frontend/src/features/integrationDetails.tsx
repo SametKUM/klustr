@@ -26,6 +26,13 @@ import {
 import { IstioVirtualServiceDetailBody } from '@/features/istio/IstioVirtualServiceDetailBody'
 import { IstioDestinationRuleDetailBody } from '@/features/istio/IstioDestinationRuleDetailBody'
 import { IstioPeerAuthenticationDetailBody } from '@/features/istio/IstioPeerAuthenticationDetailBody'
+import {
+  IstioAuthorizationPolicyDetailBody,
+  IstioGatewayDetailBody,
+  IstioRequestAuthenticationDetailBody,
+  IstioServiceEntryDetailBody,
+  IstioSidecarDetailBody,
+} from '@/features/istio/IstioDetailBodies'
 import { KarpenterEC2NodeClassDetailBody } from '@/features/karpenter-nodeclasses/KarpenterEC2NodeClassDetailBody'
 import {
   KEDAScaledJobDetailBody,
@@ -93,6 +100,11 @@ export const INTEGRATION_DETAIL_BODIES: Record<IntegrationView, DetailBody | nul
   istiovirtualservices: (p) => <IstioVirtualServiceDetailBody {...p} />,
   istiodestinationrules: (p) => <IstioDestinationRuleDetailBody {...p} />,
   istiopeerauthentications: (p) => <IstioPeerAuthenticationDetailBody {...p} />,
+  istiogateways: (p) => <IstioGatewayDetailBody {...p} />,
+  istioserviceentries: (p) => <IstioServiceEntryDetailBody {...p} />,
+  istiosidecars: (p) => <IstioSidecarDetailBody {...p} />,
+  istioauthorizationpolicies: (p) => <IstioAuthorizationPolicyDetailBody {...p} />,
+  istiorequestauthentications: (p) => <IstioRequestAuthenticationDetailBody {...p} />,
   tektonpipelineruns: (p) => <TektonPipelineRunDetailBody {...p} />,
   tektontaskruns: (p) => <TektonTaskRunDetailBody {...p} />,
   tektonpipelines: (p) => <TektonPipelineDetailBody {...p} />,

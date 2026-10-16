@@ -247,6 +247,35 @@ var integrationCatalog = append([]integrationResource{
 		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*IstioPeerAuthenticationDetail, error) {
 			return m.GetIstioPeerAuthentication(ctx, "ctx", ns, name)
 		})},
+	{view: "istiogateways", gr: istioGatewayGR, kind: "Gateway", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []IstioGatewayInfo { return m.ListIstioGateways("ctx", ns) }),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*IstioGatewayDetail, error) {
+			return m.GetIstioGateway(ctx, "ctx", ns, name)
+		})},
+	{view: "istioserviceentries", gr: istioServiceEntryGR, kind: "ServiceEntry", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []IstioServiceEntryInfo { return m.ListIstioServiceEntries("ctx", ns) }),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*IstioServiceEntryDetail, error) {
+			return m.GetIstioServiceEntry(ctx, "ctx", ns, name)
+		})},
+	{view: "istiosidecars", gr: istioSidecarGR, kind: "Sidecar", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []IstioSidecarInfo { return m.ListIstioSidecars("ctx", ns) }),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*IstioSidecarDetail, error) {
+			return m.GetIstioSidecar(ctx, "ctx", ns, name)
+		})},
+	{view: "istioauthorizationpolicies", gr: istioAuthorizationPolicyGR, kind: "AuthorizationPolicy", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []IstioAuthorizationPolicyInfo {
+			return m.ListIstioAuthorizationPolicies("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*IstioAuthorizationPolicyDetail, error) {
+			return m.GetIstioAuthorizationPolicy(ctx, "ctx", ns, name)
+		})},
+	{view: "istiorequestauthentications", gr: istioRequestAuthenticationGR, kind: "RequestAuthentication", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []IstioRequestAuthenticationInfo {
+			return m.ListIstioRequestAuthentications("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*IstioRequestAuthenticationDetail, error) {
+			return m.GetIstioRequestAuthentication(ctx, "ctx", ns, name)
+		})},
 
 	// Tekton
 	{view: "tektonpipelineruns", gr: tektonGR(tektonPipelineRunsResource), kind: "PipelineRun", namespaced: true,

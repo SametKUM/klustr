@@ -1,9 +1,19 @@
 import { useCallback } from 'react'
-import { api, type IstioRouteRule, type IstioVirtualServiceDetail } from '@/lib/api'
+import {
+  api,
+  type IstioDestinationWeight,
+  type IstioRouteRule,
+  type IstioServiceRef,
+  type IstioVirtualServiceDetail,
+  type OwnerRef,
+} from '@/lib/api'
 import { formatAge } from '@/lib/time'
-import { Chips, ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
+import { ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { Copyable } from '@/features/_shared/Copyable'
+import { OwnerLink } from '@/features/_shared/OwnerLink'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
+import { RefLinks } from './IstioDetailBodies'
+import { ISTIO_GATEWAY_RESOURCE } from './istioKinds'
 
 type Props = {
   contextName: string | null
@@ -20,35 +30,81 @@ export function IstioVirtualServiceDetailBody({ contextName, namespace, name }: 
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 
-  const gatewayItems: Record<string, string> = {}
-  for (const g of detail.gateways) gatewayItems[g] = ''
+  // The sidecars ("mesh") serve the routes when no gateway is listed, or
+  // when "mesh" is listed next to gateways.
+  const servesMesh = detail.gateways.length === 0 || detail.gateways.includes('mesh')
 
   return (
     <div className="space-y-6">
       <Section title="VirtualService">
         <Field label="Hosts">
-          {detail.hosts.length > 0 ? (
-            <Copyable className="font-mono text-xs" value={detail.hosts.join(',')}>
-              {detail.hosts.join(', ')}
-            </Copyable>
+          {detail.hostServices.length > 0 ? (
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {detail.hostServices.map((h) => (
+                <HostLink key={h.host} contextName={contextName} host={h} />
+              ))}
+            </div>
           ) : (
             '—'
           )}
         </Field>
         <Field label="Gateways">
-          {detail.gateways.length > 0 ? <Chips items={gatewayItems} /> : <span>mesh</span>}
+          <div className="space-y-1">
+            {servesMesh && <div className="text-xs">mesh (sidecars)</div>}
+            {detail.gatewayRefs.length > 0 && (
+              <RefLinks
+                contextName={contextName}
+                refs={detail.gatewayRefs}
+                resource={ISTIO_GATEWAY_RESOURCE}
+                kind="IstioGateway"
+                empty=""
+              />
+            )}
+          </div>
         </Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
 
-      <RouteRulesSection title="HTTP routes" rules={detail.httpRoutes} />
-      <RouteRulesSection title="TLS routes" rules={detail.tlsRoutes} />
-      <RouteRulesSection title="TCP routes" rules={detail.tcpRoutes} />
+      <RouteRulesSection title="HTTP routes" rules={detail.httpRoutes} contextName={contextName} />
+      <RouteRulesSection title="TLS routes" rules={detail.tlsRoutes} contextName={contextName} />
+      <RouteRulesSection title="TCP routes" rules={detail.tcpRoutes} contextName={contextName} />
     </div>
   )
 }
 
-function RouteRulesSection({ title, rules }: { title: string; rules: IstioRouteRule[] }) {
+// HostLink opens the Service a host resolves to, or offers the host to copy
+// when it is not a Service of this cluster.
+function HostLink({ contextName, host }: { contextName: string | null; host: IstioServiceRef }) {
+  if (!host.name) return <Copyable className="font-mono text-xs" value={host.host} />
+  return (
+    <span className="font-mono text-xs" title={`Service ${host.namespace}/${host.name}`}>
+      <OwnerLink owner={{ kind: 'Service', name: host.name } as OwnerRef} namespace={host.namespace} context={contextName} />
+      {host.host !== host.name && <span className="text-muted-foreground"> ({host.host})</span>}
+    </span>
+  )
+}
+
+function DestinationLink({ contextName, d }: { contextName: string | null; d: IstioDestinationWeight }) {
+  const suffix = `${d.subset ? `/${d.subset}` : ''}${d.port > 0 ? `:${d.port}` : ''}`
+  if (!d.serviceName) return <Copyable value={destinationLabel(d.host, d.subset, d.port)} />
+  return (
+    <span title={`Service ${d.serviceNamespace}/${d.serviceName}`}>
+      <OwnerLink owner={{ kind: 'Service', name: d.serviceName } as OwnerRef} namespace={d.serviceNamespace} context={contextName} />
+      {d.host !== d.serviceName && <span className="text-muted-foreground"> ({d.host})</span>}
+      {suffix}
+    </span>
+  )
+}
+
+function RouteRulesSection({
+  title,
+  rules,
+  contextName,
+}: {
+  title: string
+  rules: IstioRouteRule[]
+  contextName: string | null
+}) {
   if (!rules || rules.length === 0) return null
   return (
     <Section title={`${title} (${rules.length})`}>
@@ -71,7 +127,7 @@ function RouteRulesSection({ title, rules }: { title: string; rules: IstioRouteR
                     ) : (
                       r.destinations.map((d, j) => (
                         <div key={j} className="font-mono">
-                          <Copyable value={destinationLabel(d.host, d.subset, d.port)} />
+                          <DestinationLink contextName={contextName} d={d} />
                           {d.weight > 0 && (
                             <span className="ml-1.5 text-muted-foreground">{d.weight}%</span>
                           )}

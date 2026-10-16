@@ -315,8 +315,13 @@ export const ISTIO_GROUP: ResourceGroup = {
   label: 'Istio',
   icon: SiIstio,
   items: [
+    { label: 'Gateways', view: 'istiogateways', icon: DoorOpen },
     { label: 'VirtualServices', view: 'istiovirtualservices', icon: Route },
     { label: 'DestinationRules', view: 'istiodestinationrules', icon: Waypoints },
+    { label: 'ServiceEntries', view: 'istioserviceentries', icon: Globe },
+    { label: 'Sidecars', view: 'istiosidecars', icon: Box },
+    { label: 'AuthorizationPolicies', view: 'istioauthorizationpolicies', icon: ShieldCheck },
+    { label: 'RequestAuthentications', view: 'istiorequestauthentications', icon: KeyRound },
     { label: 'PeerAuthentications', view: 'istiopeerauthentications', icon: Lock },
   ],
 }

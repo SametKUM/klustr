@@ -1,0 +1,14 @@
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: default
+  namespace: shop
+  creationTimestamp: "2026-09-18T08:10:02Z"
+spec:
+  egress:
+    - hosts:
+        - "./*"
+        - istio-system/*
+        - payments/api.payments.svc.cluster.local
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY

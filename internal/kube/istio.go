@@ -29,6 +29,10 @@ type IstioDestinationWeight struct {
 	Subset string `json:"subset"`
 	Port   int64  `json:"port"`
 	Weight int64  `json:"weight"`
+	// ServiceNamespace and ServiceName are the cluster Service the host
+	// resolves to, "" when it is not one.
+	ServiceNamespace string `json:"serviceNamespace"`
+	ServiceName      string `json:"serviceName"`
 }
 
 type IstioRouteRule struct {
@@ -52,6 +56,11 @@ type IstioVirtualServiceDetail struct {
 	HTTPRoutes []IstioRouteRule `json:"httpRoutes"`
 	TLSRoutes  []IstioRouteRule `json:"tlsRoutes"`
 	TCPRoutes  []IstioRouteRule `json:"tcpRoutes"`
+	// HostServices resolves each of spec.hosts to a cluster Service.
+	HostServices []IstioServiceRef `json:"hostServices"`
+	// GatewayRefs are the Istio Gateways the routes bind to; the reserved
+	// "mesh" gateway (the sidecars) is left out.
+	GatewayRefs []IstioObjectRef `json:"gatewayRefs"`
 }
 
 func (m *ClientManager) ListIstioVirtualServices(contextName, namespace string) []IstioVirtualServiceInfo {
@@ -64,12 +73,44 @@ func (m *ClientManager) GetIstioVirtualService(ctx context.Context, contextName,
 	if err != nil {
 		return nil, err
 	}
-	return &IstioVirtualServiceDetail{
+	d := &IstioVirtualServiceDetail{
 		IstioVirtualServiceInfo: extractVirtualService(obj),
 		HTTPRoutes:              extractRouteRules(obj, "http"),
 		TLSRoutes:               extractRouteRules(obj, "tls"),
 		TCPRoutes:               extractRouteRules(obj, "tcp"),
-	}, nil
+		HostServices:            []IstioServiceRef{},
+	}
+	d.GatewayRefs = istioGatewayRefs(namespace, d.Gateways)
+	for _, host := range d.Hosts {
+		d.HostServices = append(d.HostServices, m.istioServiceRef(contextName, host, namespace))
+	}
+	for _, rules := range [][]IstioRouteRule{d.HTTPRoutes, d.TLSRoutes, d.TCPRoutes} {
+		for i := range rules {
+			for j := range rules[i].Destinations {
+				dest := &rules[i].Destinations[j]
+				ref := m.istioServiceRef(contextName, dest.Host, namespace)
+				dest.ServiceNamespace, dest.ServiceName = ref.Namespace, ref.Name
+			}
+		}
+	}
+	return d, nil
+}
+
+// istioGatewayRefs resolves VirtualService gateway names, "name" in the
+// VirtualService's namespace or "namespace/name", skipping "mesh".
+func istioGatewayRefs(namespace string, gateways []string) []IstioObjectRef {
+	out := []IstioObjectRef{}
+	for _, g := range gateways {
+		if g == "" || g == "mesh" {
+			continue
+		}
+		if ns, name, ok := strings.Cut(g, "/"); ok {
+			out = append(out, IstioObjectRef{Namespace: ns, Name: name})
+		} else {
+			out = append(out, IstioObjectRef{Namespace: namespace, Name: g})
+		}
+	}
+	return out
 }
 
 func extractVirtualService(obj *unstructured.Unstructured) IstioVirtualServiceInfo {
@@ -193,6 +234,9 @@ func summariseMatch(rule map[string]any) string {
 type IstioSubset struct {
 	Name   string            `json:"name"`
 	Labels map[string]string `json:"labels"`
+	// Workloads are the host Service's pods that also carry the subset's
+	// labels, the endpoints traffic to the subset reaches.
+	Workloads IstioWorkloads `json:"workloads"`
 }
 
 type IstioDestinationRuleInfo struct {
@@ -208,6 +252,8 @@ type IstioDestinationRuleDetail struct {
 	IstioDestinationRuleInfo
 	SubsetDetails []IstioSubset `json:"subsetDetails"`
 	LoadBalancer  string        `json:"loadBalancer"`
+	// Service is the cluster Service spec.host resolves to.
+	Service IstioServiceRef `json:"service"`
 }
 
 func (m *ClientManager) ListIstioDestinationRules(contextName, namespace string) []IstioDestinationRuleInfo {
@@ -221,11 +267,37 @@ func (m *ClientManager) GetIstioDestinationRule(ctx context.Context, contextName
 		return nil, err
 	}
 	lb, _, _ := unstructured.NestedString(obj.Object, "spec", "trafficPolicy", "loadBalancer", "simple")
-	return &IstioDestinationRuleDetail{
+	d := &IstioDestinationRuleDetail{
 		IstioDestinationRuleInfo: extractDestinationRule(obj),
 		SubsetDetails:            extractSubsets(obj),
 		LoadBalancer:             lb,
-	}, nil
+	}
+	d.Service = IstioServiceRef{Host: d.Host}
+	w, ok := m.watcher(contextName)
+	if !ok {
+		return d, nil
+	}
+	svc, found := w.istioService(d.Host, namespace)
+	if !found {
+		return d, nil
+	}
+	d.Service.Namespace, d.Service.Name = svc.Namespace, svc.Name
+	// A Service without a selector has hand-managed endpoints that no label
+	// set describes.
+	if len(svc.Spec.Selector) == 0 {
+		return d, nil
+	}
+	for i := range d.SubsetDetails {
+		sel := map[string]string{}
+		for k, v := range svc.Spec.Selector {
+			sel[k] = v
+		}
+		for k, v := range d.SubsetDetails[i].Labels {
+			sel[k] = v
+		}
+		d.SubsetDetails[i].Workloads = m.istioWorkloads(contextName, svc.Namespace, sel)
+	}
+	return d, nil
 }
 
 func extractDestinationRule(obj *unstructured.Unstructured) IstioDestinationRuleInfo {
@@ -263,7 +335,7 @@ func extractSubsets(obj *unstructured.Unstructured) []IstioSubset {
 				}
 			}
 		}
-		out = append(out, IstioSubset{Name: name, Labels: labels})
+		out = append(out, IstioSubset{Name: name, Labels: labels, Workloads: IstioWorkloads{Pods: []IstioObjectRef{}}})
 	}
 	return out
 }

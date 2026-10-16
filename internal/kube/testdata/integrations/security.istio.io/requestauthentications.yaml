@@ -1,0 +1,19 @@
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: storefront-jwt
+  namespace: shop
+  creationTimestamp: "2026-09-21T13:50:11Z"
+spec:
+  selector:
+    matchLabels:
+      app: storefront
+  jwtRules:
+    - issuer: https://auth.example.com/
+      audiences:
+        - storefront
+      jwksUri: https://auth.example.com/.well-known/jwks.json
+      forwardOriginalToken: true
+      fromHeaders:
+        - name: Authorization
+          prefix: "Bearer "

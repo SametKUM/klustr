@@ -1,9 +1,11 @@
 import { useCallback } from 'react'
-import { api, type IstioDestinationRuleDetail } from '@/lib/api'
+import { api, type IstioDestinationRuleDetail, type OwnerRef } from '@/lib/api'
 import { formatAge } from '@/lib/time'
 import { Chips, ErrorBox, Field, Section, Td, Th } from '@/features/_shared/DetailPrimitives'
 import { Copyable } from '@/features/_shared/Copyable'
+import { OwnerLink } from '@/features/_shared/OwnerLink'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
+import { WorkloadLinks } from './IstioDetailBodies'
 
 type Props = {
   contextName: string | null
@@ -26,6 +28,17 @@ export function IstioDestinationRuleDetailBody({ contextName, namespace, name }:
         <Field label="Host">
           {detail.host ? <Copyable className="font-mono text-xs" value={detail.host} /> : '—'}
         </Field>
+        <Field label="Service" mono>
+          {detail.service.name ? (
+            <OwnerLink
+              owner={{ kind: 'Service', name: detail.service.name } as OwnerRef}
+              namespace={detail.service.namespace}
+              context={contextName}
+            />
+          ) : (
+            <span className="text-muted-foreground">not a Service of this cluster</span>
+          )}
+        </Field>
         <Field label="TLS mode">{detail.tlsMode || '—'}</Field>
         <Field label="Load balancer">{detail.loadBalancer || '—'}</Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
@@ -39,6 +52,7 @@ export function IstioDestinationRuleDetailBody({ contextName, namespace, name }:
                 <tr>
                   <Th>Name</Th>
                   <Th>Labels</Th>
+                  {detail.service.name && <Th>Pods</Th>}
                 </tr>
               </thead>
               <tbody>
@@ -52,6 +66,15 @@ export function IstioDestinationRuleDetailBody({ contextName, namespace, name }:
                         <span className="text-muted-foreground">—</span>
                       )}
                     </Td>
+                    {detail.service.name && (
+                      <Td>
+                        <WorkloadLinks
+                          contextName={contextName}
+                          workloads={s.workloads}
+                          empty="No pod of the Service carries these labels."
+                        />
+                      </Td>
+                    )}
                   </tr>
                 ))}
               </tbody>

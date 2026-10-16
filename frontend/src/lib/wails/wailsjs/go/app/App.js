@@ -278,12 +278,32 @@ export function GetIngressClass(arg1, arg2) {
   return window['go']['app']['App']['GetIngressClass'](arg1, arg2);
 }
 
+export function GetIstioAuthorizationPolicy(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetIstioAuthorizationPolicy'](arg1, arg2, arg3);
+}
+
 export function GetIstioDestinationRule(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetIstioDestinationRule'](arg1, arg2, arg3);
 }
 
+export function GetIstioGateway(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetIstioGateway'](arg1, arg2, arg3);
+}
+
 export function GetIstioPeerAuthentication(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetIstioPeerAuthentication'](arg1, arg2, arg3);
+}
+
+export function GetIstioRequestAuthentication(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetIstioRequestAuthentication'](arg1, arg2, arg3);
+}
+
+export function GetIstioServiceEntry(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetIstioServiceEntry'](arg1, arg2, arg3);
+}
+
+export function GetIstioSidecar(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetIstioSidecar'](arg1, arg2, arg3);
 }
 
 export function GetIstioVirtualService(arg1, arg2, arg3) {
@@ -790,12 +810,32 @@ export function ListIngresses(arg1, arg2) {
   return window['go']['app']['App']['ListIngresses'](arg1, arg2);
 }
 
+export function ListIstioAuthorizationPolicies(arg1, arg2) {
+  return window['go']['app']['App']['ListIstioAuthorizationPolicies'](arg1, arg2);
+}
+
 export function ListIstioDestinationRules(arg1, arg2) {
   return window['go']['app']['App']['ListIstioDestinationRules'](arg1, arg2);
 }
 
+export function ListIstioGateways(arg1, arg2) {
+  return window['go']['app']['App']['ListIstioGateways'](arg1, arg2);
+}
+
 export function ListIstioPeerAuthentications(arg1, arg2) {
   return window['go']['app']['App']['ListIstioPeerAuthentications'](arg1, arg2);
+}
+
+export function ListIstioRequestAuthentications(arg1, arg2) {
+  return window['go']['app']['App']['ListIstioRequestAuthentications'](arg1, arg2);
+}
+
+export function ListIstioServiceEntries(arg1, arg2) {
+  return window['go']['app']['App']['ListIstioServiceEntries'](arg1, arg2);
+}
+
+export function ListIstioSidecars(arg1, arg2) {
+  return window['go']['app']['App']['ListIstioSidecars'](arg1, arg2);
 }
 
 export function ListIstioVirtualServices(arg1, arg2) {

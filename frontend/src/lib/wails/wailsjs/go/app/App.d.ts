@@ -141,9 +141,19 @@ export function GetIngress(arg1:string,arg2:string,arg3:string):Promise<kube.Ing
 
 export function GetIngressClass(arg1:string,arg2:string):Promise<kube.IngressClassDetail>;
 
+export function GetIstioAuthorizationPolicy(arg1:string,arg2:string,arg3:string):Promise<kube.IstioAuthorizationPolicyDetail>;
+
 export function GetIstioDestinationRule(arg1:string,arg2:string,arg3:string):Promise<kube.IstioDestinationRuleDetail>;
 
+export function GetIstioGateway(arg1:string,arg2:string,arg3:string):Promise<kube.IstioGatewayDetail>;
+
 export function GetIstioPeerAuthentication(arg1:string,arg2:string,arg3:string):Promise<kube.IstioPeerAuthenticationDetail>;
+
+export function GetIstioRequestAuthentication(arg1:string,arg2:string,arg3:string):Promise<kube.IstioRequestAuthenticationDetail>;
+
+export function GetIstioServiceEntry(arg1:string,arg2:string,arg3:string):Promise<kube.IstioServiceEntryDetail>;
+
+export function GetIstioSidecar(arg1:string,arg2:string,arg3:string):Promise<kube.IstioSidecarDetail>;
 
 export function GetIstioVirtualService(arg1:string,arg2:string,arg3:string):Promise<kube.IstioVirtualServiceDetail>;
 
@@ -397,9 +407,19 @@ export function ListIngressClasses(arg1:string):Promise<Array<kube.IngressClassI
 
 export function ListIngresses(arg1:string,arg2:string):Promise<Array<kube.IngressInfo>>;
 
+export function ListIstioAuthorizationPolicies(arg1:string,arg2:string):Promise<Array<kube.IstioAuthorizationPolicyInfo>>;
+
 export function ListIstioDestinationRules(arg1:string,arg2:string):Promise<Array<kube.IstioDestinationRuleInfo>>;
 
+export function ListIstioGateways(arg1:string,arg2:string):Promise<Array<kube.IstioGatewayInfo>>;
+
 export function ListIstioPeerAuthentications(arg1:string,arg2:string):Promise<Array<kube.IstioPeerAuthenticationInfo>>;
+
+export function ListIstioRequestAuthentications(arg1:string,arg2:string):Promise<Array<kube.IstioRequestAuthenticationInfo>>;
+
+export function ListIstioServiceEntries(arg1:string,arg2:string):Promise<Array<kube.IstioServiceEntryInfo>>;
+
+export function ListIstioSidecars(arg1:string,arg2:string):Promise<Array<kube.IstioSidecarInfo>>;
 
 export function ListIstioVirtualServices(arg1:string,arg2:string):Promise<Array<kube.IstioVirtualServiceInfo>>;
 

@@ -1,0 +1,29 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: orders-api
+  namespace: shop
+  creationTimestamp: "2026-09-21T13:55:30Z"
+spec:
+  selector:
+    matchLabels:
+      app: orders-api
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/shop/sa/storefront
+      to:
+        - operation:
+            methods: [GET, POST]
+            paths: ["/api/orders*"]
+    - from:
+        - source:
+            namespaces: [monitoring]
+      to:
+        - operation:
+            ports: ["15090"]
+      when:
+        - key: request.headers[x-scrape]
+          values: ["prometheus"]
