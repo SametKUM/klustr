@@ -316,7 +316,7 @@ func (m *ClientManager) GetIstioSidecar(ctx context.Context, contextName, namesp
 		SelectorLabels:   sel,
 		Ingress:          istioSidecarListeners(obj, "ingress"),
 		Egress:           istioSidecarListeners(obj, "egress"),
-		Workloads:        m.istioPolicyWorkloads(contextName, obj, "spec", "workloadSelector", "labels"),
+		Workloads:        m.istioPolicyWorkloads(contextName, obj, false, "spec", "workloadSelector", "labels"),
 	}, nil
 }
 
@@ -346,7 +346,7 @@ func extractIstioSidecar(obj *unstructured.Unstructured) IstioSidecarInfo {
 		policy = "mesh default"
 	}
 	return IstioSidecarInfo{
-		Name: obj.GetName(), Namespace: obj.GetNamespace(), Selector: istioScope(obj, "spec", "workloadSelector", "labels"),
+		Name: obj.GetName(), Namespace: obj.GetNamespace(), Selector: istioScope(obj, false, "spec", "workloadSelector", "labels"),
 		EgressHosts: hosts, OutboundPolicy: policy, CreatedAt: crCreatedAt(obj),
 	}
 }
@@ -370,8 +370,8 @@ type IstioAuthorizationPolicyInfo struct {
 	Scope     string `json:"scope"`
 	Rules     int    `json:"rules"`
 	// Effect calls out the two policies whose meaning is not obvious from
-	// their rules: ALLOW without rules denies everything, and an empty rule
-	// matches every request.
+	// their rules: ALLOW without rules allows nothing, which denies whatever
+	// no other ALLOW policy allows, and an empty rule matches every request.
 	Effect    string `json:"effect"`
 	CreatedAt string `json:"createdAt"`
 }
@@ -383,6 +383,8 @@ type IstioAuthorizationPolicyDetail struct {
 	Provider       string                   `json:"provider"`
 	RuleList       []IstioAuthorizationRule `json:"ruleList"`
 	Workloads      IstioWorkloads           `json:"workloads"`
+	// MeshWide reports that the policy picks workloads in every namespace.
+	MeshWide bool `json:"meshWide"`
 }
 
 func (m *ClientManager) ListIstioAuthorizationPolicies(contextName, namespace string) []IstioAuthorizationPolicyInfo {
@@ -403,7 +405,8 @@ func (m *ClientManager) GetIstioAuthorizationPolicy(ctx context.Context, context
 		TargetRefs:                   istioTargetRefs(obj),
 		Provider:                     provider,
 		RuleList:                     []IstioAuthorizationRule{},
-		Workloads:                    m.istioPolicyWorkloads(contextName, obj, "spec", "selector", "matchLabels"),
+		Workloads:                    m.istioPolicyWorkloads(contextName, obj, true, "spec", "selector", "matchLabels"),
+		MeshWide:                     istioSelectsAcrossMesh(obj, true, "spec", "selector", "matchLabels"),
 	}
 	rules, _, _ := nestedSliceNoCopy(obj.Object, "spec", "rules")
 	for _, item := range rules {
@@ -473,7 +476,7 @@ func extractIstioAuthorizationPolicy(obj *unstructured.Unstructured) IstioAuthor
 	switch {
 	case !rulesSet || len(rules) == 0:
 		if action == "ALLOW" {
-			effect = "Denies all requests"
+			effect = "Allows no requests (default deny)"
 		} else {
 			effect = "Matches no requests"
 		}
@@ -487,7 +490,7 @@ func extractIstioAuthorizationPolicy(obj *unstructured.Unstructured) IstioAuthor
 	}
 	return IstioAuthorizationPolicyInfo{
 		Name: obj.GetName(), Namespace: obj.GetNamespace(), Action: action,
-		Scope: istioScope(obj, "spec", "selector", "matchLabels"), Rules: len(rules), Effect: effect,
+		Scope: istioScope(obj, true, "spec", "selector", "matchLabels"), Rules: len(rules), Effect: effect,
 		CreatedAt: crCreatedAt(obj),
 	}
 }
@@ -523,6 +526,8 @@ type IstioRequestAuthenticationDetail struct {
 	TargetRefs     []string          `json:"targetRefs"`
 	JWTRules       []IstioJWTRule    `json:"jwtRules"`
 	Workloads      IstioWorkloads    `json:"workloads"`
+	// MeshWide reports that the policy picks workloads in every namespace.
+	MeshWide bool `json:"meshWide"`
 }
 
 func (m *ClientManager) ListIstioRequestAuthentications(contextName, namespace string) []IstioRequestAuthenticationInfo {
@@ -541,7 +546,8 @@ func (m *ClientManager) GetIstioRequestAuthentication(ctx context.Context, conte
 		SelectorLabels:                 sel,
 		TargetRefs:                     istioTargetRefs(obj),
 		JWTRules:                       istioJWTRules(obj),
-		Workloads:                      m.istioPolicyWorkloads(contextName, obj, "spec", "selector", "matchLabels"),
+		Workloads:                      m.istioPolicyWorkloads(contextName, obj, true, "spec", "selector", "matchLabels"),
+		MeshWide:                       istioSelectsAcrossMesh(obj, true, "spec", "selector", "matchLabels"),
 	}, nil
 }
 
@@ -581,7 +587,7 @@ func extractIstioRequestAuthentication(obj *unstructured.Unstructured) IstioRequ
 		issuers = append(issuers, r.Issuer)
 	}
 	return IstioRequestAuthenticationInfo{
-		Name: obj.GetName(), Namespace: obj.GetNamespace(), Scope: istioScope(obj, "spec", "selector", "matchLabels"),
+		Name: obj.GetName(), Namespace: obj.GetNamespace(), Scope: istioScope(obj, true, "spec", "selector", "matchLabels"),
 		Issuers: issuers, CreatedAt: crCreatedAt(obj),
 	}
 }

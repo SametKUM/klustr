@@ -9,6 +9,7 @@ import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import type { IntegrationDetailProps } from '@/features/integrationDetails'
 import { ActionPill } from './IstioViews'
 import { ISTIO_NETWORKING_GROUP, ISTIO_VIRTUALSERVICE_RESOURCE } from './istioKinds'
+import { useIstioRelationsReload } from './useIstioRelationsReload'
 
 function portLabel(p: IstioPort): string {
   let out = String(p.number)
@@ -73,17 +74,33 @@ export function WorkloadLinks({
   )
 }
 
-function SelectorField({ labels, scope }: { labels: Record<string, string>; scope: string }) {
+function SelectorField({
+  labels,
+  scope,
+  meshWide = false,
+}: {
+  labels: Record<string, string>
+  scope: string
+  meshWide?: boolean
+}) {
   return (
     <Field label="Applies to">
-      {Object.keys(labels).length > 0 ? <Chips items={labels} /> : <span className="text-muted-foreground">{scope}</span>}
+      {Object.keys(labels).length > 0 ? (
+        <>
+          <Chips items={labels} />
+          {meshWide && <div className="mt-1 text-xs text-muted-foreground">in all namespaces</div>}
+        </>
+      ) : (
+        <span className="text-muted-foreground">{scope}</span>
+      )}
     </Field>
   )
 }
 
 export function IstioGatewayDetailBody({ contextName, namespace, name }: IntegrationDetailProps) {
   const load = useCallback((ctx: string) => api.getIstioGateway(ctx, namespace, name), [namespace, name])
-  const { detail: d, error } = useResourceDetail(contextName, 'IstioGateway', namespace, name, load)
+  const { detail: d, error, reload } = useResourceDetail(contextName, 'IstioGateway', namespace, name, load)
+  useIstioRelationsReload(contextName, ['Pod'], reload)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!d) return null
   return (
@@ -247,7 +264,8 @@ export function IstioServiceEntryDetailBody({ contextName, namespace, name }: In
 
 export function IstioSidecarDetailBody({ contextName, namespace, name }: IntegrationDetailProps) {
   const load = useCallback((ctx: string) => api.getIstioSidecar(ctx, namespace, name), [namespace, name])
-  const { detail: d, error } = useResourceDetail(contextName, 'IstioSidecar', namespace, name, load)
+  const { detail: d, error, reload } = useResourceDetail(contextName, 'IstioSidecar', namespace, name, load)
+  useIstioRelationsReload(contextName, ['Pod'], reload)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!d) return null
   return (
@@ -314,7 +332,8 @@ export function IstioSidecarDetailBody({ contextName, namespace, name }: Integra
 
 export function IstioAuthorizationPolicyDetailBody({ contextName, namespace, name }: IntegrationDetailProps) {
   const load = useCallback((ctx: string) => api.getIstioAuthorizationPolicy(ctx, namespace, name), [namespace, name])
-  const { detail: d, error } = useResourceDetail(contextName, 'IstioAuthorizationPolicy', namespace, name, load)
+  const { detail: d, error, reload } = useResourceDetail(contextName, 'IstioAuthorizationPolicy', namespace, name, load)
+  useIstioRelationsReload(contextName, ['Pod'], reload)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!d) return null
   return (
@@ -334,7 +353,7 @@ export function IstioAuthorizationPolicyDetailBody({ contextName, namespace, nam
             <Lines items={d.targetRefs} />
           </Field>
         ) : (
-          <SelectorField labels={d.selectorLabels} scope={d.scope} />
+          <SelectorField labels={d.selectorLabels} scope={d.scope} meshWide={d.meshWide} />
         )}
         <Field label="Age">{formatAge(d.createdAt)}</Field>
       </Section>
@@ -380,7 +399,8 @@ export function IstioAuthorizationPolicyDetailBody({ contextName, namespace, nam
 
 export function IstioRequestAuthenticationDetailBody({ contextName, namespace, name }: IntegrationDetailProps) {
   const load = useCallback((ctx: string) => api.getIstioRequestAuthentication(ctx, namespace, name), [namespace, name])
-  const { detail: d, error } = useResourceDetail(contextName, 'IstioRequestAuthentication', namespace, name, load)
+  const { detail: d, error, reload } = useResourceDetail(contextName, 'IstioRequestAuthentication', namespace, name, load)
+  useIstioRelationsReload(contextName, ['Pod'], reload)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!d) return null
   return (
@@ -391,7 +411,7 @@ export function IstioRequestAuthenticationDetailBody({ contextName, namespace, n
             <Lines items={d.targetRefs} />
           </Field>
         ) : (
-          <SelectorField labels={d.selectorLabels} scope={d.scope} />
+          <SelectorField labels={d.selectorLabels} scope={d.scope} meshWide={d.meshWide} />
         )}
         <Field label="Age">{formatAge(d.createdAt)}</Field>
       </Section>

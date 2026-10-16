@@ -14,6 +14,7 @@ import { OwnerLink } from '@/features/_shared/OwnerLink'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { RefLinks } from './IstioDetailBodies'
 import { ISTIO_GATEWAY_RESOURCE } from './istioKinds'
+import { useIstioRelationsReload } from './useIstioRelationsReload'
 
 type Props = {
   contextName: string | null
@@ -26,7 +27,8 @@ export function IstioVirtualServiceDetailBody({ contextName, namespace, name }: 
     (ctx: string) => api.getIstioVirtualService(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<IstioVirtualServiceDetail>(contextName, 'IstioVirtualService', namespace, name, load)
+  const { detail, error, reload } = useResourceDetail<IstioVirtualServiceDetail>(contextName, 'IstioVirtualService', namespace, name, load)
+  useIstioRelationsReload(contextName, ['Service'], reload)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

@@ -35,9 +35,14 @@ type IstioWorkloads struct {
 	Total int              `json:"total"`
 }
 
+// istioRootNamespace is Istio's default root namespace. Klustr does not read
+// the mesh config, so a mesh that moves it gets namespace-local results.
+const istioRootNamespace = "istio-system"
+
 // istioServiceHost reads the Service a host names, the way Istio resolves it:
-// a short name in the config's namespace, "name.namespace", or a
-// "name.namespace.svc[.<cluster domain>]" FQDN.
+// a short name in the config's namespace, or a
+// "name.namespace.svc.<cluster domain>" FQDN. Istio expands only dotless
+// names, so "name.namespace" and "name.namespace.svc" name no Service.
 func istioServiceHost(host, namespace string) (ns, name string, ok bool) {
 	if host == "" || strings.Contains(host, "*") {
 		return "", "", false
@@ -46,9 +51,7 @@ func istioServiceHost(host, namespace string) (ns, name string, ok bool) {
 	switch {
 	case len(parts) == 1:
 		return namespace, parts[0], true
-	case len(parts) == 2:
-		return parts[1], parts[0], true
-	case parts[2] == "svc":
+	case len(parts) >= 4 && parts[2] == "svc":
 		return parts[1], parts[0], true
 	}
 	return "", "", false
@@ -134,6 +137,22 @@ func istioSelector(obj *unstructured.Unstructured, path ...string) (map[string]s
 	return sel, true
 }
 
+// istioSubsetSelector is a Service selector narrowed by a subset's labels, or
+// nil when the two disagree on a key: no pod carries both values.
+func istioSubsetSelector(service, subset map[string]string) map[string]string {
+	sel := make(map[string]string, len(service)+len(subset))
+	for k, v := range service {
+		sel[k] = v
+	}
+	for k, v := range subset {
+		if cur, ok := sel[k]; ok && cur != v {
+			return nil
+		}
+		sel[k] = v
+	}
+	return sel
+}
+
 func selectorString(sel map[string]string) string {
 	pairs := make([]string, 0, len(sel))
 	for k, v := range sel {
@@ -166,33 +185,50 @@ func istioTargetRefs(obj *unstructured.Unstructured) []string {
 	return out
 }
 
+// istioSelectsAcrossMesh reports whether a selector-scoped policy picks
+// workloads in every namespace. Istio applies a selector-less policy in the
+// root namespace to the whole mesh. AuthorizationPolicy and
+// RequestAuthentication (rootSelectorMeshWide) also match a root-namespace
+// selector against every namespace's workloads; a Sidecar's workloadSelector
+// stays within its own namespace.
+func istioSelectsAcrossMesh(obj *unstructured.Unstructured, rootSelectorMeshWide bool, selectorPath ...string) bool {
+	if obj.GetNamespace() != istioRootNamespace || len(istioTargetRefs(obj)) > 0 {
+		return false
+	}
+	_, hasSelector := istioSelector(obj, selectorPath...)
+	return !hasSelector || rootSelectorMeshWide
+}
+
 // istioScope describes which workloads a selector-or-targetRefs policy
-// applies to. Istio applies a selector-less policy in the root namespace
-// (istio-system unless the mesh config says otherwise) to the whole mesh.
-func istioScope(obj *unstructured.Unstructured, selectorPath ...string) string {
+// applies to.
+func istioScope(obj *unstructured.Unstructured, rootSelectorMeshWide bool, selectorPath ...string) string {
 	if refs := istioTargetRefs(obj); len(refs) > 0 {
 		return strings.Join(refs, ", ")
 	}
+	meshWide := istioSelectsAcrossMesh(obj, rootSelectorMeshWide, selectorPath...)
 	if sel, ok := istioSelector(obj, selectorPath...); ok {
+		if meshWide {
+			return selectorString(sel) + " (all namespaces)"
+		}
 		return selectorString(sel)
 	}
-	if obj.GetNamespace() == "istio-system" {
+	if meshWide {
 		return "mesh-wide"
 	}
 	return "namespace-wide"
 }
 
 // istioPolicyWorkloads lists the pods a selector-scoped policy applies to,
-// or every pod of its namespace when it has neither selector nor targetRefs.
-// Policies attached through targetRefs apply at a gateway or waypoint and
-// list none.
-func (m *ClientManager) istioPolicyWorkloads(contextName string, obj *unstructured.Unstructured, selectorPath ...string) IstioWorkloads {
+// or every pod of its namespace when it has neither selector nor targetRefs,
+// searching every namespace when istioSelectsAcrossMesh says so. Policies
+// attached through targetRefs apply at a gateway or waypoint and list none.
+func (m *ClientManager) istioPolicyWorkloads(contextName string, obj *unstructured.Unstructured, rootSelectorMeshWide bool, selectorPath ...string) IstioWorkloads {
 	if len(istioTargetRefs(obj)) > 0 {
 		return IstioWorkloads{Pods: []IstioObjectRef{}}
 	}
 	sel, _ := istioSelector(obj, selectorPath...)
 	ns := obj.GetNamespace()
-	if len(sel) == 0 && ns == "istio-system" {
+	if istioSelectsAcrossMesh(obj, rootSelectorMeshWide, selectorPath...) {
 		ns = ""
 	}
 	return m.istioWorkloads(contextName, ns, sel)

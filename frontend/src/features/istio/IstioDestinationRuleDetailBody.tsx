@@ -6,6 +6,7 @@ import { Copyable } from '@/features/_shared/Copyable'
 import { OwnerLink } from '@/features/_shared/OwnerLink'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { WorkloadLinks } from './IstioDetailBodies'
+import { useIstioRelationsReload } from './useIstioRelationsReload'
 
 type Props = {
   contextName: string | null
@@ -18,7 +19,8 @@ export function IstioDestinationRuleDetailBody({ contextName, namespace, name }:
     (ctx: string) => api.getIstioDestinationRule(ctx, namespace, name),
     [namespace, name],
   )
-  const { detail, error } = useResourceDetail<IstioDestinationRuleDetail>(contextName, 'IstioDestinationRule', namespace, name, load)
+  const { detail, error, reload } = useResourceDetail<IstioDestinationRuleDetail>(contextName, 'IstioDestinationRule', namespace, name, load)
+  useIstioRelationsReload(contextName, ['Service', 'Pod'], reload)
   if (error) return <ErrorBox>{error}</ErrorBox>
   if (!detail) return null
 

@@ -288,13 +288,7 @@ func (m *ClientManager) GetIstioDestinationRule(ctx context.Context, contextName
 		return d, nil
 	}
 	for i := range d.SubsetDetails {
-		sel := map[string]string{}
-		for k, v := range svc.Spec.Selector {
-			sel[k] = v
-		}
-		for k, v := range d.SubsetDetails[i].Labels {
-			sel[k] = v
-		}
+		sel := istioSubsetSelector(svc.Spec.Selector, d.SubsetDetails[i].Labels)
 		d.SubsetDetails[i].Workloads = m.istioWorkloads(contextName, svc.Namespace, sel)
 	}
 	return d, nil

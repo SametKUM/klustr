@@ -5382,6 +5382,7 @@ export namespace kube {
 	    provider: string;
 	    ruleList: IstioAuthorizationRule[];
 	    workloads: IstioWorkloads;
+	    meshWide: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new IstioAuthorizationPolicyDetail(source);
@@ -5401,6 +5402,7 @@ export namespace kube {
 	        this.provider = source["provider"];
 	        this.ruleList = this.convertValues(source["ruleList"], IstioAuthorizationRule);
 	        this.workloads = this.convertValues(source["workloads"], IstioWorkloads);
+	        this.meshWide = source["meshWide"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -5834,6 +5836,7 @@ export namespace kube {
 	    targetRefs: string[];
 	    jwtRules: IstioJWTRule[];
 	    workloads: IstioWorkloads;
+	    meshWide: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new IstioRequestAuthenticationDetail(source);
@@ -5850,6 +5853,7 @@ export namespace kube {
 	        this.targetRefs = source["targetRefs"];
 	        this.jwtRules = this.convertValues(source["jwtRules"], IstioJWTRule);
 	        this.workloads = this.convertValues(source["workloads"], IstioWorkloads);
+	        this.meshWide = source["meshWide"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

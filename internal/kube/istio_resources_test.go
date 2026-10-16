@@ -76,9 +76,12 @@ func TestIstioServiceHost(t *testing.T) {
 		ok                         bool
 	}{
 		{"reviews", "shop", "shop", "reviews", true},
-		{"reviews.prod", "shop", "prod", "reviews", true},
-		{"reviews.prod.svc", "shop", "prod", "reviews", true},
+		// Istio expands only dotless names: these stay unresolved in routing.
+		{"reviews.prod", "shop", "", "", false},
+		{"reviews.prod.svc", "shop", "", "", false},
+		{"api.com", "shop", "", "", false},
 		{"reviews.prod.svc.cluster.local", "shop", "prod", "reviews", true},
+		{"reviews.prod.svc.corp.internal", "shop", "prod", "reviews", true},
 		{"api.payments.example.net", "shop", "", "", false},
 		{"*.example.com", "shop", "", "", false},
 		{"", "shop", "", "", false},
@@ -141,6 +144,7 @@ spec:
   subsets:
     - {name: v1, labels: {version: v1}}
     - {name: v2, labels: {version: v2}}
+    - {name: conflict, labels: {app: ratings, version: v1}}
 `)
 	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "shop", Name: "reviews"},
 		Spec: corev1.ServiceSpec{Selector: map[string]string{"app": "reviews"}}}
@@ -165,6 +169,11 @@ spec:
 	}
 	if d.SubsetDetails[1].Workloads.Total != 1 {
 		t.Fatalf("v2 workloads = %+v", d.SubsetDetails[1].Workloads)
+	}
+	// A subset label that contradicts the Service selector leaves no
+	// endpoints, even though ratings-v1 carries the subset labels.
+	if w := d.SubsetDetails[2].Workloads; w.Total != 0 || len(w.Pods) != 0 || w.Pods == nil {
+		t.Fatalf("conflicting subset workloads = %+v", w)
 	}
 }
 
@@ -209,16 +218,18 @@ spec: {hosts: [internal], gateways: [mesh]}
 
 func TestIstioAuthorizationPolicyEffect(t *testing.T) {
 	cases := []struct {
-		name, spec, effect, scope string
+		name, namespace, spec, effect, scope string
 	}{
-		{"allow nothing", `{}`, "Denies all requests", "namespace-wide"},
-		{"deny without rules", `{action: DENY, selector: {matchLabels: {app: api}}}`, "Matches no requests", "app=api"},
-		{"allow all", `{rules: [{}]}`, "Matches all requests", "namespace-wide"},
-		{"targeted", `{targetRefs: [{kind: Gateway, group: gateway.networking.k8s.io, name: public}], rules: [{to: [{operation: {methods: [GET]}}]}]}`, "", "Gateway/public"},
+		{"allow nothing", "shop", `{}`, "Allows no requests (default deny)", "namespace-wide"},
+		{"deny without rules", "shop", `{action: DENY, selector: {matchLabels: {app: api}}}`, "Matches no requests", "app=api"},
+		{"allow all", "shop", `{rules: [{}]}`, "Matches all requests", "namespace-wide"},
+		{"targeted", "shop", `{targetRefs: [{kind: Gateway, group: gateway.networking.k8s.io, name: public}], rules: [{to: [{operation: {methods: [GET]}}]}]}`, "", "Gateway/public"},
+		{"root without selector", "istio-system", `{action: DENY, rules: [{}]}`, "Matches all requests", "mesh-wide"},
+		{"root selector", "istio-system", `{selector: {matchLabels: {istio: ingressgateway}}, rules: [{}]}`, "Matches all requests", "istio=ingressgateway (all namespaces)"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			obj := mustUnstructured(t, "apiVersion: security.istio.io/v1\nkind: AuthorizationPolicy\nmetadata: {name: p, namespace: shop}\nspec: "+tc.spec)
+			obj := mustUnstructured(t, "apiVersion: security.istio.io/v1\nkind: AuthorizationPolicy\nmetadata: {name: p, namespace: "+tc.namespace+"}\nspec: "+tc.spec)
 			info := extractIstioAuthorizationPolicy(obj)
 			if info.Effect != tc.effect || info.Scope != tc.scope {
 				t.Fatalf("effect %q scope %q, want %q %q", info.Effect, info.Scope, tc.effect, tc.scope)
@@ -259,6 +270,72 @@ func TestIstioRequestAuthenticationRules(t *testing.T) {
 	}}
 	if !reflect.DeepEqual(d, want) {
 		t.Fatalf("jwt rules = %+v", d)
+	}
+}
+
+// Istio matches a root-namespace AuthorizationPolicy or RequestAuthentication
+// selector against every namespace's workloads, but looks a Sidecar's
+// workloadSelector up only in the workload's own namespace.
+func TestIstioRootNamespaceSelectors(t *testing.T) {
+	ap := mustUnstructured(t, `
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: {name: ingress, namespace: istio-system}
+spec: {selector: {matchLabels: {istio: ingressgateway}}, rules: [{}]}
+`)
+	ra := mustUnstructured(t, `
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata: {name: ingress-jwt, namespace: istio-system}
+spec: {selector: {matchLabels: {istio: ingressgateway}}}
+`)
+	sc := mustUnstructured(t, `
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata: {name: gateways, namespace: istio-system}
+spec: {workloadSelector: {labels: {istio: ingressgateway}}}
+`)
+	local := mustUnstructured(t, `
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: {name: ingress, namespace: istio-ingress}
+spec: {selector: {matchLabels: {istio: ingressgateway}}, rules: [{}]}
+`)
+	pods := []*corev1.Pod{
+		istioPod("istio-ingress", "istio-ingressgateway-1", map[string]string{"istio": "ingressgateway"}),
+		istioPod("istio-system", "istio-ingressgateway-2", map[string]string{"istio": "ingressgateway"}),
+		istioPod("shop", "storefront-1", map[string]string{"app": "storefront"}),
+	}
+	m := istioManager(t, nil, pods, ap, ra, sc, local)
+	ctx := context.Background()
+
+	apd, err := m.GetIstioAuthorizationPolicy(ctx, "ctx", "istio-system", "ingress")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if apd.Workloads.Total != 2 || !apd.MeshWide {
+		t.Fatalf("root authorization policy: workloads %+v meshWide %v", apd.Workloads, apd.MeshWide)
+	}
+	rad, err := m.GetIstioRequestAuthentication(ctx, "ctx", "istio-system", "ingress-jwt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rad.Workloads.Total != 2 || !rad.MeshWide || rad.Scope != "istio=ingressgateway (all namespaces)" {
+		t.Fatalf("root request authentication: workloads %+v meshWide %v scope %q", rad.Workloads, rad.MeshWide, rad.Scope)
+	}
+	scd, err := m.GetIstioSidecar(ctx, "ctx", "istio-system", "gateways")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scd.Workloads.Total != 1 || scd.Workloads.Pods[0].Namespace != "istio-system" || scd.Selector != "istio=ingressgateway" {
+		t.Fatalf("root sidecar: workloads %+v selector %q", scd.Workloads, scd.Selector)
+	}
+	lpd, err := m.GetIstioAuthorizationPolicy(ctx, "ctx", "istio-ingress", "ingress")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lpd.Workloads.Total != 1 || lpd.MeshWide {
+		t.Fatalf("namespaced authorization policy: workloads %+v meshWide %v", lpd.Workloads, lpd.MeshWide)
 	}
 }
 
