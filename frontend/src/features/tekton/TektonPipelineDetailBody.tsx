@@ -9,6 +9,7 @@ import {
   ResultSpecsTable,
   WorkspaceSpecsTable,
 } from './TektonDetailPrimitives'
+import { TektonTaskGraph } from './TektonTaskGraph'
 import { useOpenTektonResource } from './useOpenTektonResource'
 
 type Props = {
@@ -48,6 +49,23 @@ export function TektonPipelineDetailBody({ contextName, namespace, name }: Props
         </Field>
         <Field label="Age">{formatAge(detail.createdAt)}</Field>
       </Section>
+
+      {detail.pipelineTasks.length > 1 && (
+        <Section title="Graph">
+          <TektonTaskGraph
+            tasks={detail.pipelineTasks.map((t) => ({
+              name: t.name,
+              label: t.displayName || t.name,
+              dependsOn: t.dependsOn,
+              finally: t.finally,
+            }))}
+            onSelect={(task) => {
+              const ref = detail.pipelineTasks.find((p) => p.name === task)?.taskRefName
+              if (ref) openTekton('Task', namespace, ref)
+            }}
+          />
+        </Section>
+      )}
 
       <Section title={`Tasks (${detail.pipelineTasks.length})`}>
         {detail.pipelineTasks.length === 0 ? (

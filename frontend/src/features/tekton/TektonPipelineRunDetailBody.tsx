@@ -7,8 +7,25 @@ import { Copyable } from '@/features/_shared/Copyable'
 import { useResourceDetail } from '@/features/_shared/useResourceDetail'
 import { LinkButton, ValuesTable, WorkspaceBindingsTable } from './TektonDetailPrimitives'
 import { TektonStatePill } from './TektonStatePill'
+import { TektonTaskGraph } from './TektonTaskGraph'
 import { tektonElapsed, tektonTaskSummary } from './tektonFormat'
+import { mergeTaskState, type GraphTask } from './tektonGraph'
 import { useOpenTektonResource } from './useOpenTektonResource'
+
+// runGraphTasks folds a run's task rows into one graph node per pipeline
+// task: a matrixed task has a row per TaskRun.
+function runGraphTasks(rows: TektonPipelineRunTask[]): GraphTask[] {
+  const byName = new Map<string, TektonPipelineRunTask[]>()
+  for (const r of rows) byName.set(r.name, [...(byName.get(r.name) ?? []), r])
+  return [...byName.values()].map((group) => ({
+    name: group[0].name,
+    label: group[0].displayName || group[0].name,
+    dependsOn: group[0].dependsOn,
+    finally: group[0].finally,
+    state: mergeTaskState(group.map((r) => r.state)),
+    count: group.length,
+  }))
+}
 
 type Props = {
   contextName: string | null
@@ -76,6 +93,18 @@ export function TektonPipelineRunDetailBody({ contextName, namespace, name }: Pr
           <Field label="Tasks">{tektonTaskSummary(detail.tasks)}</Field>
         </Section>
       </div>
+
+      {detail.pipelineTasks.length > 1 && (
+        <Section title="Graph">
+          <TektonTaskGraph
+            tasks={runGraphTasks(detail.pipelineTasks)}
+            onSelect={(task) => {
+              const run = detail.pipelineTasks.find((r) => r.name === task && r.taskRunName)?.taskRunName
+              if (run) openTekton('TaskRun', namespace, run)
+            }}
+          />
+        </Section>
+      )}
 
       <TaskTable
         title="Tasks"
