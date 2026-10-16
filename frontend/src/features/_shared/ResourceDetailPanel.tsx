@@ -247,7 +247,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
                 <RestartWorkloadButton contextName={contextName} resource={resource} />
               )}
               {!readOnly && isScalable(resource.kind) && (
-                <ScaleResourceButton contextName={contextName} resource={resource} />
+                <ScaleResourceButton contextName={contextName} resource={resource} managers={managers} />
               )}
               {!readOnly && isArgoApplication(resource) && (
                 <SyncArgoApplicationButton contextName={contextName} resource={resource} />

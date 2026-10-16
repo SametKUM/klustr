@@ -14,9 +14,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { api } from '@/lib/api'
+import { api, type ResourceManager } from '@/lib/api'
 import type { SelectedResource } from '@/store/ui'
 import { ContextBadge } from './ContextBadge'
+import { GitOpsRevertWarning } from './GitOpsRevertWarning'
 
 const MIN_REPLICAS = 0
 const MAX_REPLICAS = 1000
@@ -24,9 +25,10 @@ const MAX_REPLICAS = 1000
 type Props = {
   contextName: string | null
   resource: SelectedResource
+  managers: ResourceManager[]
 }
 
-export function ScaleResourceButton({ contextName, resource }: Props) {
+export function ScaleResourceButton({ contextName, resource, managers }: Props) {
   const [open, setOpen] = useState(false)
   const [replicas, setReplicas] = useState<number>(0)
   const [loading, setLoading] = useState(false)
@@ -91,6 +93,7 @@ export function ScaleResourceButton({ contextName, resource }: Props) {
                 in <span className="font-mono text-xs">{resource.namespace}</span>.
               </p>
               <ContextBadge contextName={contextName} label="Target context" />
+              <GitOpsRevertWarning managers={managers} field="/spec/replicas" className="rounded border p-2" />
               {loadError && (
                 <p className="rounded border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs text-destructive break-words">
                   Failed to read current replicas: {loadError}

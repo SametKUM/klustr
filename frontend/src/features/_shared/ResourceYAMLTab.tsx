@@ -17,6 +17,8 @@ import { deltaTouches, onKubeChange } from '@/lib/events'
 import { useUIStore } from '@/store/ui'
 import { Spinner } from '@/components/ui/spinner'
 import { CopyButton } from './Copyable'
+import { GitOpsRevertWarning } from './GitOpsRevertWarning'
+import { useManagers } from './useResourceManagers'
 
 const Editor = lazy(() => import('@/lib/monaco').then((m) => ({ default: m.Editor })))
 const DiffEditor = lazy(() =>
@@ -47,6 +49,7 @@ function summarizeServerError(raw: string): string {
 export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Props) {
   const theme = useThemeMode()
   const readOnly = useUIStore((s) => s.globalReadOnly)
+  const managers = useManagers()
   const [source, setSource] = useState<string>('')
   const [draft, setDraft] = useState<string>('')
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -249,6 +252,7 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Pro
             : 'Refresh to load the latest YAML.'}
         </div>
       )}
+      {editing && <GitOpsRevertWarning managers={managers} className="border-b px-4 py-2" />}
       {loadError && (
         <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-xs font-mono text-destructive break-words">
           {loadError}
@@ -309,6 +313,7 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Pro
               defaulting and admission (right). Nothing is written until you click Apply.
             </DialogDescription>
           </DialogHeader>
+          <GitOpsRevertWarning managers={managers} className="border-b px-6 py-2" />
           <div className="min-h-0 flex-1">
             {dryRun.isPending && (
               <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground">
