@@ -4,6 +4,7 @@ import (
 	"context"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -36,11 +37,14 @@ const (
 	fluxKustomizationNamespaceLabel = "kustomize.toolkit.fluxcd.io/namespace"
 	fluxHelmReleaseNameLabel        = "helm.toolkit.fluxcd.io/name"
 	fluxHelmReleaseNamespaceLabel   = "helm.toolkit.fluxcd.io/namespace"
-	// The reconcile annotation set to "disabled" and the ssa annotation set to
-	// "IfNotPresent" or "Ignore" make kustomize-controller leave an object's
-	// live state alone.
-	fluxKustomizeReconcileAnnotation = "kustomize.toolkit.fluxcd.io/reconcile"
-	fluxKustomizeSSAAnnotation       = "kustomize.toolkit.fluxcd.io/ssa"
+	// Per-object opt-outs, read from labels and annotations alike: reconcile
+	// set to "disabled" and ssa set to "IfNotPresent" or "Ignore" make
+	// kustomize-controller leave an object's live state alone, and
+	// driftDetection set to "disabled" exempts it from helm-controller's
+	// drift correction.
+	fluxKustomizeReconcileKey = "kustomize.toolkit.fluxcd.io/reconcile"
+	fluxKustomizeSSAKey       = "kustomize.toolkit.fluxcd.io/ssa"
+	fluxHelmDriftDetectionKey = "helm.toolkit.fluxcd.io/driftDetection"
 )
 
 // argoLookupTimeout bounds each Application lookup in another context, so a
@@ -79,8 +83,8 @@ type ResourceManager struct {
 // managedTarget is the resource whose owners are looked up, identified the
 // way Argo CD's tracking-id and status.resources spell it.
 type managedTarget struct {
-	group, kind, namespace, name string
-	labels, annotations          map[string]string
+	group, version, kind, namespace, name string
+	labels, annotations                   map[string]string
 }
 
 // GetResourceManagers returns the tools that own a resource, read from its
@@ -98,6 +102,7 @@ func (m *ClientManager) GetResourceManagers(ctx context.Context, contextName, ki
 	}
 	t := managedTarget{
 		group:       gvr.Group,
+		version:     gvr.Version,
 		kind:        m.apiKind(contextName, kind, gvr),
 		namespace:   meta.GetNamespace(),
 		name:        meta.GetName(),
@@ -169,7 +174,7 @@ func (m *ClientManager) argoManager(ctx context.Context, contextName string, t m
 	if appName == "" {
 		return ResourceManager{}, false
 	}
-	ownServer := m.contextServer(contextName)
+	servers := m.contextServers()
 	var (
 		best        *unstructured.Unstructured
 		bestContext string
@@ -180,8 +185,9 @@ func (m *ClientManager) argoManager(ctx context.Context, contextName string, t m
 		if i > 0 {
 			lookupCtx, cancel = context.WithTimeout(ctx, argoLookupTimeout)
 		}
+		clusters := argoClusters{appContext: c, appServer: servers[c], targetContext: contextName, targetServer: servers[contextName]}
 		for _, app := range m.argoApplicationsNamed(lookupCtx, c, appNS, appName) {
-			score := argoOwnerScore(app, t, c == contextName, byAnnotation, c, contextName, ownServer)
+			score := argoOwnerScore(app, t, byAnnotation, clusters)
 			if score > bestScore {
 				best, bestContext, bestScore = app, c, score
 			}
@@ -259,12 +265,20 @@ const (
 	argoScoreConfirmed = 3 // lists the resource and targets this cluster
 )
 
+// argoClusters names the context an Application was read from and the
+// context of the resource it may own, each with the API server its kubeconfig
+// entry points to ("" when unknown).
+type argoClusters struct {
+	appContext, appServer       string
+	targetContext, targetServer string
+}
+
 // argoOwnerScore ranks an Application as t's owner; 0 rejects it. Membership
 // in status.resources is what confirms ownership: status names no cluster, so
 // an Application listing the same namespace/name in another cluster is told
 // apart by its destination.
-func argoOwnerScore(app *unstructured.Unstructured, t managedTarget, sameContext, byAnnotation bool, appContext, targetContext, targetServer string) int {
-	targets := argoTargetsContext(app, appContext, targetContext, targetServer)
+func argoOwnerScore(app *unstructured.Unstructured, t managedTarget, byAnnotation bool, c argoClusters) int {
+	targets := argoTargetsContext(app, c)
 	if targets == argoTargetOther {
 		return 0
 	}
@@ -274,7 +288,7 @@ func argoOwnerScore(app *unstructured.Unstructured, t managedTarget, sameContext
 		}
 		return argoScoreListed
 	}
-	if sameContext && byAnnotation {
+	if c.appContext == c.targetContext && byAnnotation {
 		return argoScoreNameOnly
 	}
 	return 0
@@ -291,19 +305,21 @@ const (
 // argoTargetsContext compares an Application's destination with the target
 // context. A destination given by cluster name only cannot be mapped to a
 // kubeconfig context and stays unknown.
-func argoTargetsContext(app *unstructured.Unstructured, appContext, targetContext, targetServer string) argoTarget {
+func argoTargetsContext(app *unstructured.Unstructured, c argoClusters) argoTarget {
 	server, _, _ := unstructured.NestedString(app.Object, "spec", "destination", "server")
 	destName, _, _ := unstructured.NestedString(app.Object, "spec", "destination", "name")
 	if server == "https://kubernetes.default.svc" || (server == "" && destName == "in-cluster") {
-		if appContext == targetContext {
+		// In-cluster is the cluster the Application was read from, which a
+		// second context can reach under another name.
+		if c.appContext == c.targetContext || sameServerURL(c.appServer, c.targetServer) {
 			return argoTargetThis
 		}
 		return argoTargetOther
 	}
-	if server == "" || targetServer == "" {
+	if server == "" || c.targetServer == "" {
 		return argoTargetUnknown
 	}
-	if normalizeServerURL(server) == normalizeServerURL(targetServer) {
+	if sameServerURL(server, c.targetServer) {
 		return argoTargetThis
 	}
 	return argoTargetOther
@@ -311,6 +327,10 @@ func argoTargetsContext(app *unstructured.Unstructured, appContext, targetContex
 
 func normalizeServerURL(s string) string {
 	return strings.TrimRight(strings.ToLower(strings.TrimSpace(s)), "/")
+}
+
+func sameServerURL(a, b string) bool {
+	return a != "" && b != "" && normalizeServerURL(a) == normalizeServerURL(b)
 }
 
 func argoAppLists(app *unstructured.Unstructured, t managedTarget) bool {
@@ -451,65 +471,82 @@ func (m *ClientManager) otherWatchedContexts(contextName string) []string {
 	return out
 }
 
-// contextServer is the API server URL the kubeconfig gives contextName, or ""
-// when it cannot be read.
-func (m *ClientManager) contextServer(contextName string) string {
+// contextServers maps each kubeconfig context to its API server URL. It is
+// empty when the kubeconfig cannot be read.
+func (m *ClientManager) contextServers() map[string]string {
+	out := map[string]string{}
 	if m.rules == nil {
-		return ""
+		return out
 	}
 	raw, err := m.rules.Load()
 	if err != nil {
-		return ""
+		return out
 	}
-	c, ok := raw.Contexts[contextName]
-	if !ok {
-		return ""
+	for name, c := range raw.Contexts {
+		if c == nil {
+			continue
+		}
+		if cl, ok := raw.Clusters[c.Cluster]; ok && cl != nil {
+			out[name] = cl.Server
+		}
 	}
-	if cl, ok := raw.Clusters[c.Cluster]; ok {
-		return cl.Server
-	}
-	return ""
+	return out
 }
 
 // fluxKustomizationManager describes the Kustomization that applied t.
 // kustomize-controller reapplies everything it manages on each interval, so a
 // live change is reverted unless the Kustomization is suspended or the object
-// opts out through its annotations.
+// opts out through its labels or annotations.
 func (m *ClientManager) fluxKustomizationManager(ctx context.Context, contextName string, t managedTarget, namespace, name string) ResourceManager {
 	rm := ResourceManager{
 		Tool: "flux", Kind: "Kustomization", Group: fluxKustomizationGR.Group, Resource: fluxKustomizationGR.Resource,
 		Context: contextName, Namespace: namespace, Name: name, IgnoredFields: []string{},
 	}
 	_, rm.Resolved = m.servedGVR(contextName, fluxKustomizationGR)
-	if t.annotations[fluxKustomizeReconcileAnnotation] == "disabled" {
-		return rm
+	// The owner is read even when the object opts out: its suspension also
+	// drives the Suspend/Resume action the chip opens.
+	var owner *unstructured.Unstructured
+	if rm.Resolved {
+		if obj, err := m.getServedCR(ctx, contextName, fluxKustomizationGR, namespace, name); err == nil {
+			owner = obj
+			rm.Suspended, _, _ = unstructured.NestedBool(obj.Object, "spec", "suspend")
+		}
 	}
-	if ssa := t.annotations[fluxKustomizeSSAAnnotation]; ssa == "IfNotPresent" || ssa == "Ignore" {
+	if rm.Suspended || anyInMetadata(t, fluxKustomizeReconcileKey, "disabled") ||
+		anyInMetadata(t, fluxKustomizeSSAKey, "IfNotPresent", "Ignore") {
 		return rm
 	}
 	rm.RevertsDrift = true
 	rm.RevertReason = "it is reapplied on every reconcile"
-	if !rm.Resolved {
-		return rm
-	}
-	obj, err := m.getServedCR(ctx, contextName, fluxKustomizationGR, namespace, name)
-	if err != nil {
-		return rm
-	}
-	if suspended, _, _ := unstructured.NestedBool(obj.Object, "spec", "suspend"); suspended {
-		rm.Suspended = true
-		rm.RevertsDrift = false
-		rm.RevertReason = ""
-		return rm
-	}
-	if interval, _, _ := unstructured.NestedString(obj.Object, "spec", "interval"); interval != "" {
-		rm.RevertReason = "it is reapplied every " + interval
+	if owner != nil {
+		if interval, _, _ := unstructured.NestedString(owner.Object, "spec", "interval"); interval != "" {
+			rm.RevertReason = "it is reapplied every " + interval
+		}
 	}
 	return rm
 }
 
+// anyInMetadata reports whether t carries key, as a label or an annotation,
+// set to one of values. Flux reads its per-object opt-outs from both and
+// compares them case-insensitively (AnyInMetadata in fluxcd/pkg).
+func anyInMetadata(t managedTarget, key string, values ...string) bool {
+	for _, set := range []map[string]string{t.labels, t.annotations} {
+		v := set[key]
+		if v == "" {
+			continue
+		}
+		for _, want := range values {
+			if strings.EqualFold(v, want) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // fluxHelmReleaseManager describes the Flux HelmRelease that installed t.
-// helm-controller corrects live changes only with drift detection enabled.
+// helm-controller corrects live changes only with drift detection enabled,
+// and never on an object that opts out of it.
 func (m *ClientManager) fluxHelmReleaseManager(ctx context.Context, contextName string, t managedTarget, namespace, name string) ResourceManager {
 	rm := ResourceManager{
 		Tool: "flux", Kind: "HelmRelease", Group: fluxHelmReleaseGR.Group, Resource: fluxHelmReleaseGR.Resource,
@@ -524,11 +561,7 @@ func (m *ClientManager) fluxHelmReleaseManager(ctx context.Context, contextName 
 		return rm
 	}
 	rm.Suspended, _, _ = unstructured.NestedBool(obj.Object, "spec", "suspend")
-	mode, _, _ := unstructured.NestedString(obj.Object, "spec", "driftDetection", "mode")
-	if mode == "enabled" && !rm.Suspended {
-		rm.RevertsDrift = true
-		rm.RevertReason = "drift detection is on"
-	}
+	wholeDocument := false
 	rules, _, _ := nestedSliceNoCopy(obj.Object, "spec", "driftDetection", "ignore")
 	for _, item := range rules {
 		rule, ok := item.(map[string]any)
@@ -539,28 +572,43 @@ func (m *ClientManager) fluxHelmReleaseManager(ctx context.Context, contextName 
 			continue
 		}
 		rm.IgnoredFields = appendStrings(rm.IgnoredFields, rule["paths"])
+		// "" is the JSON pointer to the document root: the rule exempts
+		// the whole object, as the driftDetection opt-out does.
+		if paths, ok := rule["paths"].([]any); ok && slices.Contains(paths, any("")) {
+			wholeDocument = true
+		}
+	}
+	mode, _, _ := unstructured.NestedString(obj.Object, "spec", "driftDetection", "mode")
+	if mode == "enabled" && !rm.Suspended && !wholeDocument && !anyInMetadata(t, fluxHelmDriftDetectionKey, "disabled") {
+		rm.RevertsDrift = true
+		rm.RevertReason = "drift detection is on"
 	}
 	return rm
 }
 
-// fluxSelectorMatches evaluates a Flux kustomize.Selector against t. Empty
-// fields match anything.
+// fluxSelectorMatches evaluates a Flux selector against t the way fluxcd/pkg
+// does: group, version, kind, name and namespace are anchored regular
+// expressions, and empty fields match anything. A selector Flux cannot parse
+// matches nothing.
 func fluxSelectorMatches(sel map[string]any, t managedTarget) bool {
 	str := func(key string) string {
 		s, _ := sel[key].(string)
 		return s
 	}
-	if g := str("group"); g != "" && g != t.group {
-		return false
-	}
-	if k := str("kind"); k != "" && k != t.kind {
-		return false
-	}
-	if n := str("name"); n != "" && n != t.name {
-		return false
-	}
-	if ns := str("namespace"); ns != "" && ns != t.namespace {
-		return false
+	for _, f := range []struct{ pattern, value string }{
+		{str("group"), t.group},
+		{str("version"), t.version},
+		{str("kind"), t.kind},
+		{str("name"), t.name},
+		{str("namespace"), t.namespace},
+	} {
+		if f.pattern == "" {
+			continue
+		}
+		re, err := regexp.Compile("^(?:" + f.pattern + ")$")
+		if err != nil || !re.MatchString(f.value) {
+			return false
+		}
 	}
 	for key, set := range map[string]map[string]string{"labelSelector": t.labels, "annotationSelector": t.annotations} {
 		raw := str(key)

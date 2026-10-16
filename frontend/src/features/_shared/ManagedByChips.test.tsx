@@ -105,6 +105,17 @@ it('shows an owner it cannot open by name only', async () => {
   expect(container.textContent).toContain('shop-api')
 })
 
+it('drops a pending navigation when the chip unmounts', async () => {
+  let finishSync!: () => void
+  mocks.ensure.mockReturnValue(new Promise<void>((resolve) => (finishSync = resolve)))
+  await act(async () => root.render(<ManagedByChips contextName="dev" managers={[manager({})]} />))
+  await act(async () => container.querySelector('button')!.click())
+  // The panel moves to another resource while the Application watch syncs.
+  await act(async () => root.render(<ManagedByChips contextName="dev" managers={[]} />))
+  await act(async () => finishSync())
+  expect(mocks.open).not.toHaveBeenCalled()
+})
+
 it('renders nothing for an unmanaged resource', async () => {
   await act(async () => root.render(<ManagedByChips contextName="dev" managers={[]} />))
   expect(container.innerHTML).toBe('')

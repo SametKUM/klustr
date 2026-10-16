@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentType, type SVGAttributes } from 'react'
+import { useEffect, useRef, useState, type ComponentType, type SVGAttributes } from 'react'
 import { GitBranch } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, type ResourceManager } from '@/lib/api'
@@ -42,6 +42,14 @@ function ManagedByChip({ contextName, manager }: { contextName: string | null; m
   )
   const [pending, setPending] = useState(false)
   const requestRef = useRef(0)
+  // The chips unmount when the panel closes or moves to another resource; a
+  // watch still syncing must not then open the owner over that choice.
+  useEffect(
+    () => () => {
+      requestRef.current += 1
+    },
+    [],
+  )
   const Icon = TOOL_ICON[manager.tool] ?? GitBranch
   const elsewhere = manager.context && manager.context !== contextName ? ` in ${manager.context}` : ''
   const title = [

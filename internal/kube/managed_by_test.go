@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -11,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	metadatafake "k8s.io/client-go/metadata/fake"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var (
@@ -266,6 +269,37 @@ func TestResourceManagersArgoInAnotherContext(t *testing.T) {
 	}
 }
 
+// Two contexts can reach one cluster, say a namespace-scoped one that cannot
+// read Applications and an admin one: an in-cluster Application read through
+// the second still owns what the first shows.
+func TestResourceManagersArgoInClusterThroughAnotherContext(t *testing.T) {
+	m, _ := fakeCRDManager(t, managedByCRDs[1:], managedDeployment(t, "",
+		`argocd.argoproj.io/tracking-id: "shop-api:apps/Deployment:shop/api"`))
+	admin, _ := fakeCRDManager(t, managedByCRDs[:1],
+		argoApp(t, "argocd", "shop-api", "https://kubernetes.default.svc", true, "automated: {selfHeal: true}"))
+	m.watchers["admin"] = admin.watchers["ctx"]
+	config := clientcmdapi.Config{
+		Clusters: map[string]*clientcmdapi.Cluster{
+			"dev":       {Server: "https://dev.example.com"},
+			"dev-again": {Server: "https://DEV.example.com/"},
+		},
+		Contexts: map[string]*clientcmdapi.Context{
+			"ctx":   {Cluster: "dev"},
+			"admin": {Cluster: "dev-again"},
+		},
+	}
+	path := filepath.Join(t.TempDir(), "config")
+	if err := clientcmd.WriteToFile(config, path); err != nil {
+		t.Fatal(err)
+	}
+	m.rules = &clientcmd.ClientConfigLoadingRules{ExplicitPath: path}
+
+	got := resourceManagersFor(t, m)
+	if len(got) != 1 || got[0].Context != "admin" || !got[0].Resolved || !got[0].RevertsDrift {
+		t.Fatalf("managers = %+v, want shop-api in admin with self-heal", got)
+	}
+}
+
 func TestArgoOwnerScore(t *testing.T) {
 	target := managedTarget{group: "apps", kind: "Deployment", namespace: "shop", name: "api"}
 	cases := []struct {
@@ -273,13 +307,16 @@ func TestArgoOwnerScore(t *testing.T) {
 		server       string
 		lists        bool
 		sameContext  bool
+		appServer    string
 		targetServer string
 		score        int
 	}{
 		{name: "listed, destination matches", server: "https://dev.example.com/", lists: true, targetServer: "https://DEV.example.com", score: argoScoreConfirmed},
 		{name: "listed, other cluster", server: "https://prod.example.com", lists: true, targetServer: "https://dev.example.com", score: 0},
 		{name: "listed, kubeconfig server unknown", server: "https://dev.example.com", lists: true, score: argoScoreListed},
-		{name: "in-cluster from another context", server: "https://kubernetes.default.svc", lists: true, score: 0},
+		{name: "in-cluster from another context", server: "https://kubernetes.default.svc", lists: true, appServer: "https://devops.example.com", targetServer: "https://dev.example.com", score: 0},
+		{name: "in-cluster from another context, servers unknown", server: "https://kubernetes.default.svc", lists: true, score: 0},
+		{name: "in-cluster from another context on the same server", server: "https://kubernetes.default.svc", lists: true, appServer: "https://dev.example.com/", targetServer: "https://DEV.example.com", score: argoScoreConfirmed},
 		{name: "in-cluster, same context", server: "https://kubernetes.default.svc", lists: true, sameContext: true, score: argoScoreConfirmed},
 		{name: "not listed, same context", server: "https://kubernetes.default.svc", sameContext: true, score: argoScoreNameOnly},
 		{name: "not listed, other context", server: "https://dev.example.com", targetServer: "https://dev.example.com", score: 0},
@@ -287,11 +324,11 @@ func TestArgoOwnerScore(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			app := argoApp(t, "argocd", "shop-api", tc.server, tc.lists, "")
-			appContext := "devops"
+			clusters := argoClusters{appContext: "devops", appServer: tc.appServer, targetContext: "dev", targetServer: tc.targetServer}
 			if tc.sameContext {
-				appContext = "dev"
+				clusters.appContext = "dev"
 			}
-			if got := argoOwnerScore(app, target, tc.sameContext, true, appContext, "dev", tc.targetServer); got != tc.score {
+			if got := argoOwnerScore(app, target, true, clusters); got != tc.score {
 				t.Fatalf("score = %d, want %d", got, tc.score)
 			}
 		})
@@ -312,6 +349,7 @@ func TestResourceManagersFluxKustomization(t *testing.T) {
 	const labels = `kustomize.toolkit.fluxcd.io/name: apps, kustomize.toolkit.fluxcd.io/namespace: flux-system`
 	cases := []struct {
 		name          string
+		labels        string
 		annotations   string
 		kustomization *unstructured.Unstructured
 		reverts       bool
@@ -321,12 +359,22 @@ func TestResourceManagersFluxKustomization(t *testing.T) {
 		{name: "reconciling", kustomization: fluxKustomization(t, "interval: 10m"), reverts: true, reason: "it is reapplied every 10m"},
 		{name: "suspended", kustomization: fluxKustomization(t, "interval: 10m, suspend: true"), suspended: true},
 		{name: "reconcile disabled on the object", annotations: `kustomize.toolkit.fluxcd.io/reconcile: disabled`, kustomization: fluxKustomization(t, "interval: 10m")},
+		{name: "reconcile disabled by label", labels: `kustomize.toolkit.fluxcd.io/reconcile: Disabled`, kustomization: fluxKustomization(t, "interval: 10m")},
 		{name: "ssa IfNotPresent", annotations: `kustomize.toolkit.fluxcd.io/ssa: IfNotPresent`, kustomization: fluxKustomization(t, "interval: 10m")},
+		{name: "ssa ignore in lower case", annotations: `kustomize.toolkit.fluxcd.io/ssa: ignore`, kustomization: fluxKustomization(t, "interval: 10m")},
+		{name: "ssa set to another value", annotations: `kustomize.toolkit.fluxcd.io/ssa: Merge`, kustomization: fluxKustomization(t, "interval: 10m"), reverts: true, reason: "it is reapplied every 10m"},
+		// The chip's Suspend/Resume action reads the owner's state, which an
+		// opted-out object must still report.
+		{name: "opted out, kustomization suspended", annotations: `kustomize.toolkit.fluxcd.io/ssa: Ignore`, kustomization: fluxKustomization(t, "interval: 10m, suspend: true"), suspended: true},
 		{name: "kustomization unreadable", reverts: true, reason: "it is reapplied on every reconcile"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			objs := []runtime.Object{managedDeployment(t, labels, tc.annotations)}
+			objLabels := labels
+			if tc.labels != "" {
+				objLabels += ", " + tc.labels
+			}
+			objs := []runtime.Object{managedDeployment(t, objLabels, tc.annotations)}
 			if tc.kustomization != nil {
 				objs = append(objs, tc.kustomization)
 			}
@@ -378,6 +426,84 @@ spec:
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("managers = %+v\nwant %+v", got, want)
+	}
+}
+
+func TestResourceManagersFluxHelmReleaseDriftExclusions(t *testing.T) {
+	const owner = `helm.toolkit.fluxcd.io/name: api, helm.toolkit.fluxcd.io/namespace: flux-system`
+	cases := []struct {
+		name        string
+		labels      string
+		annotations string
+		ignore      string
+		reverts     bool
+	}{
+		{name: "drift detection on", reverts: true},
+		{name: "object opts out by annotation", annotations: `helm.toolkit.fluxcd.io/driftDetection: disabled`},
+		{name: "object opts out by label", labels: `helm.toolkit.fluxcd.io/driftDetection: Disabled`},
+		{name: "whole document ignored", ignore: `[{paths: [""], target: {kind: Deployment}}]`},
+		{name: "whole document ignored for every object", ignore: `[{paths: [""]}]`},
+		{name: "whole document ignored for another kind", ignore: `[{paths: [""], target: {kind: StatefulSet}}]`, reverts: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ignore := tc.ignore
+			if ignore == "" {
+				ignore = "[]"
+			}
+			release := mustUnstructured(t, `
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata: {name: api, namespace: flux-system}
+spec:
+  driftDetection: {mode: enabled, ignore: `+ignore+`}
+`)
+			objLabels := owner
+			if tc.labels != "" {
+				objLabels += ", " + tc.labels
+			}
+			m, _ := fakeCRDManager(t, managedByCRDs, managedDeployment(t, objLabels, tc.annotations), release)
+			got := resourceManagersFor(t, m)
+			if len(got) != 1 || got[0].Tool != "flux" || got[0].RevertsDrift != tc.reverts {
+				t.Fatalf("managers = %+v, want a HelmRelease that reverts drift: %v", got, tc.reverts)
+			}
+			if !tc.reverts && got[0].RevertReason != "" {
+				t.Fatalf("revert reason = %q without a revert", got[0].RevertReason)
+			}
+		})
+	}
+}
+
+func TestFluxSelectorMatches(t *testing.T) {
+	target := managedTarget{
+		group: "apps", version: "v1", kind: "Deployment", namespace: "shop", name: "api",
+		labels: map[string]string{"tier": "backend"},
+	}
+	cases := []struct {
+		name     string
+		selector map[string]any
+		want     bool
+	}{
+		{name: "empty", selector: map[string]any{}, want: true},
+		{name: "kind alternation", selector: map[string]any{"kind": "(Deployment|StatefulSet)"}, want: true},
+		{name: "name pattern", selector: map[string]any{"name": "ap.*"}, want: true},
+		{name: "anchored at both ends", selector: map[string]any{"name": "ap"}, want: false},
+		{name: "anchored alternation", selector: map[string]any{"kind": "Deploy|Stateful"}, want: false},
+		{name: "namespace pattern", selector: map[string]any{"namespace": "sh.p"}, want: true},
+		{name: "group", selector: map[string]any{"group": "apps"}, want: true},
+		{name: "other group", selector: map[string]any{"group": "batch"}, want: false},
+		{name: "version", selector: map[string]any{"version": "v1"}, want: true},
+		{name: "other version", selector: map[string]any{"version": "v1beta1"}, want: false},
+		{name: "invalid pattern", selector: map[string]any{"name": "("}, want: false},
+		{name: "label selector", selector: map[string]any{"kind": "Deployment", "labelSelector": "tier=backend"}, want: true},
+		{name: "other labels", selector: map[string]any{"labelSelector": "tier=frontend"}, want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := fluxSelectorMatches(tc.selector, target); got != tc.want {
+				t.Fatalf("match = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 
