@@ -13,11 +13,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// kedaScaledObjectGR is KEDA's ScaledObject CR. Klustr keeps the generic CRD
-// browse for KEDA, but additionally enriches HPA target labels with the real
-// trigger type / metadata — KEDA stamps a vanilla HPA whose metrics are all
-// of type `External` and named `s<N>-<trigger>-<shortkey>`, which without
-// this enrichment renders as a wall of identical "external" rows.
+// kedaScaledObjectGR is KEDA's ScaledObject CR. Besides its own view
+// (keda_resources.go), it enriches HPA target labels with the real trigger
+// type / metadata — KEDA stamps a vanilla HPA whose metrics are all of type
+// `External` and named `s<N>-<trigger>-<shortkey>`, which without this
+// enrichment renders as a wall of identical "external" rows.
 var kedaScaledObjectGR = schema.GroupResource{Group: "keda.sh", Resource: "scaledobjects"}
 
 const kedaScaledObjectLabel = "scaledobject.keda.sh/name"

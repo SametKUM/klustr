@@ -5677,6 +5677,458 @@ export namespace kube {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class KEDAAuthParameter {
+	    parameter: string;
+	    source: string;
+	    name: string;
+	    key: string;
+	    container: string;
+	    version: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDAAuthParameter(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.parameter = source["parameter"];
+	        this.source = source["source"];
+	        this.name = source["name"];
+	        this.key = source["key"];
+	        this.container = source["container"];
+	        this.version = source["version"];
+	    }
+	}
+	export class KEDAField {
+	    label: string;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDAField(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.label = source["label"];
+	        this.value = source["value"];
+	    }
+	}
+	export class KEDAAuthProvider {
+	    kind: string;
+	    fields: KEDAField[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDAAuthProvider(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.fields = this.convertValues(source["fields"], KEDAField);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KEDAContainer {
+	    name: string;
+	    image: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDAContainer(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.image = source["image"];
+	    }
+	}
+	
+	export class KEDAMetricHealth {
+	    metric: string;
+	    status: string;
+	    failures: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDAMetricHealth(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.metric = source["metric"];
+	        this.status = source["status"];
+	        this.failures = source["failures"];
+	    }
+	}
+	export class KEDATrigger {
+	    type: string;
+	    name: string;
+	    summary: string;
+	    metadata: Record<string, string>;
+	    metricType: string;
+	    useCachedMetrics: boolean;
+	    authKind: string;
+	    authName: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDATrigger(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.name = source["name"];
+	        this.summary = source["summary"];
+	        this.metadata = source["metadata"];
+	        this.metricType = source["metricType"];
+	        this.useCachedMetrics = source["useCachedMetrics"];
+	        this.authKind = source["authKind"];
+	        this.authName = source["authName"];
+	    }
+	}
+	export class KEDAScaledJobDetail {
+	    name: string;
+	    namespace: string;
+	    minReplicas: number;
+	    maxReplicas: number;
+	    scalingStrategy: string;
+	    triggerTypes: string;
+	    ready: string;
+	    active: string;
+	    status: string;
+	    paused: boolean;
+	    pausedReplicas: string;
+	    annotated: boolean;
+	    lastActiveTime: string;
+	    createdAt: string;
+	    pollingInterval: number;
+	    successfulJobsHistoryLimit: number;
+	    failedJobsHistoryLimit: number;
+	    rolloutStrategy: string;
+	    multipleScalers: string;
+	    envSourceContainer: string;
+	    parallelism: string;
+	    completions: string;
+	    backoffLimit: string;
+	    activeDeadlineSeconds: string;
+	    containers: KEDAContainer[];
+	    triggers: KEDATrigger[];
+	    conditions: ConditionDetail[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDAScaledJobDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.minReplicas = source["minReplicas"];
+	        this.maxReplicas = source["maxReplicas"];
+	        this.scalingStrategy = source["scalingStrategy"];
+	        this.triggerTypes = source["triggerTypes"];
+	        this.ready = source["ready"];
+	        this.active = source["active"];
+	        this.status = source["status"];
+	        this.paused = source["paused"];
+	        this.pausedReplicas = source["pausedReplicas"];
+	        this.annotated = source["annotated"];
+	        this.lastActiveTime = source["lastActiveTime"];
+	        this.createdAt = source["createdAt"];
+	        this.pollingInterval = source["pollingInterval"];
+	        this.successfulJobsHistoryLimit = source["successfulJobsHistoryLimit"];
+	        this.failedJobsHistoryLimit = source["failedJobsHistoryLimit"];
+	        this.rolloutStrategy = source["rolloutStrategy"];
+	        this.multipleScalers = source["multipleScalers"];
+	        this.envSourceContainer = source["envSourceContainer"];
+	        this.parallelism = source["parallelism"];
+	        this.completions = source["completions"];
+	        this.backoffLimit = source["backoffLimit"];
+	        this.activeDeadlineSeconds = source["activeDeadlineSeconds"];
+	        this.containers = this.convertValues(source["containers"], KEDAContainer);
+	        this.triggers = this.convertValues(source["triggers"], KEDATrigger);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KEDAScaledJobInfo {
+	    name: string;
+	    namespace: string;
+	    minReplicas: number;
+	    maxReplicas: number;
+	    scalingStrategy: string;
+	    triggerTypes: string;
+	    ready: string;
+	    active: string;
+	    status: string;
+	    paused: boolean;
+	    pausedReplicas: string;
+	    annotated: boolean;
+	    lastActiveTime: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDAScaledJobInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.minReplicas = source["minReplicas"];
+	        this.maxReplicas = source["maxReplicas"];
+	        this.scalingStrategy = source["scalingStrategy"];
+	        this.triggerTypes = source["triggerTypes"];
+	        this.ready = source["ready"];
+	        this.active = source["active"];
+	        this.status = source["status"];
+	        this.paused = source["paused"];
+	        this.pausedReplicas = source["pausedReplicas"];
+	        this.annotated = source["annotated"];
+	        this.lastActiveTime = source["lastActiveTime"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class KEDAScaledObjectDetail {
+	    name: string;
+	    namespace: string;
+	    targetAPIVersion: string;
+	    targetKind: string;
+	    targetName: string;
+	    minReplicas: number;
+	    maxReplicas: number;
+	    triggerTypes: string;
+	    ready: string;
+	    active: string;
+	    fallback: string;
+	    status: string;
+	    hpaName: string;
+	    paused: boolean;
+	    pausedReplicas: string;
+	    annotated: boolean;
+	    createdAt: string;
+	    envSourceContainer: string;
+	    pollingInterval: number;
+	    cooldownPeriod: number;
+	    initialCooldownPeriod: number;
+	    idleReplicas: string;
+	    fallbackReplicas: string;
+	    fallbackFailureThreshold: string;
+	    fallbackBehavior: string;
+	    restoreOriginalReplicas: boolean;
+	    originalReplicas: string;
+	    scalingFormula: string;
+	    scalingTarget: string;
+	    lastActiveTime: string;
+	    triggers: KEDATrigger[];
+	    health: KEDAMetricHealth[];
+	    conditions: ConditionDetail[];
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDAScaledObjectDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.targetAPIVersion = source["targetAPIVersion"];
+	        this.targetKind = source["targetKind"];
+	        this.targetName = source["targetName"];
+	        this.minReplicas = source["minReplicas"];
+	        this.maxReplicas = source["maxReplicas"];
+	        this.triggerTypes = source["triggerTypes"];
+	        this.ready = source["ready"];
+	        this.active = source["active"];
+	        this.fallback = source["fallback"];
+	        this.status = source["status"];
+	        this.hpaName = source["hpaName"];
+	        this.paused = source["paused"];
+	        this.pausedReplicas = source["pausedReplicas"];
+	        this.annotated = source["annotated"];
+	        this.createdAt = source["createdAt"];
+	        this.envSourceContainer = source["envSourceContainer"];
+	        this.pollingInterval = source["pollingInterval"];
+	        this.cooldownPeriod = source["cooldownPeriod"];
+	        this.initialCooldownPeriod = source["initialCooldownPeriod"];
+	        this.idleReplicas = source["idleReplicas"];
+	        this.fallbackReplicas = source["fallbackReplicas"];
+	        this.fallbackFailureThreshold = source["fallbackFailureThreshold"];
+	        this.fallbackBehavior = source["fallbackBehavior"];
+	        this.restoreOriginalReplicas = source["restoreOriginalReplicas"];
+	        this.originalReplicas = source["originalReplicas"];
+	        this.scalingFormula = source["scalingFormula"];
+	        this.scalingTarget = source["scalingTarget"];
+	        this.lastActiveTime = source["lastActiveTime"];
+	        this.triggers = this.convertValues(source["triggers"], KEDATrigger);
+	        this.health = this.convertValues(source["health"], KEDAMetricHealth);
+	        this.conditions = this.convertValues(source["conditions"], ConditionDetail);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KEDAScaledObjectInfo {
+	    name: string;
+	    namespace: string;
+	    targetAPIVersion: string;
+	    targetKind: string;
+	    targetName: string;
+	    minReplicas: number;
+	    maxReplicas: number;
+	    triggerTypes: string;
+	    ready: string;
+	    active: string;
+	    fallback: string;
+	    status: string;
+	    hpaName: string;
+	    paused: boolean;
+	    pausedReplicas: string;
+	    annotated: boolean;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDAScaledObjectInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.targetAPIVersion = source["targetAPIVersion"];
+	        this.targetKind = source["targetKind"];
+	        this.targetName = source["targetName"];
+	        this.minReplicas = source["minReplicas"];
+	        this.maxReplicas = source["maxReplicas"];
+	        this.triggerTypes = source["triggerTypes"];
+	        this.ready = source["ready"];
+	        this.active = source["active"];
+	        this.fallback = source["fallback"];
+	        this.status = source["status"];
+	        this.hpaName = source["hpaName"];
+	        this.paused = source["paused"];
+	        this.pausedReplicas = source["pausedReplicas"];
+	        this.annotated = source["annotated"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	export class KEDATriggerAuthenticationDetail {
+	    name: string;
+	    namespace: string;
+	    sources: string[];
+	    scaledObjects: string[];
+	    scaledJobs: string[];
+	    createdAt: string;
+	    parameters: KEDAAuthParameter[];
+	    providers: KEDAAuthProvider[];
+	    filePath: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDATriggerAuthenticationDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.sources = source["sources"];
+	        this.scaledObjects = source["scaledObjects"];
+	        this.scaledJobs = source["scaledJobs"];
+	        this.createdAt = source["createdAt"];
+	        this.parameters = this.convertValues(source["parameters"], KEDAAuthParameter);
+	        this.providers = this.convertValues(source["providers"], KEDAAuthProvider);
+	        this.filePath = source["filePath"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class KEDATriggerAuthenticationInfo {
+	    name: string;
+	    namespace: string;
+	    sources: string[];
+	    scaledObjects: string[];
+	    scaledJobs: string[];
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new KEDATriggerAuthenticationInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.sources = source["sources"];
+	        this.scaledObjects = source["scaledObjects"];
+	        this.scaledJobs = source["scaledJobs"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class KarpenterResolvedRequirement {
 	    key: string;
 	    operator: string;

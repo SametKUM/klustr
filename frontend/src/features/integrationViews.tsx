@@ -27,6 +27,7 @@ import { FluxReceiversView } from '@/features/flux/FluxReceiversView'
 import { IstioVirtualServicesView } from '@/features/istio/IstioVirtualServicesView'
 import { IstioDestinationRulesView } from '@/features/istio/IstioDestinationRulesView'
 import { IstioPeerAuthenticationsView } from '@/features/istio/IstioPeerAuthenticationsView'
+import { KEDAScaledJobsView, KEDAScaledObjectsView, KEDATriggerAuthenticationsView } from '@/features/keda/KEDAViews'
 import { KarpenterNodePoolsView } from '@/features/karpenter-nodepools/KarpenterNodePoolsView'
 import { KarpenterNodeClaimsView } from '@/features/karpenter-nodeclaims/KarpenterNodeClaimsView'
 import { KarpenterEC2NodeClassesView } from '@/features/karpenter-nodeclasses/KarpenterEC2NodeClassesView'
@@ -72,6 +73,10 @@ export const INTEGRATION_LIST_VIEWS: Record<IntegrationView, () => ReactNode> = 
   karpenternodepools: () => <KarpenterNodePoolsView />,
   karpenternodeclaims: () => <KarpenterNodeClaimsView />,
   karpenterec2nodeclasses: () => <KarpenterEC2NodeClassesView />,
+  kedascaledobjects: () => <KEDAScaledObjectsView />,
+  kedascaledjobs: () => <KEDAScaledJobsView />,
+  kedatriggerauthentications: () => <KEDATriggerAuthenticationsView cluster={false} />,
+  kedaclustertriggerauthentications: () => <KEDATriggerAuthenticationsView cluster />,
   istiovirtualservices: () => <IstioVirtualServicesView />,
   istiodestinationrules: () => <IstioDestinationRulesView />,
   istiopeerauthentications: () => <IstioPeerAuthenticationsView />,

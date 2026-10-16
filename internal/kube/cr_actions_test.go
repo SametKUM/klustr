@@ -51,6 +51,15 @@ var integrationActions = []struct {
 		_, err := m.RerunTektonPipelineRun(ctx, "ctx", "apps", "one")
 		return err
 	}},
+	{"keda pause scaledobject", kedaScaledObjectGR, "ScaledObject", func(ctx context.Context, m *ClientManager) error {
+		return m.PauseKEDAScaledObject(ctx, "ctx", "apps", "one", 2)
+	}},
+	{"keda resume scaledobject", kedaScaledObjectGR, "ScaledObject", func(ctx context.Context, m *ClientManager) error {
+		return m.ResumeKEDAScaledObject(ctx, "ctx", "apps", "one")
+	}},
+	{"keda pause scaledjob", kedaScaledJobGR, "ScaledJob", func(ctx context.Context, m *ClientManager) error {
+		return m.SetKEDAScaledJobPaused(ctx, "ctx", "apps", "one", true)
+	}},
 }
 
 func TestIntegrationActions(t *testing.T) {

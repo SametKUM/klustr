@@ -294,6 +294,22 @@ export function GetJob(arg1, arg2, arg3) {
   return window['go']['app']['App']['GetJob'](arg1, arg2, arg3);
 }
 
+export function GetKEDAClusterTriggerAuthentication(arg1, arg2) {
+  return window['go']['app']['App']['GetKEDAClusterTriggerAuthentication'](arg1, arg2);
+}
+
+export function GetKEDAScaledJob(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKEDAScaledJob'](arg1, arg2, arg3);
+}
+
+export function GetKEDAScaledObject(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKEDAScaledObject'](arg1, arg2, arg3);
+}
+
+export function GetKEDATriggerAuthentication(arg1, arg2, arg3) {
+  return window['go']['app']['App']['GetKEDATriggerAuthentication'](arg1, arg2, arg3);
+}
+
 export function GetKarpenterEC2NodeClass(arg1, arg2) {
   return window['go']['app']['App']['GetKarpenterEC2NodeClass'](arg1, arg2);
 }
@@ -786,6 +802,26 @@ export function ListJobs(arg1, arg2) {
   return window['go']['app']['App']['ListJobs'](arg1, arg2);
 }
 
+export function ListKEDAClusterTriggerAuthentications(arg1) {
+  return window['go']['app']['App']['ListKEDAClusterTriggerAuthentications'](arg1);
+}
+
+export function ListKEDAScaledJobJobs(arg1, arg2, arg3) {
+  return window['go']['app']['App']['ListKEDAScaledJobJobs'](arg1, arg2, arg3);
+}
+
+export function ListKEDAScaledJobs(arg1, arg2) {
+  return window['go']['app']['App']['ListKEDAScaledJobs'](arg1, arg2);
+}
+
+export function ListKEDAScaledObjects(arg1, arg2) {
+  return window['go']['app']['App']['ListKEDAScaledObjects'](arg1, arg2);
+}
+
+export function ListKEDATriggerAuthentications(arg1, arg2) {
+  return window['go']['app']['App']['ListKEDATriggerAuthentications'](arg1, arg2);
+}
+
 export function ListKarpenterEC2NodeClasses(arg1) {
   return window['go']['app']['App']['ListKarpenterEC2NodeClasses'](arg1);
 }
@@ -1038,6 +1074,10 @@ export function PatchHPAReplicas(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['PatchHPAReplicas'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function PauseKEDAScaledObject(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['PauseKEDAScaledObject'](arg1, arg2, arg3, arg4);
+}
+
 export function PingContext(arg1) {
   return window['go']['app']['App']['PingContext'](arg1);
 }
@@ -1098,6 +1138,10 @@ export function RestartWorkload(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['RestartWorkload'](arg1, arg2, arg3, arg4);
 }
 
+export function ResumeKEDAScaledObject(arg1, arg2, arg3) {
+  return window['go']['app']['App']['ResumeKEDAScaledObject'](arg1, arg2, arg3);
+}
+
 export function RevealSecretValue(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['RevealSecretValue'](arg1, arg2, arg3, arg4);
 }
@@ -1152,6 +1196,10 @@ export function SetCredentialMapping(arg1, arg2, arg3) {
 
 export function SetFluxResourceSuspended(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['SetFluxResourceSuspended'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function SetKEDAScaledJobPaused(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['SetKEDAScaledJobPaused'](arg1, arg2, arg3, arg4);
 }
 
 export function SetReadOnly(arg1, arg2) {

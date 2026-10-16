@@ -199,6 +199,32 @@ var integrationCatalog = append([]integrationResource{
 			return m.GetKarpenterEC2NodeClass(ctx, "ctx", name)
 		})},
 
+	// KEDA
+	{view: "kedascaledobjects", gr: kedaScaledObjectGR, kind: "ScaledObject", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []KEDAScaledObjectInfo { return m.ListKEDAScaledObjects("ctx", ns) }),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*KEDAScaledObjectDetail, error) {
+			return m.GetKEDAScaledObject(ctx, "ctx", ns, name)
+		})},
+	{view: "kedascaledjobs", gr: kedaScaledJobGR, kind: "ScaledJob", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []KEDAScaledJobInfo { return m.ListKEDAScaledJobs("ctx", ns) }),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*KEDAScaledJobDetail, error) {
+			return m.GetKEDAScaledJob(ctx, "ctx", ns, name)
+		})},
+	{view: "kedatriggerauthentications", gr: kedaTriggerAuthenticationGR, kind: "TriggerAuthentication", namespaced: true,
+		list: listOf(func(m *ClientManager, ns string) []KEDATriggerAuthenticationInfo {
+			return m.ListKEDATriggerAuthentications("ctx", ns)
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, ns, name string) (*KEDATriggerAuthenticationDetail, error) {
+			return m.GetKEDATriggerAuthentication(ctx, "ctx", ns, name)
+		})},
+	{view: "kedaclustertriggerauthentications", gr: kedaClusterTriggerAuthenticationGR, kind: "ClusterTriggerAuthentication",
+		list: listOf(func(m *ClientManager, _ string) []KEDATriggerAuthenticationInfo {
+			return m.ListKEDAClusterTriggerAuthentications("ctx")
+		}),
+		get: getOf(func(ctx context.Context, m *ClientManager, _, name string) (*KEDATriggerAuthenticationDetail, error) {
+			return m.GetKEDAClusterTriggerAuthentication(ctx, "ctx", name)
+		})},
+
 	// Istio
 	{view: "istiovirtualservices", gr: istioVirtualServiceGR, kind: "VirtualService", namespaced: true,
 		list: listOf(func(m *ClientManager, ns string) []IstioVirtualServiceInfo {

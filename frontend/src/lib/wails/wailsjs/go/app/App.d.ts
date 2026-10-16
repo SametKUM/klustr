@@ -149,6 +149,14 @@ export function GetIstioVirtualService(arg1:string,arg2:string,arg3:string):Prom
 
 export function GetJob(arg1:string,arg2:string,arg3:string):Promise<kube.JobDetail>;
 
+export function GetKEDAClusterTriggerAuthentication(arg1:string,arg2:string):Promise<kube.KEDATriggerAuthenticationDetail>;
+
+export function GetKEDAScaledJob(arg1:string,arg2:string,arg3:string):Promise<kube.KEDAScaledJobDetail>;
+
+export function GetKEDAScaledObject(arg1:string,arg2:string,arg3:string):Promise<kube.KEDAScaledObjectDetail>;
+
+export function GetKEDATriggerAuthentication(arg1:string,arg2:string,arg3:string):Promise<kube.KEDATriggerAuthenticationDetail>;
+
 export function GetKarpenterEC2NodeClass(arg1:string,arg2:string):Promise<kube.KarpenterEC2NodeClassDetail>;
 
 export function GetKyvernoClusterPolicy(arg1:string,arg2:string):Promise<kube.KyvernoPolicyDetail>;
@@ -395,6 +403,16 @@ export function ListIstioVirtualServices(arg1:string,arg2:string):Promise<Array<
 
 export function ListJobs(arg1:string,arg2:string):Promise<Array<kube.JobInfo>>;
 
+export function ListKEDAClusterTriggerAuthentications(arg1:string):Promise<Array<kube.KEDATriggerAuthenticationInfo>>;
+
+export function ListKEDAScaledJobJobs(arg1:string,arg2:string,arg3:string):Promise<Array<kube.JobInfo>>;
+
+export function ListKEDAScaledJobs(arg1:string,arg2:string):Promise<Array<kube.KEDAScaledJobInfo>>;
+
+export function ListKEDAScaledObjects(arg1:string,arg2:string):Promise<Array<kube.KEDAScaledObjectInfo>>;
+
+export function ListKEDATriggerAuthentications(arg1:string,arg2:string):Promise<Array<kube.KEDATriggerAuthenticationInfo>>;
+
 export function ListKarpenterEC2NodeClasses(arg1:string):Promise<Array<kube.KarpenterEC2NodeClassInfo>>;
 
 export function ListKarpenterNodeClaims(arg1:string):Promise<Array<kube.KarpenterNodeClaimInfo>>;
@@ -521,6 +539,8 @@ export function PatchDeploymentPaused(arg1:string,arg2:string,arg3:string,arg4:b
 
 export function PatchHPAReplicas(arg1:string,arg2:string,arg3:string,arg4:number,arg5:number):Promise<void>;
 
+export function PauseKEDAScaledObject(arg1:string,arg2:string,arg3:string,arg4:number):Promise<void>;
+
 export function PingContext(arg1:string):Promise<kube.ServerVersion>;
 
 export function PodLogTargets(arg1:string,arg2:string,arg3:Record<string, string>):Promise<Array<kube.PodLogTarget>>;
@@ -551,6 +571,8 @@ export function ResizePodResources(arg1:string,arg2:string,arg3:string,arg4:stri
 
 export function RestartWorkload(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
+export function ResumeKEDAScaledObject(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function RevealSecretValue(arg1:string,arg2:string,arg3:string,arg4:string):Promise<kube.SecretValueResult>;
 
 export function RollbackArgoApplication(arg1:string,arg2:string,arg3:string,arg4:number,arg5:boolean):Promise<void>;
@@ -578,6 +600,8 @@ export function SetArgoApplicationAutomation(arg1:string,arg2:string,arg3:string
 export function SetCredentialMapping(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SetFluxResourceSuspended(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean):Promise<void>;
+
+export function SetKEDAScaledJobPaused(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<void>;
 
 export function SetReadOnly(arg1:string,arg2:boolean):Promise<void>;
 

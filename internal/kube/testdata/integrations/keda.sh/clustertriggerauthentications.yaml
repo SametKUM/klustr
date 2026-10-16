@@ -1,0 +1,21 @@
+apiVersion: keda.sh/v1alpha1
+kind: ClusterTriggerAuthentication
+metadata:
+  name: rabbitmq-conn
+  creationTimestamp: "2026-09-22T14:29:51Z"
+  finalizers:
+    - finalizer.keda.sh
+spec:
+  hashiCorpVault:
+    address: https://vault.example.com:8200
+    authentication: kubernetes
+    role: keda
+    mount: kubernetes
+    credential:
+      serviceAccountName: keda-operator
+    secrets:
+      - parameter: host
+        path: secret/data/rabbitmq
+        key: amqp-uri
+status:
+  scaledjobs: invoice-renderer

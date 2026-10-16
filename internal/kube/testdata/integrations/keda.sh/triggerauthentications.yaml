@@ -1,0 +1,18 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: aws-irsa
+  namespace: shop
+  creationTimestamp: "2026-09-20T10:01:40Z"
+  finalizers:
+    - finalizer.keda.sh
+spec:
+  podIdentity:
+    provider: aws
+    roleArn: arn:aws:iam::123456789012:role/keda-orders-sqs
+  secretTargetRef:
+    - parameter: awsSessionToken
+      name: orders-sqs
+      key: session-token
+status:
+  scaledobjects: orders-worker

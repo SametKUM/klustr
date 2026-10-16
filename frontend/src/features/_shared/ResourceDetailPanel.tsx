@@ -102,6 +102,9 @@ import { integrationFor } from '@/lib/integrations'
 import { TektonPipelineRunsTab } from '@/features/tekton/TektonPipelineRunsTab'
 import { TektonRunHeaderActions } from '@/features/tekton/TektonRunHeaderActions'
 import { tektonKindOf } from '@/features/tekton/tektonKinds'
+import { KEDAPauseButton } from '@/features/keda/KEDAPauseButton'
+import { KEDAScaledJobJobsTab } from '@/features/keda/KEDAScaledJobJobsTab'
+import { kedaKindOf } from '@/features/keda/kedaKinds'
 import { KyvernoPolicyViolationsTab } from '@/features/kyverno/KyvernoPolicyViolationsTab'
 import { PolicyTabLabel, ResourcePolicyTab } from '@/features/kyverno/ResourcePolicyTab'
 import { useResourcePolicyReport } from '@/features/kyverno/useResourcePolicyReport'
@@ -276,6 +279,14 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
               {!readOnly && isCertManagerCertificate(resource) && (
                 <RenewCertificateButton
                   contextName={contextName}
+                  namespace={resource.namespace}
+                  name={resource.name}
+                />
+              )}
+              {!readOnly && (kedaKindOf(resource) === 'ScaledObject' || kedaKindOf(resource) === 'ScaledJob') && (
+                <KEDAPauseButton
+                  contextName={contextName}
+                  kind={resource.kind as 'ScaledObject' | 'ScaledJob'}
                   namespace={resource.namespace}
                   name={resource.name}
                 />
@@ -479,6 +490,8 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
   const isTektonRun = tektonKind === 'PipelineRun' || tektonKind === 'TaskRun'
   const hasTektonLogs = tektonKind === 'TaskRun'
   const hasTektonRuns = tektonKind === 'Pipeline'
+  const kedaKind = kedaKindOf(resource)
+  const hasKEDAJobs = kedaKind === 'ScaledJob'
   const kyvernoKind = kyvernoKindOf(resource)
   const isClassicKyvernoPolicy = kyvernoKind === 'ClusterPolicy' || kyvernoKind === 'Policy'
   const isKyvernoPolicy =
@@ -492,7 +505,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
   const overview = customResourceOverview(contextName, resource)
   const hasOverview = overview !== null
   // Kyverno posts PolicyViolation events on the classic policy objects.
-  const hasEvents = isFlux || isCertManager || isTektonRun || isClassicKyvernoPolicy
+  const hasEvents = isFlux || isCertManager || isTektonRun || isClassicKyvernoPolicy || kedaKind !== null
   const initialTab = isArgoApp
     ? 'resources'
     : hasKarpenterNodes
@@ -510,6 +523,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
   if (isCertManagerOrder) allowedTabs.push('challenges')
   if (hasTektonLogs) allowedTabs.push('logs')
   if (hasTektonRuns) allowedTabs.push('runs')
+  if (hasKEDAJobs) allowedTabs.push('jobs')
   if (hasViolations) allowedTabs.push('violations')
   if (hasEvents) allowedTabs.push('events')
   allowedTabs.push('yaml')
@@ -536,6 +550,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
         {isCertManagerOrder && <TabsTrigger value="challenges">Challenges</TabsTrigger>}
         {hasTektonLogs && <TabsTrigger value="logs">Logs</TabsTrigger>}
         {hasTektonRuns && <TabsTrigger value="runs">Runs</TabsTrigger>}
+        {hasKEDAJobs && <TabsTrigger value="jobs">Jobs</TabsTrigger>}
         {hasViolations && <TabsTrigger value="violations">Violations</TabsTrigger>}
         {hasEvents && <TabsTrigger value="events">Events</TabsTrigger>}
         <TabsTrigger value="yaml">YAML</TabsTrigger>
@@ -665,6 +680,11 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
             namespace={resource.namespace}
             pipeline={resource.name}
           />
+        </TabsContent>
+      )}
+      {hasKEDAJobs && (
+        <TabsContent value="jobs" className="flex min-h-0 flex-1 flex-col p-0">
+          <KEDAScaledJobJobsTab contextName={contextName} namespace={resource.namespace} name={resource.name} />
         </TabsContent>
       )}
       {hasViolations && (

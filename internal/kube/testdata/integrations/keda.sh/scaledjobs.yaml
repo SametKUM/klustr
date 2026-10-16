@@ -1,0 +1,54 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: invoice-renderer
+  namespace: shop
+  creationTimestamp: "2026-09-22T14:30:05Z"
+  finalizers:
+    - finalizer.keda.sh
+spec:
+  jobTargetRef:
+    parallelism: 1
+    completions: 1
+    backoffLimit: 2
+    activeDeadlineSeconds: 900
+    template:
+      spec:
+        restartPolicy: Never
+        containers:
+          - name: renderer
+            image: registry.example.com/shop/invoice-renderer:1.8.2
+  pollingInterval: 10
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  maxReplicaCount: 30
+  rollout:
+    strategy: gradual
+  scalingStrategy:
+    strategy: accurate
+  triggers:
+    - type: rabbitmq
+      metadata:
+        queueName: invoices
+        mode: QueueLength
+        value: "5"
+      authenticationRef:
+        name: rabbitmq-conn
+        kind: ClusterTriggerAuthentication
+status:
+  lastActiveTime: "2026-10-16T09:38:12Z"
+  triggersTypes: rabbitmq
+  authenticationsTypes: rabbitmq-conn
+  conditions:
+    - type: Ready
+      status: "True"
+      reason: ScaledJobReady
+      message: ScaledJob is defined correctly and is ready to scaling
+    - type: Active
+      status: "False"
+      reason: ScalerNotActive
+      message: Scaling is not performed because triggers are not active
+    - type: Paused
+      status: "False"
+      reason: ScaledJobUnpaused
+      message: ScaledJob is unpaused

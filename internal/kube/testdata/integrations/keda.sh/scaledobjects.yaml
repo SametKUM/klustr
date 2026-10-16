@@ -1,0 +1,79 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: orders-worker
+  namespace: shop
+  creationTimestamp: "2026-09-20T10:02:11Z"
+  finalizers:
+    - finalizer.keda.sh
+  labels:
+    scaledobject.keda.sh/name: orders-worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: orders-worker
+  pollingInterval: 15
+  cooldownPeriod: 120
+  minReplicaCount: 1
+  maxReplicaCount: 20
+  fallback:
+    failureThreshold: 3
+    replicas: 4
+  advanced:
+    restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+  triggers:
+    - type: aws-sqs-queue
+      name: orders
+      metadata:
+        queueURL: https://sqs.eu-central-1.amazonaws.com/123456789012/orders
+        queueLength: "50"
+        awsRegion: eu-central-1
+      authenticationRef:
+        name: aws-irsa
+    - type: cron
+      metadata:
+        timezone: Europe/Istanbul
+        start: 0 8 * * 1-5
+        end: 0 20 * * 1-5
+        desiredReplicas: "3"
+status:
+  scaleTargetKind: apps/v1.Deployment
+  scaleTargetGVKR:
+    group: apps
+    kind: Deployment
+    resource: deployments
+    version: v1
+  originalReplicaCount: 2
+  lastActiveTime: "2026-10-16T09:41:00Z"
+  hpaName: keda-hpa-orders-worker
+  externalMetricNames:
+    - s0-aws-sqs-queue-orders
+    - s1-cron-Europe-Istanbul-08xx1-5-020xx1-5
+  triggersTypes: aws-sqs-queue,cron
+  authenticationsTypes: aws-irsa
+  health:
+    s0-aws-sqs-queue-orders:
+      numberOfFailures: 0
+      status: Happy
+  conditions:
+    - type: Ready
+      status: "True"
+      reason: ScaledObjectReady
+      message: ScaledObject is defined correctly and is ready for scaling
+    - type: Active
+      status: "True"
+      reason: ScalerActive
+      message: Scaling is performed because triggers are active
+    - type: Fallback
+      status: "False"
+      reason: NoFallbackFound
+      message: No fallbacks are active on this scaled object
+    - type: Paused
+      status: "False"
+      reason: ScaledObjectUnpaused
+      message: pause annotation removed for ScaledObject

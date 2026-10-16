@@ -49,6 +49,7 @@ import {
   Ruler,
   ScanSearch,
   Scale,
+  Scaling,
   ScrollText,
   Server,
   Settings2,
@@ -271,6 +272,19 @@ export const KARPENTER_GROUP: ResourceGroup = {
   ],
 }
 
+// KEDA's autoscalers and the authentications their triggers use. Each item
+// shows only where an active context serves its CRD.
+export const KEDA_GROUP_NAV: ResourceGroup = {
+  label: 'KEDA',
+  icon: Scaling,
+  items: [
+    { label: 'ScaledObjects', view: 'kedascaledobjects', icon: Scaling },
+    { label: 'ScaledJobs', view: 'kedascaledjobs', icon: Briefcase },
+    { label: 'TriggerAuthentications', view: 'kedatriggerauthentications', icon: KeyRound },
+    { label: 'ClusterTriggerAuthentications', view: 'kedaclustertriggerauthentications', icon: KeyRound },
+  ],
+}
+
 // Flux CD CRs are watched via the dynamic CR informer (same path Argo CD
 // uses). The group is rendered conditionally when the
 // kustomize.toolkit.fluxcd.io CRDs are present in App.tsx.
@@ -371,6 +385,7 @@ export const ALL_SIDEBAR_GROUPS: readonly ResourceGroup[] = [
   ARGO_GROUP,
   GATEWAY_GROUP,
   KARPENTER_GROUP,
+  KEDA_GROUP_NAV,
   FLUX_GROUP,
   TEKTON_GROUP_NAV,
   ISTIO_GROUP,

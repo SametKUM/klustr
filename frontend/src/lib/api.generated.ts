@@ -182,6 +182,18 @@ export type IstioVirtualServiceDetail = kube.IstioVirtualServiceDetail
 export type IstioVirtualServiceInfo = kube.IstioVirtualServiceInfo
 export type JobDetail = kube.JobDetail
 export type JobInfo = kube.JobInfo
+export type KEDAAuthParameter = kube.KEDAAuthParameter
+export type KEDAField = kube.KEDAField
+export type KEDAAuthProvider = kube.KEDAAuthProvider
+export type KEDAContainer = kube.KEDAContainer
+export type KEDAMetricHealth = kube.KEDAMetricHealth
+export type KEDATrigger = kube.KEDATrigger
+export type KEDAScaledJobDetail = kube.KEDAScaledJobDetail
+export type KEDAScaledJobInfo = kube.KEDAScaledJobInfo
+export type KEDAScaledObjectDetail = kube.KEDAScaledObjectDetail
+export type KEDAScaledObjectInfo = kube.KEDAScaledObjectInfo
+export type KEDATriggerAuthenticationDetail = kube.KEDATriggerAuthenticationDetail
+export type KEDATriggerAuthenticationInfo = kube.KEDATriggerAuthenticationInfo
 export type KarpenterResolvedRequirement = kube.KarpenterResolvedRequirement
 export type KarpenterResolvedResource = kube.KarpenterResolvedResource
 export type KarpenterEC2NodeClassDetail = kube.KarpenterEC2NodeClassDetail
@@ -391,6 +403,10 @@ export const generatedApi = {
   getIstioPeerAuthentication: bindings.GetIstioPeerAuthentication,
   getIstioVirtualService: bindings.GetIstioVirtualService,
   getJob: bindings.GetJob,
+  getKEDAClusterTriggerAuthentication: bindings.GetKEDAClusterTriggerAuthentication,
+  getKEDAScaledJob: bindings.GetKEDAScaledJob,
+  getKEDAScaledObject: bindings.GetKEDAScaledObject,
+  getKEDATriggerAuthentication: bindings.GetKEDATriggerAuthentication,
   getKarpenterEC2NodeClass: bindings.GetKarpenterEC2NodeClass,
   getKyvernoClusterPolicy: bindings.GetKyvernoClusterPolicy,
   getKyvernoNamespacedValidatingPolicy: bindings.GetKyvernoNamespacedValidatingPolicy,
@@ -514,6 +530,11 @@ export const generatedApi = {
   listIstioPeerAuthentications: bindings.ListIstioPeerAuthentications,
   listIstioVirtualServices: bindings.ListIstioVirtualServices,
   listJobs: bindings.ListJobs,
+  listKEDAClusterTriggerAuthentications: bindings.ListKEDAClusterTriggerAuthentications,
+  listKEDAScaledJobJobs: bindings.ListKEDAScaledJobJobs,
+  listKEDAScaledJobs: bindings.ListKEDAScaledJobs,
+  listKEDAScaledObjects: bindings.ListKEDAScaledObjects,
+  listKEDATriggerAuthentications: bindings.ListKEDATriggerAuthentications,
   listKarpenterEC2NodeClasses: bindings.ListKarpenterEC2NodeClasses,
   listKarpenterNodeClaims: bindings.ListKarpenterNodeClaims,
   listKarpenterNodePools: bindings.ListKarpenterNodePools,
@@ -577,6 +598,7 @@ export const generatedApi = {
   openPodExecInSystemTerminal: bindings.OpenPodExecInSystemTerminal,
   patchDeploymentPaused: bindings.PatchDeploymentPaused,
   patchHPAReplicas: bindings.PatchHPAReplicas,
+  pauseKEDAScaledObject: bindings.PauseKEDAScaledObject,
   pingContext: bindings.PingContext,
   podLogTargets: bindings.PodLogTargets,
   podsForOwner: bindings.PodsForOwner,
@@ -592,6 +614,7 @@ export const generatedApi = {
   resizeLocalTerminal: bindings.ResizeLocalTerminal,
   resizePodResources: bindings.ResizePodResources,
   restartWorkload: bindings.RestartWorkload,
+  resumeKEDAScaledObject: bindings.ResumeKEDAScaledObject,
   revealSecretValue: bindings.RevealSecretValue,
   rollbackArgoApplication: bindings.RollbackArgoApplication,
   rollbackDaemonSet: bindings.RollbackDaemonSet,
@@ -606,6 +629,7 @@ export const generatedApi = {
   setArgoApplicationAutomation: bindings.SetArgoApplicationAutomation,
   setCredentialMapping: bindings.SetCredentialMapping,
   setFluxResourceSuspended: bindings.SetFluxResourceSuspended,
+  setKEDAScaledJobPaused: bindings.SetKEDAScaledJobPaused,
   setReadOnly: bindings.SetReadOnly,
   startExec: bindings.StartExec,
   startNodeShell: bindings.StartNodeShell,

@@ -27,6 +27,11 @@ import { IstioVirtualServiceDetailBody } from '@/features/istio/IstioVirtualServ
 import { IstioDestinationRuleDetailBody } from '@/features/istio/IstioDestinationRuleDetailBody'
 import { IstioPeerAuthenticationDetailBody } from '@/features/istio/IstioPeerAuthenticationDetailBody'
 import { KarpenterEC2NodeClassDetailBody } from '@/features/karpenter-nodeclasses/KarpenterEC2NodeClassDetailBody'
+import {
+  KEDAScaledJobDetailBody,
+  KEDAScaledObjectDetailBody,
+  KEDATriggerAuthenticationDetailBody,
+} from '@/features/keda/KEDADetailBodies'
 import { KyvernoPolicyDetailBody } from '@/features/kyverno/KyvernoPolicyDetailBody'
 import { KyvernoValidatingPolicyDetailBody } from '@/features/kyverno/KyvernoValidatingPolicyDetailBody'
 import { KyvernoPolicyExceptionDetailBody } from '@/features/kyverno/KyvernoPolicyExceptionDetailBody'
@@ -81,6 +86,10 @@ export const INTEGRATION_DETAIL_BODIES: Record<IntegrationView, DetailBody | nul
   karpenternodepools: null,
   karpenternodeclaims: null,
   karpenterec2nodeclasses: (p) => <KarpenterEC2NodeClassDetailBody contextName={p.contextName} name={p.name} />,
+  kedascaledobjects: (p) => <KEDAScaledObjectDetailBody {...p} />,
+  kedascaledjobs: (p) => <KEDAScaledJobDetailBody {...p} />,
+  kedatriggerauthentications: (p) => <KEDATriggerAuthenticationDetailBody {...p} cluster={false} />,
+  kedaclustertriggerauthentications: (p) => <KEDATriggerAuthenticationDetailBody {...p} cluster />,
   istiovirtualservices: (p) => <IstioVirtualServiceDetailBody {...p} />,
   istiodestinationrules: (p) => <IstioDestinationRuleDetailBody {...p} />,
   istiopeerauthentications: (p) => <IstioPeerAuthenticationDetailBody {...p} />,
