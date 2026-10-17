@@ -68,7 +68,19 @@ import {
   Workflow,
   Zap,
 } from 'lucide-react'
-import { Cilium, Karpenter, Keda, Kyverno, SiArgo, SiHelm, SiIstio, SiTekton } from './brandIcons'
+import {
+  CertManager,
+  Cilium,
+  Flux,
+  GatewayApi,
+  Karpenter,
+  Keda,
+  Kyverno,
+  SiArgo,
+  SiHelm,
+  SiIstio,
+  SiTekton,
+} from './brandIcons'
 
 import type { ResourceKind, ResourceView } from '@/store/ui'
 import { CILIUM_RESOURCES, type CiliumView } from '@/features/cilium/ciliumKinds'
@@ -244,7 +256,7 @@ export const ARGO_GROUP: ResourceGroup = {
 
 export const GATEWAY_GROUP: ResourceGroup = {
   label: 'Gateway API',
-  icon: Waypoints,
+  icon: GatewayApi,
   items: [
     { label: 'Gateways', view: 'gateways', kind: 'Gateway', icon: DoorOpen },
     { label: 'HTTPRoutes', view: 'httproutes', kind: 'HTTPRoute', icon: Route },
@@ -291,7 +303,7 @@ export const KEDA_GROUP_NAV: ResourceGroup = {
 // kustomize.toolkit.fluxcd.io CRDs are present in App.tsx.
 export const FLUX_GROUP: ResourceGroup = {
   label: 'Flux CD',
-  icon: GitBranch,
+  icon: Flux,
   items: [
     { label: 'Kustomizations', view: 'fluxkustomizations', icon: Layers3 },
     { label: 'HelmReleases', view: 'fluxhelmreleases', icon: Package },
@@ -332,7 +344,7 @@ export const ISTIO_GROUP: ResourceGroup = {
 // present in App.tsx. ClusterIssuers are cluster-scoped; the rest namespaced.
 export const CERT_MANAGER_GROUP_NAV: ResourceGroup = {
   label: 'cert-manager',
-  icon: ShieldCheck,
+  icon: CertManager,
   items: [
     { label: 'Certificates', view: 'certmanagercertificates', icon: ShieldCheck },
     { label: 'Requests', view: 'certmanagercertificaterequests', icon: ClipboardList },

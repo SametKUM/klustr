@@ -5,13 +5,13 @@ import { api, type ResourceManager } from '@/lib/api'
 import { findCRD, useCRDStore } from '@/store/crds'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
-import { SiArgo, SiHelm } from './brandIcons'
+import { Flux, SiArgo, SiHelm } from './brandIcons'
 import { ensureWatchUntilSynced } from './customResourceModel'
 import { TOOL_LABEL, managerResource, managerTitle } from './managedBy'
 
 const TOOL_ICON: Record<string, ComponentType<SVGAttributes<SVGElement>>> = {
   argocd: SiArgo,
-  flux: GitBranch,
+  flux: Flux,
   helm: SiHelm,
 }
 
