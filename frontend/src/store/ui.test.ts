@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { readSidebarMode } from './ui.persistence'
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -207,6 +208,14 @@ describe('sidebar width', () => {
 
 describe('sidebar mode toggle', () => {
   beforeEach(resetStore)
+
+  it('starts icon-only until the user expands it', () => {
+    expect(readSidebarMode()).toBe('icons')
+    localStorage.setItem('klustr-sidebar-mode', 'expanded')
+    expect(readSidebarMode()).toBe('expanded')
+    localStorage.setItem('klustr-sidebar-mode', 'bogus')
+    expect(readSidebarMode()).toBe('icons')
+  })
 
   it('flips and persists', () => {
     const before = useUIStore.getState().sidebarMode

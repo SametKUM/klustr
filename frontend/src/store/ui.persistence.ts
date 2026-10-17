@@ -98,7 +98,7 @@ export function persistThemeId(id: ThemeId) {
 
 export function readSidebarMode(): SidebarMode {
   const raw = localStorage.getItem(SIDEBAR_MODE_KEY)
-  return raw === 'icons' ? 'icons' : 'expanded'
+  return raw === 'expanded' ? 'expanded' : 'icons'
 }
 
 export function persistSidebarMode(mode: SidebarMode) {
