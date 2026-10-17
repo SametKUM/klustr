@@ -68,7 +68,7 @@ import {
   Workflow,
   Zap,
 } from 'lucide-react'
-import { Cilium, Karpenter, Kyverno, SiArgo, SiHelm, SiIstio, SiTekton } from './brandIcons'
+import { Cilium, Karpenter, Keda, Kyverno, SiArgo, SiHelm, SiIstio, SiTekton } from './brandIcons'
 
 import type { ResourceKind, ResourceView } from '@/store/ui'
 import { CILIUM_RESOURCES, type CiliumView } from '@/features/cilium/ciliumKinds'
@@ -277,7 +277,7 @@ export const KARPENTER_GROUP: ResourceGroup = {
 // shows only where an active context serves its CRD.
 export const KEDA_GROUP_NAV: ResourceGroup = {
   label: 'KEDA',
-  icon: Scaling,
+  icon: Keda,
   items: [
     { label: 'ScaledObjects', view: 'kedascaledobjects', icon: Scaling },
     { label: 'ScaledJobs', view: 'kedascaledjobs', icon: Briefcase },

@@ -15,9 +15,19 @@ import type { SVGProps } from 'react'
 // to show that Klustr works with Kyverno.
 // Cilium uses the official monochrome mark from cncf/artwork
 // (projects/cilium/icon/black/cilium_icon-black.svg at ac38e11), under the same
-// Linux Foundation trademark guidelines.
+// Linux Foundation trademark guidelines. So does KEDA
+// (projects/keda/icon/black/keda-icon-black.svg at cb62966): its circles are
+// rewritten as paths, and its heptagon and the lightning bolt's thin edge are
+// stroked rather than filled, as in the source.
 
-type Glyph = { role?: string; viewBox: string; paths: string[]; fillRule?: 'evenodd' }
+// outlines are paths the source strokes instead of fills, with their stroke width.
+type Glyph = {
+  role?: string
+  viewBox: string
+  paths: string[]
+  outlines?: { d: string; width: number }[]
+  fillRule?: 'evenodd'
+}
 
 const GLYPHS = {
   Cilium: {
@@ -134,9 +144,28 @@ const GLYPHS = {
       "M432.85945,443.20813a1.178,1.178,0,0,0,.95652.48921h8.5361l8.53622-.00124a1.17706,1.17706,0,0,0,.92321-.44741l5.32337-6.67131,5.31979-6.67578a1.18136,1.18136,0,0,0,.2281-.99354l-3.7951-16.63169a1.16472,1.16472,0,0,0-.64159-.81571l-15.381-7.40682a1.17853,1.17853,0,0,0-1.02653,0l-15.38107,7.40682a1.18977,1.18977,0,0,0-.638.80337l-3.79,16.60146a1.18425,1.18425,0,0,0,.21822,1.03735Zm-12.06422,24.6491a2.68578,2.68578,0,0,0,2.1734,1.10751h19.38344l19.38635-.00354a2.67442,2.67442,0,0,0,2.09828-1.01282l12.08642-15.15357,12.08349-15.159a2.69186,2.69186,0,0,0,.51667-2.25806l-8.61844-37.76932a2.6516,2.6516,0,0,0-1.45592-1.85182l-34.93136-16.82278a2.6829,2.6829,0,0,0-2.33008,0l-34.9309,16.82278a2.68376,2.68376,0,0,0-1.44851,1.82375l-8.60487,37.70054a2.67227,2.67227,0,0,0,.4943,2.35614Z",
     ],
   },
+  Keda: {
+    role: 'img',
+    viewBox: '0 0 625 625',
+    paths: [
+      'M399,553a39,39 0 1,0 78,0a39,39 0 1,0 -78,0zM157,553a39,39 0 1,0 78,0a39,39 0 1,0 -78,0zM268,73a39,39 0 1,0 78,0a39,39 0 1,0 -78,0zM479,165a39,39 0 1,0 78,0a39,39 0 1,0 -78,0zM61,165a39,39 0 1,0 78,0a39,39 0 1,0 -78,0zM528,384a39,39 0 1,0 78,0a39,39 0 1,0 -78,0zM20,384a39,39 0 1,0 78,0a39,39 0 1,0 -78,0z',
+      'M195.8,367l-23-41.1l-6.9,7.1v34h-18v-89.9h18v29l26.3-29h24.3L185,312.3l32.2,54.7H195.8z M295.7,277.1v18h-60v-18H295.7z M235.7,329.8v-18h49.7v18H235.7z M235.7,367.1v-18h59.6v18H235.7z M314.1,277.1h25.4c11.9-0.1,23.3,4.6,31.7,13.1c4.2,4.1,7.4,9,9.6,14.4c4.8,11.2,4.8,23.9,0,35c-2.2,5.4-5.4,10.2-9.6,14.2c-8.4,8.4-19.8,13.2-31.7,13.2h-18V367h-7.3L314.1,277.1z M332.1,349.1h7.5c14.9,0,27-12.1,27-27s-12.1-27-27-27l0,0h-7.5V349.1z M434.7,277.1h5.3l42.5,90h-19.9l-25.7-54.7L409,367.1h-20.2L434.7,277.1z',
+      'M444.7,367.1l6.9-12.5h-18.8l5.9-40.5l-29.3,53h-6.5l34-63.7l34,63.7L444.7,367.1z',
+    ],
+    outlines: [
+      {
+        width: 30,
+        d: 'M522.2,172.9c-1.9-5.4-6.3-10.4-12.4-13.6L318.8,68.7l-0.1-0.1c-2.1-1-5.1-1.6-9-1.6c-3.6,0-5.1,0-7,0.1c-1.3,0.1-2.6,0.2-3.9,0.4l-189.7,90.5l-0.2,0.1c-5.3,2.4-9.2,7.1-10.5,12.8L51.5,374.8c-1,6.2,0.5,12.6,4.1,17.8l131.5,161c5,4.7,11.4,7.6,18.3,8.2h211.1l0.8,0.1c5.8,0.6,11.3-1.9,15.2-7.1l0.2-0.3l132.3-162c3.7-5.3,5.3-11.8,4.7-18.2L522.2,172.9z',
+      },
+      {
+        width: 1,
+        d: 'M446.7,363.3L451.6,354.6L432.8,354.6L438.4,315.5L438.1,315L408.3,369L407.4,370.6L426.5,370.4L421.5,408.9L421.6,409.4L444.7,367.1Z',
+      },
+    ],
+  },
 } satisfies Record<string, Glyph>
 
-function makeIcon({ role, viewBox, paths, fillRule }: Glyph) {
+function makeIcon({ role, viewBox, paths, outlines = [], fillRule }: Glyph) {
   return function BrandIcon(props: SVGProps<SVGSVGElement>) {
     return (
       <svg
@@ -152,6 +181,9 @@ function makeIcon({ role, viewBox, paths, fillRule }: Glyph) {
       >
         {paths.map((d, i) => (
           <path key={i} d={d} />
+        ))}
+        {outlines.map((o, i) => (
+          <path key={`o${i}`} d={o.d} fill="none" strokeWidth={o.width} />
         ))}
       </svg>
     )
@@ -173,3 +205,4 @@ export const FaMicrosoft = makeIcon(GLYPHS.FaMicrosoft)
 export const Karpenter = makeIcon(GLYPHS.Karpenter)
 export const Kyverno = makeIcon(GLYPHS.Kyverno)
 export const Cilium = makeIcon(GLYPHS.Cilium)
+export const Keda = makeIcon(GLYPHS.Keda)
