@@ -41,7 +41,8 @@ it('passes the release source context through the detail panel into the upgrade 
     await act(async () => root.render(<ResourceDetailPanel contextName="release-cluster"
       resource={{ kind: 'HelmRelease', name: 'api', namespace: 'apps', context: 'release-cluster' }} />))
     expect(mocks.getHelmRelease).toHaveBeenCalledWith('release-cluster', 'apps', 'api')
-    await act(async () => container.querySelector('button')!.click())
+    await act(async () => [...container.querySelectorAll('button')]
+      .find((button) => button.textContent === 'Upgrade release')!.click())
     expect(mocks.dialog).toHaveBeenLastCalledWith(expect.objectContaining({
       open: true, mode: 'upgrade', contextName: 'release-cluster', initialNamespace: 'apps', initialName: 'api',
     }))

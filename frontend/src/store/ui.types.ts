@@ -6,6 +6,10 @@ import type { IntegrationView } from '@/lib/integrationCatalog.generated'
 
 export type SidebarMode = 'expanded' | 'icons'
 
+export const DETAIL_WIDTH_DEFAULT = 560
+export const DETAIL_WIDTH_MIN = 480
+export const DETAIL_WIDTH_MAX = 960
+
 export const SIDEBAR_WIDTH_MIN = 200
 export const SIDEBAR_WIDTH_MAX = 400
 export const SIDEBAR_WIDTH_DEFAULT = 256
@@ -227,6 +231,9 @@ export type DetailTab =
   | 'shell'
   | 'events'
   | 'history'
+  | 'values'
+  | 'manifest'
+  | 'notes'
   | 'policy'
   | 'disruption'
   | 'yaml'

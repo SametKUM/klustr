@@ -494,6 +494,38 @@
     --sidebar-ring: #7e44ff;
 }
 
+.resource-detail-panel {
+  container: resource-detail / inline-size;
+}
+
+.resource-detail-panel [data-slot="tabs-content"] {
+  min-width: 0;
+}
+
+.resource-detail-panel [data-slot="tabs-list"] {
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  justify-content: flex-start;
+}
+
+.resource-detail-panel [data-slot="tabs-list"]::-webkit-scrollbar {
+  display: none;
+}
+
+.resource-detail-panel [data-slot="tabs"] > [data-slot="tabs-list"] {
+  max-width: calc(100% - 2rem);
+  margin-inline: 1rem;
+}
+
+/* Viewport breakpoints cannot describe a narrow inspector on a wide window. */
+@container resource-detail (max-width: 42rem) {
+  .resource-detail-panel :is([class~="sm:grid-cols-2"], [class~="md:grid-cols-2"], [class~="lg:grid-cols-2"], [class~="md:grid-cols-3"], [class~="lg:grid-cols-3"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

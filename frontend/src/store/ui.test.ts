@@ -26,6 +26,92 @@ const {
 
 const baseSnapshot = useUIStore.getState()
 
+describe('resource inspector navigation', () => {
+  beforeEach(resetStore)
+  const pod = { kind: 'Pod', context: 'cluster-a', namespace: 'apps', name: 'api-a' }
+
+  it('retains reading tabs across rows and keeps source context in the selection', () => {
+    const s = useUIStore.getState()
+    s.setSelectedResource(pod)
+    s.setActiveDetailTab('logs')
+    s.setSelectedResource({ ...pod, context: 'cluster-b', name: 'api-b' })
+    expect(useUIStore.getState()).toMatchObject({
+      requestedTab: 'logs', selectedResource: { context: 'cluster-b', name: 'api-b' },
+    })
+  })
+
+  it.each(['exec', 'shell'])('does not carry %s connections to another resource', (tab) => {
+    const s = useUIStore.getState()
+    s.setSelectedResource(pod)
+    s.setActiveDetailTab(tab)
+    s.setSelectedResource({ ...pod, name: 'api-b' })
+    expect(useUIStore.getState().requestedTab).toBeNull()
+  })
+
+  it.each(['values', 'manifest', 'notes', 'history'])('retains the Helm %s tab between releases', (tab) => {
+    const s = useUIStore.getState()
+    const release = { ...pod, kind: 'HelmRelease' }
+    s.setSelectedResource(release)
+    s.setActiveDetailTab(tab)
+    s.setSelectedResource({ ...release, name: 'other-release' })
+    expect(useUIStore.getState().requestedTab).toBe(tab)
+  })
+
+  it('keeps explicit terminal navigation available and ignores repeat row clicks', () => {
+    const s = useUIStore.getState()
+    s.openResource(pod, 'exec')
+    s.setSelectedResource({ ...pod })
+    expect(useUIStore.getState().requestedTab).toBe('exec')
+  })
+
+  it.each(['row', 'close', 'view', 'context', 'crd', 'back', 'tab'])(
+    'defers %s navigation until the draft is discarded', (target) => {
+      const s = useUIStore.getState()
+      s.setSelectedContext('cluster-a')
+      s.setSelectedResource(pod)
+      s.openResource({ ...pod, name: 'api-b' })
+      s.setDetailDirty(true)
+      const changeTab = vi.fn()
+      const actions = {
+        row: () => s.setSelectedResource({ ...pod, name: 'api-c' }),
+        close: () => s.setSelectedResource(null),
+        view: () => s.setSelectedView('nodes'),
+        context: () => s.setSelectedContext('cluster-b'),
+        crd: () => s.setSelectedCRD('example.io/widgets'),
+        back: () => s.goBackResource(),
+        tab: () => s.requestDetailNavigation(changeTab),
+      }
+      actions[target as keyof typeof actions]()
+      expect(useUIStore.getState().selectedResource?.name).toBe('api-b')
+      expect(useUIStore.getState().pendingDetailNavigation).toBeTypeOf('function')
+      expect(changeTab).not.toHaveBeenCalled()
+      s.confirmDetailNavigation()
+      expect(useUIStore.getState().pendingDetailNavigation).toBeNull()
+      expect(useUIStore.getState().detailDirty).toBe(false)
+      if (target === 'tab') expect(changeTab).toHaveBeenCalledOnce()
+      else expect(useUIStore.getState().selectedResource?.name).not.toBe('api-b')
+    },
+  )
+
+  it('keeps the draft and resource when navigation is cancelled', () => {
+    const s = useUIStore.getState()
+    s.setSelectedResource(pod)
+    s.setDetailDirty(true)
+    s.setSelectedResource(null)
+    s.cancelDetailNavigation()
+    expect(useUIStore.getState()).toMatchObject({ selectedResource: pod, detailDirty: true, pendingDetailNavigation: null })
+  })
+
+  it('resizing and expansion do not change resource identity or navigation', () => {
+    const s = useUIStore.getState()
+    s.openResource(pod, 'exec')
+    s.setDetailWidth(620)
+    s.setDetailExpanded(true)
+    expect(useUIStore.getState()).toMatchObject({ selectedResource: pod, requestedTab: 'exec', detailWidth: 620 })
+    expect(localStorage.getItem('klustr-detail-width')).toBe('620')
+  })
+})
+
 function resetStore() {
   localStorage.clear()
   useUIStore.setState({

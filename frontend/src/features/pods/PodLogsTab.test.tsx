@@ -118,4 +118,20 @@ describe('PodLogsTab tail', () => {
       expect.stringContaining('# previous instance of app (last 1000 lines before termination)'),
     )
   })
+
+  it('follows a new container link in the same mounted inspector without losing the tail selection', async () => {
+    const multi = { ...detail, containers: [...detail.containers, { name: 'sidecar', restartCount: 0 }] } as PodDetail
+    await act(async () => root.render(<PodLogsTab detail={multi} contextName="cluster-a" initialContainer="app" active />))
+    await pick('Select how many lines to load', '1000')
+    await act(async () => root.render(<PodLogsTab detail={multi} contextName="cluster-a" initialContainer="sidecar" active />))
+
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'sidecar', true, false, 1000)
+    expect(mocks.stopPodLogs).toHaveBeenCalledWith('log-2')
+
+    await pick('Select container', 'app')
+    const starts = mocks.startPodLogs.mock.calls.length
+    await act(async () => root.render(<PodLogsTab detail={{ ...multi } as PodDetail} contextName="cluster-a" initialContainer="sidecar" active={false} />))
+    expect(mocks.startPodLogs).toHaveBeenCalledTimes(starts)
+    expect(container.querySelector<HTMLSelectElement>('select[aria-label="Select container"]')?.value).toBe('app')
+  })
 })

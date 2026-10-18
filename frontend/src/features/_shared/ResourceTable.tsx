@@ -36,6 +36,7 @@ import {
   useActiveContexts,
   useIsAggregated,
   useUIStore,
+  sameResource,
   type ResourceKind,
   type SelectedResource,
 } from '@/store/ui'
@@ -65,6 +66,8 @@ import { applyHeaderFilters, headerFilterOptions } from './headerFilter'
 import { parseSearch, rowMatchesSearch } from './rowSearch'
 import { KLUSTR_CTX, resolveResourceContexts, type Tagged } from './resourceContext'
 import { resourcePageCount } from './pagination'
+import { compactColumnIds } from './detailLayout'
+import { useElementWidth } from './useElementWidth'
 
 type RowIdentity = { namespace?: string; name?: string }
 
@@ -168,6 +171,8 @@ type ResourceRowProps<T> = {
   columnOrder: string[]
   columnVisibility: VisibilityState
   isSelected: boolean
+  inspected: boolean
+  compactColumns: Set<string> | null
   flashing: boolean
   clickable: boolean
   onRowClick: (item: Tagged<T>) => void
@@ -181,6 +186,8 @@ function ResourceRowInner<T>({
   rowIndex,
   kind,
   isSelected,
+  inspected,
+  compactColumns,
   flashing,
   clickable,
   onRowClick,
@@ -199,6 +206,8 @@ function ResourceRowInner<T>({
     <tr
       ref={measureRef}
       data-index={rowIndex}
+      data-resource-row={rowKey ?? undefined}
+      aria-current={inspected ? 'true' : undefined}
       className={[
         'border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors',
         clickable
@@ -206,10 +215,11 @@ function ResourceRowInner<T>({
           : '',
         flashing ? 'bg-emerald-100/60 dark:bg-emerald-400/15' : '',
         isSelected ? 'bg-primary/10' : '',
+        inspected ? 'bg-accent text-accent-foreground outline-1 -outline-offset-1 outline-primary/40' : '',
       ].join(' ')}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
-      onClick={clickable ? () => onRowClick(tagged) : undefined}
+      onClick={clickable ? (event) => { event.currentTarget.focus({ preventScroll: true }); onRowClick(tagged) } : undefined}
       onKeyDown={
         clickable
           ? (e) => {
@@ -217,6 +227,7 @@ function ResourceRowInner<T>({
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
                 onRowClick(tagged)
+                requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-resource-detail]')?.focus())
               }
             }
           : undefined
@@ -231,12 +242,19 @@ function ResourceRowInner<T>({
           />
         )}
       </td>
-      {row.getVisibleCells().map((cell) => (
+      {row.getVisibleCells().filter((cell) => !compactColumns || compactColumns.has(cell.column.id)).map((cell) => (
         <td
           key={cell.id}
-          className="overflow-hidden truncate whitespace-nowrap px-3 py-1.5 align-middle"
+          className={`overflow-hidden truncate whitespace-nowrap py-1.5 align-middle ${compactColumns ? 'px-2' : 'px-3'}`}
         >
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          <div className="truncate" title={typeof cell.getValue() === 'string' ? cell.getValue() as string : undefined}>
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </div>
+          {compactColumns && cell.column.id === 'name' && <div className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground"
+            title={`${ctx}${identity.namespace ? ` / ${identity.namespace}` : ''}`}>
+            {identity.namespace && <><span className="max-w-1/2 shrink-0 truncate">{identity.namespace}</span><span aria-hidden>·</span></>}
+            <span className="truncate">{ctx}</span>
+          </div>}
         </td>
       ))}
       <td aria-hidden />
@@ -272,6 +290,8 @@ const ResourceRow = memo(ResourceRowInner, (prev, next) => {
     prev.columnOrder === next.columnOrder &&
     prev.columnVisibility === next.columnVisibility &&
     prev.isSelected === next.isSelected &&
+    prev.inspected === next.inspected &&
+    prev.compactColumns === next.compactColumns &&
     prev.flashing === next.flashing &&
     prev.clickable === next.clickable
   )
@@ -300,6 +320,12 @@ export function ResourceTable<T>({
   const readOnly = useUIStore((s) => s.globalReadOnly)
   const selectedResource = useUIStore((s) => s.selectedResource)
   const lastSelectedResource = useUIStore((s) => s.lastSelectedResource)
+  const setOutsideResults = useUIStore((s) => s.setDetailOutsideResults)
+  const tableRef = useRef<HTMLDivElement>(null)
+  const { ref: scrollRef, width: tableWidth } = useElementWidth<HTMLDivElement>()
+  const [fullColumns, setFullColumns] = useState(false)
+  const narrow = selectedResource !== null && tableWidth > 0 && tableWidth < 720
+  const compact = narrow && !fullColumns
   // Key on the selection *content*, not the array ref — the store
   // hands back a fresh array even for an unchanged selection, and a new query
   // object would tear down the fetch effect and refetch every context.
@@ -688,6 +714,16 @@ export function ResourceTable<T>({
       rowMatchesSearch(row, terms, ids, (r, id) => columnGetters.get(id)?.(r as Tagged<T>)),
     )
   }, [filteredData, appliedFilter, columnGetters])
+  useEffect(() => {
+    if (!selectedResource || !tableRef.current?.closest('[data-resource-list]')) return
+    const belongs = selectedResource.kind === kind || (selectedResource.gvr &&
+      kind === `cr:${selectedResource.gvr.group}/${selectedResource.gvr.resource}`)
+    const loaded = resourceContexts.every((ctx) => loadedSet.has(ctx))
+    setOutsideResults(!!belongs && loaded && !searchedData.some((row) => sameResource(selectedResource,
+      rowResource?.(row as unknown as T, row[KLUSTR_CTX]) ?? {
+        kind, context: row[KLUSTR_CTX], namespace: (row as RowIdentity).namespace ?? '', name: (row as RowIdentity).name ?? '',
+      })))
+  }, [selectedResource, kind, resourceContexts, loadedSet, searchedData, rowResource, setOutsideResults, tableRef])
   const columnOrder = useMemo(() => {
     const saved = prefs?.order ?? []
     if (!isAggregated || saved.includes('klustrContext')) {
@@ -701,6 +737,9 @@ export function ResourceTable<T>({
     for (const id of allColumnIds) v[id] = !(prefs?.hidden ?? []).includes(id)
     return v
   }, [allColumnIds, prefs?.hidden])
+  const compactColumns = useMemo(() => compact
+    ? compactColumnIds(allColumnIds.filter((id) => columnVisibility[id] !== false)) : null,
+  [compact, allColumnIds, columnVisibility])
   // Sort lives in tablePrefs (like order/size/hidden) so it survives leaving and
   // returning to a kind. Absent prefs.sorting → the view's default; entries are
   // filtered to columns that currently exist (e.g. the aggregated Context column).
@@ -774,14 +813,22 @@ export function ResourceTable<T>({
   }, [pageIndex, pageCount])
 
   const visibleRows = table.getRowModel().rows
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const renderedColumns = table.getVisibleLeafColumns().filter((col) => !compactColumns || compactColumns.has(col.id))
+  const compactStatusWidth = tableWidth < 480 ? 112 : 148
+  const compactFixedWidth = renderedColumns.reduce((sum, col) => col.id === 'name'
+    ? sum : sum + (col.id === 'restarts' ? 84 : compactStatusWidth), 0)
+  const renderedWidth = (id: string, fallback: number) => {
+    if (!compact) return fallback
+    if (id === 'name') return Math.max(128, tableWidth - 36 - compactFixedWidth)
+    return id === 'restarts' ? 84 : compactStatusWidth
+  }
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 })
-  }, [pageIndex])
+  }, [pageIndex, scrollRef])
   const virtualizer = useVirtualizer({
     count: visibleRows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 33,
+    estimateSize: () => compact ? 49 : 33,
     overscan: 12,
   })
   // The virtualizer re-renders this component on every scroll frame; both
@@ -905,9 +952,24 @@ export function ResourceTable<T>({
   const isNodeKind = kind === 'Node'
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+    <div ref={tableRef} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+      onKeyDown={(event) => {
+        if (event.defaultPrevented || isEditableTarget(event.target) || event.altKey || event.ctrlKey || event.metaKey) return
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+        const current = (event.target as HTMLElement).closest<HTMLElement>('[data-resource-row]')
+        if (!current || event.target !== current) return
+        event.preventDefault()
+        event.stopPropagation()
+        const index = Math.max(0, Math.min(visibleRows.length - 1,
+          Number(current.dataset.index) + (event.key === 'ArrowDown' ? 1 : -1)))
+        const next = visibleRows[index]
+        if (!next) return
+        virtualizer.scrollToIndex(index, { align: 'auto' })
+        if (selectedResource && onRowClick) handleRowClick(next.original)
+        requestAnimationFrame(() => tableRef.current?.querySelector<HTMLElement>(`[data-resource-row][data-index="${index}"]`)?.focus({ preventScroll: true }))
+      }}>
       {selectedItems.length > 0 && (
-        <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs">
           <span className="shrink-0 font-medium text-foreground">
             {selectedItems.length} selected
           </span>
@@ -1007,15 +1069,15 @@ export function ResourceTable<T>({
           </button>
         </div>
       )}
-      <div className="flex items-center gap-3 border-b border-border px-4 py-2 text-xs text-muted-foreground">
-        <span className="min-w-0">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2 text-xs text-muted-foreground">
+        <span className={narrow ? 'w-full truncate' : 'min-w-0'} title={`${countLabel}${scopeLabel}${contextLabel}`}>
           {countLabel}
           {scopeLabel}
           {contextLabel}
           {hasLoadErrors && ' (incomplete)'}
           {connectionWarnings.length > 0 && ' (possibly outdated)'}
         </span>
-        <div className="relative ml-auto w-64 max-w-full">
+        <div className={`relative min-w-24 ${narrow ? 'flex-1' : 'ml-auto w-64 max-w-full'}`}>
           <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
           <input
             ref={filterRef}
@@ -1046,7 +1108,10 @@ export function ResourceTable<T>({
             </button>
           )}
         </div>
-        <ColumnControls table={table} onReset={() => resetPrefs(kind)} />
+        {narrow && <Button size="sm" variant="ghost" className="h-7 shrink-0 px-2 text-xs"
+          aria-pressed={compact} title={compact ? 'Show all columns' : 'Use compact columns'}
+          onClick={() => setFullColumns(!fullColumns)}>{compact ? 'Full columns' : 'Compact'}</Button>}
+        {!compact && <ColumnControls table={table} onReset={() => resetPrefs(kind)} />}
       </div>
       {connectionWarnings.length > 0 && (
         <div
@@ -1103,19 +1168,19 @@ export function ResourceTable<T>({
           className="border-collapse text-sm"
           style={{
             width: '100%',
-            minWidth: table.getTotalSize(),
+            minWidth: compact ? 36 + renderedColumns.reduce((sum, col) => sum + renderedWidth(col.id, col.getSize()), 0) : table.getTotalSize(),
             tableLayout: 'fixed',
           }}
         >
           <colgroup>
             <col style={{ width: 36 }} />
-            {table.getVisibleLeafColumns().map((col) => (
+            {renderedColumns.map((col) => (
               <col
                 key={col.id}
                 ref={(el) => {
                   colRefs.current[col.id] = el
                 }}
-                style={{ width: col.getSize() }}
+                style={{ width: renderedWidth(col.id, col.getSize()) }}
               />
             ))}
             <col />
@@ -1130,7 +1195,7 @@ export function ResourceTable<T>({
                     aria-label="Select all visible"
                   />
                 </th>
-                {hg.headers.map((h) => {
+                {hg.headers.filter((h) => !compactColumns || compactColumns.has(h.column.id)).map((h) => {
                   const sorted = h.column.getIsSorted()
                   const canSort = h.column.getCanSort()
                   const colId = h.column.id
@@ -1141,7 +1206,7 @@ export function ResourceTable<T>({
                     dragColId !== null && dropTargetColId === colId && dragColId !== colId
                   const headerContent = (
                     <>
-                      <span className="truncate">
+                      <span className="truncate" title={typeof h.column.columnDef.header === 'string' ? h.column.columnDef.header : colId}>
                         {flexRender(h.column.columnDef.header, h.getContext())}
                       </span>
                       {canSort &&
@@ -1206,7 +1271,8 @@ export function ResourceTable<T>({
                         setDropTargetColId(null)
                       }}
                       className={[
-                        'group relative select-none overflow-hidden px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground',
+                        'group relative select-none overflow-hidden py-2 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground',
+                        compact ? 'px-2' : 'px-3',
                         isDragging ? 'opacity-40' : '',
                         isDropTarget
                           ? 'before:absolute before:left-0 before:top-0 before:h-full before:w-0.5 before:bg-primary before:content-[""]'
@@ -1261,7 +1327,7 @@ export function ResourceTable<T>({
                           </DropdownMenu>
                         )}
                       </span>
-                      <span
+                      {!compact && <span
                         draggable={false}
                         onMouseDown={startResize(h.column.id)}
                         onTouchStart={startResize(h.column.id)}
@@ -1272,7 +1338,7 @@ export function ResourceTable<T>({
                           'group-hover:after:opacity-100',
                           'data-[resizing=true]:after:bg-primary data-[resizing=true]:after:opacity-100',
                         ].join(' ')}
-                      />
+                      />}
                     </th>
                   )
                 })}
@@ -1287,7 +1353,7 @@ export function ResourceTable<T>({
                   <td className="px-2 py-1.5 align-middle">
                     <Skeleton className="size-4 rounded-sm" />
                   </td>
-                  {table.getVisibleLeafColumns().map((col, ci) => (
+                  {renderedColumns.map((col, ci) => (
                     <td key={col.id} className="px-3 py-1.5 align-middle">
                       <Skeleton
                         className="h-3.5"
@@ -1303,7 +1369,7 @@ export function ResourceTable<T>({
             ) : visibleRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={tableColumns.length + 2}
+                  colSpan={renderedColumns.length + 2}
                   className="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
                   {hasLoadErrors
@@ -1323,7 +1389,7 @@ export function ResourceTable<T>({
                   virtualItems.length > 0
                     ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end
                     : 0
-                const spacerSpan = table.getVisibleLeafColumns().length + 2
+                const spacerSpan = renderedColumns.length + 2
                 return (
                   <>
                     {padTop > 0 && (
@@ -1347,6 +1413,10 @@ export function ResourceTable<T>({
                           columnOrder={columnOrder}
                           columnVisibility={columnVisibility}
                           isSelected={rowKey !== null && selectedKeys.has(rowKey)}
+                          inspected={!!selectedResource && sameResource(selectedResource, handleRowResource(tagged) ?? {
+                            kind, context: ctx, namespace: identity.namespace ?? '', name: identity.name ?? '',
+                          })}
+                          compactColumns={compactColumns}
                           flashing={rowKey !== null && flashKey === rowKey}
                           clickable={!!onRowClick}
                           onRowClick={handleRowClick}
@@ -1369,7 +1439,7 @@ export function ResourceTable<T>({
         </table>
       </div>
       {allLoaded && filteredCount > 0 && (
-        <div className="flex min-w-0 items-center gap-3 border-t border-border px-4 py-1.5 text-xs text-muted-foreground">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 border-t border-border px-4 py-1.5 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <span>Rows per page</span>
             <DropdownMenu>

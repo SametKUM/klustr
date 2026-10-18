@@ -49,6 +49,7 @@ function summarizeServerError(raw: string): string {
 export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Props) {
   const theme = useThemeMode()
   const readOnly = useUIStore((s) => s.globalReadOnly)
+  const setDetailDirty = useUIStore((s) => s.setDetailDirty)
   const managers = useManagers()
   const [source, setSource] = useState<string>('')
   const [draft, setDraft] = useState<string>('')
@@ -146,6 +147,10 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Pro
   }
 
   const dirty = draft !== source
+  useEffect(() => {
+    setDetailDirty(editing && dirty)
+    return () => setDetailDirty(false)
+  }, [editing, dirty, setDetailDirty])
 
   const reviewError = dryRun.error ?? apply.error
   const reviewErrorFull = reviewError != null ? String(reviewError) : ''

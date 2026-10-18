@@ -83,7 +83,8 @@ import { GatewayClassesView } from '@/features/gatewayclasses/GatewayClassesView
 import { ReferenceGrantsView } from '@/features/referencegrants/ReferenceGrantsView'
 import { INTEGRATION_LIST_VIEWS } from '@/features/integrationViews'
 import { isIntegrationView } from '@/lib/integrations'
-import { ResourceDetailPanel } from '@/features/_shared/ResourceDetailPanel'
+import { ResourceWorkspace } from '@/features/_shared/ResourceWorkspace'
+import { DetailNavigationDialog } from '@/features/_shared/DetailNavigationDialog'
 import type { ResourceGroup } from '@/features/_shared/resourceGroups'
 import { useVisibleResourceGroups } from '@/features/_shared/useVisibleResourceGroups'
 import { HiddenSidebarItemsButton } from '@/features/_shared/HiddenSidebarItemsButton'
@@ -299,10 +300,8 @@ type NavEntry = { kind: 'view'; view: ResourceView } | { kind: 'crd'; key: strin
 function App() {
   const activeContexts = useActiveContexts()
   const globalReadOnly = useUIStore((s) => s.globalReadOnly)
-  const selectedContext = useUIStore((s) => s.selectedContext)
   const selectedView = useUIStore((s) => s.selectedView)
   const setSelectedView = useUIStore((s) => s.setSelectedView)
-  const selectedResource = useUIStore((s) => s.selectedResource)
   const collapsedNavGroups = useUIStore((s) => s.collapsedNavGroups)
   const toggleNavGroup = useUIStore((s) => s.toggleNavGroup)
   const sidebarMode = useUIStore((s) => s.sidebarMode)
@@ -365,9 +364,11 @@ function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
       if (isEditableTarget(e.target)) return
+      if (e.target instanceof Element && e.target.closest('[data-resource-list], [data-resource-detail], [role="separator"]')) return
       // Don't move the sidebar selection behind an open dialog — Radix doesn't
       // stop arrow keys bubbling to this window listener.
       if (document.querySelector('[role="dialog"][data-state="open"]')) return
@@ -662,7 +663,7 @@ function App() {
 
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <main className="flex min-h-0 flex-1 overflow-hidden">
-              <MainView />
+              <ResourceWorkspace><MainView /></ResourceWorkspace>
             </main>
             <TerminalDrawer />
           </div>
@@ -670,11 +671,8 @@ function App() {
 
         <StatusBar />
 
-        <ResourceDetailPanel
-          contextName={selectedResource?.context ?? selectedContext}
-          resource={selectedResource}
-        />
         <RowActionDialogs />
+        <DetailNavigationDialog />
         <KeyboardShortcutsDialog />
         <CredentialSuggestionPrompt />
         <CommandPalette />

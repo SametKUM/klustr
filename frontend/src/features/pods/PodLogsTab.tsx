@@ -43,9 +43,20 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
     [detail.initContainers, detail.containers],
   )
   const defaultContainer = detail.containers[0]?.name ?? detail.initContainers[0]?.name ?? ''
-  const [container, setContainer] = useState(
-    initialContainer && containerNames.includes(initialContainer) ? initialContainer : defaultContainer,
-  )
+  const [selection, setSelection] = useState(() => ({
+    requested: initialContainer,
+    container: initialContainer && containerNames.includes(initialContainer) ? initialContainer : defaultContainer,
+  }))
+  // A container link can target the already-mounted pod inspector. Synchronize
+  // before committing effects so the old container never starts an extra stream.
+  if (selection.requested !== initialContainer) {
+    setSelection({
+      requested: initialContainer,
+      container: initialContainer && containerNames.includes(initialContainer) ? initialContainer : selection.container,
+    })
+  }
+  const container = containerNames.includes(selection.container) ? selection.container : defaultContainer
+  const setContainer = (container: string) => setSelection({ requested: initialContainer, container })
   const [previous, setPrevious] = useState(false)
   // A previous (terminated) instance only exists once the container restarted.
   const canPrevious = useMemo(() => {
@@ -157,7 +168,7 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-2 text-xs">
+      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-4 py-2 text-xs">
         <label className="text-muted-foreground">Container</label>
         <InlinePicker
           value={container}

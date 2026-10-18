@@ -1,0 +1,126 @@
+import { act, useEffect, useState } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+
+const mocks = vi.hoisted(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+  })
+  return { width: 1100, mounted: vi.fn(), stopped: vi.fn() }
+})
+
+vi.mock('./useElementWidth', async () => {
+  const { useRef } = await import('react')
+  return { useElementWidth: () => ({ ref: useRef(null), width: mocks.width }) }
+})
+
+vi.mock('./ResourceDetailPanel', () => ({
+  ResourceDetailPanel: ({ resource }: { resource: object | null }) =>
+    resource ? <DetailSession /> : null,
+}))
+
+function DetailSession() {
+  const [draft, setDraft] = useState('retained draft')
+  useEffect(() => {
+    mocks.mounted()
+    return mocks.stopped
+  }, [])
+  return (
+    <section id="resource-detail-panel" data-resource-detail tabIndex={-1}>
+      <input aria-label="Draft" value={draft} onChange={(event) => setDraft(event.target.value)} />
+    </section>
+  )
+}
+
+const { useUIStore } = await import('@/store/ui')
+const { ResourceWorkspace } = await import('./ResourceWorkspace')
+const snapshot = useUIStore.getState()
+const pod = { kind: 'Pod', context: 'cluster-a', namespace: 'apps', name: 'api' }
+
+describe('resource workspace sessions and focus', () => {
+  let container: HTMLDivElement
+  let root: Root
+  const render = () =>
+    root.render(
+      <ResourceWorkspace>
+        <button data-resource-row="cluster-a/apps/api" aria-current="true">
+          Pod
+        </button>
+      </ResourceWorkspace>,
+    )
+  const key = (element: Element, key: string) =>
+    element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))
+
+  beforeEach(() => {
+    mocks.width = 1100
+    vi.clearAllMocks()
+    useUIStore.setState({ ...snapshot, selectedContext: 'cluster-a', selectedResource: pod })
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+  })
+
+  afterEach(() => {
+    act(() => root.unmount())
+    container.remove()
+  })
+
+  it('keeps the same session, draft and list scroll through expansion and narrow fallback', () => {
+    act(render)
+    const detail = container.querySelector('[data-resource-detail]')!
+    const list = container.querySelector<HTMLElement>('[data-resource-list]')!
+    const input = container.querySelector('input')!
+    list.scrollTop = 320
+    input.focus()
+
+    act(() => useUIStore.getState().setDetailExpanded(true))
+    expect(list.hasAttribute('inert')).toBe(true)
+    expect(document.activeElement).toBe(input)
+    act(() => useUIStore.getState().setDetailExpanded(false))
+    mocks.width = 760
+    act(render)
+    expect(list.hasAttribute('inert')).toBe(true)
+    mocks.width = 1100
+    act(render)
+
+    expect(container.querySelector('[data-resource-detail]')).toBe(detail)
+    expect(container.querySelector('input')).toBe(input)
+    expect(input.value).toBe('retained draft')
+    expect(list.scrollTop).toBe(320)
+    expect(list.hasAttribute('inert')).toBe(false)
+    expect(mocks.mounted).toHaveBeenCalledTimes(1)
+    expect(mocks.stopped).not.toHaveBeenCalled()
+  })
+
+  it('moves focus between panes, closes from the inspector and returns to the inspected row', () => {
+    act(render)
+    const row = container.querySelector('button')!
+    const detail = container.querySelector<HTMLElement>('[data-resource-detail]')!
+    row.focus()
+    act(() => key(row, 'F6'))
+    expect(document.activeElement).toBe(detail)
+    act(() => key(detail, 'F6'))
+    expect(document.activeElement).toBe(row)
+    act(() => key(row, 'F6'))
+    act(() => key(detail, 'Escape'))
+    expect(useUIStore.getState().selectedResource).toBeNull()
+    expect(document.activeElement).toBe(row)
+    expect(mocks.stopped).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves editing and defers closing while a YAML draft is dirty', () => {
+    act(render)
+    const input = container.querySelector('input')!
+    act(() => key(input, 'Escape'))
+    expect(useUIStore.getState().selectedResource).toEqual(pod)
+    act(() => useUIStore.getState().setDetailDirty(true))
+    act(() => key(container.querySelector('[data-resource-detail]')!, 'Escape'))
+    expect(useUIStore.getState().pendingDetailNavigation).not.toBeNull()
+    expect(mocks.stopped).not.toHaveBeenCalled()
+    act(() => useUIStore.getState().cancelDetailNavigation())
+    expect(useUIStore.getState().selectedResource).toEqual(pod)
+  })
+})

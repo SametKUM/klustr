@@ -17,6 +17,7 @@ import {
 } from './ui.types'
 import {
   applyThemeClasses,
+  clampDetailWidth,
   clampSidebarWidth,
   isValidGroupColor,
   persistAggregatedContexts,
@@ -30,6 +31,7 @@ import {
   persistLastSession,
   persistSidebarMode,
   persistSidebarWidth,
+  persistDetailWidth,
   persistThemeId,
   readAggregatedContexts,
   readNamespacesByContext,
@@ -49,6 +51,7 @@ import {
   readSavedThemeId,
   readSidebarMode,
   readSidebarWidth,
+  readDetailWidth,
   systemThemeId,
 } from './ui.persistence'
 
@@ -89,6 +92,12 @@ type UIState = {
   lastSelectedResource: SelectedResource | null
   resourceNavStack: SelectedResource[]
   requestedTab: DetailTab | null
+  activeDetailTab: string
+  detailWidth: number
+  detailExpanded: boolean
+  detailDirty: boolean
+  detailOutsideResults: boolean
+  pendingDetailNavigation: (() => void) | null
   pendingAction: PendingAction | null
   themeId: ThemeId
   sidebarMode: SidebarMode
@@ -116,6 +125,14 @@ type UIState = {
   setSelectedResource: (resource: SelectedResource | null) => void
   openResource: (resource: SelectedResource, tab?: DetailTab) => void
   goBackResource: () => void
+  setActiveDetailTab: (tab: string) => void
+  setDetailWidth: (width: number) => void
+  setDetailExpanded: (expanded: boolean) => void
+  setDetailDirty: (dirty: boolean) => void
+  setDetailOutsideResults: (outside: boolean) => void
+  requestDetailNavigation: (navigate: () => void) => void
+  cancelDetailNavigation: () => void
+  confirmDetailNavigation: () => void
   setPendingAction: (action: PendingAction | null) => void
   setTheme: (id: ThemeId) => void
   toggleSidebarMode: () => void
@@ -170,6 +187,15 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((n, i) => b[i] === n)
 }
 
+function retainedDetailTab(s: UIState, resource: SelectedResource | null): DetailTab | null {
+  const current = s.selectedResource
+  if (!current || !resource || current.kind !== resource.kind ||
+    current.gvr?.group !== resource.gvr?.group || current.gvr?.resource !== resource.gvr?.resource) return null
+  // Terminal tabs must never auto-connect to a newly selected resource.
+  const readingTabs: readonly string[] = ['overview', 'logs', 'events', 'yaml', 'history', 'values', 'manifest', 'notes', 'policy', 'disruption']
+  return readingTabs.includes(s.activeDetailTab) ? s.activeDetailTab as DetailTab : null
+}
+
 type NormalizedContexts = {
   selectedContext: string | null
   aggregatedContexts: string[]
@@ -219,7 +245,11 @@ function applyNamespaceSelection(
   return { selectedNamespaces: next, namespacesByContext: map }
 }
 
-export const useUIStore = create<UIState>((set) => {
+export const useUIStore = create<UIState>((set, get) => {
+  const navigate = (action: () => void) => {
+    if (get().detailDirty) set({ pendingDetailNavigation: action })
+    else action()
+  }
   const saved = readSavedThemeId()
   const initialThemeId = saved ?? systemThemeId()
   applyThemeClasses(getTheme(initialThemeId))
@@ -269,6 +299,12 @@ export const useUIStore = create<UIState>((set) => {
     lastSelectedResource: null,
     resourceNavStack: [],
     requestedTab: null,
+    activeDetailTab: 'overview',
+    detailWidth: readDetailWidth(),
+    detailExpanded: false,
+    detailDirty: false,
+    detailOutsideResults: false,
+    pendingDetailNavigation: null,
     pendingAction: null,
     themeId: initialThemeId,
     sidebarMode: readSidebarMode(),
@@ -281,7 +317,7 @@ export const useUIStore = create<UIState>((set) => {
     customTags: readCustomTags(),
     contextGroups: readContextGroups(),
     lastSession: readLastSession(),
-    setSelectedContext: (name) =>
+    setSelectedContext: (name) => navigate(() =>
       set((s) => {
         const next = name ? [name] : []
         if (sameList(next, effectiveContextList(s))) return s
@@ -292,8 +328,8 @@ export const useUIStore = create<UIState>((set) => {
           return { ...out, lastSession: ls }
         }
         return out
-      }),
-    setAggregatedContexts: (names, groupId) =>
+      })),
+    setAggregatedContexts: (names, groupId) => navigate(() =>
       set((s) => {
         const next = dedupeSorted(names)
         const nextGroup = groupId ?? null
@@ -305,12 +341,12 @@ export const useUIStore = create<UIState>((set) => {
           return { ...out, lastSession: ls }
         }
         return out
-      }),
+      })),
     clearLastSession: () => {
       persistLastSession(null)
       set({ lastSession: null })
     },
-    toggleAggregatedContext: (name) =>
+    toggleAggregatedContext: (name) => navigate(() =>
       set((s) => {
         const current = effectiveContextList(s)
         const next = current.includes(name)
@@ -318,12 +354,12 @@ export const useUIStore = create<UIState>((set) => {
           : dedupeSorted([...current, name])
         if (sameList(next, current)) return s
         return normalizeContexts(next, s.namespacesByContext)
-      }),
-    clearAggregatedContexts: () =>
+      })),
+    clearAggregatedContexts: () => navigate(() =>
       set((s) => {
         if (effectiveContextList(s).length === 0) return s
         return normalizeContexts([], s.namespacesByContext)
-      }),
+      })),
     setSelectedNamespaces: (names) =>
       set((s) => applyNamespaceSelection(s, dedupeSorted(names))),
     toggleSelectedNamespace: (name) =>
@@ -343,7 +379,7 @@ export const useUIStore = create<UIState>((set) => {
       persistLogWrap(value)
       set({ logWrap: value })
     },
-    setSelectedView: (view) =>
+    setSelectedView: (view) => navigate(() =>
       set({
         selectedView: view,
         selectedCRDKey: null,
@@ -351,33 +387,41 @@ export const useUIStore = create<UIState>((set) => {
         lastSelectedResource: null,
         resourceNavStack: [],
         requestedTab: null,
-      }),
-    setSelectedCRD: (key) =>
+      })),
+    setSelectedCRD: (key) => navigate(() =>
       set({
         selectedCRDKey: key,
         selectedResource: null,
         lastSelectedResource: null,
         resourceNavStack: [],
         requestedTab: null,
-      }),
-    setSelectedResource: (resource) =>
-      set((s) => ({
+      })),
+    setSelectedResource: (resource) => {
+      const current = get().selectedResource
+      if (resource && current && sameResource(resource, current)) {
+        set({ selectedResource: resource })
+        return
+      }
+      navigate(() => set((s) => ({
         selectedResource: resource,
+        detailOutsideResults: false,
         lastSelectedResource: resource ?? s.selectedResource ?? s.lastSelectedResource,
         resourceNavStack: [],
-        requestedTab: null,
-      })),
-    openResource: (resource, tab) =>
+        requestedTab: retainedDetailTab(s, resource),
+      })))
+    },
+    openResource: (resource, tab) => navigate(() =>
       set((s) => ({
         resourceNavStack:
           s.selectedResource && !sameResource(s.selectedResource, resource)
             ? [...s.resourceNavStack, s.selectedResource]
             : s.resourceNavStack,
         selectedResource: resource,
+        detailOutsideResults: false,
         lastSelectedResource: resource,
-        requestedTab: tab ?? null,
-      })),
-    goBackResource: () =>
+        requestedTab: tab ?? retainedDetailTab(s, resource),
+      }))),
+    goBackResource: () => navigate(() =>
       set((s) => {
         if (s.resourceNavStack.length === 0) return s
         const next = s.resourceNavStack[s.resourceNavStack.length - 1]
@@ -387,7 +431,23 @@ export const useUIStore = create<UIState>((set) => {
           resourceNavStack: s.resourceNavStack.slice(0, -1),
           requestedTab: null,
         }
-      }),
+      })),
+    setActiveDetailTab: (activeDetailTab) => set({ activeDetailTab }),
+    setDetailWidth: (value) => {
+      const detailWidth = clampDetailWidth(value)
+      persistDetailWidth(detailWidth)
+      set({ detailWidth })
+    },
+    setDetailExpanded: (detailExpanded) => set({ detailExpanded }),
+    setDetailDirty: (detailDirty) => set({ detailDirty }),
+    setDetailOutsideResults: (detailOutsideResults) => set({ detailOutsideResults }),
+    requestDetailNavigation: navigate,
+    cancelDetailNavigation: () => set({ pendingDetailNavigation: null }),
+    confirmDetailNavigation: () => {
+      const action = get().pendingDetailNavigation
+      set({ detailDirty: false, pendingDetailNavigation: null })
+      action?.()
+    },
     setPendingAction: (action) => set({ pendingAction: action }),
     setTheme: (id) => {
       if (followingSystem) {

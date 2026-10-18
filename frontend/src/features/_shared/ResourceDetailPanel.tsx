@@ -1,8 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, RefreshCcw } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { lazy, Suspense, useCallback, useEffect, useState, type ComponentProps } from 'react'
+import { ArrowLeft, Maximize2, Minimize2, RefreshCcw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs as UITabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, type PodDetail } from '@/lib/api'
 import { useUIStore, type DetailTab, type SelectedResource } from '@/store/ui'
 import { useResourceDetail } from './useResourceDetail'
@@ -165,25 +164,34 @@ function TerminalFallback() {
 type Props = {
   contextName: string | null
   resource: SelectedResource | null
+  expanded?: boolean
+  canSplit?: boolean
+  onToggleExpanded?: () => void
 }
 
-export function ResourceDetailPanel({ contextName, resource }: Props) {
+function Tabs({ value, onValueChange, ...props }: ComponentProps<typeof UITabs>) {
+  const requestNavigation = useUIStore((s) => s.requestDetailNavigation)
+  const setActiveTab = useUIStore((s) => s.setActiveDetailTab)
+  useEffect(() => { if (value) setActiveTab(value) }, [value, setActiveTab])
+  return <UITabs {...props} value={value} activationMode="manual"
+    onValueChange={(next) => requestNavigation(() => onValueChange?.(next))} />
+}
+
+export function ResourceDetailPanel({ contextName, resource, expanded, canSplit, onToggleExpanded }: Props) {
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
   const goBackResource = useUIStore((s) => s.goBackResource)
   const canGoBack = useUIStore((s) => s.resourceNavStack.length > 0)
   const readOnly = useUIStore((s) => s.globalReadOnly)
+  const outsideResults = useUIStore((s) => s.detailOutsideResults)
   const managers = useResourceManagers(contextName, resource)
-  const open = resource !== null
+  if (!resource) return null
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (!o) setSelectedResource(null)
-      }}
-    >
-      <DialogContent className="flex h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-6xl">
-        <DialogHeader className="flex flex-row items-start justify-between gap-4 border-b border-border px-6 py-4 pr-12">
+      <section id="resource-detail-panel" data-resource-detail role="region" tabIndex={-1}
+        aria-labelledby="resource-detail-title"
+        className="resource-detail-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring">
+        <header className="shrink-0 space-y-3 border-b border-border px-4 py-3">
+          <div className="flex items-start gap-2">
           {canGoBack && (
             <Button
               size="icon"
@@ -198,7 +206,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
           <div className="min-w-0 flex-1 space-y-1">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{resource?.kind}</div>
             <div className="group flex min-w-0 items-center gap-1.5">
-              <DialogTitle className="truncate text-base">{resource?.name}</DialogTitle>
+              <h2 id="resource-detail-title" className="truncate text-sm font-semibold" title={resource.name}>{resource.name}</h2>
               {resource?.name && (
                 <CopyButton
                   value={resource.name}
@@ -224,11 +232,22 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
                   </div>
                 )}
                 <ManagedByChips contextName={contextName} managers={managers} />
+                {outsideResults && <span role="status" className="text-xs text-muted-foreground">Outside current results</span>}
               </div>
             )}
           </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {canSplit && <Button size="icon" variant="ghost" className="size-7"
+              aria-label={expanded ? 'Restore split view' : 'Expand resource details'}
+              title={expanded ? 'Restore split view' : 'Expand resource details'} onClick={onToggleExpanded}>
+              {expanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+            </Button>}
+            <Button size="icon" variant="ghost" className="size-7" aria-label="Close resource details"
+              title="Close resource details" onClick={() => setSelectedResource(null)}><X className="size-4" /></Button>
+          </div>
+          </div>
           {resource && resource.kind !== 'HelmRelease' && (
-            <div className="flex shrink-0 items-center gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-2">
               {!readOnly && resource.kind === 'Pod' && (
                 <ResizePodButton
                   contextName={contextName}
@@ -313,7 +332,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
                 ))}
             </div>
           )}
-        </DialogHeader>
+        </header>
         {resource && (
           <ErrorBoundary
             key={[
@@ -339,8 +358,7 @@ export function ResourceDetailPanel({ contextName, resource }: Props) {
             </ResourceManagersContext.Provider>
           </ErrorBoundary>
         )}
-      </DialogContent>
-    </Dialog>
+      </section>
   )
 }
 

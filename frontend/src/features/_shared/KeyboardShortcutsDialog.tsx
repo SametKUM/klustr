@@ -34,6 +34,8 @@ const GROUPS: Group[] = [
       { keys: ['Esc'], label: 'Clear filter or blur input' },
       { keys: ['Click'], label: 'Open resource details' },
       { keys: ['Right-click'], label: 'Open row action menu' },
+      { keys: ['↑', '↓'], label: 'Move between resource rows' },
+      { keys: ['F6'], label: 'Move between list and details' },
     ],
   },
   {

@@ -14,6 +14,9 @@ import {
 } from '@/features/_shared/themes'
 import {
   MAX_TAGS_PER_CONTEXT,
+  DETAIL_WIDTH_DEFAULT,
+  DETAIL_WIDTH_MIN,
+  DETAIL_WIDTH_MAX,
   SIDEBAR_WIDTH_DEFAULT,
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
@@ -31,6 +34,7 @@ export const EXPANDED_CRD_GROUPS_KEY = 'klustr-expanded-crd-groups'
 export const HIDDEN_SIDEBAR_ITEMS_KEY = 'klustr-hidden-sidebar-items'
 export const SIDEBAR_MODE_KEY = 'klustr-sidebar-mode'
 export const SIDEBAR_WIDTH_KEY = 'klustr-sidebar-width'
+export const DETAIL_WIDTH_KEY = 'klustr-detail-width'
 export const DEFAULT_CONTEXT_KEY = 'klustr-default-context'
 export const AGGREGATED_CONTEXTS_KEY = 'klustr-aggregated-contexts'
 export const NAMESPACES_BY_CONTEXT_KEY = 'klustr-namespaces-by-context'
@@ -40,6 +44,20 @@ export const CUSTOM_TAGS_KEY = 'klustr-custom-tags'
 export const CONTEXT_GROUPS_KEY = 'klustr-context-groups'
 export const LAST_SESSION_KEY = 'klustr-last-session'
 export const LOG_WRAP_KEY = 'klustr-log-wrap'
+
+export function clampDetailWidth(value: number): number {
+  if (!Number.isFinite(value)) return DETAIL_WIDTH_DEFAULT
+  return Math.min(DETAIL_WIDTH_MAX, Math.max(DETAIL_WIDTH_MIN, Math.round(value)))
+}
+
+export function readDetailWidth(): number {
+  const raw = localStorage.getItem(DETAIL_WIDTH_KEY)
+  return raw ? clampDetailWidth(Number(raw)) : DETAIL_WIDTH_DEFAULT
+}
+
+export function persistDetailWidth(value: number) {
+  localStorage.setItem(DETAIL_WIDTH_KEY, String(value))
+}
 
 const VALID_COLORS: ReadonlySet<TagColor> = new Set([
   'rose',
