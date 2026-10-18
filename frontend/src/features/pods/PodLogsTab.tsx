@@ -32,10 +32,11 @@ type Props = {
   detail: PodDetail
   contextName?: string | null
   initialContainer?: string
+  containerRequestId?: number
   active: boolean
 }
 
-export function PodLogsTab({ detail, contextName, initialContainer, active }: Props) {
+export function PodLogsTab({ detail, contextName, initialContainer, containerRequestId, active }: Props) {
   const fallbackContext = useUIStore((s) => s.selectedContext)
   const selectedContext = contextName ?? fallbackContext
   const setLogWrap = useUIStore((s) => s.setLogWrap)
@@ -46,18 +47,20 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
   const defaultContainer = detail.containers[0]?.name ?? detail.initContainers[0]?.name ?? ''
   const [selection, setSelection] = useState(() => ({
     requested: initialContainer,
+    requestId: containerRequestId,
     container: initialContainer && containerNames.includes(initialContainer) ? initialContainer : defaultContainer,
   }))
   // A container link can target the already-mounted pod inspector. Synchronize
   // before committing effects so the old container never starts an extra stream.
-  if (selection.requested !== initialContainer) {
+  if (selection.requested !== initialContainer || (containerRequestId !== undefined && selection.requestId !== containerRequestId)) {
     setSelection({
       requested: initialContainer,
+      requestId: containerRequestId,
       container: initialContainer && containerNames.includes(initialContainer) ? initialContainer : selection.container,
     })
   }
   const container = containerNames.includes(selection.container) ? selection.container : defaultContainer
-  const setContainer = (container: string) => setSelection({ requested: initialContainer, container })
+  const setContainer = (container: string) => setSelection({ requested: initialContainer, requestId: containerRequestId, container })
   const [previous, setPrevious] = useState(false)
   // A previous (terminated) instance only exists once the container restarted.
   const canPrevious = useMemo(() => {

@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { sameResource, useUIStore } from '@/store/ui'
+import { sameResource, useUIStore, type SelectedResource } from '@/store/ui'
 import { isEditableTarget } from '@/lib/dom'
 import { DetailResizeHandle } from './DetailResizeHandle'
 import { detailLayout, LIST_WIDTH_MIN } from './detailLayout'
@@ -10,6 +10,15 @@ import {
   ResourceNavigationDispatchContext,
   type ResourceNavigation,
 } from './resourceNavigation'
+
+function focusResourceRow(workspace: HTMLElement | null, resource: SelectedResource, context: string | null) {
+  const list = workspace?.querySelector<HTMLElement>('[data-resource-list]')
+  const key = `${resource.context ?? context ?? ''}/${resource.namespace}/${resource.name}`
+  const row = [...(list?.querySelectorAll<HTMLElement>('[data-resource-row]') ?? [])].find(
+    (element) => element.dataset.resourceRow === key,
+  )
+  ;(row ?? list)?.focus({ preventScroll: true })
+}
 
 export function ResourceWorkspace({ children }: { children: ReactNode }) {
   const [navigation, setNavigation] = useState<ResourceNavigation | null>(null)
@@ -26,29 +35,48 @@ function Workspace({ children }: { children: ReactNode }) {
   const { ref, width } = useElementWidth<HTMLDivElement>()
   const selectedResource = useUIStore((s) => s.selectedResource)
   const selectedContext = useUIStore((s) => s.selectedContext)
+  const selectedView = useUIStore((s) => s.selectedView)
+  const selectedCRDKey = useUIStore((s) => s.selectedCRDKey)
+  const contexts = useUIStore((s) => s.aggregatedContexts)
   const preferredWidth = useUIStore((s) => s.detailWidth)
   const expanded = useUIStore((s) => s.detailExpanded)
   const setWidth = useUIStore((s) => s.setDetailWidth)
   const setExpanded = useUIStore((s) => s.setDetailExpanded)
   const close = useUIStore((s) => s.setSelectedResource)
+  const requestNavigation = useUIStore((s) => s.requestDetailNavigation)
   const navigation = useContext(ResourceNavigationContext)
-  const previousResource = useRef(selectedResource)
+  const scope = `${selectedContext}\u0000${contexts.join('\u0000')}\u0000${selectedView}\u0000${selectedCRDKey}`
+  const previousSelection = useRef({ resource: selectedResource, scope })
   const [dragWidth, setDragWidth] = useState<number | null>(null)
   const layout = detailLayout(width, dragWidth ?? preferredWidth, expanded)
   const splitLayout = detailLayout(width, dragWidth ?? preferredWidth, false)
   const fullWidth = !!selectedResource && layout.fullWidth
 
+  const closeInspector = () => {
+    if (!selectedResource) return
+    requestNavigation(() => {
+      close(null)
+      // Wait for the pane and any draft dialog to release their focus traps.
+      requestAnimationFrame(() => {
+        const current = useUIStore.getState()
+        if (current.selectedResource || current.selectedContext !== selectedContext ||
+          current.selectedView !== selectedView || current.selectedCRDKey !== selectedCRDKey ||
+          current.aggregatedContexts !== contexts) return
+        focusResourceRow(ref.current, selectedResource, selectedContext)
+      })
+    })
+  }
+
   useEffect(() => {
-    const previous = previousResource.current
-    previousResource.current = selectedResource
-    if (!previous || selectedResource) return
-    const list = ref.current?.querySelector<HTMLElement>('[data-resource-list]')
-    const key = `${previous.context ?? selectedContext ?? ''}/${previous.namespace}/${previous.name}`
-    const row = [...(list?.querySelectorAll<HTMLElement>('[data-resource-row]') ?? [])].find(
-      (element) => element.dataset.resourceRow === key,
-    )
-    ;(row ?? list)?.focus({ preventScroll: true })
-  }, [selectedResource, selectedContext, ref])
+    const previous = previousSelection.current
+    previousSelection.current = { resource: selectedResource, scope }
+    if (!previous.resource || selectedResource || previous.scope !== scope) return
+    // Only closing this inspector returns focus to its list. Sidebar and
+    // context navigation own their focus even when they also clear selection.
+    const focused = document.activeElement
+    if (focused && focused !== document.body && !ref.current?.contains(focused)) return
+    focusResourceRow(ref.current, previous.resource, selectedContext)
+  }, [selectedResource, selectedContext, scope, ref])
 
   useEffect(() => {
     if (
@@ -118,7 +146,7 @@ function Workspace({ children }: { children: ReactNode }) {
         ) {
           event.preventDefault()
           event.stopPropagation()
-          close(null)
+          closeInspector()
         }
       }}
     >
@@ -163,6 +191,7 @@ function Workspace({ children }: { children: ReactNode }) {
           expanded={fullWidth}
           canSplit={layout.canSplit}
           onToggleExpanded={() => setExpanded(!expanded)}
+          onClose={closeInspector}
         />
       </div>
     </div>

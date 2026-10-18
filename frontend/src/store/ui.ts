@@ -93,6 +93,7 @@ type UIState = {
   lastSelectedResource: SelectedResource | null
   resourceNavStack: ResourceHistoryEntry[]
   requestedTab: DetailTab | null
+  detailRequestId: number
   activeDetailTab: string
   detailWidth: number
   detailExpanded: boolean
@@ -124,6 +125,7 @@ type UIState = {
   setSelectedView: (view: ResourceView) => void
   setSelectedCRD: (key: string | null) => void
   setSelectedResource: (resource: SelectedResource | null) => void
+  openResourceInView: (view: ResourceView, resource: SelectedResource) => void
   openResource: (resource: SelectedResource, tab?: DetailTab) => void
   goBackResource: () => void
   setActiveDetailTab: (tab: string) => void
@@ -310,6 +312,7 @@ export const useUIStore = create<UIState>((set, get) => {
     lastSelectedResource: null,
     resourceNavStack: [],
     requestedTab: null,
+    detailRequestId: 0,
     activeDetailTab: 'overview',
     detailWidth: readDetailWidth(),
     detailExpanded: false,
@@ -429,11 +432,31 @@ export const useUIStore = create<UIState>((set, get) => {
         lastSelectedResource: resource ?? s.selectedResource ?? s.lastSelectedResource,
         resourceNavStack: [],
         requestedTab: retainedDetailTab(s, resource),
+        detailRequestId: s.detailRequestId + 1,
+      })))
+    },
+    openResourceInView: (view, resource) => {
+      const s = get()
+      if (s.selectedView === view && s.selectedCRDKey === null) {
+        s.setSelectedResource(resource)
+        return
+      }
+      // View and resource are one destination, including after a draft decision.
+      navigate(() => set((s) => ({
+        selectedView: view,
+        selectedCRDKey: null,
+        selectedResource: resource,
+        lastSelectedResource: resource,
+        resourceNavStack: [],
+        requestedTab: null,
+        detailRequestId: s.detailRequestId + 1,
+        detailOutsideResults: false,
       })))
     },
     openResource: (resource, tab) => {
       const current = get().selectedResource
-      if (current && sameResource(current, resource) && (!tab || tab === get().activeDetailTab)) {
+      const containerRequest = tab === 'logs' && resource.logContainer !== undefined
+      if (current && sameResource(current, resource) && (!tab || tab === get().activeDetailTab) && !containerRequest) {
         set({ selectedResource: resource })
         return
       }
@@ -446,6 +469,8 @@ export const useUIStore = create<UIState>((set, get) => {
         detailOutsideResults: false,
         lastSelectedResource: resource,
         requestedTab: tab ?? retainedDetailTab(s, resource),
+        // Repeated requests must remain observable after manual tab/container changes.
+        detailRequestId: s.detailRequestId + 1,
       })))
     },
     goBackResource: () => {
@@ -458,6 +483,7 @@ export const useUIStore = create<UIState>((set, get) => {
           lastSelectedResource: next.resource,
           resourceNavStack: s.resourceNavStack.slice(0, -1),
           requestedTab: next.tab,
+          detailRequestId: s.detailRequestId + 1,
           detailOutsideResults: false,
         }
       }))

@@ -64,6 +64,46 @@ describe('resource inspector navigation', () => {
     expect(useUIStore.getState().requestedTab).toBe('exec')
   })
 
+  it.each(['logs', 'events', 'yaml'] as const)('dispatches another %s request after manual navigation', (tab) => {
+    const s = useUIStore.getState()
+    s.openResource(pod, tab)
+    const firstRequest = useUIStore.getState().detailRequestId
+    s.setActiveDetailTab('overview')
+    s.openResource(pod, tab)
+    expect(useUIStore.getState().detailRequestId).toBeGreaterThan(firstRequest)
+    expect(useUIStore.getState().requestedTab).toBe(tab)
+  })
+
+  it('dispatches repeated container links even while Logs is already active', () => {
+    const s = useUIStore.getState()
+    const target = { ...pod, logContainer: 'app' }
+    s.openResource(target, 'logs')
+    s.setActiveDetailTab('logs')
+    const firstRequest = useUIStore.getState().detailRequestId
+    s.openResource(target, 'logs')
+    expect(useUIStore.getState().detailRequestId).toBeGreaterThan(firstRequest)
+    s.setSelectedResource({ ...target })
+    expect(useUIStore.getState().detailRequestId).toBe(firstRequest + 1)
+  })
+
+  it('keeps view and resource together when a palette jump is confirmed or cancelled', () => {
+    const s = useUIStore.getState()
+    const configMap = { ...pod, kind: 'ConfigMap', name: 'settings' }
+    s.setSelectedView('configmaps')
+    s.setSelectedResource(configMap)
+    s.setDetailDirty(true)
+    s.openResourceInView('pods', pod)
+    expect(useUIStore.getState()).toMatchObject({ selectedView: 'configmaps', selectedResource: configMap })
+    s.cancelDetailNavigation()
+    expect(useUIStore.getState()).toMatchObject({ selectedView: 'configmaps', selectedResource: configMap, detailDirty: true })
+    s.openResourceInView('pods', pod)
+    s.confirmDetailNavigation()
+    expect(useUIStore.getState()).toMatchObject({
+      selectedView: 'pods', selectedResource: pod, selectedCRDKey: null,
+      detailDirty: false, pendingDetailNavigation: null, resourceNavStack: [],
+    })
+  })
+
   it.each(['row', 'close', 'view', 'context', 'crd', 'back', 'tab'])(
     'defers %s navigation until the draft is discarded', (target) => {
       const s = useUIStore.getState()

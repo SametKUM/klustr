@@ -18,11 +18,11 @@ vi.mock('./useElementWidth', async () => {
 })
 
 vi.mock('./ResourceDetailPanel', () => ({
-  ResourceDetailPanel: ({ resource }: { resource: object | null }) =>
-    resource ? <DetailSession /> : null,
+  ResourceDetailPanel: ({ resource, onClose }: { resource: object | null; onClose: () => void }) =>
+    resource ? <DetailSession onClose={onClose} /> : null,
 }))
 
-function DetailSession() {
+function DetailSession({ onClose }: { onClose: () => void }) {
   const [draft, setDraft] = useState('retained draft')
   useEffect(() => {
     mocks.mounted()
@@ -31,6 +31,7 @@ function DetailSession() {
   return (
     <section id="resource-detail-panel" data-resource-detail tabIndex={-1}>
       <input aria-label="Draft" value={draft} onChange={(event) => setDraft(event.target.value)} />
+      <button aria-label="Close resource details" onClick={onClose}>Close</button>
     </section>
   )
 }
@@ -122,5 +123,66 @@ describe('resource workspace sessions and focus', () => {
     expect(mocks.stopped).not.toHaveBeenCalled()
     act(() => useUIStore.getState().cancelDetailNavigation())
     expect(useUIStore.getState().selectedResource).toEqual(pod)
+  })
+
+  it.each(['view', 'context', 'crd'] as const)('does not focus the list when %s navigation clears the inspector', (target) => {
+    act(render)
+    const sidebar = document.createElement('button')
+    document.body.appendChild(sidebar)
+    try {
+      sidebar.focus()
+      act(() => {
+        const s = useUIStore.getState()
+        if (target === 'view') s.setSelectedView('configmaps')
+        else if (target === 'context') s.setSelectedContext('cluster-b')
+        else s.setSelectedCRD('example.io/widgets')
+      })
+      expect(useUIStore.getState().selectedResource).toBeNull()
+      expect(document.activeElement).toBe(sidebar)
+    } finally {
+      sidebar.remove()
+    }
+  })
+
+  it('leaves global keyboard navigation outside the list when a view change starts from the body', () => {
+    act(render)
+    expect(document.activeElement).toBe(document.body)
+    act(() => useUIStore.getState().setSelectedView('configmaps'))
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('preserves external toolbar focus when selection is cleared without changing views', () => {
+    act(render)
+    const toolbar = document.createElement('button')
+    document.body.appendChild(toolbar)
+    try {
+      toolbar.focus()
+      act(() => useUIStore.getState().setSelectedResource(null))
+      expect(document.activeElement).toBe(toolbar)
+    } finally {
+      toolbar.remove()
+    }
+  })
+
+  it.each([false, true])('returns focus after an explicit close, including a deferred draft decision (%s)', (dirty) => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.push(callback); return frames.length })
+    const dialogButton = document.createElement('button')
+    document.body.appendChild(dialogButton)
+    try {
+      act(render)
+      act(() => useUIStore.getState().setDetailDirty(dirty))
+      act(() => container.querySelector<HTMLButtonElement>('[aria-label="Close resource details"]')!.click())
+      dialogButton.focus()
+      if (dirty) {
+        expect(useUIStore.getState().selectedResource).toEqual(pod)
+        act(() => useUIStore.getState().confirmDetailNavigation())
+      }
+      act(() => frames.forEach((callback) => callback(0)))
+      expect(document.activeElement).toBe(container.querySelector('[data-resource-row]'))
+    } finally {
+      dialogButton.remove()
+      vi.unstubAllGlobals()
+    }
   })
 })

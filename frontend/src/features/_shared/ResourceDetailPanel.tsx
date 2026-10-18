@@ -168,6 +168,7 @@ type Props = {
   expanded?: boolean
   canSplit?: boolean
   onToggleExpanded?: () => void
+  onClose?: () => void
 }
 
 function Tabs({ value, onValueChange, ...props }: ComponentProps<typeof UITabs>) {
@@ -178,8 +179,9 @@ function Tabs({ value, onValueChange, ...props }: ComponentProps<typeof UITabs>)
     onValueChange={(next) => requestNavigation(() => onValueChange?.(next))} />
 }
 
-export function ResourceDetailPanel({ contextName, resource, expanded, canSplit, onToggleExpanded }: Props) {
+export function ResourceDetailPanel({ contextName, resource, expanded, canSplit, onToggleExpanded, onClose }: Props) {
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
+  const close = onClose ?? (() => setSelectedResource(null))
   const goBackResource = useUIStore((s) => s.goBackResource)
   const previousResource = useUIStore((s) => s.resourceNavStack.at(-1)?.resource)
   const dirty = useUIStore((s) => s.detailDirty)
@@ -224,7 +226,7 @@ export function ResourceDetailPanel({ contextName, resource, expanded, canSplit,
               <Button
                 size="icon" variant="ghost" className="size-6"
                 aria-label="Close resource details" title="Close resource details (Esc)"
-                onClick={() => setSelectedResource(null)}
+                onClick={close}
               >
                 <X className="size-4" />
               </Button>
@@ -364,7 +366,7 @@ export function ResourceDetailPanel({ contextName, resource, expanded, canSplit,
                 error={error}
                 componentStack={componentStack}
                 onRetry={reset}
-                onDismiss={() => setSelectedResource(null)}
+                onDismiss={close}
               />
             )}
           >
@@ -558,6 +560,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
         ? 'overview'
         : 'yaml'
   const requestedTab = useUIStore((s) => s.requestedTab)
+  const detailRequestId = useUIStore((s) => s.detailRequestId)
   const allowedTabs: string[] = []
   if (hasOverview) allowedTabs.push('overview')
   if (isArgoApp) allowedTabs.push('resources', 'history')
@@ -580,7 +583,7 @@ function CustomResourceTabs({ contextName, resource }: { contextName: string | n
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Requested navigation synchronizes the controlled tab.
     setTab(resolveTab(requestedTab))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- allowedTabs/initialTab derive from the identity deps below
-  }, [resource.kind, resource.namespace, resource.name, resource.gvr?.group, requestedTab])
+  }, [resource.kind, resource.namespace, resource.name, resource.gvr?.group, requestedTab, detailRequestId])
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
@@ -781,6 +784,7 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
   )
   const policyReport = useResourcePolicyReport(contextName, resource.kind, resource.namespace, resource.name)
   const requestedTab = useUIStore((s) => s.requestedTab)
+  const detailRequestId = useUIStore((s) => s.detailRequestId)
   const allowed: DetailTab[] = ['overview']
   if (hasAggregatedLogs) allowed.push('logs')
   if (hasNodeShell) allowed.push('shell')
@@ -798,7 +802,7 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Requested navigation synchronizes the controlled tab.
     setTab(requestedTab && allowed.includes(requestedTab) ? requestedTab : 'overview')
     // eslint-disable-next-line react-hooks/exhaustive-deps -- allowed is derived from the identity deps below
-  }, [resource.kind, resource.namespace, resource.name, requestedTab])
+  }, [resource.kind, resource.namespace, resource.name, requestedTab, detailRequestId])
   return (
     <Tabs value={tab} onValueChange={(v) => setTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
@@ -960,6 +964,7 @@ function PodTabs({
   )
   const policyReport = useResourcePolicyReport(contextName, 'Pod', namespace, name)
   const requestedTab = useUIStore((s) => s.requestedTab)
+  const detailRequestId = useUIStore((s) => s.detailRequestId)
   const requestedContainer = useUIStore((s) => s.selectedResource?.logContainer)
   const [tabState, setTabState] = useState(() => ({
     active: requestedTab ?? 'overview',
@@ -969,12 +974,15 @@ function PodTabs({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Requested navigation synchronizes the controlled tab.
-    setTabState({
+    setTabState((current) => ({
       active: requestedTab ?? 'overview',
-      logsMounted: requestedTab === 'logs',
-      execMounted: requestedTab === 'exec',
-    })
-  }, [namespace, name, requestedTab])
+      logsMounted: current.logsMounted || requestedTab === 'logs',
+      execMounted: current.execMounted || requestedTab === 'exec',
+    }))
+  }, [namespace, name, requestedTab, detailRequestId])
+  // Keep the requested Policy tab while its report loads, but always render an
+  // available body. Manual navigation replaces the pending preference.
+  const activeTab = tabState.active === 'policy' && !policyReport ? 'overview' : tabState.active
 
   const selectTab = (active: DetailTab) => {
     setTabState((current) => ({
@@ -985,7 +993,7 @@ function PodTabs({
   }
 
   return (
-    <Tabs value={tabState.active} onValueChange={(v) => selectTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
+    <Tabs value={activeTab} onValueChange={(v) => selectTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="logs" disabled={!detail}>Logs</TabsTrigger>
@@ -1030,7 +1038,8 @@ function PodTabs({
               detail={detail}
               contextName={contextName}
               initialContainer={requestedContainer}
-              active={tabState.active === 'logs'}
+              containerRequestId={requestedTab === 'logs' && requestedContainer ? detailRequestId : undefined}
+              active={activeTab === 'logs'}
             />
           </Suspense>
         )}
@@ -1041,7 +1050,7 @@ function PodTabs({
             <PodExecTab
               detail={detail}
               contextName={contextName}
-              active={tabState.active === 'exec'}
+              active={activeTab === 'exec'}
             />
           </Suspense>
         )}

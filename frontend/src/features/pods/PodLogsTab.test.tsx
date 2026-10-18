@@ -158,4 +158,27 @@ describe('PodLogsTab tail', () => {
     expect(mocks.startPodLogs).toHaveBeenCalledTimes(starts)
     expect(container.querySelector<HTMLSelectElement>('select[aria-label="Select container"]')?.value).toBe('app')
   })
+
+  it('honors a repeated explicit container request after a manual selection but ignores passive refreshes', async () => {
+    const multi = { ...detail, containers: [...detail.containers, { name: 'sidecar', restartCount: 0 }] } as PodDetail
+    const render = (requestId?: number) => root.render(
+      <PodLogsTab detail={{ ...multi } as PodDetail} contextName="cluster-a" initialContainer="app" containerRequestId={requestId} active />,
+    )
+    await act(async () => render(1))
+    await pick('Select how many lines to load', '1000')
+    await pick('Select container', 'sidecar')
+    const starts = mocks.startPodLogs.mock.calls.length
+    await act(async () => render(1))
+    expect(mocks.startPodLogs).toHaveBeenCalledTimes(starts)
+    expect(container.querySelector<HTMLSelectElement>('select[aria-label="Select container"]')?.value).toBe('sidecar')
+    await act(async () => render())
+    expect(mocks.startPodLogs).toHaveBeenCalledTimes(starts)
+    expect(container.querySelector<HTMLSelectElement>('select[aria-label="Select container"]')?.value).toBe('sidecar')
+    await act(async () => render(2))
+    expect(container.querySelector<HTMLSelectElement>('select[aria-label="Select container"]')?.value).toBe('app')
+    expect(mocks.startPodLogs).toHaveBeenCalledTimes(starts + 1)
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', true, false, 1000)
+    await act(async () => render(3))
+    expect(mocks.startPodLogs).toHaveBeenCalledTimes(starts + 1)
+  })
 })

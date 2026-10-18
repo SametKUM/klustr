@@ -27,8 +27,7 @@ export function PodSearchPalette() {
   const [query, setQuery] = useState('')
   const activeContexts = useActiveContexts()
   const isAggregated = useIsAggregated()
-  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
-  const setSelectedView = useUIStore((s) => s.setSelectedView)
+  const openResourceInView = useUIStore((s) => s.openResourceInView)
 
   const podsByCtx = useResources((s) => s.pods)
   const setPods = useResources((s) => s.setPods)
@@ -143,8 +142,7 @@ export function PodSearchPalette() {
                 key={`${p.__ctx}/${p.namespace}/${p.name}`}
                 value={`${p.namespace} ${p.name} ${p.__ctx}`}
                 onSelect={() => {
-                  setSelectedView('pods')
-                  setSelectedResource({
+                  openResourceInView('pods', {
                     kind: 'Pod',
                     namespace: p.namespace,
                     name: p.name,

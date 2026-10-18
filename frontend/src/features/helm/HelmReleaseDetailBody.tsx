@@ -32,8 +32,13 @@ export function HelmReleaseDetailBody({
   onRequestUninstall,
 }: Props) {
   const requestedTab = useUIStore((s) => s.requestedTab)
+  const detailRequestId = useUIStore((s) => s.detailRequestId)
   const setActiveTab = useUIStore((s) => s.setActiveDetailTab)
   const [tab, setTab] = useState<Tab>(requestedTab && TABS.includes(requestedTab) ? requestedTab as Tab : 'overview')
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Explicit inspector navigation can target the same release again.
+    setTab(requestedTab && TABS.includes(requestedTab) ? requestedTab as Tab : 'overview')
+  }, [requestedTab, detailRequestId])
   useEffect(() => setActiveTab(tab), [tab, setActiveTab])
 
   if (error) return <ErrorBox>{error}</ErrorBox>

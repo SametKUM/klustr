@@ -20,6 +20,8 @@ Browse the current filtered and sorted result set from the inspector, including 
 
 Back navigation restores the previous reading tab without reconnecting terminal tabs. Unchanged view, context and tab selections preserve the editor without prompting. Show unapplied YAML status in the header, identify the resource and context in discard decisions, and return cancelled navigation to the editor. Reset inspector width by double-clicking its divider or pressing Enter while the divider is focused. Alt+Up/Down navigates results outside editors, terminals and open menus.
 
+Treat explicit tab and container links as navigation requests, including repeated destinations after manual selection. Passive resource updates preserve the user's container choice. Keep visited log and exec sessions mounted during same-resource navigation. While a requested Pod Policy report is unavailable, show Overview; a delayed report must not override subsequent manual tab navigation. A Pod search jump changes the list view and inspected resource together after any draft decision. Explicit inspector closing returns focus to its row, including after discarding a draft; sidebar and context navigation retain their own focus.
+
 Preserve the list search when a namespace is empty. Distinguish an empty source list from results hidden by filters; offer Clear filters for the latter without changing the namespace or open inspector.
 
 Inspector tab strips scroll horizontally only when their tabs exceed the available width. Keep their scrollbar hidden without disabling scrolling so native scrollbars cannot squeeze the tab labels. Hide the unused underline decoration in the default boxed variant so it cannot create vertical overflow.
@@ -46,7 +48,11 @@ Log toolbar verification covers thirteen inspector widths from 480px to 960px, i
 
 Previous-log verification reads a real terminated local container instance, checks the labeled action at the same thirteen widths, and returns to the current stream. Previous mode remains explicitly identified after historical output arrives. Regression coverage checks that switching to a container without restarts disables Previous and restores current-instance status and request routing.
 
+Review regressions cover repeated tab requests for built-in, custom and Helm resources, repeated container links after manual selection, unavailable and delayed Pod policy reports, atomic search navigation through draft decisions, and scoped focus restoration. Native local-kind verification confirms real log and exec session retention, repeated container routing, continued sidebar arrow navigation, editor focus after cancelling a search jump, and row focus after confirming an inspector close. These navigation checks edit local drafts without applying them to the cluster.
+
 ## Changelog
+
+- 2026-10-18: Resolve repeated inspector navigation requests, unavailable Pod Policy tabs, deferred search destinations and focus restoration without reconnecting existing sessions.
 
 - 2026-10-18: Keep Previous visibly labeled at every width and distinguish previous-instance output from live logs.
 
