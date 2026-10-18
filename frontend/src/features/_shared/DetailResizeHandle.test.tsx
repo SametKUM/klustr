@@ -75,4 +75,11 @@ describe('inspector resizing', () => {
     act(() => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })))
     expect(commit).toHaveBeenLastCalledWith(700)
   })
+
+  it('resets the preferred width with a double-click or Enter', () => {
+    act(() => handle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })))
+    expect(commit).toHaveBeenLastCalledWith(560)
+    act(() => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
+    expect(commit).toHaveBeenLastCalledWith(560)
+  })
 })

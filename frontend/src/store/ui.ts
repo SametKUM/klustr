@@ -12,6 +12,7 @@ import {
   type LastSession,
   type PendingAction,
   type ResourceView,
+  type ResourceHistoryEntry,
   type SelectedResource,
   type SidebarMode,
 } from './ui.types'
@@ -90,7 +91,7 @@ type UIState = {
   selectedCRDKey: string | null
   selectedResource: SelectedResource | null
   lastSelectedResource: SelectedResource | null
-  resourceNavStack: SelectedResource[]
+  resourceNavStack: ResourceHistoryEntry[]
   requestedTab: DetailTab | null
   activeDetailTab: string
   detailWidth: number
@@ -187,13 +188,17 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((n, i) => b[i] === n)
 }
 
+function readingDetailTab(tab: string): DetailTab | null {
+  // Terminal tabs must never auto-connect when returning through history.
+  const readingTabs: readonly string[] = ['overview', 'logs', 'events', 'yaml', 'history', 'values', 'manifest', 'notes', 'policy', 'disruption']
+  return readingTabs.includes(tab) ? tab as DetailTab : null
+}
+
 function retainedDetailTab(s: UIState, resource: SelectedResource | null): DetailTab | null {
   const current = s.selectedResource
   if (!current || !resource || current.kind !== resource.kind ||
     current.gvr?.group !== resource.gvr?.group || current.gvr?.resource !== resource.gvr?.resource) return null
-  // Terminal tabs must never auto-connect to a newly selected resource.
-  const readingTabs: readonly string[] = ['overview', 'logs', 'events', 'yaml', 'history', 'values', 'manifest', 'notes', 'policy', 'disruption']
-  return readingTabs.includes(s.activeDetailTab) ? s.activeDetailTab as DetailTab : null
+  return readingDetailTab(s.activeDetailTab)
 }
 
 type NormalizedContexts = {
@@ -204,6 +209,9 @@ type NormalizedContexts = {
   selectedCRDKey: string | null
   selectedResource: SelectedResource | null
   lastSelectedResource: SelectedResource | null
+  resourceNavStack: ResourceHistoryEntry[]
+  requestedTab: DetailTab | null
+  detailOutsideResults: boolean
 }
 
 // normalizeContexts also re-applies the namespace selection saved for the
@@ -226,6 +234,9 @@ function normalizeContexts(
     selectedCRDKey: null,
     selectedResource: null,
     lastSelectedResource: null,
+    resourceNavStack: [],
+    requestedTab: null,
+    detailOutsideResults: false,
   }
 }
 
@@ -317,8 +328,9 @@ export const useUIStore = create<UIState>((set, get) => {
     customTags: readCustomTags(),
     contextGroups: readContextGroups(),
     lastSession: readLastSession(),
-    setSelectedContext: (name) => navigate(() =>
-      set((s) => {
+    setSelectedContext: (name) => {
+      if (sameList(name ? [name] : [], effectiveContextList(get()))) return
+      navigate(() => set((s) => {
         const next = name ? [name] : []
         if (sameList(next, effectiveContextList(s))) return s
         const out = normalizeContexts(next, s.namespacesByContext)
@@ -328,11 +340,13 @@ export const useUIStore = create<UIState>((set, get) => {
           return { ...out, lastSession: ls }
         }
         return out
-      })),
-    setAggregatedContexts: (names, groupId) => navigate(() =>
-      set((s) => {
-        const next = dedupeSorted(names)
-        const nextGroup = groupId ?? null
+      }))
+    },
+    setAggregatedContexts: (names, groupId) => {
+      const next = dedupeSorted(names)
+      const nextGroup = groupId ?? null
+      if (sameList(next, effectiveContextList(get())) && get().activeGroupId === nextGroup) return
+      navigate(() => set((s) => {
         if (sameList(next, effectiveContextList(s)) && s.activeGroupId === nextGroup) return s
         const out = { ...normalizeContexts(next, s.namespacesByContext), activeGroupId: nextGroup }
         if (next.length > 0) {
@@ -341,7 +355,8 @@ export const useUIStore = create<UIState>((set, get) => {
           return { ...out, lastSession: ls }
         }
         return out
-      })),
+      }))
+    },
     clearLastSession: () => {
       persistLastSession(null)
       set({ lastSession: null })
@@ -355,11 +370,13 @@ export const useUIStore = create<UIState>((set, get) => {
         if (sameList(next, current)) return s
         return normalizeContexts(next, s.namespacesByContext)
       })),
-    clearAggregatedContexts: () => navigate(() =>
-      set((s) => {
+    clearAggregatedContexts: () => {
+      if (effectiveContextList(get()).length === 0) return
+      navigate(() => set((s) => {
         if (effectiveContextList(s).length === 0) return s
         return normalizeContexts([], s.namespacesByContext)
-      })),
+      }))
+    },
     setSelectedNamespaces: (names) =>
       set((s) => applyNamespaceSelection(s, dedupeSorted(names))),
     toggleSelectedNamespace: (name) =>
@@ -379,23 +396,27 @@ export const useUIStore = create<UIState>((set, get) => {
       persistLogWrap(value)
       set({ logWrap: value })
     },
-    setSelectedView: (view) => navigate(() =>
-      set({
+    setSelectedView: (view) => {
+      if (get().selectedView === view && get().selectedCRDKey === null) return
+      navigate(() => set({
         selectedView: view,
         selectedCRDKey: null,
         selectedResource: null,
         lastSelectedResource: null,
         resourceNavStack: [],
         requestedTab: null,
-      })),
-    setSelectedCRD: (key) => navigate(() =>
-      set({
+      }))
+    },
+    setSelectedCRD: (key) => {
+      if (get().selectedCRDKey === key) return
+      navigate(() => set({
         selectedCRDKey: key,
         selectedResource: null,
         lastSelectedResource: null,
         resourceNavStack: [],
         requestedTab: null,
-      })),
+      }))
+    },
     setSelectedResource: (resource) => {
       const current = get().selectedResource
       if (resource && current && sameResource(resource, current)) {
@@ -410,28 +431,37 @@ export const useUIStore = create<UIState>((set, get) => {
         requestedTab: retainedDetailTab(s, resource),
       })))
     },
-    openResource: (resource, tab) => navigate(() =>
-      set((s) => ({
+    openResource: (resource, tab) => {
+      const current = get().selectedResource
+      if (current && sameResource(current, resource) && (!tab || tab === get().activeDetailTab)) {
+        set({ selectedResource: resource })
+        return
+      }
+      navigate(() => set((s) => ({
         resourceNavStack:
           s.selectedResource && !sameResource(s.selectedResource, resource)
-            ? [...s.resourceNavStack, s.selectedResource]
+            ? [...s.resourceNavStack, { resource: s.selectedResource, tab: readingDetailTab(s.activeDetailTab) }]
             : s.resourceNavStack,
         selectedResource: resource,
         detailOutsideResults: false,
         lastSelectedResource: resource,
         requestedTab: tab ?? retainedDetailTab(s, resource),
-      }))),
-    goBackResource: () => navigate(() =>
-      set((s) => {
+      })))
+    },
+    goBackResource: () => {
+      if (get().resourceNavStack.length === 0) return
+      navigate(() => set((s) => {
         if (s.resourceNavStack.length === 0) return s
         const next = s.resourceNavStack[s.resourceNavStack.length - 1]
         return {
-          selectedResource: next,
-          lastSelectedResource: next,
+          selectedResource: next.resource,
+          lastSelectedResource: next.resource,
           resourceNavStack: s.resourceNavStack.slice(0, -1),
-          requestedTab: null,
+          requestedTab: next.tab,
+          detailOutsideResults: false,
         }
-      })),
+      }))
+    },
     setActiveDetailTab: (activeDetailTab) => set({ activeDetailTab }),
     setDetailWidth: (value) => {
       const detailWidth = clampDetailWidth(value)

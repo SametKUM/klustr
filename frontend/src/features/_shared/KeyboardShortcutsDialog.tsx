@@ -36,6 +36,9 @@ const GROUPS: Group[] = [
       { keys: ['Right-click'], label: 'Open row action menu' },
       { keys: ['↑', '↓'], label: 'Move between resource rows' },
       { keys: ['F6'], label: 'Move between list and details' },
+      { keys: ['Alt', '↑', '↓'], label: 'Inspect previous / next result' },
+      { keys: ['Esc'], label: 'Close details outside editors' },
+      { keys: ['Enter'], label: 'Reset the focused inspector divider' },
     ],
   },
   {

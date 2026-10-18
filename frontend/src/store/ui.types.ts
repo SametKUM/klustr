@@ -238,6 +238,11 @@ export type DetailTab =
   | 'disruption'
   | 'yaml'
 
+export type ResourceHistoryEntry = {
+  resource: SelectedResource
+  tab: DetailTab | null
+}
+
 export type PendingAction =
   | { kind: 'delete'; resource: SelectedResource }
   | { kind: 'portforward'; resource: SelectedResource }

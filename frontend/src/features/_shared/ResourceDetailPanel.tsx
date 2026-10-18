@@ -9,6 +9,7 @@ import { ResourceManagersContext, useResourceManagers } from './useResourceManag
 import { ManagedByChips } from './ManagedByChips'
 import { CopyButton } from './Copyable'
 import { ContextBadge } from './ContextBadge'
+import { ResourceListNavigator } from './ResourceListNavigator'
 import { ErrorBoundary } from './ErrorBoundary'
 import { ErrorRecovery } from './ErrorRecovery'
 import { ErrorBox } from './DetailPrimitives'
@@ -180,7 +181,8 @@ function Tabs({ value, onValueChange, ...props }: ComponentProps<typeof UITabs>)
 export function ResourceDetailPanel({ contextName, resource, expanded, canSplit, onToggleExpanded }: Props) {
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
   const goBackResource = useUIStore((s) => s.goBackResource)
-  const canGoBack = useUIStore((s) => s.resourceNavStack.length > 0)
+  const previousResource = useUIStore((s) => s.resourceNavStack.at(-1)?.resource)
+  const dirty = useUIStore((s) => s.detailDirty)
   const readOnly = useUIStore((s) => s.globalReadOnly)
   const outsideResults = useUIStore((s) => s.detailOutsideResults)
   const managers = useResourceManagers(contextName, resource)
@@ -191,20 +193,42 @@ export function ResourceDetailPanel({ contextName, resource, expanded, canSplit,
         aria-labelledby="resource-detail-title"
         className="resource-detail-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring">
         <header className="shrink-0 space-y-3 border-b border-border px-4 py-3">
-          <div className="flex items-start gap-2">
-          {canGoBack && (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={goBackResource}
-              aria-label="Back to previous resource"
-              className="-ml-2 mt-0.5 size-7 shrink-0"
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">{resource?.kind}</div>
+          <div className="space-y-1">
+            <div className="flex min-w-0 items-center gap-1">
+              {previousResource && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={goBackResource}
+                  aria-label="Back to previous resource"
+                  title={`Back to ${previousResource.kind}/${previousResource.name}`}
+                  className="-ml-1 size-6 shrink-0"
+                >
+                  <ArrowLeft className="size-4" />
+                </Button>
+              )}
+              <div className="min-w-0 flex-1 truncate text-xs uppercase tracking-wide text-muted-foreground" title={resource.kind}>
+                {resource.kind}
+              </div>
+              <ResourceListNavigator resource={resource} />
+              {canSplit && (
+                <Button
+                  size="icon" variant="ghost" className="size-6"
+                  aria-label={expanded ? 'Restore split view' : 'Expand resource details'}
+                  title={expanded ? 'Restore split view' : 'Expand resource details'}
+                  onClick={onToggleExpanded}
+                >
+                  {expanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+                </Button>
+              )}
+              <Button
+                size="icon" variant="ghost" className="size-6"
+                aria-label="Close resource details" title="Close resource details (Esc)"
+                onClick={() => setSelectedResource(null)}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
             <div className="group flex min-w-0 items-center gap-1.5">
               <h2 id="resource-detail-title" className="truncate text-sm font-semibold" title={resource.name}>{resource.name}</h2>
               {resource?.name && (
@@ -232,19 +256,10 @@ export function ResourceDetailPanel({ contextName, resource, expanded, canSplit,
                   </div>
                 )}
                 <ManagedByChips contextName={contextName} managers={managers} />
+                {dirty && <span role="status" className="rounded border border-border px-1.5 py-0.5 text-[11px] text-foreground">Unapplied YAML</span>}
                 {outsideResults && <span role="status" className="text-xs text-muted-foreground">Outside current results</span>}
               </div>
             )}
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {canSplit && <Button size="icon" variant="ghost" className="size-7"
-              aria-label={expanded ? 'Restore split view' : 'Expand resource details'}
-              title={expanded ? 'Restore split view' : 'Expand resource details'} onClick={onToggleExpanded}>
-              {expanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
-            </Button>}
-            <Button size="icon" variant="ghost" className="size-7" aria-label="Close resource details"
-              title="Close resource details" onClick={() => setSelectedResource(null)}><X className="size-4" /></Button>
-          </div>
           </div>
           {resource && resource.kind !== 'HelmRelease' && (
             <div className="flex flex-wrap items-center gap-2">

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { DETAIL_WIDTH_MIN } from '@/store/ui.types'
+import { DETAIL_WIDTH_DEFAULT, DETAIL_WIDTH_MIN } from '@/store/ui.types'
 
 type Props = {
   width: number
@@ -36,6 +36,8 @@ export function DetailResizeHandle({ width, maxWidth, onResize, onCommit }: Prop
       aria-valuemin={DETAIL_WIDTH_MIN}
       aria-valuemax={maxWidth}
       aria-valuenow={Math.round(width)}
+      title="Drag to resize. Double-click or press Enter to reset."
+      onDoubleClick={() => onCommit(clamp(DETAIL_WIDTH_DEFAULT))}
       onKeyDown={(event) => {
         const step = event.shiftKey ? 64 : 16
         const next =
@@ -47,7 +49,9 @@ export function DetailResizeHandle({ width, maxWidth, onResize, onCommit }: Prop
                 ? DETAIL_WIDTH_MIN
                 : event.key === 'End'
                   ? maxWidth
-                  : null
+                  : event.key === 'Enter'
+                    ? DETAIL_WIDTH_DEFAULT
+                    : null
         if (next === null) return
         event.preventDefault()
         event.stopPropagation()

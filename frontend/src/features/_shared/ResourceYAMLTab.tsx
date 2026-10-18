@@ -172,7 +172,7 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Pro
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div data-resource-yaml className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs">
         <span className="text-muted-foreground">YAML</span>
         <Button

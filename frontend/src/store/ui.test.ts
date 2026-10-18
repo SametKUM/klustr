@@ -102,6 +102,41 @@ describe('resource inspector navigation', () => {
     expect(useUIStore.getState()).toMatchObject({ selectedResource: pod, detailDirty: true, pendingDetailNavigation: null })
   })
 
+  it.each(['context', 'view', 'row', 'tab', 'empty history'])(
+    'keeps the editor without prompting for unchanged %s navigation', (target) => {
+      const s = useUIStore.getState()
+      s.setSelectedContext('cluster-a')
+      s.setSelectedView('pods')
+      s.setSelectedResource(pod)
+      s.setActiveDetailTab('yaml')
+      s.setDetailDirty(true)
+      const actions = {
+        context: () => s.setSelectedContext('cluster-a'),
+        view: () => s.setSelectedView('pods'),
+        row: () => s.setSelectedResource({ ...pod }),
+        tab: () => s.openResource({ ...pod }, 'yaml'),
+        'empty history': () => s.goBackResource(),
+      }
+      actions[target as keyof typeof actions]()
+      expect(useUIStore.getState()).toMatchObject({
+        selectedResource: pod, detailDirty: true, pendingDetailNavigation: null,
+      })
+    },
+  )
+
+  it('ignores repeated aggregate and custom-resource selections while editing', () => {
+    const s = useUIStore.getState()
+    s.setAggregatedContexts(['cluster-b', 'cluster-a'], 'local-group')
+    s.setSelectedCRD('example.io/widgets')
+    s.setSelectedResource(pod)
+    s.setDetailDirty(true)
+    s.setAggregatedContexts(['cluster-a', 'cluster-b', 'cluster-a'], 'local-group')
+    s.setSelectedCRD('example.io/widgets')
+    expect(useUIStore.getState()).toMatchObject({
+      selectedResource: pod, detailDirty: true, pendingDetailNavigation: null,
+    })
+  })
+
   it('resizing and expansion do not change resource identity or navigation', () => {
     const s = useUIStore.getState()
     s.openResource(pod, 'exec')
@@ -323,7 +358,7 @@ describe('resource navigation stack', () => {
     useUIStore.getState().openResource(node)
     const s = useUIStore.getState()
     expect(s.selectedResource).toEqual(node)
-    expect(s.resourceNavStack).toEqual([pod])
+    expect(s.resourceNavStack).toEqual([{ resource: pod, tab: 'overview' }])
   })
 
   it('opening the same resource twice does not push a duplicate', () => {
@@ -339,6 +374,36 @@ describe('resource navigation stack', () => {
     const s = useUIStore.getState()
     expect(s.selectedResource).toEqual(pod)
     expect(s.resourceNavStack).toEqual([])
+  })
+
+  it('returns to the reading tab after following a related resource', () => {
+    const s = useUIStore.getState()
+    s.openResource(pod)
+    s.setActiveDetailTab('events')
+    s.openResource(node)
+    s.setActiveDetailTab('overview')
+    s.goBackResource()
+    expect(useUIStore.getState()).toMatchObject({ selectedResource: pod, requestedTab: 'events' })
+  })
+
+  it.each(['exec', 'shell'])('does not reconnect a %s tab when returning through history', (tab) => {
+    const s = useUIStore.getState()
+    s.openResource(pod)
+    s.setActiveDetailTab(tab)
+    s.openResource(node)
+    s.goBackResource()
+    expect(useUIStore.getState()).toMatchObject({ selectedResource: pod, requestedTab: null })
+  })
+
+  it('clears resource history when switching contexts', () => {
+    const s = useUIStore.getState()
+    s.setSelectedContext('cluster-a')
+    s.openResource(pod)
+    s.setActiveDetailTab('logs')
+    s.openResource(node)
+    s.setSelectedContext('cluster-b')
+    s.goBackResource()
+    expect(useUIStore.getState()).toMatchObject({ selectedResource: null, resourceNavStack: [], requestedTab: null })
   })
 
   it('goBackResource is a no-op on an empty stack', () => {

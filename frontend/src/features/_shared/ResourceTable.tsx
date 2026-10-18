@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -68,6 +68,7 @@ import { KLUSTR_CTX, resolveResourceContexts, type Tagged } from './resourceCont
 import { resourcePageCount } from './pagination'
 import { compactColumnIds } from './detailLayout'
 import { useElementWidth } from './useElementWidth'
+import { ResourceNavigationDispatchContext, type ResourceNavigation } from './resourceNavigation'
 
 type RowIdentity = { namespace?: string; name?: string }
 
@@ -321,6 +322,8 @@ export function ResourceTable<T>({
   const selectedResource = useUIStore((s) => s.selectedResource)
   const lastSelectedResource = useUIStore((s) => s.lastSelectedResource)
   const setOutsideResults = useUIStore((s) => s.setDetailOutsideResults)
+  const requestNavigation = useUIStore((s) => s.requestDetailNavigation)
+  const setResourceNavigation = useContext(ResourceNavigationDispatchContext)
   const tableRef = useRef<HTMLDivElement>(null)
   const { ref: scrollRef, width: tableWidth } = useElementWidth<HTMLDivElement>()
   const [fullColumns, setFullColumns] = useState(false)
@@ -489,10 +492,6 @@ export function ResourceTable<T>({
     const id = window.setTimeout(() => setFlashKey(null), 1_200)
     return () => window.clearTimeout(id)
   }, [selectedResource, lastSelectedResource, resourceContexts])
-
-  useEffect(() => {
-    if (mergedData.length === 0) setFilter('')
-  }, [mergedData.length])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -908,6 +907,51 @@ export function ResourceTable<T>({
     })
   }
   const clearSelection = () => setSelectedKeys(new Set())
+
+  useEffect(() => {
+    if (!setResourceNavigation || !selectedResource || !onRowClick ||
+      !tableRef.current?.closest('[data-resource-list]')) return
+    const resourceFor = (row: Row<Tagged<T>>): SelectedResource => {
+      const identity = row.original as RowIdentity
+      return handleRowResource(row.original) ?? {
+        kind, context: row.original[KLUSTR_CTX], namespace: identity.namespace ?? '', name: identity.name ?? '',
+      }
+    }
+    const index = selectableRows.findIndex((row) => sameResource(selectedResource, resourceFor(row)))
+    if (index < 0) {
+      setResourceNavigation(null)
+      return
+    }
+    const move = (offset: number) => {
+      const intendedRow = selectableRows[index + offset]
+      if (!intendedRow) return
+      const intendedResource = resourceFor(intendedRow)
+      requestNavigation(() => {
+        // Informer updates can move the chosen resource while a draft decision
+        // is open. Preserve its identity, then reveal its current page.
+        const rows = table.getPrePaginationRowModel().rows
+        const target = rows.findIndex((row) => sameResource(intendedResource, resourceFor(row)))
+        const pageSize = table.getState().pagination.pageSize
+        handleRowClick((rows[target] ?? intendedRow).original)
+        if (target >= 0) setPageIndex(Math.floor(target / pageSize))
+        requestAnimationFrame(() => {
+          if (target >= 0) virtualizer.scrollToIndex(target % pageSize, { align: 'auto' })
+          tableRef.current?.closest('[data-resource-workspace]')
+            ?.querySelector<HTMLElement>('[data-resource-detail]')?.focus({ preventScroll: true })
+        })
+      })
+    }
+    const navigation: ResourceNavigation = {
+      resource: selectedResource,
+      index,
+      total: selectableRows.length,
+      previous: index > 0 ? () => move(-1) : null,
+      next: index + 1 < selectableRows.length ? () => move(1) : null,
+    }
+    setResourceNavigation(navigation)
+    return () => setResourceNavigation((current) => current === navigation ? null : current)
+  }, [setResourceNavigation, selectedResource, onRowClick, kind, selectableRows,
+    handleRowResource, handleRowClick, requestNavigation, table, virtualizer])
 
   if (activeContexts.length === 0) {
     return (
@@ -1376,9 +1420,19 @@ export function ResourceTable<T>({
                     ? `Could not load a complete list of ${noun.plural}.`
                     : connectionWarnings.length > 0
                       ? `No cached ${noun.plural} for the current selection.`
-                      : appliedFilter
-                        ? `No ${noun.plural} matching "${appliedFilter}".`
+                      : total > 0 && (appliedFilter || hasHeaderFilter)
+                        ? appliedFilter
+                          ? `No ${noun.plural} matching "${appliedFilter}".`
+                          : `No ${noun.plural} match the current filters.`
                         : `No ${noun.plural}${scope === 'namespaced' && selectedNamespaces.length > 0 ? scopeLabel : ''}.`}
+                  {!hasLoadErrors && connectionWarnings.length === 0 && total > 0 && (appliedFilter || hasHeaderFilter) && (
+                    <div className="mt-3">
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setFilter('')
+                        setHeaderFilterValues({})
+                      }}>Clear filters</Button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ) : (
