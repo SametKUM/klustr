@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Download, Eraser, Filter, Pause, Play, Regex, RefreshCcw, TextWrap } from 'lucide-react'
+import { RefreshCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { api, type PodLogTarget } from '@/lib/api'
 import { columnWidth } from '@/features/_shared/logColumns'
 import { LogViewport } from '@/features/_shared/LogViewport'
+import { LogToolbar } from '@/features/_shared/LogToolbar'
 import type { LogLine } from '@/features/_shared/logView'
 import { useLogTerminal } from '@/features/_shared/useLogTerminal'
 import { useUIStore } from '@/store/ui'
@@ -181,80 +182,34 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-4 py-2 text-xs">
-        <span className="text-muted-foreground">
-          Tailing {targets.length} pod{targets.length === 1 ? '' : 's'} · all containers
-        </span>
-        <Button
-          type="button"
-          size="xs"
-          variant="outline"
-          onClick={() => setReloadKey((k) => k + 1)}
-          aria-label="Reload pod list"
-        >
-          <RefreshCcw />
-          Reload
-        </Button>
-        <Button type="button" size="xs" variant="outline" onClick={() => view.setPaused(!view.paused)}>
-          {view.paused ? <Play /> : <Pause />}
-          {view.paused ? `Resume${view.pending > 0 ? ` (${view.pending})` : ''}` : 'Pause'}
-        </Button>
-        <Button type="button" size="xs" variant="outline" onClick={() => view.reset()}>
-          <Eraser />
-          Clear
-        </Button>
-        <Button type="button" size="xs" variant="outline" onClick={saveLogs}>
-          <Download />
-          Save
-        </Button>
-        <Button
-          type="button"
-          size="xs"
-          variant={view.wrap ? 'default' : 'outline'}
-          aria-pressed={view.wrap}
-          title="Wrap long lines — turn off to keep each line on one row and scroll sideways (Shift+wheel)"
-          onClick={() => setLogWrap(!view.wrap)}
-        >
-          <TextWrap />
-          Wrap
-        </Button>
-        <div className="ml-auto flex items-center gap-1">
-          <div className="relative w-44">
-            <Filter className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground/70" />
-            <input
-              type="text"
-              spellCheck={false}
-              autoCorrect="off"
-              autoCapitalize="off"
-              value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-              placeholder={useRegex ? 'Regex filter…' : 'Substring filter…'}
-              className={[
-                'h-6 w-full rounded border bg-background pl-6 pr-2 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring',
-                filterError ? 'border-destructive' : 'border-border',
-              ].join(' ')}
-            />
-          </div>
-          <Button
-            type="button"
-            size="icon-xs"
-            variant={useRegex ? 'default' : 'outline'}
-            aria-pressed={useRegex}
-            aria-label="Toggle regex mode"
-            onClick={() => setUseRegex((v) => !v)}
-          >
-            <Regex />
-          </Button>
-          <span className={view.paused ? 'text-amber-500' : streaming ? 'text-emerald-500' : 'text-muted-foreground'}>
-            {view.paused ? '❙❙ paused' : streaming ? '● live' : '○ idle'}
-          </span>
-        </div>
-      </div>
-      {filterError && (
-        <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-1 text-[10px] font-mono text-destructive break-words">
-          {filterError}
-        </div>
-      )}
+      <LogToolbar
+        view={view}
+        onSave={saveLogs}
+        onToggleWrap={() => setLogWrap(!view.wrap)}
+        filterValue={filterValue}
+        onFilterChange={setFilterValue}
+        useRegex={useRegex}
+        onRegexChange={setUseRegex}
+        filterError={filterError}
+        streaming={streaming}
+        source={
+          <>
+            <span className="min-w-0 flex-1 text-muted-foreground">
+              Tailing {targets.length} pod{targets.length === 1 ? '' : 's'} · all containers
+            </span>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() => setReloadKey((k) => k + 1)}
+              aria-label="Reload pod list"
+            >
+              <RefreshCcw />
+              Reload
+            </Button>
+          </>
+        }
+      />
       <LogViewport view={view} />
     </div>
   )

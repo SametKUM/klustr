@@ -16,6 +16,7 @@ type Props = {
   ariaLabel: string
   placeholder?: string
   minWidth?: number
+  className?: string
   align?: 'start' | 'center' | 'end'
 }
 
@@ -30,6 +31,7 @@ export function InlinePicker({
   ariaLabel,
   placeholder = 'Select…',
   minWidth = 120,
+  className,
   align = 'start',
 }: Props) {
   const normalized = options.map(normalize)
@@ -43,7 +45,8 @@ export function InlinePicker({
           variant="outline"
           size="xs"
           aria-label={ariaLabel}
-          className="justify-between font-normal"
+          title={label}
+          className={`justify-between font-normal ${className ?? ''}`}
           style={{ minWidth }}
           data-icon="inline-end"
         >
@@ -56,6 +59,7 @@ export function InlinePicker({
           <DropdownMenuItem
             key={opt.value}
             onSelect={() => onChange(opt.value)}
+            title={opt.label ?? opt.value}
             className="gap-2"
           >
             <span className="flex-1 truncate text-sm">{opt.label ?? opt.value}</span>

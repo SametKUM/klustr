@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Download, Eraser, Filter, History, Pause, Play, Regex, TextWrap } from 'lucide-react'
+import { History } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { api, type PodDetail } from '@/lib/api'
 import { InlinePicker } from '@/features/_shared/InlinePicker'
 import { LogViewport } from '@/features/_shared/LogViewport'
+import { LogToolbar } from '@/features/_shared/LogToolbar'
 import type { LogLine } from '@/features/_shared/logView'
 import { useLogTerminal } from '@/features/_shared/useLogTerminal'
 import { useUIStore } from '@/store/ui'
@@ -13,10 +14,10 @@ import { useUIStore } from '@/store/ui'
 // How far back a stream starts; 0 asks for the whole log. Scrolling still
 // reaches only the terminal's scrollback, the filter and Save the retained lines.
 const TAIL_OPTIONS = [
-  { value: '200', label: '200' },
-  { value: '1000', label: '1,000' },
-  { value: '10000', label: '10,000' },
-  { value: '0', label: 'All' },
+  { value: '200', label: '200 lines' },
+  { value: '1000', label: '1,000 lines' },
+  { value: '10000', label: '10,000 lines' },
+  { value: '0', label: 'Whole log' },
 ]
 const DEFAULT_TAIL_LINES = 200
 
@@ -168,111 +169,66 @@ export function PodLogsTab({ detail, contextName, initialContainer, active }: Pr
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-4 py-2 text-xs">
-        <label className="text-muted-foreground">Container</label>
-        <InlinePicker
-          value={container}
-          options={containerNames}
-          onChange={setContainer}
-          ariaLabel="Select container"
-          minWidth={140}
-        />
-        <label className="text-muted-foreground">Tail</label>
-        <InlinePicker
-          value={String(tailLines)}
-          options={TAIL_OPTIONS}
-          onChange={(v) => setTailLines(Number(v))}
-          ariaLabel="Select how many lines to load"
-          minWidth={72}
-        />
-        {/* The title sits on a wrapper because a disabled button gets no
-            pointer events, so it would never show its own tooltip. */}
-        <span
-          className="inline-flex"
-          title={
-            canPrevious
-              ? 'Logs of the previous (terminated) container instance — kubectl logs --previous'
-              : 'No previous instance — this container has not restarted'
-          }
-        >
-          <Button
-            type="button"
-            size="xs"
-            variant={showPrevious ? 'default' : 'outline'}
-            aria-pressed={showPrevious}
-            disabled={!canPrevious}
-            onClick={() => setPrevious((v) => !v)}
-          >
-            <History />
-            Previous
-          </Button>
-        </span>
-
-        <Button
-          type="button"
-          size="xs"
-          variant="outline"
-          onClick={() => view.setPaused(!view.paused)}
-        >
-          {view.paused ? <Play /> : <Pause />}
-          {view.paused ? `Resume${view.pending > 0 ? ` (${view.pending})` : ''}` : 'Pause'}
-        </Button>
-        <Button type="button" size="xs" variant="outline" onClick={() => view.reset()}>
-          <Eraser />
-          Clear
-        </Button>
-        <Button type="button" size="xs" variant="outline" onClick={saveLogs}>
-          <Download />
-          Save
-        </Button>
-        <Button
-          type="button"
-          size="xs"
-          variant={view.wrap ? 'default' : 'outline'}
-          aria-pressed={view.wrap}
-          title="Wrap long lines — turn off to keep each line on one row and scroll sideways (Shift+wheel)"
-          onClick={() => setLogWrap(!view.wrap)}
-        >
-          <TextWrap />
-          Wrap
-        </Button>
-        <div className="ml-auto flex items-center gap-1">
-          <div className="relative w-44">
-            <Filter className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground/70" />
-            <input
-              type="text"
-              spellCheck={false}
-              autoCorrect="off"
-              autoCapitalize="off"
-              value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-              placeholder={useRegex ? 'Regex filter…' : 'Substring filter…'}
-              className={[
-                'h-6 w-full rounded border bg-background pl-6 pr-2 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring',
-                filterError ? 'border-destructive' : 'border-border',
-              ].join(' ')}
+      <LogToolbar
+        view={view}
+        onSave={saveLogs}
+        onToggleWrap={() => setLogWrap(!view.wrap)}
+        filterValue={filterValue}
+        onFilterChange={setFilterValue}
+        useRegex={useRegex}
+        onRegexChange={setUseRegex}
+        filterError={filterError}
+        streaming={streaming}
+        previous={showPrevious}
+        source={
+          <>
+            <div className="flex min-w-0 max-w-96 flex-1 items-center gap-2">
+              <span className="hidden shrink-0 text-muted-foreground @min-[38rem]/log-toolbar:inline">Container</span>
+              <InlinePicker
+                value={container}
+                options={containerNames}
+                onChange={setContainer}
+                ariaLabel="Select container"
+                minWidth={0}
+                className="min-w-0 flex-1 shrink"
+              />
+            </div>
+            <InlinePicker
+              value={String(tailLines)}
+              options={TAIL_OPTIONS}
+              onChange={(v) => setTailLines(Number(v))}
+              ariaLabel="Select how many lines to load"
+              minWidth={0}
+              className="w-28"
             />
-          </div>
-          <Button
-            type="button"
-            size="icon-xs"
-            variant={useRegex ? 'default' : 'outline'}
-            aria-pressed={useRegex}
-            aria-label="Toggle regex mode"
-            onClick={() => setUseRegex((v) => !v)}
-          >
-            <Regex />
-          </Button>
-          <span className={view.paused ? 'text-amber-500' : streaming ? 'text-emerald-500' : 'text-muted-foreground'}>
-            {view.paused ? '❙❙ paused' : streaming ? '● live' : '○ idle'}
-          </span>
-        </div>
-      </div>
-      {filterError && (
-        <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-1 text-[10px] font-mono text-destructive break-words">
-          {filterError}
-        </div>
-      )}
+            {/* The title sits on a wrapper because a disabled button gets no
+                pointer events, so it would never show its own tooltip. */}
+            <span
+              className="inline-flex shrink-0"
+              title={
+                canPrevious
+                  ? showPrevious
+                    ? 'Showing previous instance logs. Click to return to current logs.'
+                    : 'Show logs from the previous terminated container instance'
+                  : 'No previous instance — this container has not restarted'
+              }
+            >
+              <Button
+                type="button"
+                size="xs"
+                variant={showPrevious ? 'default' : 'outline'}
+                aria-label="Show previous container logs"
+                aria-pressed={showPrevious}
+                disabled={!canPrevious}
+                onClick={() => setPrevious((v) => !v)}
+              >
+                <History />
+                Previous
+              </Button>
+            </span>
+          </>
+        }
+      />
       {error && (
         <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-xs font-mono text-destructive break-words">
           {error}

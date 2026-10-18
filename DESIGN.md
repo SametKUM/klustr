@@ -24,6 +24,10 @@ Preserve the list search when a namespace is empty. Distinguish an empty source 
 
 Inspector tab strips scroll horizontally only when their tabs exceed the available width. Keep their scrollbar hidden without disabling scrolling so native scrollbars cannot squeeze the tab labels. Hide the unused underline decoration in the default boxed variant so it cannot create vertical overflow.
 
+Log toolbars use two stable rows. Group the container picker, a self-describing line-count picker and the previous-instance toggle on the first row, with stream status at the end. Keep related source settings adjacent; do not cap a picker inside a growing field and leave an internal gap. Long names truncate and remain available in tooltips. The second row holds a flexible filter with its regex toggle inside the field, followed by Pause/Resume, Wrap and an overflow menu for Save logs and Clear view. Reveal action labels when the toolbar itself is wide enough; keep accessible names and tooltips at every width. Reserve the same action widths for Pause and Resume, and show buffered counts beside stream status so pausing never shifts the filter. Use the same toolbar for individual and workload logs.
+
+Previous container logs remain a labeled, outlined action at every inspector width. Use the primary selected treatment and a previous status indicator while viewing a terminated instance, so historical output cannot be mistaken for a live stream. Explain the disabled state when the container has never restarted. At narrow widths, hide the redundant Container caption before hiding an important action label; the picker keeps its accessible name and selected-name tooltip.
+
 Resource lists use CustomResourceTable, existing column sizes, context tagging and persisted table preferences. Detail panels use Section, Field, Th and Td. Relations retain the selected resource's context, namespace and discovered API version. Reference buttons show focus, pending and error states, and stop row-click propagation.
 
 Use labeled numerical values with tabular numerals. Empty, loading and error states come from the shared resource components. Use borders for section boundaries and retain existing density. Add no decorative imagery or new motion.
@@ -38,7 +42,15 @@ Inspector verification uses the native Linux Wails window with WebKit 4.1 and an
 
 Follow-up verification uses a separate native window restricted to the local kind kubeconfig. Result navigation crosses real pagination boundaries, works at the minimum 480px split width and survives full-width fallback. Tests cover source context and discovered API versions, draft confirmation during live row changes, preserved filters across empty namespaces, safe reading-tab history, and focus returning to Monaco after Keep editing. Existing typography, semantic colors, density and restrained motion remain the reference.
 
+Log toolbar verification covers thirteen inspector widths from 480px to 960px, including both sides of the action-label breakpoint, with a long container name. The toolbar stays 77px tall in two rows, including expanded workload logs. Native checks confirm aligned controls without overlap or horizontal overflow, filtering and invalid-regex recovery, buffered pause/resume, wrap toggling, keyboard access to Save/Clear and restored menu focus. Resizing keeps the existing log stream, and stream status changes preserve the filter's position and width. Light and dark themes retain the same layout. Responsive action widths change without layout animation; buffered counts remain outside live screen-reader announcements.
+
+Previous-log verification reads a real terminated local container instance, checks the labeled action at the same thirteen widths, and returns to the current stream. Previous mode remains explicitly identified after historical output arrives. Regression coverage checks that switching to a container without restarts disables Previous and restores current-instance status and request routing.
+
 ## Changelog
+
+- 2026-10-18: Keep Previous visibly labeled at every width and distinguish previous-instance output from live logs.
+
+- 2026-10-18: Use a compact two-row console toolbar for pod and workload logs, integrate regex into filtering, and move Save/Clear into an overflow menu. Keep source controls adjacent and reveal action labels by container width.
 
 - 2026-10-18: Add contextual result navigation, reading-tab history, visible draft status, editor focus recovery and divider reset. Preserve searches across empty namespaces and make filtered empty states recoverable.
 
