@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { DETAIL_WIDTH_DEFAULT, DETAIL_WIDTH_MIN } from '@/store/ui.types'
 
+const DRAG_THRESHOLD = 3
+
 type Props = {
   width: number
   maxWidth: number
@@ -13,10 +15,20 @@ export function DetailResizeHandle({ width, maxWidth, onResize, onCommit }: Prop
     x: number
     width: number
     current: number
+    moved: boolean
     cursor: string
     select: string
   } | null>(null)
   const clamp = (value: number) => Math.max(DETAIL_WIDTH_MIN, Math.min(maxWidth, value))
+  // `width` is already fitted to the window. Committing it without a real
+  // drag would overwrite the saved preference with the narrow-window value.
+  const finishDrag = () => {
+    if (!drag.current) return
+    if (drag.current.moved) onCommit(drag.current.current)
+    document.body.style.cursor = drag.current.cursor
+    document.body.style.userSelect = drag.current.select
+    drag.current = null
+  }
   useEffect(
     () => () => {
       if (!drag.current) return
@@ -37,7 +49,7 @@ export function DetailResizeHandle({ width, maxWidth, onResize, onCommit }: Prop
       aria-valuemax={maxWidth}
       aria-valuenow={Math.round(width)}
       title="Drag to resize. Double-click or press Enter to reset."
-      onDoubleClick={() => onCommit(clamp(DETAIL_WIDTH_DEFAULT))}
+      onDoubleClick={() => onCommit(DETAIL_WIDTH_DEFAULT)}
       onKeyDown={(event) => {
         const step = event.shiftKey ? 64 : 16
         const next =
@@ -55,7 +67,8 @@ export function DetailResizeHandle({ width, maxWidth, onResize, onCommit }: Prop
         if (next === null) return
         event.preventDefault()
         event.stopPropagation()
-        onCommit(clamp(next))
+        // Reset stores the default itself; the layout fits it to the window.
+        onCommit(event.key === 'Enter' ? next : clamp(next))
       }}
       onPointerDown={(event) => {
         if (event.button !== 0) return
@@ -66,6 +79,7 @@ export function DetailResizeHandle({ width, maxWidth, onResize, onCommit }: Prop
           x: event.clientX,
           width,
           current: width,
+          moved: false,
           cursor: document.body.style.cursor,
           select: document.body.style.userSelect,
         }
@@ -74,25 +88,19 @@ export function DetailResizeHandle({ width, maxWidth, onResize, onCommit }: Prop
       }}
       onPointerMove={(event) => {
         if (!drag.current) return
+        // A few pixels of jitter during a click or double-click is not a resize.
+        if (!drag.current.moved && Math.abs(event.clientX - drag.current.x) < DRAG_THRESHOLD) return
         const next = clamp(drag.current.width + drag.current.x - event.clientX)
+        drag.current.moved = true
         drag.current.current = next
         onResize(next)
       }}
       onPointerUp={(event) => {
         if (!drag.current) return
-        onCommit(drag.current.current)
-        document.body.style.cursor = drag.current.cursor
-        document.body.style.userSelect = drag.current.select
-        drag.current = null
+        finishDrag()
         event.currentTarget.releasePointerCapture(event.pointerId)
       }}
-      onLostPointerCapture={() => {
-        if (!drag.current) return
-        onCommit(drag.current.current)
-        document.body.style.cursor = drag.current.cursor
-        document.body.style.userSelect = drag.current.select
-        drag.current = null
-      }}
+      onLostPointerCapture={finishDrag}
       className="relative z-10 w-px shrink-0 cursor-ew-resize touch-none bg-border before:absolute before:inset-y-0 before:-left-3 before:w-6 hover:bg-primary focus-visible:outline-2 focus-visible:outline-ring"
     />
   )

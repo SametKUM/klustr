@@ -82,4 +82,32 @@ describe('inspector resizing', () => {
     act(() => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
     expect(commit).toHaveBeenLastCalledWith(560)
   })
+
+  it('does not save the window-fitted width for a click without a drag', () => {
+    act(() =>
+      root.render(
+        <DetailResizeHandle width={499} maxWidth={499} onResize={resize} onCommit={commit} />,
+      ),
+    )
+    pointer('pointerdown', 400)
+    pointer('pointermove', 401)
+    pointer('pointerup', 401)
+    pointer('lostpointercapture', 401)
+    expect(resize).not.toHaveBeenCalled()
+    expect(commit).not.toHaveBeenCalled()
+    expect(document.body.style.cursor).toBe('crosshair')
+    expect(document.body.style.userSelect).toBe('text')
+  })
+
+  it('resets to the default rather than the window-fitted width', () => {
+    act(() =>
+      root.render(
+        <DetailResizeHandle width={499} maxWidth={520} onResize={resize} onCommit={commit} />,
+      ),
+    )
+    act(() => handle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })))
+    expect(commit).toHaveBeenLastCalledWith(560)
+    act(() => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
+    expect(commit).toHaveBeenLastCalledWith(560)
+  })
 })
