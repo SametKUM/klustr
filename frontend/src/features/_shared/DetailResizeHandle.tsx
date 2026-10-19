@@ -101,7 +101,9 @@ export function DetailResizeHandle({ width, maxWidth, onResize, onCommit }: Prop
         event.currentTarget.releasePointerCapture(event.pointerId)
       }}
       onLostPointerCapture={finishDrag}
-      className="relative z-10 w-px shrink-0 cursor-ew-resize touch-none bg-border before:absolute before:inset-y-0 before:-left-3 before:w-6 hover:bg-primary focus-visible:outline-2 focus-visible:outline-ring"
+      // The hit area extends into the inspector only: the list's vertical
+      // scrollbar sits directly left of the divider.
+      className="relative z-10 w-px shrink-0 cursor-ew-resize touch-none bg-border before:absolute before:inset-y-0 before:left-0 before:w-2 hover:bg-primary focus-visible:outline-2 focus-visible:outline-ring"
     />
   )
 }
