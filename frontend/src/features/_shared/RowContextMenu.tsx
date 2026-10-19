@@ -64,7 +64,7 @@ export function RowContextMenu({
   resource: resourceOverride,
   children,
 }: Props) {
-  const openResource = useUIStore((s) => s.openResource)
+  const openResourceFromList = useUIStore((s) => s.openResourceFromList)
   const setPendingAction = useUIStore((s) => s.setPendingAction)
   const readOnly = useUIStore((s) => s.globalReadOnly)
 
@@ -79,7 +79,7 @@ export function RowContextMenu({
   const hasEvents = EVENT_BEARING_KINDS.has(kind)
   const isRestartable = RESTARTABLE_KINDS.has(kind)
 
-  const open = (tab?: DetailTab) => openResource(resource, tab)
+  const open = (tab?: DetailTab) => openResourceFromList(resource, tab)
 
   const copy = (value: string, label: string) => {
     if (!value) return

@@ -426,6 +426,26 @@ describe('resource navigation stack', () => {
     expect(useUIStore.getState().resourceNavStack).toEqual([])
   })
 
+  it('opening another row from the list starts a new history, like a row click', () => {
+    const s = useUIStore.getState()
+    s.setSelectedResource(pod)
+    s.openResource(node)
+    s.openResourceFromList({ ...pod, name: 'sibling' }, 'logs')
+    expect(useUIStore.getState()).toMatchObject({
+      selectedResource: { name: 'sibling' }, requestedTab: 'logs', resourceNavStack: [],
+    })
+  })
+
+  it('keeps the history when a list action targets the inspected resource', () => {
+    const s = useUIStore.getState()
+    s.setSelectedResource(pod)
+    s.openResource(node)
+    s.openResourceFromList(node, 'events')
+    expect(useUIStore.getState()).toMatchObject({
+      selectedResource: node, requestedTab: 'events', resourceNavStack: [{ resource: pod }],
+    })
+  })
+
   it('goBackResource pops the stack', () => {
     useUIStore.getState().openResource(pod)
     useUIStore.getState().openResource(node)

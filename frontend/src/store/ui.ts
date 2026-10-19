@@ -128,6 +128,7 @@ type UIState = {
   closeRemovedResource: (resource: SelectedResource) => void
   openResourceInView: (view: ResourceView, resource: SelectedResource) => void
   openResource: (resource: SelectedResource, tab?: DetailTab) => void
+  openResourceFromList: (resource: SelectedResource, tab?: DetailTab) => void
   goBackResource: () => void
   setActiveDetailTab: (tab: string) => void
   setDetailWidth: (width: number) => void
@@ -263,6 +264,32 @@ export const useUIStore = create<UIState>((set, get) => {
   const navigate = (action: () => void) => {
     if (get().detailDirty) set({ pendingDetailNavigation: action })
     else action()
+  }
+  // Following a reference from the inspector records the current resource for
+  // Back. Opening another row from the list starts over, as a row click does.
+  const openWithTab = (resource: SelectedResource, tab: DetailTab | undefined, recordHistory: boolean) => {
+    const current = get().selectedResource
+    const containerRequest = tab === 'logs' && resource.logContainer !== undefined
+    if (current && sameResource(current, resource) && (!tab || tab === get().activeDetailTab) && !containerRequest) {
+      set({ selectedResource: resource })
+      return
+    }
+    navigate(() => set((s) => {
+      const same = !!s.selectedResource && sameResource(s.selectedResource, resource)
+      return {
+        resourceNavStack:
+          same ? s.resourceNavStack
+            : recordHistory && s.selectedResource
+              ? [...s.resourceNavStack, { resource: s.selectedResource, tab: readingDetailTab(s.activeDetailTab) }]
+              : [],
+        selectedResource: resource,
+        detailOutsideResults: false,
+        lastSelectedResource: resource,
+        requestedTab: tab ?? retainedDetailTab(s, resource),
+        // Repeated requests must remain observable after manual tab/container changes.
+        detailRequestId: s.detailRequestId + 1,
+      }
+    }))
   }
   const saved = readSavedThemeId()
   const initialThemeId = saved ?? systemThemeId()
@@ -470,26 +497,8 @@ export const useUIStore = create<UIState>((set, get) => {
         detailOutsideResults: false,
       })))
     },
-    openResource: (resource, tab) => {
-      const current = get().selectedResource
-      const containerRequest = tab === 'logs' && resource.logContainer !== undefined
-      if (current && sameResource(current, resource) && (!tab || tab === get().activeDetailTab) && !containerRequest) {
-        set({ selectedResource: resource })
-        return
-      }
-      navigate(() => set((s) => ({
-        resourceNavStack:
-          s.selectedResource && !sameResource(s.selectedResource, resource)
-            ? [...s.resourceNavStack, { resource: s.selectedResource, tab: readingDetailTab(s.activeDetailTab) }]
-            : s.resourceNavStack,
-        selectedResource: resource,
-        detailOutsideResults: false,
-        lastSelectedResource: resource,
-        requestedTab: tab ?? retainedDetailTab(s, resource),
-        // Repeated requests must remain observable after manual tab/container changes.
-        detailRequestId: s.detailRequestId + 1,
-      })))
-    },
+    openResource: (resource, tab) => openWithTab(resource, tab, true),
+    openResourceFromList: (resource, tab) => openWithTab(resource, tab, false),
     goBackResource: () => {
       if (get().resourceNavStack.length === 0) return
       navigate(() => set((s) => {

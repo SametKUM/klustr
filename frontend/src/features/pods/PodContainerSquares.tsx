@@ -24,13 +24,13 @@ export function PodContainerSquares({
   name: string
   context: string
 }) {
-  const openResource = useUIStore((s) => s.openResource)
+  const openResourceFromList = useUIStore((s) => s.openResourceFromList)
   if (!containers || containers.length === 0) {
     return <span className="text-muted-foreground">—</span>
   }
   const firstInit = containers.findIndex((c) => c.init)
   const openLogs = (containerName: string) => {
-    openResource({ kind: 'Pod', namespace, name, context, logContainer: containerName }, 'logs')
+    openResourceFromList({ kind: 'Pod', namespace, name, context, logContainer: containerName }, 'logs')
   }
   const label = `${containers.length} container${containers.length === 1 ? '' : 's'}: ${containers
     .map((c) => `${c.name}${c.init ? ' (init)' : ''} ${c.state}`)
