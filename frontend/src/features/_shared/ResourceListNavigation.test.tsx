@@ -248,6 +248,15 @@ describe('inspector result navigation', () => {
     expect(container.textContent).toContain('1 of 2')
   })
 
+  it('clears the search when the list moves to another cluster', async () => {
+    await act(async () => root.render(<Harness />))
+    await filter('api')
+    await act(async () => useUIStore.getState().setSelectedContext('cluster-b'))
+    expect(
+      container.querySelector<HTMLInputElement>('input[placeholder^="Filter resources"]')?.value,
+    ).toBe('')
+  })
+
   it('offers a filter reset when results are hidden without changing the namespace or inspector', async () => {
     useUIStore.getState().setSelectedNamespaces(['apps'])
     await act(async () => root.render(<Harness />))

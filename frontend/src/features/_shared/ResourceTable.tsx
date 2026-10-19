@@ -439,6 +439,13 @@ export function ResourceTable<T>({
   useEffect(() => {
     setSelectedKeys(new Set())
   }, [resourceContexts, selectedNamespaces, kind])
+  // A search typed for one cluster does not carry over to another. It does
+  // survive an empty namespace, where the user is usually about to go back.
+  // Keyed on content: a capability-filtered context list is a fresh array.
+  const contextsKey = resourceContexts.join('\n')
+  useEffect(() => {
+    setFilter('')
+  }, [contextsKey])
   useEffect(() => {
     setPageIndex(0)
   }, [resourceContexts, selectedNamespaces, kind, appliedFilter, headerFilterValues, pageSize])
