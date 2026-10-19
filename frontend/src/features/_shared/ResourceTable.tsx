@@ -1163,7 +1163,7 @@ export function ResourceTable<T>({
           )}
         </div>
         {narrow && <Button size="sm" variant="ghost" className="h-7 shrink-0 px-2 text-xs"
-          aria-pressed={compact} title={compact ? 'Show all columns' : 'Use compact columns'}
+          title={compact ? 'Show all columns' : 'Use compact columns'}
           onClick={() => setFullColumns(!fullColumns)}>{compact ? 'Full columns' : 'Compact'}</Button>}
         {!compact && <ColumnControls table={table} onReset={() => resetPrefs(kind)} />}
       </div>
