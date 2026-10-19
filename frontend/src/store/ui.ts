@@ -100,6 +100,7 @@ type UIState = {
   detailDirty: boolean
   detailOutsideResults: boolean
   pendingDetailNavigation: (() => void) | null
+  detailDiscardRequest: number
   pendingAction: PendingAction | null
   themeId: ThemeId
   sidebarMode: SidebarMode
@@ -347,6 +348,7 @@ export const useUIStore = create<UIState>((set, get) => {
     detailDirty: false,
     detailOutsideResults: false,
     pendingDetailNavigation: null,
+    detailDiscardRequest: 0,
     pendingAction: null,
     themeId: initialThemeId,
     sidebarMode: readSidebarMode(),
@@ -527,7 +529,10 @@ export const useUIStore = create<UIState>((set, get) => {
     cancelDetailNavigation: () => set({ pendingDetailNavigation: null }),
     confirmDetailNavigation: () => {
       const action = get().pendingDetailNavigation
-      set({ detailDirty: false, pendingDetailNavigation: null })
+      // The editor drops its draft on this signal: a destination that keeps it
+      // mounted (an unavailable tab, a no-op closure) must not leave an
+      // unguarded draft behind.
+      set((s) => ({ detailDirty: false, pendingDetailNavigation: null, detailDiscardRequest: s.detailDiscardRequest + 1 }))
       action?.()
     },
     setPendingAction: (action) => set({ pendingAction: action }),

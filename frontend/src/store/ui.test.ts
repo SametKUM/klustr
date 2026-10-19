@@ -125,9 +125,11 @@ describe('resource inspector navigation', () => {
       expect(useUIStore.getState().selectedResource?.name).toBe('api-b')
       expect(useUIStore.getState().pendingDetailNavigation).toBeTypeOf('function')
       expect(changeTab).not.toHaveBeenCalled()
+      const discards = useUIStore.getState().detailDiscardRequest
       s.confirmDetailNavigation()
       expect(useUIStore.getState().pendingDetailNavigation).toBeNull()
       expect(useUIStore.getState().detailDirty).toBe(false)
+      expect(useUIStore.getState().detailDiscardRequest).toBe(discards + 1)
       if (target === 'tab') expect(changeTab).toHaveBeenCalledOnce()
       else expect(useUIStore.getState().selectedResource?.name).not.toBe('api-b')
     },

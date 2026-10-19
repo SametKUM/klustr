@@ -146,6 +146,14 @@ export function ResourceYAMLTab({ contextName, kind, namespace, name, gvr }: Pro
     dryRun.mutate()
   }
 
+  const discardRequest = useUIStore((s) => s.detailDiscardRequest)
+  const [handledDiscard, setHandledDiscard] = useState(discardRequest)
+  if (handledDiscard !== discardRequest) {
+    setHandledDiscard(discardRequest)
+    setDraft(source)
+    setEditing(false)
+  }
+
   const dirty = draft !== source
   useEffect(() => {
     setDetailDirty(editing && dirty)
