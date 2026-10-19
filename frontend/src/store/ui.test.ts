@@ -142,6 +142,25 @@ describe('resource inspector navigation', () => {
     expect(useUIStore.getState()).toMatchObject({ selectedResource: pod, detailDirty: true, pendingDetailNavigation: null })
   })
 
+  it('closes a removed resource without asking about its draft', () => {
+    const s = useUIStore.getState()
+    s.setSelectedResource(pod)
+    s.setDetailDirty(true)
+    s.setSelectedResource({ ...pod, name: 'api-b' })
+    s.closeRemovedResource(pod)
+    expect(useUIStore.getState()).toMatchObject({
+      selectedResource: null, lastSelectedResource: pod, detailDirty: false, pendingDetailNavigation: null,
+    })
+  })
+
+  it('leaves the inspector alone when another resource is removed', () => {
+    const s = useUIStore.getState()
+    s.setSelectedResource(pod)
+    s.setDetailDirty(true)
+    s.closeRemovedResource({ ...pod, context: 'cluster-b' })
+    expect(useUIStore.getState()).toMatchObject({ selectedResource: pod, detailDirty: true })
+  })
+
   it.each(['context', 'view', 'row', 'tab', 'empty history'])(
     'keeps the editor without prompting for unchanged %s navigation', (target) => {
       const s = useUIStore.getState()

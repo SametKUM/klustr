@@ -125,6 +125,7 @@ type UIState = {
   setSelectedView: (view: ResourceView) => void
   setSelectedCRD: (key: string | null) => void
   setSelectedResource: (resource: SelectedResource | null) => void
+  closeRemovedResource: (resource: SelectedResource) => void
   openResourceInView: (view: ResourceView, resource: SelectedResource) => void
   openResource: (resource: SelectedResource, tab?: DetailTab) => void
   goBackResource: () => void
@@ -435,6 +436,22 @@ export const useUIStore = create<UIState>((set, get) => {
         detailRequestId: s.detailRequestId + 1,
       })))
     },
+    closeRemovedResource: (resource) =>
+      set((s) => {
+        if (!s.selectedResource || !sameResource(s.selectedResource, resource)) return s
+        // The object is gone, so its draft can no longer be applied: close
+        // without the draft prompt, and drop a prompt already on screen.
+        return {
+          selectedResource: null,
+          lastSelectedResource: s.selectedResource,
+          resourceNavStack: [],
+          requestedTab: null,
+          detailRequestId: s.detailRequestId + 1,
+          detailOutsideResults: false,
+          detailDirty: false,
+          pendingDetailNavigation: null,
+        }
+      }),
     openResourceInView: (view, resource) => {
       const s = get()
       if (s.selectedView === view && s.selectedCRDKey === null) {

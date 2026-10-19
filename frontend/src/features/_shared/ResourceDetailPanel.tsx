@@ -402,7 +402,7 @@ const EVENT_BEARING_KINDS: ResourceKind[] = [
 
 function DetailContent({ contextName, resource }: { contextName: string | null; resource: SelectedResource }) {
   if (resource.kind === 'HelmRelease') {
-    return <HelmReleaseTabs contextName={contextName} namespace={resource.namespace} name={resource.name} />
+    return <HelmReleaseTabs contextName={contextName} resource={resource} />
   }
   if (resource.gvr) {
     return <CustomResourceTabs contextName={contextName} resource={resource} />
@@ -415,14 +415,13 @@ function DetailContent({ contextName, resource }: { contextName: string | null; 
 
 function HelmReleaseTabs({
   contextName,
-  namespace,
-  name,
+  resource,
 }: {
   contextName: string | null
-  namespace: string
-  name: string
+  resource: SelectedResource
 }) {
-  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
+  const { namespace, name } = resource
+  const closeRemovedResource = useUIStore((s) => s.closeRemovedResource)
   const [detail, setDetail] = useState<HelmReleaseDetail | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
   const [reloadTick, setReloadTick] = useState(0)
@@ -503,7 +502,7 @@ function HelmReleaseTabs({
         name={name}
         open={uninstallOpen}
         onOpenChange={setUninstallOpen}
-        onUninstalled={() => setSelectedResource(null)}
+        onUninstalled={() => closeRemovedResource(resource)}
       />
     </>
   )

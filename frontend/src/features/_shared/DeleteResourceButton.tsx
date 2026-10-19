@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
-import { sameResource, useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
+import { useUIStore, type ResourceKind, type SelectedResource } from '@/store/ui'
 import { ContextBadge } from './ContextBadge'
 
 const CONFIRM_BY_TYPING_KINDS: ReadonlySet<ResourceKind> = new Set<ResourceKind>([
@@ -47,7 +47,7 @@ type DialogProps = {
 }
 
 export function DeleteResourceDialog({ contextName, resource, open, onOpenChange }: DialogProps) {
-  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
+  const closeRemovedResource = useUIStore((s) => s.closeRemovedResource)
   const [typed, setTyped] = useState('')
 
   const requireConfirmation = CONFIRM_BY_TYPING_KINDS.has(resource.kind as ResourceKind)
@@ -64,10 +64,7 @@ export function DeleteResourceDialog({ contextName, resource, open, onOpenChange
     onSuccess: () => {
       toast.success(`Deleted ${resource.kind.toLowerCase()}/${resource.name}`)
       onOpenChange(false)
-      const selected = useUIStore.getState().selectedResource
-      if (selected && sameResource(selected, resource)) {
-        setSelectedResource(null)
-      }
+      closeRemovedResource(resource)
     },
   })
 

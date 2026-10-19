@@ -85,7 +85,7 @@ type DialogProps = Props & {
 }
 
 export function DeleteArgoApplicationDialog({ contextName, resource, open, onOpenChange }: DialogProps) {
-  const setSelectedResource = useUIStore((s) => s.setSelectedResource)
+  const closeRemovedResource = useUIStore((s) => s.closeRemovedResource)
   const [mode, setMode] = useState<ArgoCascadeMode>('foreground')
   const [typed, setTyped] = useState('')
   const [managed, setManaged] = useState<ArgoApplicationResource[] | null>(null)
@@ -127,9 +127,7 @@ export function DeleteArgoApplicationDialog({ contextName, resource, open, onOpe
           : `${mode} cascade — Argo is cleaning up`
       toast.success(`Deleted application/${resource.name} (${fate})`)
       onOpenChange(false)
-      if (useUIStore.getState().selectedResource?.name === resource.name) {
-        setSelectedResource(null)
-      }
+      closeRemovedResource(resource)
     },
   })
 
