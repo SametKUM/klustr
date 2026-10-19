@@ -236,6 +236,14 @@ export type DetailTab =
   | 'notes'
   | 'policy'
   | 'disruption'
+  | 'resources'
+  | 'nodes'
+  | 'requests'
+  | 'orders'
+  | 'challenges'
+  | 'runs'
+  | 'jobs'
+  | 'violations'
   | 'yaml'
 
 export type ResourceHistoryEntry = {

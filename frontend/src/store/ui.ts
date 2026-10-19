@@ -193,10 +193,14 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((n, i) => b[i] === n)
 }
 
+// Terminal tabs open a session, so they never reconnect on their own when
+// moving between resources or returning through history. Every other tab is
+// a reading tab, including integration tabs added later; each detail body
+// falls back to its default for a tab it does not have.
+const CONNECTING_TABS: ReadonlySet<string> = new Set<DetailTab>(['exec', 'shell'])
+
 function readingDetailTab(tab: string): DetailTab | null {
-  // Terminal tabs must never auto-connect when returning through history.
-  const readingTabs: readonly string[] = ['overview', 'logs', 'events', 'yaml', 'history', 'values', 'manifest', 'notes', 'policy', 'disruption']
-  return readingTabs.includes(tab) ? tab as DetailTab : null
+  return CONNECTING_TABS.has(tab) ? null : (tab as DetailTab)
 }
 
 function retainedDetailTab(s: UIState, resource: SelectedResource | null): DetailTab | null {

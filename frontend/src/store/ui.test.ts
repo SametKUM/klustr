@@ -57,6 +57,22 @@ describe('resource inspector navigation', () => {
     expect(useUIStore.getState().requestedTab).toBe(tab)
   })
 
+  it.each([
+    ['violations', { group: 'kyverno.io', version: 'v1', resource: 'clusterpolicies' }],
+    ['requests', { group: 'cert-manager.io', version: 'v1', resource: 'certificates' }],
+    ['resources', { group: 'argoproj.io', version: 'v1alpha1', resource: 'applications' }],
+  ])('retains the integration %s tab between resources of the same kind and through Back', (tab, gvr) => {
+    const s = useUIStore.getState()
+    const cr = { ...pod, kind: 'Custom', gvr }
+    s.setSelectedResource(cr)
+    s.setActiveDetailTab(tab)
+    s.setSelectedResource({ ...cr, name: 'next' })
+    expect(useUIStore.getState().requestedTab).toBe(tab)
+    s.openResource(pod)
+    s.goBackResource()
+    expect(useUIStore.getState()).toMatchObject({ selectedResource: { name: 'next' }, requestedTab: tab })
+  })
+
   it('keeps explicit terminal navigation available and ignores repeat row clicks', () => {
     const s = useUIStore.getState()
     s.openResource(pod, 'exec')
