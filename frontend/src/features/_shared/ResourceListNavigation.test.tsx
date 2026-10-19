@@ -1,4 +1,4 @@
-import { act, useCallback, useMemo, useState, type ReactNode } from 'react'
+import { act, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import type { ColumnDef } from '@tanstack/react-table'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -13,7 +13,7 @@ vi.hoisted(() => {
   })
 })
 
-const mocks = vi.hoisted(() => ({ scrollToIndex: vi.fn() }))
+const mocks = vi.hoisted(() => ({ scrollToIndex: vi.fn(), panelRenders: vi.fn() }))
 vi.mock('@/lib/events', () => ({ isKindSynced: () => true, onKubeChange: () => () => {} }))
 vi.mock('@/lib/nowTick', () => ({ useNowTick: () => {} }))
 vi.mock('./ColumnControls', () => ({ ColumnControls: () => null }))
@@ -48,8 +48,9 @@ vi.mock('@tanstack/react-virtual', () => ({
     ),
 }))
 vi.mock('./ResourceDetailPanel', () => ({
-  ResourceDetailPanel: ({ resource }: { resource: SelectedResource | null }) =>
-    resource ? (
+  ResourceDetailPanel: ({ resource }: { resource: SelectedResource | null }) => {
+    mocks.panelRenders()
+    return resource ? (
       <section data-resource-detail tabIndex={-1}>
         <h2>{resource.name}</h2>
         <ResourceListNavigator resource={resource} />
@@ -58,7 +59,8 @@ vi.mock('./ResourceDetailPanel', () => ({
           Terminal
         </div>
       </section>
-    ) : null,
+    ) : null
+  },
 }))
 
 const { useUIStore } = await import('@/store/ui')
@@ -78,7 +80,25 @@ const fetch = async (context: string): Promise<Item[]> => [
   ...(context === 'cluster-a' ? [{ namespace: 'apps', name: 'worker-d' }] : []),
 ]
 
-function Harness({
+function Harness(props: { custom?: boolean; prependRows?: boolean }) {
+  return (
+    <ResourceWorkspace>
+      <ListHarness {...props} />
+    </ResourceWorkspace>
+  )
+}
+
+// Owns its rows below the workspace, as the views do with the resource store.
+const ownedList: { prepend: () => void } = { prepend: () => {} }
+function OwnedListHarness() {
+  const [prependRows, setPrependRows] = useState(false)
+  useEffect(() => {
+    ownedList.prepend = () => setPrependRows(true)
+  }, [])
+  return <ListHarness prependRows={prependRows} />
+}
+
+function ListHarness({
   custom = false,
   prependRows = false,
 }: {
@@ -127,8 +147,7 @@ function Harness({
     [data, prependRows],
   )
   return (
-    <ResourceWorkspace>
-      <ResourceTable
+    <ResourceTable
         kind={custom ? 'cr:example.io/widgets' : 'Pod'}
         noun={{ singular: 'resource', plural: 'resources' }}
         scope="namespaced"
@@ -139,7 +158,6 @@ function Harness({
         onRowClick={onRowClick}
         rowResource={rowResource}
       />
-    </ResourceWorkspace>
   )
 }
 
@@ -219,6 +237,16 @@ describe('inspector result navigation', () => {
     expect(container.querySelector('[aria-label="Browse filtered resources"]')).toBeNull()
     expect(useUIStore.getState().detailOutsideResults).toBe(true)
     expect(useUIStore.getState().selectedResource?.name).toBe('api-a')
+  })
+
+  it('updates the navigator on list changes without re-rendering the inspector', async () => {
+    await act(async () => root.render(<ResourceWorkspace><OwnedListHarness /></ResourceWorkspace>))
+    await act(async () => row('api-b').click())
+    expect(container.textContent).toContain('2 of 4')
+    const renders = mocks.panelRenders.mock.calls.length
+    await act(async () => ownedList.prepend())
+    expect(container.textContent).toContain('4 of 6')
+    expect(mocks.panelRenders).toHaveBeenCalledTimes(renders)
   })
 
   it('does not flag a custom resource that shares its kind name with the list', async () => {

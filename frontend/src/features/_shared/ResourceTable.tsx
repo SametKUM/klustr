@@ -68,7 +68,7 @@ import { KLUSTR_CTX, resolveResourceContexts, type Tagged } from './resourceCont
 import { resourcePageCount } from './pagination'
 import { compactColumnIds } from './detailLayout'
 import { useElementWidth } from './useElementWidth'
-import { ResourceNavigationDispatchContext, type ResourceNavigation } from './resourceNavigation'
+import { ResourceNavigationContext, type ResourceNavigation } from './resourceNavigation'
 
 type RowIdentity = { namespace?: string; name?: string }
 
@@ -323,7 +323,7 @@ export function ResourceTable<T>({
   const lastSelectedResource = useUIStore((s) => s.lastSelectedResource)
   const setOutsideResults = useUIStore((s) => s.setDetailOutsideResults)
   const requestNavigation = useUIStore((s) => s.requestDetailNavigation)
-  const setResourceNavigation = useContext(ResourceNavigationDispatchContext)
+  const setResourceNavigation = useContext(ResourceNavigationContext)?.set
   const tableRef = useRef<HTMLDivElement>(null)
   const { ref: scrollRef, width: tableWidth } = useElementWidth<HTMLDivElement>()
   const [fullColumns, setFullColumns] = useState(false)

@@ -1,11 +1,10 @@
-import { useContext } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { sameResource, type SelectedResource } from '@/store/ui'
-import { ResourceNavigationContext } from './resourceNavigation'
+import { useResourceNavigation } from './resourceNavigation'
 
 export function ResourceListNavigator({ resource }: { resource: SelectedResource }) {
-  const navigation = useContext(ResourceNavigationContext)
+  const navigation = useResourceNavigation()
   if (!navigation || !sameResource(navigation.resource, resource)) return null
 
   return (

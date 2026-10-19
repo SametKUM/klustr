@@ -5,11 +5,7 @@ import { DetailResizeHandle } from './DetailResizeHandle'
 import { detailLayout, LIST_WIDTH_MIN } from './detailLayout'
 import { ResourceDetailPanel } from './ResourceDetailPanel'
 import { useElementWidth } from './useElementWidth'
-import {
-  ResourceNavigationContext,
-  ResourceNavigationDispatchContext,
-  type ResourceNavigation,
-} from './resourceNavigation'
+import { createResourceNavigationStore, ResourceNavigationContext } from './resourceNavigation'
 
 function focusResourceRow(workspace: HTMLElement | null, resource: SelectedResource, context: string | null) {
   const list = workspace?.querySelector<HTMLElement>('[data-resource-list]')
@@ -21,13 +17,11 @@ function focusResourceRow(workspace: HTMLElement | null, resource: SelectedResou
 }
 
 export function ResourceWorkspace({ children }: { children: ReactNode }) {
-  const [navigation, setNavigation] = useState<ResourceNavigation | null>(null)
+  const [navigation] = useState(createResourceNavigationStore)
   return (
-    <ResourceNavigationDispatchContext value={setNavigation}>
-      <ResourceNavigationContext value={navigation}>
-        <Workspace>{children}</Workspace>
-      </ResourceNavigationContext>
-    </ResourceNavigationDispatchContext>
+    <ResourceNavigationContext value={navigation}>
+      <Workspace>{children}</Workspace>
+    </ResourceNavigationContext>
   )
 }
 
@@ -44,7 +38,7 @@ function Workspace({ children }: { children: ReactNode }) {
   const setExpanded = useUIStore((s) => s.setDetailExpanded)
   const close = useUIStore((s) => s.setSelectedResource)
   const requestNavigation = useUIStore((s) => s.requestDetailNavigation)
-  const navigation = useContext(ResourceNavigationContext)
+  const navigationStore = useContext(ResourceNavigationContext)
   const scope = `${selectedContext}\u0000${contexts.join('\u0000')}\u0000${selectedView}\u0000${selectedCRDKey}`
   const previousSelection = useRef({ resource: selectedResource, scope })
   const [dragWidth, setDragWidth] = useState<number | null>(null)
@@ -106,6 +100,7 @@ function Workspace({ children }: { children: ReactNode }) {
         const inEditor =
           isEditableTarget(event.target) ||
           (event.target instanceof Element && !!event.target.closest('.monaco-editor, .xterm'))
+        const navigation = navigationStore?.get()
         if (
           event.altKey &&
           !event.ctrlKey &&
