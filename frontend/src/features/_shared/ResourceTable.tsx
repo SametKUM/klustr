@@ -715,8 +715,11 @@ export function ResourceTable<T>({
   }, [filteredData, appliedFilter, columnGetters])
   useEffect(() => {
     if (!selectedResource || !tableRef.current?.closest('[data-resource-list]')) return
-    const belongs = selectedResource.kind === kind || (selectedResource.gvr &&
-      kind === `cr:${selectedResource.gvr.group}/${selectedResource.gvr.resource}`)
+    // A CR can share its kind name with a built-in list (Istio's Gateway, Flux's
+    // HelmRelease), so a CR belongs only to the list of its own group/resource.
+    const belongs = selectedResource.gvr
+      ? kind === `cr:${selectedResource.gvr.group}/${selectedResource.gvr.resource}`
+      : selectedResource.kind === kind
     const loaded = resourceContexts.every((ctx) => loadedSet.has(ctx))
     setOutsideResults(!!belongs && loaded && !searchedData.some((row) => sameResource(selectedResource,
       rowResource?.(row as unknown as T, row[KLUSTR_CTX]) ?? {

@@ -221,6 +221,17 @@ describe('inspector result navigation', () => {
     expect(useUIStore.getState().selectedResource?.name).toBe('api-a')
   })
 
+  it('does not flag a custom resource that shares its kind name with the list', async () => {
+    await act(async () => root.render(<Harness />))
+    const missing = { kind: 'Pod', context: 'cluster-a', namespace: 'apps', name: 'gone' }
+    await act(async () => useUIStore.getState().setSelectedResource(missing))
+    expect(useUIStore.getState().detailOutsideResults).toBe(true)
+    await act(async () => useUIStore.getState().setSelectedResource({
+      ...missing, name: 'lookalike', gvr: { group: 'example.io', version: 'v1', resource: 'pods' },
+    }))
+    expect(useUIStore.getState().detailOutsideResults).toBe(false)
+  })
+
   it('keeps the search when an empty namespace is selected and restores matching results on return', async () => {
     await act(async () => root.render(<Harness />))
     await filter('api')
