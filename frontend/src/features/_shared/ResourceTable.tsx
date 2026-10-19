@@ -720,19 +720,6 @@ export function ResourceTable<T>({
       rowMatchesSearch(row, terms, ids, (r, id) => columnGetters.get(id)?.(r as Tagged<T>)),
     )
   }, [filteredData, appliedFilter, columnGetters])
-  useEffect(() => {
-    if (!selectedResource || !tableRef.current?.closest('[data-resource-list]')) return
-    // A CR can share its kind name with a built-in list (Istio's Gateway, Flux's
-    // HelmRelease), so a CR belongs only to the list of its own group/resource.
-    const belongs = selectedResource.gvr
-      ? kind === `cr:${selectedResource.gvr.group}/${selectedResource.gvr.resource}`
-      : selectedResource.kind === kind
-    const loaded = resourceContexts.every((ctx) => loadedSet.has(ctx))
-    setOutsideResults(!!belongs && loaded && !searchedData.some((row) => sameResource(selectedResource,
-      rowResource?.(row as unknown as T, row[KLUSTR_CTX]) ?? {
-        kind, context: row[KLUSTR_CTX], namespace: (row as RowIdentity).namespace ?? '', name: (row as RowIdentity).name ?? '',
-      })))
-  }, [selectedResource, kind, resourceContexts, loadedSet, searchedData, rowResource, setOutsideResults, tableRef])
   const columnOrder = useMemo(() => {
     const saved = prefs?.order ?? []
     if (!isAggregated || saved.includes('klustrContext')) {
@@ -918,16 +905,39 @@ export function ResourceTable<T>({
   }
   const clearSelection = () => setSelectedKeys(new Set())
 
+  // The identity a row opens as: the view's own mapping (CRs carry their GVR),
+  // or kind, context, namespace and name for built-in kinds.
+  const resourceOf = useCallback((item: Tagged<T>): SelectedResource => {
+    const identity = item as unknown as RowIdentity
+    return rowResource?.(item as unknown as T, item[KLUSTR_CTX]) ?? {
+      kind, context: item[KLUSTR_CTX], namespace: identity.namespace ?? '', name: identity.name ?? '',
+    }
+  }, [rowResource, kind])
+  // One scan per row-model change locates the inspected resource for the row
+  // highlight, the outside-results notice and result navigation.
+  const inspectedIndex = useMemo(
+    () => selectedResource
+      ? selectableRows.findIndex((row) => sameResource(selectedResource, resourceOf(row.original)))
+      : -1,
+    [selectedResource, selectableRows, resourceOf],
+  )
+  const inspectedRowId = inspectedIndex >= 0 ? selectableRows[inspectedIndex].id : null
+
+  useEffect(() => {
+    if (!selectedResource || !tableRef.current?.closest('[data-resource-list]')) return
+    // A CR can share its kind name with a built-in list (Istio's Gateway, Flux's
+    // HelmRelease), so a CR belongs only to the list of its own group/resource.
+    const belongs = selectedResource.gvr
+      ? kind === `cr:${selectedResource.gvr.group}/${selectedResource.gvr.resource}`
+      : selectedResource.kind === kind
+    const loaded = resourceContexts.every((ctx) => loadedSet.has(ctx))
+    setOutsideResults(belongs && loaded && inspectedIndex < 0)
+  }, [selectedResource, kind, resourceContexts, loadedSet, inspectedIndex, setOutsideResults, tableRef])
+
   useEffect(() => {
     if (!setResourceNavigation || !selectedResource || !onRowClick ||
       !tableRef.current?.closest('[data-resource-list]')) return
-    const resourceFor = (row: Row<Tagged<T>>): SelectedResource => {
-      const identity = row.original as RowIdentity
-      return handleRowResource(row.original) ?? {
-        kind, context: row.original[KLUSTR_CTX], namespace: identity.namespace ?? '', name: identity.name ?? '',
-      }
-    }
-    const index = selectableRows.findIndex((row) => sameResource(selectedResource, resourceFor(row)))
+    const index = inspectedIndex
     if (index < 0) {
       setResourceNavigation(null)
       return
@@ -935,12 +945,12 @@ export function ResourceTable<T>({
     const move = (offset: number) => {
       const intendedRow = selectableRows[index + offset]
       if (!intendedRow) return
-      const intendedResource = resourceFor(intendedRow)
+      const intendedResource = resourceOf(intendedRow.original)
       requestNavigation(() => {
         // Informer updates can move the chosen resource while a draft decision
         // is open. Preserve its identity, then reveal its current page.
         const rows = table.getPrePaginationRowModel().rows
-        const target = rows.findIndex((row) => sameResource(intendedResource, resourceFor(row)))
+        const target = rows.findIndex((row) => sameResource(intendedResource, resourceOf(row.original)))
         const pageSize = table.getState().pagination.pageSize
         handleRowClick((rows[target] ?? intendedRow).original)
         if (target >= 0) setPageIndex(Math.floor(target / pageSize))
@@ -960,8 +970,8 @@ export function ResourceTable<T>({
     }
     setResourceNavigation(navigation)
     return () => setResourceNavigation((current) => current === navigation ? null : current)
-  }, [setResourceNavigation, selectedResource, onRowClick, kind, selectableRows,
-    handleRowResource, handleRowClick, requestNavigation, table, virtualizer])
+  }, [setResourceNavigation, selectedResource, onRowClick, inspectedIndex, selectableRows,
+    resourceOf, handleRowClick, requestNavigation, table, virtualizer])
 
   if (activeContexts.length === 0) {
     return (
@@ -1477,9 +1487,7 @@ export function ResourceTable<T>({
                           columnOrder={columnOrder}
                           columnVisibility={columnVisibility}
                           isSelected={rowKey !== null && selectedKeys.has(rowKey)}
-                          inspected={!!selectedResource && sameResource(selectedResource, handleRowResource(tagged) ?? {
-                            kind, context: ctx, namespace: identity.namespace ?? '', name: identity.name ?? '',
-                          })}
+                          inspected={row.id === inspectedRowId}
                           compactColumns={compactColumns}
                           flashing={rowKey !== null && flashKey === rowKey}
                           clickable={!!onRowClick}
