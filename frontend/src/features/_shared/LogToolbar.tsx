@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import { Circle, Download, Ellipsis, Eraser, Filter, History, Pause, Play, Regex, TextWrap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,12 +72,11 @@ export function LogToolbar({
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <label htmlFor={filterId} className="sr-only">Filter logs</label>
-          <div className={[
-            'flex h-7 min-w-0 flex-1 items-center gap-1 rounded-md border bg-background pr-0.5 pl-2 focus-within:ring-1 focus-within:ring-ring',
-            filterError ? 'border-destructive' : 'border-border',
-          ].join(' ')} data-log-filter>
-            <Filter className="pointer-events-none size-3 shrink-0 text-muted-foreground/70" />
-            <input
+          <InputGroup className="h-7 min-w-0 flex-1 rounded-md" data-log-filter>
+            <InputGroupAddon align="inline-start">
+              <Filter className="size-3 text-muted-foreground/70" />
+            </InputGroupAddon>
+            <InputGroupInput
               id={filterId}
               type="text"
               aria-label="Filter logs"
@@ -88,20 +88,21 @@ export function LogToolbar({
               value={filterValue}
               onChange={(e) => onFilterChange(e.target.value)}
               placeholder={useRegex ? 'Filter logs with regex…' : 'Filter logs…'}
-              className="h-full min-w-0 flex-1 bg-transparent px-1 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+              className="h-full min-w-0 px-1 text-xs placeholder:text-muted-foreground/70 md:text-xs"
             />
-            <Button
-              type="button"
-              size="icon-xs"
-              variant={useRegex ? 'secondary' : 'ghost'}
-              aria-pressed={useRegex}
-              aria-label="Toggle regex mode"
-              title="Use a regular expression"
-              onClick={() => onRegexChange(!useRegex)}
-            >
-              <Regex />
-            </Button>
-          </div>
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                size="icon-xs"
+                variant={useRegex ? 'secondary' : 'ghost'}
+                aria-pressed={useRegex}
+                aria-label="Toggle regex mode"
+                title="Use a regular expression"
+                onClick={() => onRegexChange(!useRegex)}
+              >
+                <Regex />
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
           <Button
             type="button"
             size="sm"
