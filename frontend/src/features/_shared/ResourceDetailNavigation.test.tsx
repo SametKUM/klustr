@@ -155,4 +155,23 @@ describe('inspector tab requests', () => {
     await act(async () => root.render(<Inspector />))
     expect(active()).toBe('Logs')
   })
+
+  it('keeps a retained Policy tab pending for other kinds until the report loads', async () => {
+    const configMap = { ...pod, kind: 'ConfigMap', name: 'settings' }
+    mocks.reports.settings = {} as PolicyReportDetail
+    await open(configMap, 'policy')
+    expect(active()).toBe('Policy')
+    await act(async () => useUIStore.getState().setSelectedResource({ ...configMap, name: 'later' }))
+    expect(active()).toBe('Overview')
+    expect(container.textContent).toContain('ConfigMap overview')
+    mocks.reports.later = {} as PolicyReportDetail
+    await act(async () => root.render(<Inspector />))
+    expect(active()).toBe('Policy')
+    await select('YAML')
+    mocks.reports.later = null
+    await act(async () => root.render(<Inspector />))
+    mocks.reports.later = {} as PolicyReportDetail
+    await act(async () => root.render(<Inspector />))
+    expect(active()).toBe('YAML')
+  })
 })

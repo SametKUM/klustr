@@ -790,7 +790,9 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
   if (hasDisruption) allowed.push('disruption')
   if (hasEvents) allowed.push('events')
   if (hasHistory) allowed.push('history')
-  if (policyReport) allowed.push('policy')
+  // The policy report loads after mount, so a requested Policy tab stays
+  // pending (showing Overview) until it arrives, as in PodTabs.
+  allowed.push('policy')
   allowed.push('yaml')
   const initialTab: DetailTab =
     requestedTab && allowed.includes(requestedTab) ? requestedTab : 'overview'
@@ -802,8 +804,9 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
     setTab(requestedTab && allowed.includes(requestedTab) ? requestedTab : 'overview')
     // eslint-disable-next-line react-hooks/exhaustive-deps -- allowed is derived from the identity deps below
   }, [resource.kind, resource.namespace, resource.name, requestedTab, detailRequestId])
+  const activeTab = tab === 'policy' && !policyReport ? 'overview' : tab
   return (
-    <Tabs value={tab} onValueChange={(v) => setTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
+    <Tabs value={activeTab} onValueChange={(v) => setTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         {hasAggregatedLogs && <TabsTrigger value="logs">Logs</TabsTrigger>}
