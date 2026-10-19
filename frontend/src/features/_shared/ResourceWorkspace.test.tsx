@@ -112,6 +112,15 @@ describe('resource workspace sessions and focus', () => {
     expect(mocks.stopped).toHaveBeenCalledTimes(1)
   })
 
+  it('closes with Escape from the inspected row and keeps focus there', () => {
+    act(render)
+    const row = container.querySelector('button')!
+    row.focus()
+    act(() => key(row, 'Escape'))
+    expect(useUIStore.getState().selectedResource).toBeNull()
+    expect(document.activeElement).toBe(row)
+  })
+
   it('preserves editing and defers closing while a YAML draft is dirty', () => {
     act(render)
     const input = container.querySelector('input')!
