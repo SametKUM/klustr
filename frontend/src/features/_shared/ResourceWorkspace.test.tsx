@@ -14,7 +14,12 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('./useElementWidth', async () => {
   const { useRef } = await import('react')
-  return { useElementWidth: () => ({ ref: useRef(null), width: mocks.width }) }
+  return {
+    useElementWidth: () => {
+      const ref = useRef(null)
+      return { ref, attach: ref, width: mocks.width }
+    },
+  }
 })
 
 vi.mock('./ResourceDetailPanel', () => ({

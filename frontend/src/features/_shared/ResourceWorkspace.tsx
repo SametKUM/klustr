@@ -26,7 +26,7 @@ export function ResourceWorkspace({ children }: { children: ReactNode }) {
 }
 
 function Workspace({ children }: { children: ReactNode }) {
-  const { ref, width } = useElementWidth<HTMLDivElement>()
+  const { ref, attach, width } = useElementWidth<HTMLDivElement>()
   const selectedResource = useUIStore((s) => s.selectedResource)
   const selectedContext = useUIStore((s) => s.selectedContext)
   const selectedView = useUIStore((s) => s.selectedView)
@@ -89,7 +89,7 @@ function Workspace({ children }: { children: ReactNode }) {
 
   return (
     <div
-      ref={ref}
+      ref={attach}
       data-resource-workspace
       className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
       onKeyDown={(event) => {

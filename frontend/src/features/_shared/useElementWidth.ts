@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
+// Attach with `ref={attach}` and read the element from `ref`. A callback ref
+// observes an element that mounts or is replaced after the first render, such
+// as a table's scroll area once its empty state gives way to rows.
 export function useElementWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null)
+  const ref = useRef<T | null>(null)
   const [width, setWidth] = useState(0)
-  useEffect(() => {
-    const element = ref.current
+  const attach = useCallback((element: T | null) => {
+    ref.current = element
     if (!element || typeof ResizeObserver === 'undefined') return
     let frame = 0
     const observer = new ResizeObserver(([entry]) => {
@@ -19,7 +22,8 @@ export function useElementWidth<T extends HTMLElement>() {
     return () => {
       observer.disconnect()
       cancelAnimationFrame(frame)
+      ref.current = null
     }
   }, [])
-  return { ref, width }
+  return { ref, attach, width }
 }

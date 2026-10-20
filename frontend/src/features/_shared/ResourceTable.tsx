@@ -325,7 +325,7 @@ export function ResourceTable<T>({
   const requestNavigation = useUIStore((s) => s.requestDetailNavigation)
   const setResourceNavigation = useContext(ResourceNavigationContext)?.set
   const tableRef = useRef<HTMLDivElement>(null)
-  const { ref: scrollRef, width: tableWidth } = useElementWidth<HTMLDivElement>()
+  const { ref: scrollRef, attach: attachScroll, width: tableWidth } = useElementWidth<HTMLDivElement>()
   const [fullColumns, setFullColumns] = useState(false)
   const narrow = selectedResource !== null && tableWidth > 0 && tableWidth < 720
   const compact = narrow && !fullColumns
@@ -1230,7 +1230,7 @@ export function ResourceTable<T>({
           </ul>
         </div>
       )}
-      <div ref={scrollRef} className="flex-1 overflow-auto">
+      <div ref={attachScroll} className="flex-1 overflow-auto">
         <table
           className="border-collapse text-sm"
           style={{

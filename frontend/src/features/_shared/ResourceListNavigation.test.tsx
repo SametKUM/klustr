@@ -29,7 +29,12 @@ vi.mock('./BulkActionDialogs', () => ({
 }))
 vi.mock('./useElementWidth', async () => {
   const { useRef } = await import('react')
-  return { useElementWidth: () => ({ ref: useRef(null), width: 1100 }) }
+  return {
+    useElementWidth: () => {
+      const ref = useRef(null)
+      return { ref, attach: ref, width: 1100 }
+    },
+  }
 })
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({ count }: { count: number }) =>
