@@ -219,7 +219,7 @@ export function ResourceDetailPanel({ contextName, resource, expanded, canSplit,
               <div className="min-w-0 flex-1 truncate text-xs uppercase tracking-wide text-muted-foreground" title={resource.kind}>
                 {resource.kind}
               </div>
-              <ResourceListNavigator resource={resource} />
+              <ResourceListNavigator />
               {canSplit && (
                 <Button
                   size="icon" variant="ghost" className="size-6"

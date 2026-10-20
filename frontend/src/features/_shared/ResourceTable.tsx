@@ -956,8 +956,11 @@ export function ResourceTable<T>({
         if (target >= 0) setPageIndex(Math.floor(target / pageSize))
         requestAnimationFrame(() => {
           if (target >= 0) virtualizer.scrollToIndex(target % pageSize, { align: 'auto' })
-          tableRef.current?.closest('[data-resource-workspace]')
-            ?.querySelector<HTMLElement>('[data-resource-detail]')?.focus({ preventScroll: true })
+          // Focus that survived the move (the Next button) stays put; focus
+          // lost with the previous resource's body moves to the inspector.
+          const detail = tableRef.current?.closest('[data-resource-workspace]')
+            ?.querySelector<HTMLElement>('[data-resource-detail]')
+          if (!detail?.contains(document.activeElement)) detail?.focus({ preventScroll: true })
         })
       })
     }

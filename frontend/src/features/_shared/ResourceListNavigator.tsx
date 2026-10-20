@@ -1,11 +1,14 @@
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { sameResource, type SelectedResource } from '@/store/ui'
 import { useResourceNavigation } from './resourceNavigation'
 
-export function ResourceListNavigator({ resource }: { resource: SelectedResource }) {
+// Not matched against the inspected resource: right after a move the list has
+// not yet published the new position, and unmounting for that one commit would
+// drop focus from the button that made the move. The list clears navigation
+// itself when the inspected resource is outside its results.
+export function ResourceListNavigator() {
   const navigation = useResourceNavigation()
-  if (!navigation || !sameResource(navigation.resource, resource)) return null
+  if (!navigation) return null
 
   return (
     <div role="group" aria-label="Browse filtered resources" className="flex items-center gap-0.5">

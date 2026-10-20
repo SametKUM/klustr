@@ -54,7 +54,7 @@ vi.mock('./ResourceDetailPanel', () => ({
     return resource ? (
       <section data-resource-detail tabIndex={-1}>
         <h2>{resource.name}</h2>
-        <ResourceListNavigator resource={resource} />
+        <ResourceListNavigator />
         <input aria-label="Editor" />
         <div className="xterm" tabIndex={0} aria-label="Terminal">
           Terminal
@@ -217,6 +217,17 @@ describe('inspector result navigation', () => {
     await act(async () => button('Next resource').click())
     expect(button('Next resource').disabled).toBe(true)
     await act(async () => button('Previous resource').click())
+    expect(useUIStore.getState().selectedResource?.name).toBe('worker-c')
+  })
+
+  it('keeps focus on a result navigation button across moves', async () => {
+    await act(async () => root.render(<Harness />))
+    await act(async () => row('api-a').click())
+    button('Next resource').focus()
+    await act(async () => button('Next resource').click())
+    expect(useUIStore.getState().selectedResource?.name).toBe('api-b')
+    expect(document.activeElement).toBe(button('Next resource'))
+    await act(async () => button('Next resource').click())
     expect(useUIStore.getState().selectedResource?.name).toBe('worker-c')
   })
 
