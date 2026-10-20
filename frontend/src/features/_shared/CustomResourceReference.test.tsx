@@ -5,10 +5,11 @@ import type { CRDInfo } from '@/lib/api'
 import { useCRDStore } from '@/store/crds'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
-const mocks = vi.hoisted(() => ({ ensure: vi.fn(), open: vi.fn(), toast: vi.fn() }))
+const mocks = vi.hoisted(() => ({ ensure: vi.fn(), open: vi.fn(), openFromList: vi.fn(), toast: vi.fn() }))
 vi.mock('@/lib/api', () => ({ api: { ensureCustomResourceWatch: mocks.ensure } }))
 vi.mock('@/store/ui', () => ({
-  useUIStore: (selector: (state: object) => unknown) => selector({ openResource: mocks.open }),
+  useUIStore: (selector: (state: object) => unknown) =>
+    selector({ openResource: mocks.open, openResourceFromList: mocks.openFromList }),
 }))
 vi.mock('sonner', () => ({ toast: { error: mocks.toast } }))
 import { CustomResourceReference } from './CustomResourceReference'
@@ -70,6 +71,13 @@ it('opens the target in its source context and explicit namespace after the serv
     name: 'images',
     gvr: { group, version: 'v1beta2', resource: 'imagerepositories' },
   })
+})
+
+it('opens from a list cell without recording Back history', async () => {
+  await act(async () => root.render(<div data-resource-list>{reference()}</div>))
+  await act(async () => container.querySelector('button')!.click())
+  expect(mocks.openFromList).toHaveBeenCalledWith(expect.objectContaining({ name: 'images', context: 'source' }))
+  expect(mocks.open).not.toHaveBeenCalled()
 })
 
 it('leaves an unavailable target unlinked without switching contexts', async () => {

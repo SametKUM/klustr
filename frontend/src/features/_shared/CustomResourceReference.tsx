@@ -36,6 +36,7 @@ export function CustomResourceReference({
       : undefined,
   )
   const openResource = useUIStore((state) => state.openResource)
+  const openResourceFromList = useUIStore((state) => state.openResourceFromList)
   const identity = [contextName, group, crd?.version, resource, kind, namespace, name].join(
     '\u0000',
   )
@@ -59,6 +60,9 @@ export function CustomResourceReference({
       title={`${crd.kind}/${namespace ? `${namespace}/` : ''}${name}`}
       onClick={async (event) => {
         event.stopPropagation()
+        // Followed from the inspector, a reference is recorded for Back; from a
+        // list cell it is a list open, which starts a new history.
+        const open = event.currentTarget.closest('[data-resource-list]') ? openResourceFromList : openResource
         const request = ++requestRef.current
         setPendingIdentity(identity)
         try {
@@ -71,7 +75,7 @@ export function CustomResourceReference({
             ? await loadSuspended(contextName, namespace, name)
             : undefined
           if (request !== requestRef.current) return
-          openResource({
+          open({
             kind,
             namespace,
             name,
