@@ -10,6 +10,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed all:frontend/dist
@@ -28,6 +29,10 @@ func main() {
 		OnStartup:  a.Startup,
 		OnShutdown: a.Shutdown,
 		Bind:       []interface{}{a},
+		// Wails v2 enables the zoom (full-screen) button only when Mac options
+		// are set; without them it stays greyed out. Esc closes dialogs and
+		// the inspector, so it must not also leave full screen.
+		Mac: &mac.Options{DisableEscapeExitsFullscreen: true},
 	}
 	if runtime.GOOS == "linux" {
 		// Wails v2 otherwise locks GTK's maximum size to the startup monitor.
