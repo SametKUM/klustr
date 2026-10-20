@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState, type ComponentProps } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useState, type ComponentProps } from 'react'
 import { ArrowLeft, Maximize2, Minimize2, RefreshCcw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs as UITabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -179,7 +179,9 @@ function Tabs({ value, onValueChange, ...props }: ComponentProps<typeof UITabs>)
     onValueChange={(next) => requestNavigation(() => onValueChange?.(next))} />
 }
 
-export function ResourceDetailPanel({ contextName, resource, expanded, canSplit, onToggleExpanded, onClose }: Props) {
+export const ResourceDetailPanel = memo(ResourceDetailPanelInner)
+
+function ResourceDetailPanelInner({ contextName, resource, expanded, canSplit, onToggleExpanded, onClose }: Props) {
   const setSelectedResource = useUIStore((s) => s.setSelectedResource)
   const close = onClose ?? (() => setSelectedResource(null))
   const goBackResource = useUIStore((s) => s.goBackResource)

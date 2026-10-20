@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
   })
   return {
     reports: {} as Record<string, PolicyReportDetail | null>,
+    reportListeners: new Set<() => void>(),
     logsMounted: vi.fn(), logsStopped: vi.fn(), execMounted: vi.fn(), execStopped: vi.fn(),
     logRequests: vi.fn(),
     getHelmRelease: vi.fn().mockResolvedValue({ info: { revision: 1 }, revisions: [], chartName: 'repo/api' }),
@@ -27,9 +28,20 @@ vi.mock('./useResourceManagers', async (importOriginal) => ({
 vi.mock('./useResourceDetail', () => ({
   useResourceDetail: () => ({ detail: { containers: [{ name: 'app' }], initContainers: [] }, error: null, loading: false }),
 }))
-vi.mock('@/features/kyverno/useResourcePolicyReport', () => ({
-  useResourcePolicyReport: (_context: string, _kind: string, _namespace: string, name: string) => mocks.reports[name] ?? null,
-}))
+// Like the real hook, a report that arrives later re-renders its subscriber.
+vi.mock('@/features/kyverno/useResourcePolicyReport', async () => {
+  const { useSyncExternalStore } = await import('react')
+  return {
+    useResourcePolicyReport: (_context: string, _kind: string, _namespace: string, name: string) =>
+      useSyncExternalStore(
+        (listener) => {
+          mocks.reportListeners.add(listener)
+          return () => mocks.reportListeners.delete(listener)
+        },
+        () => mocks.reports[name] ?? null,
+      ),
+  }
+})
 vi.mock('@/features/kyverno/ResourcePolicyTab', () => ({
   PolicyTabLabel: () => <>Policy</>, ResourcePolicyTab: () => <div>Policy report</div>,
 }))
@@ -94,6 +106,10 @@ describe('inspector tab requests', () => {
     tab.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }))
   })
   const active = () => container.querySelector('[role="tab"][aria-selected="true"]')?.textContent
+  const report = (name: string, value: PolicyReportDetail | null) => act(async () => {
+    mocks.reports[name] = value
+    for (const listener of mocks.reportListeners) listener()
+  })
 
   it.each(['logs', 'events', 'yaml'] as const)('honors another Pod %s request after a manual Overview selection', async (tab) => {
     await open(pod, tab)
@@ -144,15 +160,12 @@ describe('inspector tab requests', () => {
     await act(async () => useUIStore.getState().setSelectedResource({ ...pod, name: 'no-report' }))
     expect(active()).toBe('Overview')
     expect(container.textContent).toContain('Pod overview')
-    mocks.reports['no-report'] = {} as PolicyReportDetail
-    await act(async () => root.render(<Inspector />))
+    await report('no-report', {} as PolicyReportDetail)
     expect(active()).toBe('Policy')
-    mocks.reports['no-report'] = null
-    await act(async () => root.render(<Inspector />))
+    await report('no-report', null)
     expect(active()).toBe('Overview')
     await select('Logs')
-    mocks.reports['no-report'] = {} as PolicyReportDetail
-    await act(async () => root.render(<Inspector />))
+    await report('no-report', {} as PolicyReportDetail)
     expect(active()).toBe('Logs')
   })
 
@@ -164,14 +177,11 @@ describe('inspector tab requests', () => {
     await act(async () => useUIStore.getState().setSelectedResource({ ...configMap, name: 'later' }))
     expect(active()).toBe('Overview')
     expect(container.textContent).toContain('ConfigMap overview')
-    mocks.reports.later = {} as PolicyReportDetail
-    await act(async () => root.render(<Inspector />))
+    await report('later', {} as PolicyReportDetail)
     expect(active()).toBe('Policy')
     await select('YAML')
-    mocks.reports.later = null
-    await act(async () => root.render(<Inspector />))
-    mocks.reports.later = {} as PolicyReportDetail
-    await act(async () => root.render(<Inspector />))
+    await report('later', null)
+    await report('later', {} as PolicyReportDetail)
     expect(active()).toBe('YAML')
   })
 
@@ -183,8 +193,7 @@ describe('inspector tab requests', () => {
     await act(async () =>
       [...container.querySelectorAll<HTMLElement>('[role="tab"]')].find((el) => el.textContent === 'Overview')!.click(),
     )
-    mocks.reports.later = {} as PolicyReportDetail
-    await act(async () => root.render(<Inspector />))
+    await report('later', {} as PolicyReportDetail)
     expect(active()).toBe('Overview')
   })
 })

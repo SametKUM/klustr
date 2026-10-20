@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { sameResource, useUIStore, type SelectedResource } from '@/store/ui'
 import { isEditableTarget, isOverlayOpen } from '@/lib/dom'
 import { DetailResizeHandle } from './DetailResizeHandle'
@@ -50,7 +50,9 @@ function Workspace({ children }: { children: ReactNode }) {
   // closes) without committing; drop its preview so the saved width applies.
   if (dragWidth !== null && (!selectedResource || fullWidth)) setDragWidth(null)
 
-  const closeInspector = () => {
+  // Stable callbacks let the memoized inspector skip the re-render that every
+  // divider drag frame and window resize causes here.
+  const closeInspector = useCallback(() => {
     if (!selectedResource) return
     requestNavigation(() => {
       close(null)
@@ -63,7 +65,8 @@ function Workspace({ children }: { children: ReactNode }) {
         focusResourceRow(ref.current, selectedResource, selectedContext)
       })
     })
-  }
+  }, [selectedResource, requestNavigation, close, selectedContext, selectedView, selectedCRDKey, contexts, ref])
+  const toggleExpanded = useCallback(() => setExpanded(!expanded), [setExpanded, expanded])
 
   useEffect(() => {
     const previous = previousSelection.current
@@ -196,7 +199,7 @@ function Workspace({ children }: { children: ReactNode }) {
           resource={selectedResource}
           expanded={fullWidth}
           canSplit={layout.canSplit}
-          onToggleExpanded={() => setExpanded(!expanded)}
+          onToggleExpanded={toggleExpanded}
           onClose={closeInspector}
         />
       </div>

@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => {
     configurable: true,
     value: () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
   })
-  return { width: 1100, mounted: vi.fn(), stopped: vi.fn() }
+  return { width: 1100, mounted: vi.fn(), stopped: vi.fn(), panelRenders: vi.fn() }
 })
 
 vi.mock('./useElementWidth', async () => {
@@ -22,10 +22,15 @@ vi.mock('./useElementWidth', async () => {
   }
 })
 
-vi.mock('./ResourceDetailPanel', () => ({
-  ResourceDetailPanel: ({ resource, onClose }: { resource: object | null; onClose: () => void }) =>
-    resource ? <DetailSession onClose={onClose} /> : null,
-}))
+vi.mock('./ResourceDetailPanel', async () => {
+  const { memo } = await import('react')
+  return {
+    ResourceDetailPanel: memo(({ resource, onClose }: { resource: object | null; onClose: () => void }) => {
+      mocks.panelRenders()
+      return resource ? <DetailSession onClose={onClose} /> : null
+    }),
+  }
+})
 
 function DetailSession({ onClose }: { onClose: () => void }) {
   const [draft, setDraft] = useState('retained draft')
@@ -112,8 +117,10 @@ describe('resource workspace sessions and focus', () => {
     }
     const detailWidth = () => container.querySelector<HTMLElement>('[data-resource-detail]')!.parentElement!.style.width
     pointer('pointerdown', 500)
+    const renders = mocks.panelRenders.mock.calls.length
     pointer('pointermove', 400)
     expect(detailWidth()).toBe('660px')
+    expect(mocks.panelRenders).toHaveBeenCalledTimes(renders)
     mocks.width = 760
     act(render)
     mocks.width = 1100
