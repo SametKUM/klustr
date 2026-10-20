@@ -96,6 +96,26 @@ describe('resource workspace sessions and focus', () => {
     expect(mocks.stopped).not.toHaveBeenCalled()
   })
 
+  it('drops an uncommitted drag preview when the divider unmounts', () => {
+    act(render)
+    const separator = container.querySelector<HTMLElement>('[role="separator"]')!
+    separator.setPointerCapture = vi.fn()
+    const pointer = (type: string, clientX: number) => {
+      const event = new MouseEvent(type, { bubbles: true, button: 0, clientX })
+      Object.defineProperty(event, 'pointerId', { value: 1 })
+      act(() => separator.dispatchEvent(event))
+    }
+    const detailWidth = () => container.querySelector<HTMLElement>('[data-resource-detail]')!.parentElement!.style.width
+    pointer('pointerdown', 500)
+    pointer('pointermove', 400)
+    expect(detailWidth()).toBe('660px')
+    mocks.width = 760
+    act(render)
+    mocks.width = 1100
+    act(render)
+    expect(detailWidth()).toBe('560px')
+  })
+
   it('moves focus between panes, closes from the inspector and returns to the inspected row', () => {
     act(render)
     const row = container.querySelector('button')!

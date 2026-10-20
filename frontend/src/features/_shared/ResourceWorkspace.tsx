@@ -45,6 +45,9 @@ function Workspace({ children }: { children: ReactNode }) {
   const layout = detailLayout(width, dragWidth ?? preferredWidth, expanded)
   const splitLayout = detailLayout(width, dragWidth ?? preferredWidth, false)
   const fullWidth = !!selectedResource && layout.fullWidth
+  // The divider can unmount mid-drag (the window narrows, the inspector
+  // closes) without committing; drop its preview so the saved width applies.
+  if (dragWidth !== null && (!selectedResource || fullWidth)) setDragWidth(null)
 
   const closeInspector = () => {
     if (!selectedResource) return
