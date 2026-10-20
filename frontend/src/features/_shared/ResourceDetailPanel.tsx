@@ -171,10 +171,14 @@ type Props = {
   onClose?: () => void
 }
 
-function Tabs({ value, onValueChange, ...props }: ComponentProps<typeof UITabs>) {
+// `selected` is the tab the user chose when it differs from the one shown (a
+// Policy tab waiting for its report). Moving to the next resource retains it,
+// not the Overview shown in the meantime.
+function Tabs({ value, selected, onValueChange, ...props }: ComponentProps<typeof UITabs> & { selected?: string }) {
   const requestNavigation = useUIStore((s) => s.requestDetailNavigation)
   const setActiveTab = useUIStore((s) => s.setActiveDetailTab)
-  useEffect(() => { if (value) setActiveTab(value) }, [value, setActiveTab])
+  const retained = selected ?? value
+  useEffect(() => { if (retained) setActiveTab(retained) }, [retained, setActiveTab])
   return <UITabs {...props} value={value} activationMode="manual"
     onValueChange={(next) => requestNavigation(() => onValueChange?.(next))} />
 }
@@ -811,7 +815,7 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
   }, [resource.kind, resource.namespace, resource.name, requestedTab, detailRequestId])
   const activeTab = tab === 'policy' && !policyReport ? 'overview' : tab
   return (
-    <Tabs value={activeTab} onValueChange={(v) => setTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
+    <Tabs value={activeTab} selected={tab} onValueChange={(v) => setTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
         {/* A pending Policy tab already shows Overview, where Radix ignores the
             click, so settle the choice here before a late report overrides it. */}
@@ -1004,7 +1008,7 @@ function PodTabs({
   }
 
   return (
-    <Tabs value={activeTab} onValueChange={(v) => selectTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
+    <Tabs value={activeTab} selected={tabState.active} onValueChange={(v) => selectTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
         {/* Settles a pending Policy tab, as in NonPodTabs. */}
         <TabsTrigger value="overview" onClick={() => { if (activeTab === 'overview') selectTab('overview') }}>

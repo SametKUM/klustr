@@ -185,6 +185,16 @@ describe('inspector tab requests', () => {
     expect(active()).toBe('YAML')
   })
 
+  it.each([pod, { ...pod, kind: 'ConfigMap' }])('keeps a $kind Policy tab pending across resources until a report arrives', async (resource) => {
+    mocks.reports.api = {} as PolicyReportDetail
+    await open(resource, 'policy')
+    await act(async () => useUIStore.getState().setSelectedResource({ ...resource, name: 'b' }))
+    expect(active()).toBe('Overview')
+    await act(async () => useUIStore.getState().setSelectedResource({ ...resource, name: 'c' }))
+    await report('c', {} as PolicyReportDetail)
+    expect(active()).toBe('Policy')
+  })
+
   it.each([pod, { ...pod, kind: 'ConfigMap' }])('lets a $kind Overview click replace a pending Policy tab', async (resource) => {
     mocks.reports.api = {} as PolicyReportDetail
     await open(resource, 'policy')
