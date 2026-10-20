@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { ownsVerticalArrows } from './dom'
+import { isOverlayOpen, ownsVerticalArrows } from './dom'
 
 function mount(html: string) {
   document.body.innerHTML = html
   return (selector: string) => document.querySelector(selector)
 }
+
+describe('isOverlayOpen', () => {
+  it('sees open dialogs, confirmations, menus and listboxes but not closed ones', () => {
+    for (const role of ['dialog', 'alertdialog', 'menu', 'listbox']) {
+      mount(`<div role="${role}" data-state="open"></div>`)
+      expect(isOverlayOpen()).toBe(true)
+      mount(`<div role="${role}" data-state="closed"></div>`)
+      expect(isOverlayOpen()).toBe(false)
+    }
+  })
+})
 
 describe('ownsVerticalArrows', () => {
   it('leaves the arrows to the sidebar from the list region around the rows', () => {

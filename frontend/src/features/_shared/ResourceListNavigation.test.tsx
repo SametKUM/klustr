@@ -1,4 +1,5 @@
 import { act, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
 import type { ColumnDef } from '@tanstack/react-table'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -370,19 +371,45 @@ describe('inspector result navigation', () => {
         ),
     )
     expect(useUIStore.getState().selectedResource?.name).toBe('api-b')
-    const menu = document.createElement('div')
-    menu.setAttribute('role', 'menu')
-    menu.dataset.state = 'open'
-    document.body.appendChild(menu)
+    for (const role of ['menu', 'alertdialog']) {
+      const overlay = document.createElement('div')
+      overlay.setAttribute('role', role)
+      overlay.dataset.state = 'open'
+      document.body.appendChild(overlay)
+      try {
+        await act(async () =>
+          detail.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true }),
+          ),
+        )
+        expect(useUIStore.getState().selectedResource?.name).toBe('api-b')
+      } finally {
+        overlay.remove()
+      }
+    }
+  })
+
+  it('leaves keys from portaled content to that content', async () => {
+    const portal = document.createElement('div')
+    document.body.appendChild(portal)
     try {
-      await act(async () =>
-        detail.dispatchEvent(
-          new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true }),
-        ),
-      )
-      expect(useUIStore.getState().selectedResource?.name).toBe('api-b')
+      await act(async () => root.render(
+        <ResourceWorkspace>
+          <ListHarness />
+          {createPortal(<button>Cancel</button>, portal)}
+        </ResourceWorkspace>,
+      ))
+      await act(async () => row('api-a').click())
+      for (const init of [{ key: 'ArrowDown', altKey: true }, { key: 'Escape' }]) {
+        await act(async () =>
+          portal.querySelector('button')!.dispatchEvent(
+            new KeyboardEvent('keydown', { ...init, bubbles: true }),
+          ),
+        )
+      }
+      expect(useUIStore.getState().selectedResource?.name).toBe('api-a')
     } finally {
-      menu.remove()
+      portal.remove()
     }
   })
 })

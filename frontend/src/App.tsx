@@ -102,7 +102,7 @@ import { TerminalDrawer } from '@/features/terminal/TerminalDrawer'
 import { Toaster } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
-import { isEditableTarget, ownsVerticalArrows } from '@/lib/dom'
+import { isEditableTarget, isOverlayOpen, ownsVerticalArrows } from '@/lib/dom'
 import { onCredsUpdate, onKubeChange, onPFUpdate, resetSyncState } from '@/lib/events'
 import { toast } from 'sonner'
 import { useCredentialsStore } from '@/store/credentials'
@@ -369,9 +369,7 @@ function App() {
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
       if (isEditableTarget(e.target)) return
       if (ownsVerticalArrows(e.target)) return
-      // Don't move the sidebar selection behind an open dialog — Radix doesn't
-      // stop arrow keys bubbling to this window listener.
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return
+      if (isOverlayOpen()) return
       if (navEntries.length === 0) return
       e.preventDefault()
       const current = selectedCRDKey

@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { sameResource, useUIStore, type SelectedResource } from '@/store/ui'
-import { isEditableTarget } from '@/lib/dom'
+import { isEditableTarget, isOverlayOpen } from '@/lib/dom'
 import { DetailResizeHandle } from './DetailResizeHandle'
 import { detailLayout, LIST_WIDTH_MIN } from './detailLayout'
 import { ResourceDetailPanel } from './ResourceDetailPanel'
@@ -90,11 +90,12 @@ function Workspace({ children }: { children: ReactNode }) {
       data-resource-workspace
       className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
       onKeyDown={(event) => {
+        // Keys from portaled content (a delete confirmation, a menu) bubble
+        // here through React, but they belong to that overlay.
         if (
           event.defaultPrevented ||
-          document.querySelector(
-            '[role="dialog"][data-state="open"], [role="menu"][data-state="open"], [role="listbox"][data-state="open"]',
-          )
+          !event.currentTarget.contains(event.target as Node) ||
+          isOverlayOpen()
         )
           return
         const inEditor =
