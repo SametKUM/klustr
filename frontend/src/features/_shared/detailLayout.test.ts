@@ -35,4 +35,13 @@ describe('resource inspector layout', () => {
     expect([...compactColumnIds(columns)]).toEqual(['name', 'status', 'restarts'])
     expect(columns).toContain('namespace')
   })
+
+  it('keeps custom resource printer columns and leads with the identity column', () => {
+    expect([...compactColumnIds(['namespace', 'name', 'pc:Ready', 'pc:Sync Status', 'createdAt'])])
+      .toEqual(['name', 'pc:Ready', 'pc:Sync Status'])
+  })
+
+  it('leads with the subject of lists that have no name column', () => {
+    expect([...compactColumnIds(['klustrContext', 'namespace', 'subject', 'source', 'createdAt'])][0]).toBe('subject')
+  })
 })

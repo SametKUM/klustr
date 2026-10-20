@@ -16,11 +16,21 @@ export function detailLayout(available: number, preferred: number, expanded: boo
   }
 }
 
+// Custom resource printer columns arrive as `pc:<name>` ("pc:Sync Status"), so
+// match on the bare, lowercased name.
+const columnKey = (id: string) => id.replace(/^pc:/, '').replace(/[^a-z]/gi, '').toLowerCase()
+
+// The identity column comes first; the table gives it the flexible width and
+// the namespace/context subline. Lists without a name column (Kyverno's
+// PolicyReports lead with namespace and subject) use their first other column,
+// since the subline already shows namespace and context.
 export function compactColumnIds(ids: string[]) {
-  const identity = ids.find((id) => id.toLowerCase() === 'name') ?? ids[0]
-  const statuses = ['status', 'phase', 'health', 'ready', 'syncStatus', 'restarts'].filter((id) =>
-    ids.includes(id),
+  const identity = ids.find((id) => columnKey(id) === 'name') ??
+    ids.find((id) => id !== 'klustrContext' && id !== 'namespace') ?? ids[0]
+  const statuses = ['status', 'phase', 'health', 'ready', 'syncstatus', 'restarts'].flatMap((key) =>
+    ids.filter((id) => columnKey(id) === key),
   )
-  const chosen = [identity, statuses[0], ids.includes('restarts') ? 'restarts' : statuses[1]]
+  const restarts = ids.find((id) => columnKey(id) === 'restarts')
+  const chosen = [identity, statuses[0], restarts ?? statuses[1]]
   return new Set(chosen.filter((id): id is string => !!id))
 }

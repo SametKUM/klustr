@@ -251,7 +251,7 @@ function ResourceRowInner<T>({
           <div className="truncate" title={typeof cell.getValue() === 'string' ? cell.getValue() as string : undefined}>
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </div>
-          {compactColumns && cell.column.id === 'name' && <div className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground"
+          {compactColumns && cell.column.id === compactColumns.values().next().value && <div className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground"
             title={`${ctx}${identity.namespace ? ` / ${identity.namespace}` : ''}`}>
             {identity.namespace && <><span className="max-w-1/2 shrink-0 truncate">{identity.namespace}</span><span aria-hidden>·</span></>}
             <span className="truncate">{ctx}</span>
@@ -811,11 +811,12 @@ export function ResourceTable<T>({
   const visibleRows = table.getRowModel().rows
   const renderedColumns = table.getVisibleLeafColumns().filter((col) => !compactColumns || compactColumns.has(col.id))
   const compactStatusWidth = tableWidth < 480 ? 112 : 148
-  const compactFixedWidth = renderedColumns.reduce((sum, col) => col.id === 'name'
+  const identityColumn = compactColumns?.values().next().value
+  const compactFixedWidth = renderedColumns.reduce((sum, col) => col.id === identityColumn
     ? sum : sum + (col.id === 'restarts' ? 84 : compactStatusWidth), 0)
   const renderedWidth = (id: string, fallback: number) => {
     if (!compact) return fallback
-    if (id === 'name') return Math.max(128, tableWidth - 36 - compactFixedWidth)
+    if (id === identityColumn) return Math.max(128, tableWidth - 36 - compactFixedWidth)
     return id === 'restarts' ? 84 : compactStatusWidth
   }
   useEffect(() => {
