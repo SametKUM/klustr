@@ -128,6 +128,20 @@ describe('resource workspace sessions and focus', () => {
     expect(detailWidth()).toBe('560px')
   })
 
+  it('leaves focus outside the workspace when the inspector goes full width', () => {
+    const terminal = document.createElement('textarea')
+    document.body.appendChild(terminal)
+    try {
+      act(render)
+      terminal.focus()
+      mocks.width = 760
+      act(render)
+      expect(document.activeElement).toBe(terminal)
+    } finally {
+      terminal.remove()
+    }
+  })
+
   it('moves focus between panes, closes from the inspector and returns to the inspected row', () => {
     act(render)
     const row = container.querySelector('button')!

@@ -80,10 +80,14 @@ function Workspace({ children }: { children: ReactNode }) {
   }, [selectedResource, selectedContext, scope, ref])
 
   useEffect(() => {
+    // The list hides behind a full-width inspector, so focus in it moves to
+    // the inspector. Focus elsewhere (the terminal drawer, the sidebar) stays.
+    const focused = document.activeElement
+    if (focused && focused !== document.body && !ref.current?.contains(focused)) return
     if (
       fullWidth &&
       selectedResource &&
-      !ref.current?.querySelector('[data-resource-detail]')?.contains(document.activeElement)
+      !ref.current?.querySelector('[data-resource-detail]')?.contains(focused)
     ) {
       ref.current
         ?.querySelector<HTMLElement>('[data-resource-detail]')
