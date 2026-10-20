@@ -68,7 +68,7 @@ import { KLUSTR_CTX, resolveResourceContexts, type Tagged } from './resourceCont
 import { resourcePageCount } from './pagination'
 import { compactColumnIds } from './detailLayout'
 import { useElementWidth } from './useElementWidth'
-import { ResourceNavigationContext, type ResourceNavigation } from './resourceNavigation'
+import { HELD_KEY_SETTLE_MS, ResourceNavigationContext, type ResourceNavigation } from './resourceNavigation'
 
 type RowIdentity = { namespace?: string; name?: string }
 
@@ -325,6 +325,10 @@ export function ResourceTable<T>({
   const requestNavigation = useUIStore((s) => s.requestDetailNavigation)
   const setResourceNavigation = useContext(ResourceNavigationContext)?.set
   const tableRef = useRef<HTMLDivElement>(null)
+  const followTimer = useRef<number>(undefined)
+  // Any selection change (closing, another row, a context switch, which
+  // clears the selection) supersedes a held arrow's pending follow.
+  useEffect(() => () => window.clearTimeout(followTimer.current), [selectedResource])
   const { ref: scrollRef, attach: attachScroll, width: tableWidth } = useElementWidth<HTMLDivElement>()
   const [fullColumns, setFullColumns] = useState(false)
   const narrow = selectedResource !== null && tableWidth > 0 && tableWidth < 720
@@ -1033,7 +1037,11 @@ export function ResourceTable<T>({
         const next = visibleRows[index]
         if (!next) return
         virtualizer.scrollToIndex(index, { align: 'auto' })
-        if (selectedResource && onRowClick) handleRowClick(next.original)
+        if (selectedResource && onRowClick) {
+          window.clearTimeout(followTimer.current)
+          if (event.repeat) followTimer.current = window.setTimeout(() => handleRowClick(next.original), HELD_KEY_SETTLE_MS)
+          else handleRowClick(next.original)
+        }
         requestAnimationFrame(() => tableRef.current?.querySelector<HTMLElement>(`[data-resource-row][data-index="${index}"]`)?.focus({ preventScroll: true }))
       }}>
       {selectedItems.length > 0 && (

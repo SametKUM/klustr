@@ -5,7 +5,7 @@ import { DetailResizeHandle } from './DetailResizeHandle'
 import { detailLayout, LIST_WIDTH_MIN } from './detailLayout'
 import { ResourceDetailPanel } from './ResourceDetailPanel'
 import { useElementWidth } from './useElementWidth'
-import { createResourceNavigationStore, ResourceNavigationContext } from './resourceNavigation'
+import { createResourceNavigationStore, HELD_KEY_SETTLE_MS, ResourceNavigationContext } from './resourceNavigation'
 
 function focusResourceRow(workspace: HTMLElement | null, resource: SelectedResource, context: string | null) {
   const list = workspace?.querySelector<HTMLElement>('[data-resource-list]')
@@ -42,6 +42,7 @@ function Workspace({ children }: { children: ReactNode }) {
   const scope = `${selectedContext}\u0000${contexts.join('\u0000')}\u0000${selectedView}\u0000${selectedCRDKey}`
   const previousSelection = useRef({ resource: selectedResource, scope })
   const [dragWidth, setDragWidth] = useState<number | null>(null)
+  const lastMove = useRef(0)
   const layout = detailLayout(width, dragWidth ?? preferredWidth, expanded)
   const splitLayout = detailLayout(width, dragWidth ?? preferredWidth, false)
   const fullWidth = !!selectedResource && layout.fullWidth
@@ -118,6 +119,10 @@ function Workspace({ children }: { children: ReactNode }) {
         ) {
           event.preventDefault()
           event.stopPropagation()
+          // ponytail: throttled, so a held key still opens one resource per
+          // interval; accumulate the offset if that ever proves too slow.
+          if (event.repeat && event.timeStamp - lastMove.current < HELD_KEY_SETTLE_MS) return
+          lastMove.current = event.timeStamp
           if (event.key === 'ArrowUp') navigation.previous?.()
           else navigation.next?.()
           return

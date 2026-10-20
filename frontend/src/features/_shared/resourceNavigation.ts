@@ -1,6 +1,12 @@
 import { createContext, useContext, useSyncExternalStore, type SetStateAction } from 'react'
 import type { SelectedResource } from '@/store/ui'
 
+// Holding an arrow key repeats it ~30 times a second, and every resource the
+// inspector opens fetches its detail and may start a log stream. Rows follow
+// a held arrow only once it pauses this long; Alt+Arrow moves at most once
+// per interval.
+export const HELD_KEY_SETTLE_MS = 150
+
 export type ResourceNavigation = {
   resource: SelectedResource
   index: number

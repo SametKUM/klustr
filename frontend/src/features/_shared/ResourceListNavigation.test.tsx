@@ -74,6 +74,7 @@ const { useTablePrefs } = await import('@/store/tablePrefs')
 const { ResourceWorkspace } = await import('./ResourceWorkspace')
 const { ResourceTable } = await import('./ResourceTable')
 const { ResourceListNavigator } = await import('./ResourceListNavigator')
+const { HELD_KEY_SETTLE_MS } = await import('./resourceNavigation')
 import type { SelectedResource } from '@/store/ui'
 
 const snapshot = useUIStore.getState()
@@ -234,6 +235,45 @@ describe('inspector result navigation', () => {
     expect(document.activeElement).toBe(button('Next resource'))
     await act(async () => button('Next resource').click())
     expect(useUIStore.getState().selectedResource?.name).toBe('worker-c')
+  })
+
+  it('opens only the row a held arrow stops on', async () => {
+    useTablePrefs.getState().setPageSize('Pod', 50)
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      await act(async () => root.render(<Harness />))
+      await act(async () => row('api-a').click())
+      const press = (name: string, repeat: boolean) => act(async () => {
+        row(name).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', repeat, bubbles: true }))
+      })
+      await press('api-a', false)
+      expect(useUIStore.getState().selectedResource?.name).toBe('api-b')
+      await press('api-b', true)
+      await press('worker-c', true)
+      expect(document.activeElement).toBe(row('worker-d'))
+      expect(useUIStore.getState().selectedResource?.name).toBe('api-b')
+      await act(async () => vi.advanceTimersByTime(HELD_KEY_SETTLE_MS))
+      expect(useUIStore.getState().selectedResource?.name).toBe('worker-d')
+      await press('worker-d', false)
+      await press('worker-c', true)
+      await act(async () => useUIStore.getState().setSelectedResource(null))
+      await act(async () => vi.advanceTimersByTime(HELD_KEY_SETTLE_MS))
+      expect(useUIStore.getState().selectedResource).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('moves a held Alt+Arrow at most once per interval', async () => {
+    await act(async () => root.render(<Harness />))
+    await act(async () => row('api-a').click())
+    const detail = container.querySelector<HTMLElement>('[data-resource-detail]')!
+    for (const repeat of [false, true]) {
+      await act(async () =>
+        detail.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, repeat, bubbles: true })),
+      )
+    }
+    expect(useUIStore.getState().selectedResource?.name).toBe('api-b')
   })
 
   it('uses the current filter and sort, and hides navigation outside the results', async () => {
