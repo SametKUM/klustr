@@ -267,8 +267,11 @@ function applyNamespaceSelection(
 
 export const useUIStore = create<UIState>((set, get) => {
   const navigate = (action: () => void) => {
-    if (get().detailDirty) set({ pendingDetailNavigation: action })
-    else action()
+    if (!get().detailDirty) action()
+    // The discard dialog blocks clicks, so a request arriving while it is open
+    // comes from async work (a resolved lookup) and must not replace the
+    // destination the user is deciding on.
+    else if (!get().pendingDetailNavigation) set({ pendingDetailNavigation: action })
   }
   // Following a reference from the inspector records the current resource for
   // Back. Opening another row from the list starts over, as a row click does.

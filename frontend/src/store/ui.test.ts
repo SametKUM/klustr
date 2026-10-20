@@ -120,6 +120,16 @@ describe('resource inspector navigation', () => {
     })
   })
 
+  it('keeps the destination under decision when a late request arrives', () => {
+    const s = useUIStore.getState()
+    s.setSelectedResource(pod)
+    s.setDetailDirty(true)
+    s.setSelectedResource(null)
+    s.openResource({ ...pod, name: 'manager' })
+    s.confirmDetailNavigation()
+    expect(useUIStore.getState().selectedResource).toBeNull()
+  })
+
   it.each(['row', 'close', 'view', 'context', 'crd', 'back', 'tab'])(
     'defers %s navigation until the draft is discarded', (target) => {
       const s = useUIStore.getState()
