@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isOverlayOpen, ownsVerticalArrows } from './dom'
+import { isOverlayOpen, ownsVerticalArrows, workspaceInspector } from './dom'
 
 function mount(html: string) {
   document.body.innerHTML = html
@@ -14,6 +14,18 @@ describe('isOverlayOpen', () => {
       mount(`<div role="${role}" data-state="closed"></div>`)
       expect(isOverlayOpen()).toBe(false)
     }
+  })
+})
+
+describe('workspaceInspector', () => {
+  it('finds the inspector of the workspace the element belongs to', () => {
+    const find = mount(
+      '<section data-resource-detail id="other"></section>' +
+        '<div data-resource-workspace><table><tr id="row"></tr></table>' +
+        '<section data-resource-detail id="own"></section></div>',
+    )
+    expect(workspaceInspector(find('#row'))).toBe(find('#own'))
+    expect(workspaceInspector(find('#other'))).toBeNull()
   })
 })
 

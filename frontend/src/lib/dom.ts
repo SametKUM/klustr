@@ -15,6 +15,11 @@ export function isOverlayOpen(): boolean {
   return document.querySelector(OPEN_OVERLAY) !== null
 }
 
+// The inspector beside a list, found from any element of the same workspace.
+export function workspaceInspector(from: Element | null): HTMLElement | null {
+  return from?.closest('[data-resource-workspace]')?.querySelector<HTMLElement>('[data-resource-detail]') ?? null
+}
+
 // Rows, the inspector and the divider use the vertical arrows themselves. The
 // list region around the rows does not: a click on its padding, count or
 // pager focuses it, and the arrows still move the sidebar from there.

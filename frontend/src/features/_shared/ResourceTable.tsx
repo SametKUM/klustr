@@ -28,7 +28,7 @@ import {
   X,
 } from 'lucide-react'
 import { isKindSynced, onKubeChange } from '@/lib/events'
-import { isEditableTarget } from '@/lib/dom'
+import { isEditableTarget, workspaceInspector } from '@/lib/dom'
 import { namespaceQuery } from '@/lib/namespaceFilter'
 import { stableList } from '@/lib/stableList'
 import { useNowTick } from '@/lib/nowTick'
@@ -228,7 +228,8 @@ function ResourceRowInner<T>({
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
                 onRowClick(tagged)
-                requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-resource-detail]')?.focus())
+                const row = e.currentTarget
+                requestAnimationFrame(() => workspaceInspector(row)?.focus())
               }
             }
           : undefined
@@ -968,8 +969,7 @@ export function ResourceTable<T>({
           if (target >= 0) virtualizer.scrollToIndex(target % pageSize, { align: 'auto' })
           // Focus that survived the move (the Next button) stays put; focus
           // lost with the previous resource's body moves to the inspector.
-          const detail = tableRef.current?.closest('[data-resource-workspace]')
-            ?.querySelector<HTMLElement>('[data-resource-detail]')
+          const detail = workspaceInspector(tableRef.current)
           if (!detail?.contains(document.activeElement)) detail?.focus({ preventScroll: true })
         })
       })
