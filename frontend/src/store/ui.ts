@@ -531,7 +531,11 @@ export const useUIStore = create<UIState>((set, get) => {
     },
     setDetailExpanded: (detailExpanded) => set({ detailExpanded }),
     setDetailDirty: (detailDirty) => set({ detailDirty }),
-    setDetailOutsideResults: (detailOutsideResults) => set({ detailOutsideResults }),
+    // Lists report this on every informer update; an unchanged value must not
+    // notify every store subscriber.
+    setDetailOutsideResults: (detailOutsideResults) => {
+      if (get().detailOutsideResults !== detailOutsideResults) set({ detailOutsideResults })
+    },
     requestDetailNavigation: navigate,
     cancelDetailNavigation: () => set({ pendingDetailNavigation: null }),
     confirmDetailNavigation: () => {

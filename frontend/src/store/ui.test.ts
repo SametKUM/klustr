@@ -120,6 +120,19 @@ describe('resource inspector navigation', () => {
     })
   })
 
+  it('does not notify subscribers for an unchanged outside-results report', () => {
+    const listener = vi.fn()
+    const unsubscribe = useUIStore.subscribe(listener)
+    try {
+      useUIStore.getState().setDetailOutsideResults(false)
+      expect(listener).not.toHaveBeenCalled()
+      useUIStore.getState().setDetailOutsideResults(true)
+      expect(listener).toHaveBeenCalledOnce()
+    } finally {
+      unsubscribe()
+    }
+  })
+
   it('keeps the destination under decision when a late request arrives', () => {
     const s = useUIStore.getState()
     s.setSelectedResource(pod)
