@@ -120,6 +120,17 @@ describe('resource inspector navigation', () => {
     })
   })
 
+  it('keeps the selection object when the inspected resource is chosen again', () => {
+    const s = useUIStore.getState()
+    s.setSelectedResource(pod)
+    const selected = useUIStore.getState().selectedResource
+    s.setSelectedResource({ ...pod })
+    s.openResource({ ...pod })
+    expect(useUIStore.getState().selectedResource).toBe(selected)
+    s.setSelectedResource({ ...pod, suspended: true })
+    expect(useUIStore.getState().selectedResource).toMatchObject({ suspended: true })
+  })
+
   it('does not notify subscribers for an unchanged outside-results report', () => {
     const listener = vi.fn()
     const unsubscribe = useUIStore.subscribe(listener)

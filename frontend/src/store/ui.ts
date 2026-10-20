@@ -193,6 +193,12 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((n, i) => b[i] === n)
 }
 
+// Re-selecting the inspected resource keeps its object unless a row snapshot
+// field changed, so the memoized inspector and the list's effects don't re-run.
+function sameSnapshot(a: SelectedResource, b: SelectedResource): boolean {
+  return a.suspended === b.suspended && a.logContainer === b.logContainer
+}
+
 // Terminal tabs open a session, so they never reconnect on their own when
 // moving between resources or returning through history. Every other tab is
 // a reading tab, including integration tabs added later; each detail body
@@ -279,7 +285,7 @@ export const useUIStore = create<UIState>((set, get) => {
     const current = get().selectedResource
     const containerRequest = tab === 'logs' && resource.logContainer !== undefined
     if (current && sameResource(current, resource) && (!tab || tab === get().activeDetailTab) && !containerRequest) {
-      set({ selectedResource: resource })
+      if (!sameSnapshot(current, resource)) set({ selectedResource: resource })
       return
     }
     navigate(() => set((s) => {
@@ -460,7 +466,7 @@ export const useUIStore = create<UIState>((set, get) => {
     setSelectedResource: (resource) => {
       const current = get().selectedResource
       if (resource && current && sameResource(resource, current)) {
-        set({ selectedResource: resource })
+        if (!sameSnapshot(current, resource)) set({ selectedResource: resource })
         return
       }
       navigate(() => set((s) => ({
