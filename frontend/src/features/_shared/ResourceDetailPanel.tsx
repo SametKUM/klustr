@@ -811,7 +811,11 @@ function NonPodTabs({ contextName, resource }: { contextName: string | null; res
   return (
     <Tabs value={activeTab} onValueChange={(v) => setTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
+        {/* A pending Policy tab already shows Overview, where Radix ignores the
+            click, so settle the choice here before a late report overrides it. */}
+        <TabsTrigger value="overview" onClick={() => { if (activeTab === 'overview') setTab('overview') }}>
+          Overview
+        </TabsTrigger>
         {hasAggregatedLogs && <TabsTrigger value="logs">Logs</TabsTrigger>}
         {hasNodeShell && <TabsTrigger value="shell">Shell</TabsTrigger>}
         {hasDisruption && <TabsTrigger value="disruption">Disruption</TabsTrigger>}
@@ -1000,7 +1004,10 @@ function PodTabs({
   return (
     <Tabs value={activeTab} onValueChange={(v) => selectTab(v as DetailTab)} className="flex min-h-0 flex-1 flex-col">
       <TabsList className="mx-6 mt-3 w-fit">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
+        {/* Settles a pending Policy tab, as in NonPodTabs. */}
+        <TabsTrigger value="overview" onClick={() => { if (activeTab === 'overview') selectTab('overview') }}>
+          Overview
+        </TabsTrigger>
         <TabsTrigger value="logs" disabled={!detail}>Logs</TabsTrigger>
         <TabsTrigger value="exec" disabled={!detail || detail.containers.length === 0}>Exec</TabsTrigger>
         <TabsTrigger value="events">Events</TabsTrigger>

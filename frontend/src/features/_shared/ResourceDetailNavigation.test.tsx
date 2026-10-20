@@ -174,4 +174,17 @@ describe('inspector tab requests', () => {
     await act(async () => root.render(<Inspector />))
     expect(active()).toBe('YAML')
   })
+
+  it.each([pod, { ...pod, kind: 'ConfigMap' }])('lets a $kind Overview click replace a pending Policy tab', async (resource) => {
+    mocks.reports.api = {} as PolicyReportDetail
+    await open(resource, 'policy')
+    await act(async () => useUIStore.getState().setSelectedResource({ ...resource, name: 'later' }))
+    expect(active()).toBe('Overview')
+    await act(async () =>
+      [...container.querySelectorAll<HTMLElement>('[role="tab"]')].find((el) => el.textContent === 'Overview')!.click(),
+    )
+    mocks.reports.later = {} as PolicyReportDetail
+    await act(async () => root.render(<Inspector />))
+    expect(active()).toBe('Overview')
+  })
 })
