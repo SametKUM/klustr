@@ -246,7 +246,7 @@ function ResourceDetailPanelInner({ contextName, resource, expanded, canSplit, o
             </div>
             <div className="group flex min-w-0 items-center gap-1.5">
               <h2 id="resource-detail-title" className="truncate text-sm font-semibold" title={resource.name}>{resource.name}</h2>
-              {resource?.name && (
+              {resource.name && (
                 <CopyButton
                   value={resource.name}
                   ariaLabel="Copy name"
@@ -254,12 +254,12 @@ function ResourceDetailPanelInner({ contextName, resource, expanded, canSplit, o
                 />
               )}
             </div>
-            {(contextName || resource?.namespace) && (
+            {(contextName || resource.namespace) && (
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {contextName && (
                   <ContextBadge contextName={contextName} className="max-w-64" />
                 )}
-                {resource?.namespace && (
+                {resource.namespace && (
                   <div className="group flex min-w-0 items-center gap-1.5">
                     <div className="truncate text-xs text-muted-foreground">{resource.namespace}</div>
                     <CopyButton
@@ -276,7 +276,7 @@ function ResourceDetailPanelInner({ contextName, resource, expanded, canSplit, o
               </div>
             )}
           </div>
-          {resource && resource.kind !== 'HelmRelease' && (
+          {resource.kind !== 'HelmRelease' && (
             // The selection can change while a confirmation is open, so
             // remount the actions to close it rather than let it retarget.
             <div key={resourceKey} className="flex flex-wrap items-center gap-2">
@@ -365,25 +365,23 @@ function ResourceDetailPanelInner({ contextName, resource, expanded, canSplit, o
             </div>
           )}
         </header>
-        {resource && (
-          <ErrorBoundary
-            key={resourceKey}
-            fallback={({ error, componentStack, reset }) => (
-              <ErrorRecovery
-                title="This resource detail could not be displayed"
-                description="The rest of Klustr is still available. Close this detail or try rendering it again."
-                error={error}
-                componentStack={componentStack}
-                onRetry={reset}
-                onDismiss={close}
-              />
-            )}
-          >
-            <ResourceManagersContext.Provider value={managers}>
-              <DetailContent contextName={contextName} resource={resource} />
-            </ResourceManagersContext.Provider>
-          </ErrorBoundary>
-        )}
+        <ErrorBoundary
+          key={resourceKey}
+          fallback={({ error, componentStack, reset }) => (
+            <ErrorRecovery
+              title="This resource detail could not be displayed"
+              description="The rest of Klustr is still available. Close this detail or try rendering it again."
+              error={error}
+              componentStack={componentStack}
+              onRetry={reset}
+              onDismiss={close}
+            />
+          )}
+        >
+          <ResourceManagersContext.Provider value={managers}>
+            <DetailContent contextName={contextName} resource={resource} />
+          </ResourceManagersContext.Provider>
+        </ErrorBoundary>
       </section>
   )
 }
