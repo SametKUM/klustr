@@ -83,6 +83,9 @@ type LoadError = { message: string; retrying: boolean }
 const GRACE_STEP_MS = 5_000
 const GRACE_HARD_CAP_MS = 30_000
 
+// Beside an open inspector, a list narrower than this switches to compact columns.
+const NARROW_LIST_WIDTH = 720
+
 // Each source item gets exactly one tagged twin so the merged rows keep
 // referential equality across re-merges; stableList already guarantees a
 // source item survives refetches unchanged. An item belongs to exactly one
@@ -330,9 +333,11 @@ export function ResourceTable<T>({
   // Any selection change (closing, another row, a context switch, which
   // clears the selection) supersedes a held arrow's pending follow.
   useEffect(() => () => window.clearTimeout(followTimer.current), [selectedResource])
-  const { ref: scrollRef, attach: attachScroll, width: tableWidth } = useElementWidth<HTMLDivElement>()
+  // Above the compact threshold only "wide" matters, so dragging the divider
+  // over a wide list doesn't re-render the table every frame.
+  const { ref: scrollRef, attach: attachScroll, width: tableWidth } = useElementWidth<HTMLDivElement>(NARROW_LIST_WIDTH)
   const [fullColumns, setFullColumns] = useState(false)
-  const narrow = selectedResource !== null && tableWidth > 0 && tableWidth < 720
+  const narrow = selectedResource !== null && tableWidth > 0 && tableWidth < NARROW_LIST_WIDTH
   const compact = narrow && !fullColumns
   // Key on the selection *content*, not the array ref — the store
   // hands back a fresh array even for an unchanged selection, and a new query
