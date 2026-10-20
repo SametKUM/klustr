@@ -189,6 +189,13 @@ export function ResourceDetailPanel({ contextName, resource, expanded, canSplit,
   const outsideResults = useUIStore((s) => s.detailOutsideResults)
   const managers = useResourceManagers(contextName, resource)
   if (!resource) return null
+  const resourceKey = [
+    resource.context ?? '',
+    resource.gvr ? `${resource.gvr.group}/${resource.gvr.version}/${resource.gvr.resource}` : '',
+    resource.kind,
+    resource.namespace,
+    resource.name,
+  ].join('|')
 
   return (
       <section id="resource-detail-panel" data-resource-detail role="region" tabIndex={-1}
@@ -264,7 +271,9 @@ export function ResourceDetailPanel({ contextName, resource, expanded, canSplit,
             )}
           </div>
           {resource && resource.kind !== 'HelmRelease' && (
-            <div className="flex flex-wrap items-center gap-2">
+            // The selection can change while a confirmation is open, so
+            // remount the actions to close it rather than let it retarget.
+            <div key={resourceKey} className="flex flex-wrap items-center gap-2">
               {!readOnly && resource.kind === 'Pod' && (
                 <ResizePodButton
                   contextName={contextName}
@@ -352,13 +361,7 @@ export function ResourceDetailPanel({ contextName, resource, expanded, canSplit,
         </header>
         {resource && (
           <ErrorBoundary
-            key={[
-              resource.context ?? '',
-              resource.gvr ? `${resource.gvr.group}/${resource.gvr.version}/${resource.gvr.resource}` : '',
-              resource.kind,
-              resource.namespace,
-              resource.name,
-            ].join('|')}
+            key={resourceKey}
             fallback={({ error, componentStack, reset }) => (
               <ErrorRecovery
                 title="This resource detail could not be displayed"
