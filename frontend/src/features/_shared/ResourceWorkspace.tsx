@@ -149,8 +149,7 @@ function Workspace({ children }: { children: ReactNode }) {
           event.key === 'Escape' &&
           selectedResource &&
           !isEditableTarget(event.target) &&
-          // A row click leaves focus in the list; Esc closes from there too,
-          // as it did when the inspector was a dialog.
+          // A row click leaves focus in the list, so Esc closes from there too.
           (event.target as HTMLElement).closest('[data-resource-detail], [data-resource-list]')
         ) {
           event.preventDefault()
