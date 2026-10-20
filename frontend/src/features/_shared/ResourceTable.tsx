@@ -919,13 +919,15 @@ export function ResourceTable<T>({
     }
   }, [rowResource, kind])
   // One scan per row-model change locates the inspected resource for the row
-  // highlight, the outside-results notice and result navigation.
-  const inspectedIndex = useMemo(
-    () => selectedResource
-      ? selectableRows.findIndex((row) => sameResource(selectedResource, resourceOf(row.original)))
-      : -1,
-    [selectedResource, selectableRows, resourceOf],
-  )
+  // highlight, the outside-results notice and result navigation. Row ids are
+  // the context/namespace/name identity, so only the matching row is mapped
+  // to a resource to confirm its kind and API version.
+  const inspectedIndex = useMemo(() => {
+    if (!selectedResource) return -1
+    const id = identityKey(selectedResource.context ?? '', selectedResource)
+    const index = selectableRows.findIndex((row) => row.id === id)
+    return index >= 0 && sameResource(selectedResource, resourceOf(selectableRows[index].original)) ? index : -1
+  }, [selectedResource, selectableRows, resourceOf])
   const inspectedRowId = inspectedIndex >= 0 ? selectableRows[inspectedIndex].id : null
 
   useEffect(() => {
@@ -939,8 +941,11 @@ export function ResourceTable<T>({
     setOutsideResults(belongs && loaded && inspectedIndex < 0)
   }, [selectedResource, kind, resourceContexts, loadedSet, inspectedIndex, setOutsideResults, tableRef])
 
+  // Views pass onRowClick inline; depending on its presence only keeps the
+  // navigator from being republished on every parent render.
+  const clickable = !!onRowClick
   useEffect(() => {
-    if (!setResourceNavigation || !selectedResource || !onRowClick ||
+    if (!setResourceNavigation || !selectedResource || !clickable ||
       !tableRef.current?.closest('[data-resource-list]')) return
     const index = inspectedIndex
     if (index < 0) {
@@ -978,7 +983,7 @@ export function ResourceTable<T>({
     }
     setResourceNavigation(navigation)
     return () => setResourceNavigation((current) => current === navigation ? null : current)
-  }, [setResourceNavigation, selectedResource, onRowClick, inspectedIndex, selectableRows,
+  }, [setResourceNavigation, selectedResource, clickable, inspectedIndex, selectableRows,
     resourceOf, handleRowClick, requestNavigation, table, virtualizer])
 
   if (activeContexts.length === 0) {
