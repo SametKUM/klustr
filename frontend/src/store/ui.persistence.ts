@@ -45,14 +45,24 @@ export const CONTEXT_GROUPS_KEY = 'klustr-context-groups'
 export const LAST_SESSION_KEY = 'klustr-last-session'
 export const LOG_WRAP_KEY = 'klustr-log-wrap'
 
+// Panel widths: whole pixels within bounds, with unreadable values falling
+// back to the default.
+function clampWidth(value: number, min: number, max: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback
+  return Math.min(max, Math.max(min, Math.round(value)))
+}
+
+function readWidth(key: string, clamp: (value: number) => number, fallback: number): number {
+  const raw = localStorage.getItem(key)
+  return raw ? clamp(Number(raw)) : fallback
+}
+
 export function clampDetailWidth(value: number): number {
-  if (!Number.isFinite(value)) return DETAIL_WIDTH_DEFAULT
-  return Math.min(DETAIL_WIDTH_MAX, Math.max(DETAIL_WIDTH_MIN, Math.round(value)))
+  return clampWidth(value, DETAIL_WIDTH_MIN, DETAIL_WIDTH_MAX, DETAIL_WIDTH_DEFAULT)
 }
 
 export function readDetailWidth(): number {
-  const raw = localStorage.getItem(DETAIL_WIDTH_KEY)
-  return raw ? clampDetailWidth(Number(raw)) : DETAIL_WIDTH_DEFAULT
+  return readWidth(DETAIL_WIDTH_KEY, clampDetailWidth, DETAIL_WIDTH_DEFAULT)
 }
 
 export function persistDetailWidth(value: number) {
@@ -124,15 +134,11 @@ export function persistSidebarMode(mode: SidebarMode) {
 }
 
 export function clampSidebarWidth(value: number): number {
-  return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, value))
+  return clampWidth(value, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_DEFAULT)
 }
 
 export function readSidebarWidth(): number {
-  const raw = localStorage.getItem(SIDEBAR_WIDTH_KEY)
-  if (!raw) return SIDEBAR_WIDTH_DEFAULT
-  const parsed = Number.parseInt(raw, 10)
-  if (!Number.isFinite(parsed)) return SIDEBAR_WIDTH_DEFAULT
-  return clampSidebarWidth(parsed)
+  return readWidth(SIDEBAR_WIDTH_KEY, clampSidebarWidth, SIDEBAR_WIDTH_DEFAULT)
 }
 
 export function persistSidebarWidth(px: number) {
