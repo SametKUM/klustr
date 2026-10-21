@@ -1,5 +1,5 @@
 [tools]
 go = "1.27"
 node = "26"
-"go:github.com/wailsapp/wails/v2/cmd/wails" = "v2.16.0"
+"go:github.com/wailsapp/wails/v2/cmd/wails" = "v2.17.0"
 "go:github.com/golangci/golangci-lint/v2/cmd/golangci-lint" = "v2.15.0"
