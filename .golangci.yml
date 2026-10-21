@@ -36,7 +36,6 @@ linters:
     gocritic:
       disabled-checks:
         - ifElseChain
-        - hugeParam
   exclusions:
     paths:
       - frontend/node_modules

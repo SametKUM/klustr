@@ -206,7 +206,7 @@ wails build -trimpath -clean
 | Layer | Choice |
 |---|---|
 | Desktop | Wails v2 (Go + native webview) |
-| Backend | Go 1.26 + `client-go` (typed clientset + dynamic) + `sigs.k8s.io/gateway-api` |
+| Backend | Go 1.27 + `client-go` (typed clientset + dynamic) + `sigs.k8s.io/gateway-api` |
 | Frontend | React 19 · TypeScript · Vite |
 | UI | Tailwind CSS · shadcn/ui |
 | State | Zustand (real-time) · TanStack Query (mutations only) |

@@ -1,8 +1,8 @@
 module klustr
 
-go 1.26.6
+go 1.27.0
 
-toolchain go1.26.9
+toolchain go1.27.3
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0

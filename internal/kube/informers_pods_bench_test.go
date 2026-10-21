@@ -25,11 +25,11 @@ var benchPodSizes = []int{500, 1500, 5000}
 // fixture object's byte footprint mirrors a real cached pod (kubelet,
 // kube-controller-manager and a couple of controllers all leave entries).
 func makeManagedFields() []metav1.ManagedFieldsEntry {
-	raw := []byte(`{"f:metadata":{"f:labels":{".":{},"f:app":{},"f:pod-template-hash":{}},` +
+	raw := `{"f:metadata":{"f:labels":{".":{},"f:app":{},"f:pod-template-hash":{}},` +
 		`"f:ownerReferences":{".":{},"k:{\"uid\":\"x\"}":{}}},` +
 		`"f:spec":{"f:containers":{"k:{\"name\":\"app\"}":{".":{},"f:image":{},` +
 		`"f:resources":{"f:requests":{".":{},"f:cpu":{},"f:memory":{}}}}}},` +
-		`"f:status":{"f:conditions":{"k:{\"type\":\"Ready\"}":{".":{},"f:status":{}}}}}`)
+		`"f:status":{"f:conditions":{"k:{\"type\":\"Ready\"}":{".":{},"f:status":{}}}}}`
 	mgrs := []string{"kubelet", "kube-controller-manager", "kube-scheduler", "deployment-controller"}
 	out := make([]metav1.ManagedFieldsEntry, 0, len(mgrs))
 	for _, m := range mgrs {
@@ -39,7 +39,7 @@ func makeManagedFields() []metav1.ManagedFieldsEntry {
 			APIVersion: "v1",
 			Time:       &metav1.Time{Time: time.Now()},
 			FieldsType: "FieldsV1",
-			FieldsV1:   &metav1.FieldsV1{Raw: raw},
+			FieldsV1:   metav1.NewFieldsV1(raw),
 		})
 	}
 	return out
