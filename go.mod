@@ -1,12 +1,10 @@
 module klustr
 
-go 1.27.2
-
-toolchain go1.27.3
+go 1.27.3
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
-	github.com/aptible/supercronic v0.2.50
+	github.com/aptible/supercronic v0.2.51
 	github.com/creack/pty v1.1.24
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/robfig/cron/v3 v3.0.1

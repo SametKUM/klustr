@@ -24,8 +24,8 @@ github.com/Masterminds/squirrel v1.5.4 h1:uUcX/aBc8O7Fg9kaISIUsHXdKuqehiXAMQTYX8
 github.com/Masterminds/squirrel v1.5.4/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA400rg+riTZj10=
 github.com/ProtonMail/go-crypto v1.4.1 h1:9RfcZHqEQUvP8RzecWEUafnZVtEvrBVL9BiF67IQOfM=
 github.com/ProtonMail/go-crypto v1.4.1/go.mod h1:e1OaTyu5SYVrO9gKOEhTc+5UcXtTUa+P3uLudwcgPqo=
-github.com/aptible/supercronic v0.2.50 h1:8RlgtJCzopf0DJkb6j/L1QEgF7pKl2mMwpilDNjKPJE=
-github.com/aptible/supercronic v0.2.50/go.mod h1:JHn8LLdg/okg5KFoWdjFwSh7y6ZpoHwHHmxFIKpjJD8=
+github.com/aptible/supercronic v0.2.51 h1:qVx8NZ0yKe/ToRjSd91Ojpx0zAkEnt1CAhOndealT3E=
+github.com/aptible/supercronic v0.2.51/go.mod h1:L5SjY1HEJAc9H+UXCqroir2bzOp/8Q7NzejlmDL4NCE=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
