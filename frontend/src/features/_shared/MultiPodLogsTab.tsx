@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { EventsOff, EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
 import { api, type PodLogTarget } from '@/lib/api'
+import { InlinePicker } from '@/features/_shared/InlinePicker'
 import { columnWidth } from '@/features/_shared/logColumns'
 import { LogViewport } from '@/features/_shared/LogViewport'
 import { LogToolbar } from '@/features/_shared/LogToolbar'
@@ -11,7 +12,14 @@ import type { LogLine } from '@/features/_shared/logView'
 import { useLogTerminal } from '@/features/_shared/useLogTerminal'
 import { useUIStore } from '@/store/ui'
 
-const TAIL_LINES = 50
+// Applied per container, so the lines loaded multiply by every pod and
+// container; the pod view keeps 10,000 lines and the whole log.
+const TAIL_OPTIONS = [
+  { value: '50', label: '50 lines' },
+  { value: '200', label: '200 lines' },
+  { value: '1000', label: '1,000 lines' },
+]
+const DEFAULT_TAIL_LINES = 50
 const RETAIN_CAP = 100_000
 const COLORS = [
   '\x1b[36m', // cyan
@@ -60,6 +68,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
   const [filterValue, setFilterValue] = useState('')
   const [useRegex, setUseRegex] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+  const [tailLines, setTailLines] = useState(DEFAULT_TAIL_LINES)
 
   const appliedPredicate = useMemo(() => {
     if (!filterValue) {
@@ -108,7 +117,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
     }
 
     reset(
-      `\x1b[2m# tailing ${title}: ${targets.length} pod${targets.length === 1 ? '' : 's'} (last ${TAIL_LINES} lines per container)\x1b[0m`,
+      `\x1b[2m# tailing ${title}: ${targets.length} pod${targets.length === 1 ? '' : 's'} (last ${tailLines} lines per container)\x1b[0m`,
     )
 
     let cancelled = false
@@ -123,7 +132,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
         const rawPrefix = `${target.pod}/${container} | `
         const prefixWidth = columnWidth(rawPrefix)
         api
-          .startPodLogs(contextName, namespace, target.pod, container, true, false, TAIL_LINES)
+          .startPodLogs(contextName, namespace, target.pod, container, true, false, tailLines)
           .then((id) => {
             if (cancelled) {
               api.stopPodLogs(id).catch(() => {})
@@ -163,7 +172,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
         EventsOff(`pod:logs:line:${s.id}`, `pod:logs:close:${s.id}`)
       }
     }
-  }, [contextName, namespace, targets, title, append, appendMarker, reset])
+  }, [contextName, namespace, targets, title, tailLines, append, appendMarker, reset])
 
   const saveLogs = () => {
     const lines = view.filteredText()
@@ -197,6 +206,14 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
             <span className="min-w-0 flex-1 text-muted-foreground">
               Tailing {targets.length} pod{targets.length === 1 ? '' : 's'} · all containers
             </span>
+            <InlinePicker
+              value={String(tailLines)}
+              options={TAIL_OPTIONS}
+              onChange={(value) => setTailLines(Number(value))}
+              ariaLabel="Select how many lines to load per container"
+              minWidth={128}
+              className="w-32"
+            />
             <Button
               type="button"
               size="xs"
