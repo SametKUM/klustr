@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { Circle, Download, Ellipsis, Eraser, Filter, History, Pause, Play, Regex, TextWrap } from 'lucide-react'
+import { ArrowDownToLine, Circle, Download, Ellipsis, Eraser, Filter, History, Radio, Regex, TextWrap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import {
@@ -14,7 +14,7 @@ import type { LogTerminal } from './useLogTerminal'
 
 type Props = {
   source: ReactNode
-  view: Pick<LogTerminal, 'paused' | 'pending' | 'setPaused' | 'reset' | 'wrap'>
+  view: Pick<LogTerminal, 'reset' | 'wrap'>
   onSave: () => void
   onToggleWrap: () => void
   filterValue: string
@@ -23,6 +23,9 @@ type Props = {
   onRegexChange: (value: boolean) => void
   filterError: string | null
   streaming: boolean
+  live: boolean
+  onLiveChange: (value: boolean) => void
+  onJumpToNow: () => void
   previous?: boolean
 }
 
@@ -37,14 +40,14 @@ export function LogToolbar({
   onRegexChange,
   filterError,
   streaming,
+  live,
+  onLiveChange,
+  onJumpToNow,
   previous = false,
 }: Props) {
   const filterId = useId()
   const errorId = `${filterId}-error`
-  const pauseLabel = view.paused ? 'Resume logs' : 'Pause logs'
-  const pauseDescription = view.paused && view.pending > 0
-    ? `Resume logs (${view.pending.toLocaleString('en-US')} buffered lines)`
-    : pauseLabel
+  const following = live && !previous
 
   return (
     <div className="@container/log-toolbar shrink-0 border-b border-border" data-log-toolbar>
@@ -58,16 +61,11 @@ export function LogToolbar({
             title={previous ? 'Logs from the previous terminated container instance' : undefined}
             className={[
               'inline-flex min-w-14 shrink-0 items-center justify-end gap-1.5 whitespace-nowrap',
-              view.paused ? 'text-amber-500' : previous ? 'text-primary' : streaming ? 'text-emerald-500' : 'text-muted-foreground',
+              previous ? 'text-primary' : following && streaming ? 'text-emerald-500' : 'text-muted-foreground',
             ].join(' ')}
           >
-            {view.paused && view.pending > 0 && (
-              <span aria-hidden="true" className="text-muted-foreground tabular-nums" title={`${view.pending.toLocaleString('en-US')} buffered lines`}>
-                +{view.pending.toLocaleString('en-US')}
-              </span>
-            )}
-            {view.paused ? <Pause className="size-3" /> : previous ? <History className="size-3" /> : <Circle className={`size-2 ${streaming ? 'fill-current' : ''}`} />}
-            {view.paused ? 'paused' : previous ? 'previous' : streaming ? 'live' : 'idle'}
+            {previous ? <History className="size-3" /> : <Circle className={`size-2 ${following && streaming ? 'fill-current' : ''}`} />}
+            {previous ? 'previous' : !following ? 'snapshot' : streaming ? 'live' : 'idle'}
           </span>
         </div>
         <div className="flex min-w-0 items-center gap-2">
@@ -103,18 +101,46 @@ export function LogToolbar({
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="w-7 px-0 transition-colors @min-[38rem]/log-toolbar:w-22"
-            aria-label={pauseLabel}
-            title={pauseDescription}
-            onClick={() => view.setPaused(!view.paused)}
+          {/* The title sits on a wrapper because a disabled button gets no
+              pointer events, so it would never show its own tooltip. */}
+          <span
+            className="inline-flex shrink-0"
+            title={
+              previous
+                ? 'A terminated container instance has no new lines'
+                : live
+                  ? 'Stop following new lines'
+                  : 'Follow new lines as they arrive'
+            }
           >
-            {view.paused ? <Play /> : <Pause />}
-            <span className="hidden @min-[38rem]/log-toolbar:inline">{view.paused ? 'Resume' : 'Pause'}</span>
-          </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={following ? 'secondary' : 'ghost'}
+              className="w-7 px-0 transition-colors @min-[38rem]/log-toolbar:w-16"
+              aria-label="Follow live logs"
+              aria-pressed={following}
+              disabled={previous}
+              onClick={() => onLiveChange(!live)}
+            >
+              <Radio />
+              <span className="hidden @min-[38rem]/log-toolbar:inline">Live</span>
+            </Button>
+          </span>
+          {!following && !previous && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="w-7 px-0 transition-colors @min-[38rem]/log-toolbar:w-28"
+              aria-label="Jump to now"
+              title="Reload the latest lines"
+              onClick={onJumpToNow}
+            >
+              <ArrowDownToLine />
+              <span className="hidden @min-[38rem]/log-toolbar:inline">Jump to now</span>
+            </Button>
+          )}
           <Button
             type="button"
             size="sm"

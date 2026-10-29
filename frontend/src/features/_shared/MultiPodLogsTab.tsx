@@ -60,6 +60,9 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
   const [filterValue, setFilterValue] = useState('')
   const [useRegex, setUseRegex] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+  // Off by default, as in PodLogsTab; Jump to now reloads the pod list and
+  // takes a fresh snapshot of each container.
+  const [live, setLive] = useState(false)
 
   const appliedPredicate = useMemo(() => {
     if (!filterValue) {
@@ -108,7 +111,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
     }
 
     reset(
-      `\x1b[2m# tailing ${title}: ${targets.length} pod${targets.length === 1 ? '' : 's'} (last ${TAIL_LINES} lines per container)\x1b[0m`,
+      `\x1b[2m# ${live ? 'tailing' : 'snapshot of'} ${title}: ${targets.length} pod${targets.length === 1 ? '' : 's'} (last ${TAIL_LINES} lines per container)\x1b[0m`,
     )
 
     let cancelled = false
@@ -123,7 +126,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
         const rawPrefix = `${target.pod}/${container} | `
         const prefixWidth = columnWidth(rawPrefix)
         api
-          .startPodLogs(contextName, namespace, target.pod, container, true, false, TAIL_LINES)
+          .startPodLogs(contextName, namespace, target.pod, container, live, false, TAIL_LINES)
           .then((id) => {
             if (cancelled) {
               api.stopPodLogs(id).catch(() => {})
@@ -163,7 +166,7 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
         EventsOff(`pod:logs:line:${s.id}`, `pod:logs:close:${s.id}`)
       }
     }
-  }, [contextName, namespace, targets, title, append, appendMarker, reset])
+  }, [contextName, namespace, targets, title, live, append, appendMarker, reset])
 
   const saveLogs = () => {
     const lines = view.filteredText()
@@ -192,6 +195,9 @@ export function MultiPodLogsTab({ contextName, namespace, selector, title }: Pro
         onRegexChange={setUseRegex}
         filterError={filterError}
         streaming={streaming}
+        live={live}
+        onLiveChange={setLive}
+        onJumpToNow={() => setReloadKey((k) => k + 1)}
         source={
           <>
             <span className="min-w-0 flex-1 text-muted-foreground">

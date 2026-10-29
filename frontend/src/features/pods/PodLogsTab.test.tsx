@@ -14,10 +14,7 @@ const mocks = vi.hoisted(() => {
     appendMarker: vi.fn(),
     reset: vi.fn(),
     refit: vi.fn(),
-    setPaused: vi.fn(),
     filteredText: () => [],
-    paused: false,
-    pending: 0,
     wrap: true,
   }
   return { view, startPodLogs: vi.fn(), stopPodLogs: vi.fn() }
@@ -65,6 +62,12 @@ const detail = {
   initContainers: [],
 } as unknown as PodDetail
 
+const click = (label: string) => {
+  const button = document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+  if (!button) throw new Error(`no button ${label}`)
+  return act(async () => button.click())
+}
+
 describe('PodLogsTab tail', () => {
   let container: HTMLDivElement
   let root: Root
@@ -93,8 +96,8 @@ describe('PodLogsTab tail', () => {
 
   it('starts from the last 200 lines', async () => {
     await act(async () => root.render(<PodLogsTab detail={detail} contextName="cluster-a" active />))
-    expect(mocks.startPodLogs).toHaveBeenCalledWith('cluster-a', 'default', 'api-0', 'app', true, false, 200)
-    expect(mocks.view.reset).toHaveBeenLastCalledWith(expect.stringContaining('# streaming app (last 200 lines)'))
+    expect(mocks.startPodLogs).toHaveBeenCalledWith('cluster-a', 'default', 'api-0', 'app', false, false, 200)
+    expect(mocks.view.reset).toHaveBeenLastCalledWith(expect.stringContaining('# snapshot of app (last 200 lines)'))
   })
 
   it('restarts the stream from the whole log when Whole log is picked', async () => {
@@ -102,8 +105,8 @@ describe('PodLogsTab tail', () => {
     await pick('Select how many lines to load', '0')
 
     expect(mocks.stopPodLogs).toHaveBeenCalledWith('log-1')
-    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', true, false, 0)
-    expect(mocks.view.reset).toHaveBeenLastCalledWith(expect.stringContaining('# streaming app (whole log)'))
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', false, false, 0)
+    expect(mocks.view.reset).toHaveBeenLastCalledWith(expect.stringContaining('# snapshot of app (whole log)'))
   })
 
   it('applies the tail to the previous instance too', async () => {
@@ -122,8 +125,8 @@ describe('PodLogsTab tail', () => {
     await act(async () => {
       container.querySelector<HTMLButtonElement>('button[aria-label="Show previous container logs"]')!.click()
     })
-    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', true, false, 1000)
-    expect(container.querySelector('[role="status"]')?.textContent).toBe('live')
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', false, false, 1000)
+    expect(container.querySelector('[role="status"]')?.textContent).toBe('snapshot')
   })
 
   it('leaves previous mode when the selected container has never restarted', async () => {
@@ -139,8 +142,8 @@ describe('PodLogsTab tail', () => {
     expect(previous.disabled).toBe(true)
     expect(previous.getAttribute('aria-pressed')).toBe('false')
     expect(previous.parentElement?.title).toContain('has not restarted')
-    expect(container.querySelector('[role="status"]')?.textContent).toBe('live')
-    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'sidecar', true, false, 200)
+    expect(container.querySelector('[role="status"]')?.textContent).toBe('snapshot')
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'sidecar', false, false, 200)
   })
 
   it('follows a new container link in the same mounted inspector without losing the tail selection', async () => {
@@ -149,7 +152,7 @@ describe('PodLogsTab tail', () => {
     await pick('Select how many lines to load', '1000')
     await act(async () => root.render(<PodLogsTab detail={multi} contextName="cluster-a" initialContainer="sidecar" active />))
 
-    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'sidecar', true, false, 1000)
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'sidecar', false, false, 1000)
     expect(mocks.stopPodLogs).toHaveBeenCalledWith('log-2')
 
     await pick('Select container', 'app')
@@ -177,8 +180,28 @@ describe('PodLogsTab tail', () => {
     await act(async () => render(2))
     expect(container.querySelector<HTMLSelectElement>('select[aria-label="Select container"]')?.value).toBe('app')
     expect(mocks.startPodLogs).toHaveBeenCalledTimes(starts + 1)
-    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', true, false, 1000)
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', false, false, 1000)
     await act(async () => render(3))
     expect(mocks.startPodLogs).toHaveBeenCalledTimes(starts + 1)
+  })
+
+  it('follows only once Live is turned on and reloads the snapshot on Jump to now', async () => {
+    await act(async () => root.render(<PodLogsTab detail={detail} contextName="cluster-a" active />))
+    expect(container.querySelector('[role="status"]')?.textContent).toBe('snapshot')
+
+    await click('Jump to now')
+    expect(mocks.stopPodLogs).toHaveBeenCalledWith('log-1')
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', false, false, 200)
+    expect(mocks.startPodLogs).toHaveBeenCalledTimes(2)
+
+    await click('Follow live logs')
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', true, false, 200)
+    expect(mocks.view.reset).toHaveBeenLastCalledWith(expect.stringContaining('# streaming app (last 200 lines)'))
+    expect(container.querySelector('[role="status"]')?.textContent).toBe('live')
+    expect(container.querySelector('button[aria-label="Jump to now"]')).toBeNull()
+
+    await click('Follow live logs')
+    expect(mocks.stopPodLogs).toHaveBeenCalledWith('log-3')
+    expect(mocks.startPodLogs).toHaveBeenLastCalledWith('cluster-a', 'default', 'api-0', 'app', false, false, 200)
   })
 })

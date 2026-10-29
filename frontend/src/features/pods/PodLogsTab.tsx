@@ -21,11 +21,10 @@ const TAIL_OPTIONS = [
 ]
 const DEFAULT_TAIL_LINES = 200
 
-function streamHeader(container: string, previous: boolean, tailLines: number): string {
+function streamHeader(container: string, previous: boolean, follow: boolean, tailLines: number): string {
   const span = tailLines > 0 ? `last ${tailLines} lines` : 'whole log'
-  return previous
-    ? `\x1b[2m# previous instance of ${container} (${span}${tailLines > 0 ? ' before termination' : ''})\x1b[0m`
-    : `\x1b[2m# streaming ${container} (${span})\x1b[0m`
+  if (previous) return `\x1b[2m# previous instance of ${container} (${span}${tailLines > 0 ? ' before termination' : ''})\x1b[0m`
+  return follow ? `\x1b[2m# streaming ${container} (${span})\x1b[0m` : `\x1b[2m# snapshot of ${container} (${span})\x1b[0m`
 }
 
 type Props = {
@@ -69,9 +68,14 @@ export function PodLogsTab({ detail, contextName, initialContainer, containerReq
   }, [detail.containers, detail.initContainers, container])
   const showPrevious = previous && canPrevious
   const [tailLines, setTailLines] = useState(DEFAULT_TAIL_LINES)
+  // Off by default: a followed log keeps scrolling while you read it. Without
+  // it the tab loads a one-off snapshot and Jump to now reloads it.
+  const [live, setLive] = useState(false)
+  const follow = live && !showPrevious
+  const [snapshot, setSnapshot] = useState(0)
   // A start failure belongs to the stream that failed; switching container,
   // mode or tail leaves it behind instead of resetting it from the effect.
-  const streamKey = JSON.stringify([selectedContext, detail.namespace, detail.name, container, showPrevious, tailLines])
+  const streamKey = JSON.stringify([selectedContext, detail.namespace, detail.name, container, showPrevious, follow, tailLines, snapshot])
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null)
   const error = failure?.key === streamKey ? failure.message : null
   const [streaming, setStreaming] = useState(false)
@@ -112,7 +116,7 @@ export function PodLogsTab({ detail, contextName, initialContainer, containerReq
   useEffect(() => {
     if (!selectedContext || !container) return
 
-    reset(streamHeader(container, showPrevious, tailLines))
+    reset(streamHeader(container, showPrevious, follow, tailLines))
 
     let cancelled = false
     let sessionId: string | null = null
@@ -120,7 +124,7 @@ export function PodLogsTab({ detail, contextName, initialContainer, containerReq
     let unsubClose: (() => void) | null = null
 
     api
-      .startPodLogs(selectedContext, detail.namespace, detail.name, container, !showPrevious, showPrevious, tailLines)
+      .startPodLogs(selectedContext, detail.namespace, detail.name, container, follow, showPrevious, tailLines)
       .then((id) => {
         if (cancelled) {
           api.stopPodLogs(id).catch(() => {})
@@ -133,7 +137,8 @@ export function PodLogsTab({ detail, contextName, initialContainer, containerReq
         })
         unsubClose = EventsOn(`pod:logs:close:${id}`, (msg: string) => {
           setStreaming(false)
-          appendMarker(msg ? `\x1b[31m# stream closed: ${msg}\x1b[0m` : `\x1b[2m# stream ended\x1b[0m`)
+          if (msg) appendMarker(`\x1b[31m# stream closed: ${msg}\x1b[0m`)
+          else if (follow) appendMarker(`\x1b[2m# stream ended\x1b[0m`)
         })
       })
       .catch((e: unknown) => {
@@ -151,7 +156,7 @@ export function PodLogsTab({ detail, contextName, initialContainer, containerReq
         EventsOff(`pod:logs:line:${sessionId}`, `pod:logs:close:${sessionId}`)
       }
     }
-  }, [selectedContext, detail.namespace, detail.name, container, showPrevious, tailLines, streamKey, append, appendMarker, reset])
+  }, [selectedContext, detail.namespace, detail.name, container, showPrevious, follow, tailLines, snapshot, streamKey, append, appendMarker, reset])
 
   const saveLogs = () => {
     const lines = view.filteredText()
@@ -182,6 +187,9 @@ export function PodLogsTab({ detail, contextName, initialContainer, containerReq
         onRegexChange={setUseRegex}
         filterError={filterError}
         streaming={streaming}
+        live={live}
+        onLiveChange={setLive}
+        onJumpToNow={() => setSnapshot((n) => n + 1)}
         previous={showPrevious}
         source={
           <>

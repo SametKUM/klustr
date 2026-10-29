@@ -26,8 +26,8 @@ type Options = {
   predicate: (text: string) => boolean
 }
 
-// useLogTerminal owns a read-only xterm log view: the retained lines, pause,
-// the filter, and the wrap mode. The terminal is a projection of the retained
+// useLogTerminal owns a read-only xterm log view: the retained lines, the
+// filter, and the wrap mode. The terminal is a projection of the retained
 // entries, repainted whenever what it should show changes. Unwrapped, each line
 // is exactly one row cut to the visible columns, so sideways scrolling is a
 // repaint at a new column offset.
@@ -41,15 +41,9 @@ export function useLogTerminal({ scrollback, retain, predicate }: Options) {
   const entriesRef = useRef<LogEntry[]>([])
   const predicateRef = useRef(predicate)
   const wrapRef = useRef(wrap)
-  const pausedRef = useRef(false)
-  // Entries that arrived while paused sit at the end of entriesRef; repaints
-  // while paused stop short of them so the frozen view stays frozen.
-  const heldRef = useRef(0)
   const offsetRef = useRef(0)
   const extentRef = useRef(0)
   const paintRef = useRef<PaintState>(idlePaintState())
-  const [paused, setPausedState] = useState(false)
-  const [pending, setPending] = useState(0)
   const [atBottom, setAtBottom] = useState(true)
   const [cols, setCols] = useState(0)
   const [extent, setExtent] = useState(0)
@@ -61,9 +55,8 @@ export function useLogTerminal({ scrollback, retain, predicate }: Options) {
     const keepScroll = state.keepScroll
     state.keepScroll = true
     const entries = entriesRef.current
-    const end = entries.length - Math.min(heldRef.current, entries.length)
     const limit = (term.options.scrollback ?? 0) + term.rows
-    const shown = pickVisible(entries, end, predicateRef.current, limit)
+    const shown = pickVisible(entries, entries.length, predicateRef.current, limit)
     const unwrapped = !wrapRef.current
     if (unwrapped) {
       let widest = 0
@@ -212,22 +205,15 @@ export function useLogTerminal({ scrollback, retain, predicate }: Options) {
       if (!term) return
       const layout = { wrap: wrapRef.current, offset: offsetRef.current, cols: term.cols }
       const out: string[] = []
-      let held = 0
       let widest = extentRef.current
       for (const line of lines) {
-        // Retain every line regardless of filter or pause, so the filter can
-        // repaint over the full buffer and Save reflects it.
+        // Retain every line regardless of filter, so the filter can repaint
+        // over the full buffer and Save reflects it.
         pushCapped(entriesRef.current, line, retain)
-        if (pausedRef.current) heldRef.current++
         if (!predicateRef.current(line.text)) continue
-        if (pausedRef.current) {
-          held++
-          continue
-        }
         if (!layout.wrap) widest = Math.max(widest, lineColumns(line))
         out.push(renderEntry(line, layout))
       }
-      if (held > 0) setPending((n) => n + held)
       if (widest > extentRef.current) {
         extentRef.current = widest
         setExtent(widest)
@@ -243,11 +229,6 @@ export function useLogTerminal({ scrollback, retain, predicate }: Options) {
       const term = termRef.current
       if (!term) return
       pushCapped(entriesRef.current, { marker }, retain)
-      if (pausedRef.current) {
-        heldRef.current++
-        setPending((n) => n + 1)
-        return
-      }
       term.write(renderEntry({ marker }, { wrap: wrapRef.current, offset: 0, cols: term.cols }) + '\r\n')
     },
     [retain],
@@ -256,23 +237,10 @@ export function useLogTerminal({ scrollback, retain, predicate }: Options) {
   const reset = useCallback(
     (header?: string) => {
       entriesRef.current = header ? [{ marker: header }] : []
-      heldRef.current = 0
       extentRef.current = 0
-      setPending(0)
       setExtent(0)
       setAtBottom(true)
       requestPaint()
-    },
-    [requestPaint],
-  )
-
-  const setPaused = useCallback(
-    (next: boolean) => {
-      pausedRef.current = next
-      heldRef.current = 0
-      setPausedState(next)
-      setPending(0)
-      if (!next) requestPaint()
     },
     [requestPaint],
   )
@@ -320,12 +288,9 @@ export function useLogTerminal({ scrollback, retain, predicate }: Options) {
     cols,
     extent,
     atBottom,
-    paused,
-    pending,
     append,
     appendMarker,
     reset,
-    setPaused,
     filteredText,
     refit,
     scrollColumns,
