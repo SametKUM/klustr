@@ -84,3 +84,35 @@ func TestStripManagedFieldsZerosCachedSecretValues(t *testing.T) {
 		}
 	}
 }
+
+func TestStripManagedFieldsBlanksSecretLastAppliedConfig(t *testing.T) {
+	applied := `{"apiVersion":"v1","kind":"Secret","stringData":{"token":"super-secret"}}`
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "credentials", Namespace: "prod", Annotations: map[string]string{
+			corev1.LastAppliedConfigAnnotation: applied,
+			"team":                             "payments",
+		}},
+	}
+	out, err := stripManagedFields(secret)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	annotations := out.(*corev1.Secret).Annotations
+	if got, ok := annotations[corev1.LastAppliedConfigAnnotation]; !ok || got != "" {
+		t.Fatalf("last-applied annotation = %q (present %v), want the key kept with an empty value", got, ok)
+	}
+	if annotations["team"] != "payments" {
+		t.Fatalf("other annotations must survive, got %v", annotations)
+	}
+
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "settings", Annotations: map[string]string{
+		corev1.LastAppliedConfigAnnotation: applied,
+	}}}
+	out, err = stripManagedFields(configMap)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := out.(*corev1.ConfigMap).Annotations[corev1.LastAppliedConfigAnnotation]; got != applied {
+		t.Fatalf("non-Secret last-applied annotation = %q, want it untouched", got)
+	}
+}

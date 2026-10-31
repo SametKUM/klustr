@@ -10,7 +10,9 @@ import (
 
 // stripManagedFields is an informer TransformFunc that drops the large
 // metadata.managedFields from every cached object and replaces Secret values
-// with same-length zero buffers. Nothing reads either from the cache: the YAML
+// with same-length zero buffers. It also blanks a Secret's kubectl
+// last-applied-configuration annotation, which holds the applied manifest with
+// its data and stringData. Nothing reads any of these from the cache: the YAML
 // view and Secret Reveal fetch live, and key names and sizes survive for the
 // list and detail views.
 func stripManagedFields(obj any) (any, error) {
@@ -29,6 +31,9 @@ func stripManagedFields(obj any) (any, error) {
 	if secret, ok := obj.(*corev1.Secret); ok {
 		for key, value := range secret.Data {
 			secret.Data[key] = make([]byte, len(value))
+		}
+		if _, ok := secret.Annotations[corev1.LastAppliedConfigAnnotation]; ok {
+			secret.Annotations[corev1.LastAppliedConfigAnnotation] = ""
 		}
 	}
 	return obj, nil
