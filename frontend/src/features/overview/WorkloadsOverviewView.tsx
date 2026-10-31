@@ -1,16 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  api,
-  type CronJobInfo,
-  type DaemonSetInfo,
-  type DeploymentInfo,
-  type EventInfo,
-  type JobInfo,
-  type PodInfo,
-  type ReplicaSetInfo,
-  type ReplicationControllerInfo,
-  type StatefulSetInfo,
-} from '@/lib/api'
+import { api, type EventInfo, type WorkloadHealth } from '@/lib/api'
 import { Copyable } from '@/features/_shared/Copyable'
 import { selectsTextWithin } from '@/features/_shared/textSelection'
 import { onKubeChange } from '@/lib/events'
@@ -22,15 +11,22 @@ import { useActiveContexts, useIsAggregated, useUIStore, type ResourceView } fro
 const POLL_INTERVAL_MS = 30_000
 const EVENTS_LIMIT = 200
 
-type WorkloadHealth = {
-  kind: string
-  view: ResourceView
-  total: number
-  healthy: number
-  // Intentionally-inactive members (e.g. suspended CronJobs) — shown as a neutral
-  // segment, not red, so a deliberately-disabled resource doesn't read as broken.
-  neutral?: number
-}
+const CARDS: { kind: string; label: string; view: ResourceView }[] = [
+  { kind: 'Pod', label: 'Pods', view: 'pods' },
+  { kind: 'Deployment', label: 'Deployments', view: 'deployments' },
+  { kind: 'StatefulSet', label: 'StatefulSets', view: 'statefulsets' },
+  { kind: 'DaemonSet', label: 'DaemonSets', view: 'daemonsets' },
+  { kind: 'ReplicaSet', label: 'ReplicaSets', view: 'replicasets' },
+  { kind: 'ReplicationController', label: 'ReplicationControllers', view: 'replicationcontrollers' },
+  { kind: 'Job', label: 'Jobs', view: 'jobs' },
+  { kind: 'CronJob', label: 'CronJobs', view: 'cronjobs' },
+]
+
+// Intentionally inactive members (suspended CronJobs) are the neutral segment,
+// not red, so a deliberately disabled resource doesn't read as broken.
+type WorkloadCounts = { total: number; healthy: number; neutral: number }
+
+const NO_COUNTS: WorkloadCounts = { total: 0, healthy: 0, neutral: 0 }
 
 type TaggedEvent = EventInfo & { contextName: string }
 
@@ -46,20 +42,15 @@ export function WorkloadsOverviewView() {
   const multi = selectedNamespaces.length > 1
   const ctxKey = activeContexts.join('|')
 
-  const [pods, setPods] = useState<PodInfo[]>([])
-  const [deployments, setDeployments] = useState<DeploymentInfo[]>([])
-  const [statefulSets, setStatefulSets] = useState<StatefulSetInfo[]>([])
-  const [daemonSets, setDaemonSets] = useState<DaemonSetInfo[]>([])
-  const [replicaSets, setReplicaSets] = useState<ReplicaSetInfo[]>([])
-  const [replicationControllers, setReplicationControllers] = useState<ReplicationControllerInfo[]>([])
-  const [jobs, setJobs] = useState<JobInfo[]>([])
-  const [cronJobs, setCronJobs] = useState<CronJobInfo[]>([])
+  const [counts, setCounts] = useState<Record<string, WorkloadCounts>>({})
   const [events, setEvents] = useState<TaggedEvent[]>([])
   const [error, setError] = useState<string | null>(null)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null)
   const [query, setQuery] = useState('')
   const debounceRef = useRef<number | null>(null)
   const epochRef = useRef(0)
+  const countsInFlightRef = useRef(false)
+  const countsDirtyRef = useRef(false)
 
   const filterByNs = useCallback(
     <T extends { namespace: string }>(list: T[]): T[] =>
@@ -67,86 +58,46 @@ export function WorkloadsOverviewView() {
     [multi, matches],
   )
 
-  // Workload counts are cheap informer-cache reads, so they refresh on every
-  // debounced kube:change burst. Events are a real apiserver List (there is no
-  // Events informer), so they're pulled separately on the slow poll only —
-  // otherwise pod churn would hammer the Events endpoint every ~300ms.
+  // Workload counts are summed from the informer caches on the Go side, so they
+  // refresh on every debounced kube:change burst. One request runs at a time: a
+  // burst during a slow round trip marks the counts dirty and the request pulls
+  // once more when it lands, so responses can't arrive out of order or pile up.
+  // Events are a real apiserver List (there is no Events informer), so they're
+  // pulled separately on the slow poll only — otherwise pod churn would hammer
+  // the Events endpoint every ~300ms.
   const pullCounts = useCallback(() => {
     if (activeContexts.length === 0) return
+    if (countsInFlightRef.current) {
+      countsDirtyRef.current = true
+      return
+    }
     const epoch = epochRef.current
-    const fetches = activeContexts.map((ctx) =>
-      Promise.all([
-        api.listPods(ctx, apiNamespace),
-        api.listDeployments(ctx, apiNamespace),
-        api.listStatefulSets(ctx, apiNamespace),
-        api.listDaemonSets(ctx, apiNamespace),
-        api.listReplicaSets(ctx, apiNamespace),
-        api.listReplicationControllers(ctx, apiNamespace),
-        api.listJobs(ctx, apiNamespace),
-        api.listCronJobs(ctx, apiNamespace),
-      ])
-        .then(([p, d, s, ds, rs, rc, j, cj]) => ({
-          p: p ?? [],
-          d: d ?? [],
-          s: s ?? [],
-          ds: ds ?? [],
-          rs: rs ?? [],
-          rc: rc ?? [],
-          j: j ?? [],
-          cj: cj ?? [],
-          err: null as string | null,
-        }))
-        .catch((err: unknown) => ({
-          p: [] as PodInfo[],
-          d: [] as DeploymentInfo[],
-          s: [] as StatefulSetInfo[],
-          ds: [] as DaemonSetInfo[],
-          rs: [] as ReplicaSetInfo[],
-          rc: [] as ReplicationControllerInfo[],
-          j: [] as JobInfo[],
-          cj: [] as CronJobInfo[],
-          err: String(err),
-        })),
-    )
-
-    Promise.all(fetches)
-      .then((results) => {
-        if (epoch !== epochRef.current) return
-        const mergedPods: PodInfo[] = []
-        const mergedDeployments: DeploymentInfo[] = []
-        const mergedStatefulSets: StatefulSetInfo[] = []
-        const mergedDaemonSets: DaemonSetInfo[] = []
-        const mergedReplicaSets: ReplicaSetInfo[] = []
-        const mergedReplicationControllers: ReplicationControllerInfo[] = []
-        const mergedJobs: JobInfo[] = []
-        const mergedCronJobs: CronJobInfo[] = []
-        const firstError = results.find((r) => r.err && !r.err.includes('no active watcher'))?.err
-        for (const r of results) {
-          mergedPods.push(...filterByNs(r.p))
-          mergedDeployments.push(...filterByNs(r.d))
-          mergedStatefulSets.push(...filterByNs(r.s))
-          mergedDaemonSets.push(...filterByNs(r.ds))
-          mergedReplicaSets.push(...filterByNs(r.rs))
-          mergedReplicationControllers.push(...filterByNs(r.rc))
-          mergedJobs.push(...filterByNs(r.j))
-          mergedCronJobs.push(...filterByNs(r.cj))
-        }
-        setPods(mergedPods)
-        setDeployments(mergedDeployments)
-        setStatefulSets(mergedStatefulSets)
-        setDaemonSets(mergedDaemonSets)
-        setReplicaSets(mergedReplicaSets)
-        setReplicationControllers(mergedReplicationControllers)
-        setJobs(mergedJobs)
-        setCronJobs(mergedCronJobs)
-        setError(firstError ?? null)
-        setLastUpdatedAt(Date.now())
-      })
-      .catch(() => {
-        /* per-context errors handled above */
-      })
+    const run = () => {
+      countsInFlightRef.current = true
+      countsDirtyRef.current = false
+      const fetches = activeContexts.map((ctx) =>
+        api
+          .getWorkloadsOverview(ctx, apiNamespace)
+          .then((health) => ({ health: health ?? [], err: null as string | null }))
+          .catch((err: unknown) => ({ health: [] as WorkloadHealth[], err: String(err) })),
+      )
+      void Promise.all(fetches)
+        .then((results) => {
+          if (epoch !== epochRef.current) return
+          setCounts(sumWorkloadHealth(results.map((r) => r.health)))
+          setError(results.find((r) => r.err && !r.err.includes('no active watcher'))?.err ?? null)
+          setLastUpdatedAt(Date.now())
+        })
+        .finally(() => {
+          // After a context or namespace change the next setup owns the flags.
+          if (epoch !== epochRef.current) return
+          countsInFlightRef.current = false
+          if (countsDirtyRef.current) run()
+        })
+    }
+    run()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctxKey, apiNamespace, filterByNs])
+  }, [ctxKey, apiNamespace])
 
   const pullEvents = useCallback(() => {
     if (activeContexts.length === 0) return
@@ -178,14 +129,7 @@ export function WorkloadsOverviewView() {
   useEffect(() => {
     if (activeContexts.length === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Workload snapshots are scoped to active contexts.
-      setPods([])
-      setDeployments([])
-      setStatefulSets([])
-      setDaemonSets([])
-      setReplicaSets([])
-      setReplicationControllers([])
-      setJobs([])
-      setCronJobs([])
+      setCounts({})
       setEvents([])
       return
     }
@@ -223,6 +167,8 @@ export function WorkloadsOverviewView() {
 
     return () => {
       epochRef.current = epochAtSetup + 1
+      countsInFlightRef.current = false
+      countsDirtyRef.current = false
       window.clearInterval(id)
       if (debounceRef.current !== null) {
         window.clearTimeout(debounceRef.current)
@@ -233,64 +179,10 @@ export function WorkloadsOverviewView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctxKey, pullCounts, pullEvents])
 
-  // Memoize so typing in the events search (same component) doesn't
-  // re-filter all 8 workload lists on every keystroke — they didn't change.
-  const cards = useMemo<WorkloadHealth[]>(() => [
-    {
-      kind: 'Pods',
-      view: 'pods',
-      total: pods.length,
-      healthy: pods.filter(isPodHealthy).length,
-    },
-    {
-      kind: 'Deployments',
-      // Scaled-to-0 workloads are intentionally idle, not unhealthy — exclude
-      // them from the total so they stay out of the red bar, mirroring the
-      // ReplicaSet/ReplicationController handling below.
-      view: 'deployments',
-      total: deployments.filter((d) => !isScaledToZero(d.ready)).length,
-      healthy: deployments.filter((d) => isReadyString(d.ready)).length,
-    },
-    {
-      kind: 'StatefulSets',
-      view: 'statefulsets',
-      total: statefulSets.filter((s) => !isScaledToZero(s.ready)).length,
-      healthy: statefulSets.filter((s) => isReadyString(s.ready)).length,
-    },
-    {
-      kind: 'DaemonSets',
-      view: 'daemonsets',
-      total: daemonSets.filter((d) => d.desired > 0).length,
-      healthy: daemonSets.filter((d) => d.desired > 0 && d.ready === d.desired).length,
-    },
-    {
-      kind: 'ReplicaSets',
-      view: 'replicasets',
-      // Scaled-down ReplicaSets (desired 0) are kept around for rollback and are
-      // not unhealthy; excluding them from the total keeps them out of the red bar.
-      total: replicaSets.filter((r) => r.desired > 0).length,
-      healthy: replicaSets.filter((r) => r.desired > 0 && r.ready === r.desired).length,
-    },
-    {
-      kind: 'ReplicationControllers',
-      view: 'replicationcontrollers',
-      total: replicationControllers.filter((r) => r.desired > 0).length,
-      healthy: replicationControllers.filter((r) => r.desired > 0 && r.ready === r.desired).length,
-    },
-    {
-      kind: 'Jobs',
-      view: 'jobs',
-      total: jobs.length,
-      healthy: jobs.filter((j) => j.status !== 'Failed').length,
-    },
-    {
-      kind: 'CronJobs',
-      view: 'cronjobs',
-      total: cronJobs.length,
-      healthy: cronJobs.filter((c) => !c.suspend).length,
-      neutral: cronJobs.filter((c) => c.suspend).length,
-    },
-  ], [pods, deployments, statefulSets, daemonSets, replicaSets, replicationControllers, jobs, cronJobs])
+  const cards = useMemo(
+    () => CARDS.map((c) => ({ ...c, ...(counts[c.kind] ?? NO_COUNTS) })),
+    [counts],
+  )
 
   if (activeContexts.length === 0) {
     return (
@@ -338,7 +230,7 @@ export function WorkloadsOverviewView() {
         {cards.map((c) => (
           <WorkloadCard
             key={c.kind}
-            kind={c.kind}
+            kind={c.label}
             total={c.total}
             healthy={c.healthy}
             neutral={c.neutral}
@@ -368,29 +260,17 @@ export function WorkloadsOverviewView() {
   )
 }
 
-function isPodHealthy(p: PodInfo): boolean {
-  // A finished pod reads as "Completed" (terminated-container reason) far more
-  // often than the bare "Succeeded" phase; both mean the pod did its job and
-  // must not be counted as failing.
-  if (p.status === 'Succeeded' || p.status === 'Completed') return true
-  if (p.status !== 'Running') return false
-  return isReadyString(p.ready)
-}
-
-function isReadyString(s: string): boolean {
-  if (!s) return false
-  const parts = s.split('/')
-  if (parts.length !== 2) return false
-  const r = parseInt(parts[0], 10)
-  const t = parseInt(parts[1], 10)
-  if (Number.isNaN(r) || Number.isNaN(t)) return false
-  return t > 0 && r === t
-}
-
-function isScaledToZero(s: string): boolean {
-  const parts = s.split('/')
-  if (parts.length !== 2) return false
-  return parseInt(parts[1], 10) === 0
+function sumWorkloadHealth(perContext: WorkloadHealth[][]): Record<string, WorkloadCounts> {
+  const sums: Record<string, WorkloadCounts> = {}
+  for (const health of perContext) {
+    for (const h of health) {
+      const sum = (sums[h.kind] ??= { ...NO_COUNTS })
+      sum.total += h.total
+      sum.healthy += h.healthy
+      sum.neutral += h.neutral
+    }
+  }
+  return sums
 }
 
 type WorkloadCardProps = {
