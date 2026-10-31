@@ -16,6 +16,8 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
@@ -118,14 +120,20 @@ func TestMetricsExecCredentialHelper(t *testing.T) {
 	os.Exit(0)
 }
 
-func TestMetricsClientUsesRefreshedExecCredentials(t *testing.T) {
-	auth := make(chan string, 2)
+// execCredentialKubeconfig starts a TLS API server that answers every request
+// with body and reports its Authorization header on auth, and writes a
+// kubeconfig whose "refreshed" context authenticates through
+// TestMetricsExecCredentialHelper, so the bearer token is whatever
+// KLUSTR_TEST_METRICS_TOKEN the captured credentials put in the exec env.
+func execCredentialKubeconfig(t *testing.T, body string) (path string, auth <-chan string) {
+	t.Helper()
+	headers := make(chan string, 2)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth <- r.Header.Get("Authorization")
+		headers <- r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"apiVersion":"metrics.k8s.io/v1beta1","kind":"PodMetricsList","items":[]}`))
+		_, _ = w.Write([]byte(body))
 	}))
-	defer server.Close()
+	t.Cleanup(server.Close)
 	executable, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -142,10 +150,15 @@ func TestMetricsClientUsesRefreshedExecCredentials(t *testing.T) {
 			Env: []clientcmdapi.ExecEnvVar{{Name: "KLUSTR_TEST_METRICS_EXEC", Value: "1"}},
 		}}},
 	}
-	path := filepath.Join(t.TempDir(), "config")
+	path = filepath.Join(t.TempDir(), "config")
 	if err := clientcmd.WriteToFile(config, path); err != nil {
 		t.Fatal(err)
 	}
+	return path, headers
+}
+
+func TestMetricsClientUsesRefreshedExecCredentials(t *testing.T) {
+	path, auth := execCredentialKubeconfig(t, `{"apiVersion":"metrics.k8s.io/v1beta1","kind":"PodMetricsList","items":[]}`)
 	c := testCredManager(t, &fakeProvider{name: "fake"})
 	defer c.stopAll()
 	m := &ClientManager{rules: &clientcmd.ClientConfigLoadingRules{ExplicitPath: path}, metrics: newMetricsCache(), creds: c}
@@ -168,6 +181,43 @@ func TestMetricsClientUsesRefreshedExecCredentials(t *testing.T) {
 		}
 		if got := <-auth; got != "Bearer "+token {
 			t.Fatalf("request used %q, want refreshed test token", got)
+		}
+	}
+}
+
+func TestWatchClientsUseRefreshedExecCredentials(t *testing.T) {
+	path, auth := execCredentialKubeconfig(t, `{"apiVersion":"v1","kind":"ConfigMapList","items":[]}`)
+	c := testCredManager(t, &fakeProvider{name: "fake"})
+	defer c.stopAll()
+	m := &ClientManager{
+		rules: &clientcmd.ClientConfigLoadingRules{ExplicitPath: path}, cache: map[string]*kubernetes.Clientset{},
+		watchers: map[string]*contextWatcher{}, metrics: newMetricsCache(), creds: c,
+	}
+	configMaps := schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}
+	for _, token := range []string{"before-refresh", "after-refresh"} {
+		c.mu.Lock()
+		c.captured["refreshed"] = CapturedCredentials{env: map[string]string{"KLUSTR_TEST_METRICS_TOKEN": token}}
+		c.mu.Unlock()
+		if token == "after-refresh" {
+			m.onCredentialsRefreshed("refreshed")
+		}
+		clients, err := m.newWatchClients("refreshed")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// The watcher stays registered while its replacement is built, as it
+		// does during a credential re-watch.
+		m.mu.Lock()
+		m.watchers["refreshed"] = &contextWatcher{dyn: clients.dyn}
+		m.mu.Unlock()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_, err = clients.dyn.Resource(configMaps).List(ctx, metav1.ListOptions{})
+		cancel()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := <-auth; got != "Bearer "+token {
+			t.Fatalf("watch dynamic client used %q, want %q", got, "Bearer "+token)
 		}
 	}
 }
