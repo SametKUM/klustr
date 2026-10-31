@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
@@ -333,29 +334,7 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 		delete(m.cache, contextName)
 		m.mu.Unlock()
 	}
-	cs, err := m.Clientset(contextName)
-	if err != nil {
-		return err
-	}
-	dyn, err := m.dynamicClient(contextName)
-	if err != nil {
-		return err
-	}
-	cfg, err := m.restConfig(contextName)
-	if err != nil {
-		return err
-	}
-	gw, err := gwclient.NewForConfig(cfg)
-	if err != nil {
-		return err
-	}
-	meta, err := metadata.NewForConfig(cfg)
-	if err != nil {
-		return err
-	}
-	discoCfg := *cfg
-	discoCfg.Timeout = discoveryTimeout
-	disco, err := discovery.NewDiscoveryClientForConfig(&discoCfg)
+	clients, err := m.newWatchClients(contextName)
 	if err != nil {
 		return err
 	}
@@ -366,7 +345,7 @@ func (m *ClientManager) watchLocked(ctx context.Context, contextName string, reu
 	cb := m.onChange
 	m.mu.Unlock()
 
-	w := newContextWatcher(cs, disco, gw, dyn, meta, defaultNS, func(kind string, delta *KindDelta) {
+	w := newContextWatcher(clients.cs, clients.disco, clients.gw, clients.dyn, clients.meta, defaultNS, func(kind string, delta *KindDelta) {
 		if cb != nil {
 			cb(ContextChange{Context: contextName, Kind: kind, Delta: delta})
 		}
@@ -511,6 +490,49 @@ func (m *ClientManager) restConfig(contextName string) (*rest.Config, error) {
 		}
 	}
 	return cfg, nil
+}
+
+// watchClients are the API clients a contextWatcher is built from.
+type watchClients struct {
+	cs    *kubernetes.Clientset
+	disco discovery.DiscoveryInterface
+	gw    gwclient.Interface
+	dyn   dynamic.Interface
+	meta  metadata.Interface
+}
+
+// newWatchClients builds every client from the context's current rest.Config.
+// None may come from m.dynamicClient: during a re-watch the watcher being
+// replaced is still registered, and its clients' exec authenticator holds the
+// credentials from before the refresh.
+func (m *ClientManager) newWatchClients(contextName string) (watchClients, error) {
+	cs, err := m.Clientset(contextName)
+	if err != nil {
+		return watchClients{}, err
+	}
+	cfg, err := m.restConfig(contextName)
+	if err != nil {
+		return watchClients{}, err
+	}
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return watchClients{}, err
+	}
+	gw, err := gwclient.NewForConfig(cfg)
+	if err != nil {
+		return watchClients{}, err
+	}
+	meta, err := metadata.NewForConfig(cfg)
+	if err != nil {
+		return watchClients{}, err
+	}
+	discoCfg := *cfg
+	discoCfg.Timeout = discoveryTimeout
+	disco, err := discovery.NewDiscoveryClientForConfig(&discoCfg)
+	if err != nil {
+		return watchClients{}, err
+	}
+	return watchClients{cs: cs, disco: disco, gw: gw, dyn: dyn, meta: meta}, nil
 }
 
 // onCredentialsRefreshed rebuilds a context's clients after new credentials
