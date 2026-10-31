@@ -12073,6 +12073,24 @@ export namespace kube {
 	    }
 	}
 	
+	export class WorkloadHealth {
+	    kind: string;
+	    total: number;
+	    healthy: number;
+	    neutral: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorkloadHealth(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.total = source["total"];
+	        this.healthy = source["healthy"];
+	        this.neutral = source["neutral"];
+	    }
+	}
 	export class WorkloadRevision {
 	    revision: number;
 	    createdAt: string;

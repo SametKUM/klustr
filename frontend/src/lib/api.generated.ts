@@ -376,6 +376,7 @@ export type VolumeAttachmentInfo = kube.VolumeAttachmentInfo
 export type WebhookSummary = kube.WebhookSummary
 export type WebhookConfigurationDetail = kube.WebhookConfigurationDetail
 export type WebhookConfigurationInfo = kube.WebhookConfigurationInfo
+export type WorkloadHealth = kube.WorkloadHealth
 export type WorkloadRevision = kube.WorkloadRevision
 export type UpdateResult = update.Result
 
@@ -529,6 +530,7 @@ export const generatedApi = {
   getValidatingWebhookConfiguration: bindings.GetValidatingWebhookConfiguration,
   getVolumeAttachment: bindings.GetVolumeAttachment,
   getWorkloadRevisionTemplate: bindings.GetWorkloadRevisionTemplate,
+  getWorkloadsOverview: bindings.GetWorkloadsOverview,
   helmChartVersions: bindings.HelmChartVersions,
   installHelmRelease: bindings.InstallHelmRelease,
   isMetricsServerKlustrManaged: bindings.IsMetricsServerKlustrManaged,

@@ -301,6 +301,8 @@ export function GetVolumeAttachment(arg1:string,arg2:string):Promise<kube.Volume
 
 export function GetWorkloadRevisionTemplate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number):Promise<string>;
 
+export function GetWorkloadsOverview(arg1:string,arg2:string):Promise<Array<kube.WorkloadHealth>>;
+
 export function HelmChartVersions(arg1:string,arg2:string):Promise<Array<string>>;
 
 export function InstallHelmRelease(arg1:kube.HelmInstallOptions):Promise<kube.HelmDryRunResult>;

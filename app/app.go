@@ -1081,6 +1081,10 @@ func (a *App) GetClusterOverview(contextName string) (*kube.ClusterOverview, err
 	return a.clients.GetClusterOverview(a.ctx, contextName)
 }
 
+func (a *App) GetWorkloadsOverview(contextName, namespace string) []kube.WorkloadHealth {
+	return a.clients.WorkloadsOverview(contextName, namespace)
+}
+
 func (a *App) ListPodMetrics(contextName, namespace string) ([]kube.PodMetrics, error) {
 	return a.clients.ListPodMetrics(a.ctx, contextName, namespace)
 }

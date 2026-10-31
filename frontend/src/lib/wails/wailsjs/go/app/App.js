@@ -598,6 +598,10 @@ export function GetWorkloadRevisionTemplate(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['GetWorkloadRevisionTemplate'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function GetWorkloadsOverview(arg1, arg2) {
+  return window['go']['app']['App']['GetWorkloadsOverview'](arg1, arg2);
+}
+
 export function HelmChartVersions(arg1, arg2) {
   return window['go']['app']['App']['HelmChartVersions'](arg1, arg2);
 }
