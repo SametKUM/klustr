@@ -46,9 +46,39 @@ func main() {
 		Mac: application.MacWindow{DisableEscapeExitsFullscreen: true},
 	})
 
+	if runtime.GOOS == "darwin" {
+		wailsApp.Menu.SetApplicationMenu(macMenu())
+	}
+
 	if err := wailsApp.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// macMenu is the menu bar Wails v2 gave Klustr on macOS. Without one, v3
+// installs its default, whose extra items don't fit a single-window app:
+// Reload (⌘R) rebuilds the frontend while terminal and exec sessions keep
+// running in Go, Close Window (⌘W) quits, and Help loads wails.io into the
+// window. Linux and Windows windows show no menu bar either way.
+func macMenu() *application.Menu {
+	menu := application.NewMenu()
+
+	appMenu := menu.AddSubmenu("Klustr")
+	appMenu.AddRole(application.Hide)
+	appMenu.AddRole(application.HideOthers)
+	appMenu.AddRole(application.UnHide)
+	appMenu.AddSeparator()
+	appMenu.AddRole(application.Quit)
+
+	menu.AddRole(application.EditMenu)
+
+	windowMenu := menu.AddSubmenu("Window")
+	windowMenu.AddRole(application.Minimise)
+	windowMenu.AddRole(application.Zoom)
+	windowMenu.AddSeparator()
+	windowMenu.AddRole(application.ToggleFullscreen)
+
+	return menu
 }
 
 // startURL keeps the page on the origin Wails v2 served it from. The webview
