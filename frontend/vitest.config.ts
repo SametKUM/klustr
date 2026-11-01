@@ -12,6 +12,9 @@ export default defineConfig({
     // Let jsdom provide Web Storage instead of Node's file-backed experimental global.
     execArgv: ['--no-experimental-webstorage'],
     globals: false,
+    alias: {
+      '@wailsio/runtime': path.resolve(import.meta.dirname, './src/test/wailsRuntime.ts'),
+    },
     include: ['src/**/*.test.{ts,tsx}'],
     css: false,
   },
