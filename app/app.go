@@ -11,7 +11,7 @@ import (
 	"klustr/internal/kube"
 	"klustr/internal/update"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 const (
@@ -29,6 +29,9 @@ var Version = "dev"
 type App struct {
 	ctx     context.Context
 	clients *kube.ClientManager
+	// wails is the running application, set in ServiceStartup. Events and
+	// dialogs go through it.
+	wails *application.App
 }
 
 func New() *App {
@@ -71,33 +74,37 @@ func (a *App) CheckForUpdate() (update.Result, error) {
 	return update.Check(a.ctx, a.Version(), githubOwner, githubRepo)
 }
 
-func (a *App) Startup(ctx context.Context) {
+// ServiceStartup runs when the Wails application starts. ctx stays valid while
+// the application runs and is cancelled right before shutdown.
+func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
+	a.wails = application.Get()
 	kube.StartPprofServer() // no-op unless KLUSTR_PPROF is set
 	probeStartup(ctx)       // no-op unless built with -tags perfprobe
 	go a.clients.ImportShellEnv()
 	go a.clients.SweepStaleLaunchFiles()
 	a.clients.SetOnChange(func(c kube.ContextChange) {
 		if c.Delta != nil {
-			emit(ctx, eventKubeChange, c.Context, c.Kind, c.Delta)
+			a.emit(eventKubeChange, c.Context, c.Kind, c.Delta)
 		} else {
-			emit(ctx, eventKubeChange, c.Context, c.Kind)
+			a.emit(eventKubeChange, c.Context, c.Kind)
 		}
 	})
 	a.clients.SetPFChangeCallback(func() {
-		emit(ctx, "pf:update")
+		a.emit("pf:update")
 	})
 	a.clients.SetCredentialEventCallback(func(s kube.CredentialStatus) {
-		emit(ctx, eventCredsUpdate, s)
+		a.emit(eventCredsUpdate, s)
 	})
+	return nil
 }
 
-// Shutdown is the OnShutdown hook Wails fires when the user quits the
-// app. We use it to drain ClientManager so port-forwards, log streams
-// and exec sessions tear down gracefully instead of dying with the
-// process.
-func (a *App) Shutdown(_ context.Context) {
+// ServiceShutdown runs when the user quits the app. It drains ClientManager
+// so port-forwards, log streams and exec sessions tear down gracefully
+// instead of dying with the process.
+func (a *App) ServiceShutdown() error {
 	a.clients.Shutdown()
+	return nil
 }
 
 func (a *App) ListContexts() (*kube.Kubeconfig, error) {
@@ -414,7 +421,7 @@ func (a *App) StartPodLogs(contextName, namespace, podName, container string, fo
 		int64(tailLines),
 		func(lines []string) {
 			if id := gate.wait(); id != "" {
-				emit(a.ctx, "pod:logs:line:"+id, lines)
+				a.emit("pod:logs:line:"+id, lines)
 			}
 		},
 		func(err error) {
@@ -426,7 +433,7 @@ func (a *App) StartPodLogs(contextName, namespace, podName, container string, fo
 			if err != nil {
 				msg = err.Error()
 			}
-			emit(a.ctx, "pod:logs:close:"+id, msg)
+			a.emit("pod:logs:close:"+id, msg)
 		},
 	)
 	if err != nil {
@@ -447,7 +454,7 @@ func (a *App) StartExec(contextName, namespace, podName, container string, comma
 		a.ctx, contextName, namespace, podName, container, command,
 		func(data string) {
 			if id := gate.wait(); id != "" {
-				emit(a.ctx, "exec:out:"+id, data)
+				a.emit("exec:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -459,7 +466,7 @@ func (a *App) StartExec(contextName, namespace, podName, container string, comma
 			if err != nil {
 				msg = err.Error()
 			}
-			emit(a.ctx, "exec:close:"+id, msg)
+			a.emit("exec:close:"+id, msg)
 		},
 	)
 	if err != nil {
@@ -476,7 +483,7 @@ func (a *App) StartPodDebug(contextName, namespace, podName, target, image, shel
 		a.ctx, contextName, namespace, podName, target, image, shell, elevated,
 		func(data string) {
 			if id := gate.wait(); id != "" {
-				emit(a.ctx, "exec:out:"+id, data)
+				a.emit("exec:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -488,7 +495,7 @@ func (a *App) StartPodDebug(contextName, namespace, podName, target, image, shel
 			if err != nil {
 				msg = err.Error()
 			}
-			emit(a.ctx, "exec:close:"+id, msg)
+			a.emit("exec:close:"+id, msg)
 		},
 	)
 	if err != nil {
@@ -529,7 +536,7 @@ func (a *App) StartNodeShell(contextName, nodeName string) (string, error) {
 		a.ctx, contextName, nodeName,
 		func(data string) {
 			if id := gate.wait(); id != "" {
-				emit(a.ctx, "exec:out:"+id, data)
+				a.emit("exec:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -541,7 +548,7 @@ func (a *App) StartNodeShell(contextName, nodeName string) (string, error) {
 			if err != nil {
 				msg = err.Error()
 			}
-			emit(a.ctx, "exec:close:"+id, msg)
+			a.emit("exec:close:"+id, msg)
 		},
 	)
 	if err != nil {
@@ -564,10 +571,10 @@ func (a *App) DrainNode(contextName, nodeName string, force bool) {
 		ctx, cancel := context.WithTimeout(a.ctx, 15*time.Minute)
 		defer cancel()
 		err := a.clients.DrainNode(ctx, contextName, nodeName, force, func(p kube.NodeDrainProgress) {
-			emit(a.ctx, event, p)
+			a.emit(event, p)
 		})
 		if err != nil {
-			emit(a.ctx, event, kube.NodeDrainProgress{
+			a.emit(event, kube.NodeDrainProgress{
 				Node:    nodeName,
 				Phase:   "error",
 				Pending: []string{},
@@ -583,7 +590,7 @@ func (a *App) OpenLocalTerminal(contextName string, cols, rows int) (string, err
 		a.ctx, contextName, clampDim(cols), clampDim(rows),
 		func(data string) {
 			if id := gate.wait(); id != "" {
-				emit(a.ctx, "term:out:"+id, data)
+				a.emit("term:out:"+id, data)
 			}
 		},
 		func(err error) {
@@ -595,7 +602,7 @@ func (a *App) OpenLocalTerminal(contextName string, cols, rows int) (string, err
 			if err != nil {
 				msg = err.Error()
 			}
-			emit(a.ctx, "term:close:"+id, msg)
+			a.emit("term:close:"+id, msg)
 		},
 	)
 	if err != nil {
@@ -1095,10 +1102,10 @@ func (a *App) ListNodeMetrics(contextName string) ([]kube.NodeMetrics, error) {
 }
 
 func (a *App) SaveTextFile(defaultName, content string) (string, error) {
-	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		DefaultFilename: defaultName,
-		Title:           "Save file",
-	})
+	path, err := a.wails.Dialog.SaveFileWithOptions(&application.SaveFileDialogOptions{
+		Filename: defaultName,
+		Title:    "Save file",
+	}).PromptForSingleSelection()
 	if err != nil {
 		return "", err
 	}

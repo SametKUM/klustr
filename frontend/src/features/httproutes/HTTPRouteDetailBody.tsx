@@ -1,5 +1,5 @@
 import { Fragment, useCallback } from 'react'
-import { BrowserOpenURL } from '@/lib/wails/wailsjs/runtime/runtime'
+import { BrowserOpenURL } from '@/lib/runtime'
 import {
   api,
   type HTTPRouteDetail,

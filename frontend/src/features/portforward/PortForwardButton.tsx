@@ -16,7 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { api, type ContainerPort, type PodDetail } from '@/lib/api'
 import { usePortForwards } from '@/store/portForwards'
 import type { SelectedResource } from '@/store/ui'
-import { BrowserOpenURL } from '@/lib/wails/wailsjs/runtime/runtime'
+import { BrowserOpenURL } from '@/lib/runtime'
 
 type PortOption = ContainerPort & { containerName: string }
 

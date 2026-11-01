@@ -2,28 +2,21 @@
 // VITE_KLUSTR_PERF=1, and only useful against a Go build with -tags perfprobe
 // (app/perfprobe.go), which appends a stamp argument to every event.
 //
-// It instruments the Wails v2 bridge from the outside, so no call site changes:
-// - events: window.runtime.EventsOnMultiple is wrapped, so every listener's
-//   stamp is stripped before the listener runs, and the delivery latency, size
-//   and handler time are recorded;
-// - bindings: every window.go.app.App method is wrapped to record its round
-//   trip;
+// It instruments the bridge from the outside, so no call site changes:
+// - events: the listener wrapper of src/lib/runtime.ts strips every event's
+//   stamp before the listener runs, and records the delivery latency, size and
+//   handler time;
+// - bindings: every method of the api object is wrapped to record its round
+//   trip, under the Go method's name;
 // - the main thread: timer lateness and frame intervals, per scenario phase.
 // The report goes back to Go as one perf:report event.
 
+import { api } from '@/lib/api'
+import { EventsEmit, setListenerWrapper } from '@/lib/runtime'
 import { runScenario } from './scenario'
 import { eventGroup, stampOf, type Stamp } from './stamp'
 
-type Listener = (...args: unknown[]) => unknown
-type WailsRuntime = {
-  EventsOnMultiple: (name: string, callback: Listener, maxCallbacks: number) => () => void
-  EventsEmit: (name: string, ...data: unknown[]) => void
-}
 type Binding = (...args: unknown[]) => Promise<unknown>
-type WailsWindow = Window & {
-  runtime: WailsRuntime
-  go: { app: { App: Record<string, Binding> } }
-}
 
 // U+F033D, the rune log-steady writes into every tenth line.
 const ICON = '\u{F033D}'
@@ -49,11 +42,6 @@ export class Probe {
   readonly errors: string[] = []
   private execWatchers: ExecWatcher[] = []
   private callWatchers: CallWatcher[] = []
-  private readonly rt: WailsRuntime
-
-  constructor(private readonly w: WailsWindow) {
-    this.rt = w.runtime
-  }
 
   private get phase(): number {
     return Math.max(0, this.phases.length - 1)
@@ -64,7 +52,7 @@ export class Probe {
     const current = this.phases.at(-1)
     if (current) current.endMs = now
     this.phases.push({ name, startMs: now, endMs: null })
-    this.rt.EventsEmit('perf:phase', name)
+    EventsEmit('perf:phase', name)
   }
 
   mark(name: string, value: number): void {
@@ -87,10 +75,6 @@ export class Probe {
     return () => {
       this.callWatchers = this.callWatchers.filter((w) => w !== watcher)
     }
-  }
-
-  get bindings(): Record<string, Binding> {
-    return this.w.go.app.App
   }
 
   private groupIndex(group: string): number {
@@ -127,34 +111,31 @@ export class Probe {
   }
 
   private wrapEvents(): void {
-    const original = this.rt.EventsOnMultiple.bind(this.rt)
-    this.rt.EventsOnMultiple = (name, callback, maxCallbacks) =>
-      original(
-        name,
-        (...args: unknown[]) => {
-          const marker = args.at(-1)
-          const stamp = stampOf(marker)
-          if (!stamp) return callback(...args)
-          // Wall clock on both sides: Go's UnixMicro and the page's time
-          // origin share the machine's clock.
-          const receivedUs = Math.round((performance.timeOrigin + performance.now()) * 1000)
-          args.pop()
-          const t0 = performance.now()
-          try {
-            return callback(...args)
-          } finally {
-            this.observe(name, marker as object, stamp, args, performance.now() - t0, receivedUs)
-          }
-        },
-        maxCallbacks,
-      )
+    setListenerWrapper((name, listener) => (...args: unknown[]) => {
+      const marker = args.at(-1)
+      const stamp = stampOf(marker)
+      if (!stamp) return listener(...args)
+      // Wall clock on both sides: Go's UnixMicro and the page's time origin
+      // share the machine's clock.
+      const receivedUs = Math.round((performance.timeOrigin + performance.now()) * 1000)
+      const rest = args.slice(0, -1)
+      const t0 = performance.now()
+      try {
+        return listener(...rest)
+      } finally {
+        this.observe(name, marker as object, stamp, rest, performance.now() - t0, receivedUs)
+      }
+    })
   }
 
   private wrapBindings(): void {
-    const app = this.w.go.app.App
-    for (const method of Object.keys(app)) {
-      const original = app[method]
-      app[method] = (...args: unknown[]) => {
+    const methods = api as unknown as Record<string, unknown>
+    for (const key of Object.keys(methods)) {
+      const original = methods[key]
+      if (typeof original !== 'function') continue
+      // Reported under the Go method's name, as v2 reports were.
+      const method = key[0].toUpperCase() + key.slice(1)
+      methods[key] = (...args: unknown[]) => {
         const t0 = performance.now()
         const phase = this.phase
         const done = (result: unknown, ok: 0 | 1) => {
@@ -162,7 +143,7 @@ export class Probe {
           this.calls.push([phase, method, performance.now() - t0, items, ok])
           for (const watcher of this.callWatchers) watcher(method, result)
         }
-        return original(...args).then(
+        return (original as Binding)(...args).then(
           (result) => {
             done(result, 1)
             return result
@@ -225,12 +206,12 @@ export class Probe {
       marks: this.marks,
       errors: this.errors,
     }
-    this.rt.EventsEmit('perf:report', JSON.stringify(report))
+    EventsEmit('perf:report', JSON.stringify(report))
   }
 }
 
 export function install(): void {
-  const probe = new Probe(window as unknown as WailsWindow)
+  const probe = new Probe()
   probe.install()
   console.info('[perf] probe installed')
   void runScenario(probe).catch((error: unknown) => {

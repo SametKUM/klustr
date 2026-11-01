@@ -1,6 +1,6 @@
 import type { Terminal } from '@xterm/xterm'
 import { toast } from 'sonner'
-import { ClipboardGetText, ClipboardSetText } from '@/lib/wails/wailsjs/runtime/runtime'
+import { ClipboardGetText, ClipboardSetText } from '@/lib/runtime'
 
 export type ClipboardAction = 'copy' | 'paste'
 

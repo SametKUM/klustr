@@ -3,7 +3,7 @@ import { ExternalLink, Network, Unplug, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { api } from '@/lib/api'
-import { BrowserOpenURL } from '@/lib/wails/wailsjs/runtime/runtime'
+import { BrowserOpenURL } from '@/lib/runtime'
 import { usePortForwards } from '@/store/portForwards'
 
 export function PortForwardIndicator() {
