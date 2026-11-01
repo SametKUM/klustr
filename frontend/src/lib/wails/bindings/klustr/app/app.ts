@@ -60,6 +60,20 @@ export function ClearCredentialMapping(contextName: string): $CancellablePromise
     return $Call.ByID(1667546087, contextName);
 }
 
+export function ClipboardGetText(): $CancellablePromise<string> {
+    return $Call.ByID(1507668552);
+}
+
+/**
+ * ClipboardSetText and ClipboardGetText fail when the native clipboard call
+ * does (on Windows, while another process holds the clipboard open), as the
+ * v2 runtime's did. The v3 JS runtime drops that result, so a failed copy
+ * would read as a success and the terminal would skip its fallback.
+ */
+export function ClipboardSetText(text: string): $CancellablePromise<void> {
+    return $Call.ByID(1946601756, text);
+}
+
 export function CordonNode(contextName: string, nodeName: string, cordon: boolean): $CancellablePromise<void> {
     return $Call.ByID(2651019428, contextName, nodeName, cordon);
 }

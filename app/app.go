@@ -1120,6 +1120,25 @@ func (a *App) SaveTextFile(defaultName, content string) (string, error) {
 	return path, nil
 }
 
+// ClipboardSetText and ClipboardGetText fail when the native clipboard call
+// does (on Windows, while another process holds the clipboard open), as the
+// v2 runtime's did. The v3 JS runtime drops that result, so a failed copy
+// would read as a success and the terminal would skip its fallback.
+func (a *App) ClipboardSetText(text string) error {
+	if !a.wails.Clipboard.SetText(text) {
+		return errors.New("clipboard write failed")
+	}
+	return nil
+}
+
+func (a *App) ClipboardGetText() (string, error) {
+	text, ok := a.wails.Clipboard.Text()
+	if !ok {
+		return "", errors.New("clipboard read failed")
+	}
+	return text, nil
+}
+
 // ---------------------------------------------------------------------------
 // Gateway API bindings.
 // ---------------------------------------------------------------------------

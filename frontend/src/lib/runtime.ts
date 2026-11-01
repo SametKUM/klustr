@@ -4,7 +4,8 @@
 // Events: app/events.go always sends an event's arguments as one list, which
 // EventsOn spreads back into the listener's parameters.
 
-import { Browser, Clipboard, Events } from '@wailsio/runtime'
+import { Browser, Events } from '@wailsio/runtime'
+import { generatedApi } from '@/lib/api.generated'
 
 // Listeners declare their own parameter types, as they did with v2's EventsOn.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,10 +41,13 @@ export function BrowserOpenURL(url: string): void {
   void Browser.OpenURL(url)
 }
 
+// The clipboard goes through App bindings rather than the runtime's Clipboard,
+// which resolves even when the native call failed. These reject instead, as
+// v2's did, so callers can fall back to navigator.clipboard.
 export function ClipboardGetText(): Promise<string> {
-  return Clipboard.Text()
+  return generatedApi.clipboardGetText()
 }
 
 export function ClipboardSetText(text: string): Promise<boolean> {
-  return Clipboard.SetText(text).then(() => true)
+  return generatedApi.clipboardSetText(text).then(() => true)
 }
