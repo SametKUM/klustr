@@ -2,7 +2,6 @@ build/bin
 build/aur/rendered
 node_modules
 frontend/dist
-frontend/package.json.md5
 .DS_Store
 /klustr
 /klustr_windows_*.syso
