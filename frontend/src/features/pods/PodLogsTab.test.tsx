@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('@/lib/api', () => ({
   api: { startPodLogs: mocks.startPodLogs, stopPodLogs: mocks.stopPodLogs, saveTextFile: vi.fn() },
 }))
-vi.mock('@/lib/wails/wailsjs/runtime/runtime', () => ({ EventsOn: () => () => {}, EventsOff: vi.fn() }))
+vi.mock('@/lib/runtime', () => ({ EventsOn: () => () => {}, EventsOff: vi.fn() }))
 vi.mock('@/features/_shared/useLogTerminal', () => ({ useLogTerminal: () => mocks.view }))
 vi.mock('@/features/_shared/LogViewport', () => ({ LogViewport: () => null }))
 // Radix menus don't open under jsdom; a native select drives the same onChange.

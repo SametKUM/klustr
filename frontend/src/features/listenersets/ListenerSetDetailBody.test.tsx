@@ -1,7 +1,8 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { kube } from '@/lib/wails/wailsjs/go/models'
+import type { ListenerSetDetail } from '@/lib/api'
+import { model } from '@/test/model'
 import { ListenerSetDetailBody } from './ListenerSetDetailBody'
 
 const { useResourceDetail, openResource } = vi.hoisted(() => ({ useResourceDetail: vi.fn(), openResource: vi.fn() }))
@@ -11,7 +12,7 @@ vi.mock('@/store/ui', () => ({
   useUIStore: (selector: (state: { openResource: typeof openResource }) => unknown) => selector({ openResource }),
 }))
 
-const detail = kube.ListenerSetDetail.createFrom({
+const detail = model<ListenerSetDetail>({
   name: 'frontend', namespace: 'apps', uid: 'listeners-uid', createdAt: '2026-09-20T00:00:00Z',
   parent: { group: 'gateway.networking.k8s.io', kind: 'Gateway', namespace: 'infra', name: 'edge', sectionName: '', port: 0 },
   conditions: [], labels: {}, annotations: {},

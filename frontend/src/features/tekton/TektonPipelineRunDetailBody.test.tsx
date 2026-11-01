@@ -1,8 +1,8 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TektonPipelineRunDetail } from '@/lib/api'
-import { kube } from '@/lib/wails/wailsjs/go/models'
+import type { TektonPipelineRunDetail, TektonPipelineRunTask } from '@/lib/api'
+import { model } from '@/test/model'
 import { TektonPipelineRunDetailBody } from './TektonPipelineRunDetailBody'
 
 const { useResourceDetail, openTekton } = vi.hoisted(() => ({
@@ -14,7 +14,7 @@ vi.mock('@/lib/api', () => ({ api: { getTektonPipelineRun: vi.fn() } }))
 vi.mock('@/lib/nowTick', () => ({ useNowTick: vi.fn() }))
 vi.mock('./useOpenTektonResource', () => ({ useOpenTektonResource: () => openTekton }))
 
-function task(partial: Partial<kube.TektonPipelineRunTask>) {
+function task(partial: Partial<TektonPipelineRunTask>) {
   return {
     name: '',
     displayName: '',
@@ -33,7 +33,7 @@ function task(partial: Partial<kube.TektonPipelineRunTask>) {
 }
 
 function run(): TektonPipelineRunDetail {
-  return kube.TektonPipelineRunDetail.createFrom({
+  return model<TektonPipelineRunDetail>({
     name: 'build-x7k2p',
     namespace: 'ci',
     pipeline: 'release',

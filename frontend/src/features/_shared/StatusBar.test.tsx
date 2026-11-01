@@ -19,7 +19,7 @@ vi.mock('@/lib/api', () => ({
     checkForUpdate: async () => null,
   },
 }))
-vi.mock('@/lib/wails/wailsjs/runtime/runtime', () => ({ BrowserOpenURL: vi.fn() }))
+vi.mock('@/lib/runtime', () => ({ BrowserOpenURL: vi.fn() }))
 
 import { useUIStore } from '@/store/ui'
 import { StatusBar } from './StatusBar'

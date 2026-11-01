@@ -1,7 +1,8 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { kube } from '@/lib/wails/wailsjs/go/models'
+import type { PolicyReportDetail } from '@/lib/api'
+import { model } from '@/test/model'
 import { PolicyReportDetailBody } from './PolicyReportDetailBody'
 
 const { useResourceDetail, openKyverno, openTarget } = vi.hoisted(() => ({
@@ -24,7 +25,7 @@ function result(policy: string, result: string, source = 'kyverno') {
 }
 
 function report() {
-  return kube.PolicyReportDetail.createFrom({
+  return model<PolicyReportDetail>({
     name: 'f9291ae4',
     namespace: 'demo-storefront',
     scopeApiVersion: 'apps/v1',

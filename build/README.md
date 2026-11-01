@@ -1,35 +1,39 @@
-# Build Directory
+# Build directory
 
-The build directory is used to house all the build files and assets for your application. 
+Build inputs for the desktop app, and the output directory `bin/`
+(gitignored). `Taskfile.yml` at the repository root drives the builds:
 
-The structure is:
+```bash
+wails3 dev                                   # development, with rebuilds
+wails3 task build                            # release app for this OS into build/bin
+wails3 task build KLUSTR_VERSION=v1.2.3      # stamped with a release version
+```
 
-* bin - Output directory
-* darwin - macOS specific files
-* windows - Windows specific files
+- `config.yml`: the Wails v3 project config. `wails3 dev` reads `dev_mode`, and
+  `tools/buildassets` renders the platform files below from `info`.
+- `appicon.png` / `appicon.svg`: the app icon; the macOS build turns the PNG
+  into the bundle's `iconfile.icns`.
 
-## Mac
+## macOS (`darwin/`)
 
-The `darwin` directory holds files specific to Mac builds.
-These may be customised and used as part of the build. To return these files to the default state, simply delete them
-and
-build with `wails build`.
+- `Info.plist`: a template that `tools/buildassets` renders with the version
+  into `build/bin/klustr.app`. The bundle identifier stays `com.wails.klustr`:
+  macOS keeps the webview's storage, and with it the app's settings, per
+  identifier.
+- `entitlements.plist`: the hardened-runtime entitlements the release workflow
+  signs with.
 
-The directory contains the following files:
+## Windows (`windows/`)
 
-- `Info.plist` - the main plist file used for Mac builds. It is used when building using `wails build`.
-- `Info.dev.plist` - same as the main plist file but used when building using `wails dev`.
+- `icon.ico`: the exe icon.
+- `info.json`, `wails.exe.manifest`: templates for the version resource and
+  the manifest. `wails3 generate syso` compiles them with the icon into the
+  syso that `go build` links into `klustr.exe`.
 
-## Windows
+## Linux (`linux/`, `aur/`)
 
-The `windows` directory contains the manifest and rc files used when building with `wails build`.
-These may be customised for your application. To return these files to the default state, simply delete them and
-build with `wails build`.
-
-- `icon.ico` - The icon used for the application. This is used when building using `wails build`. If you wish to
-  use a different icon, simply replace this file with your own. If it is missing, a new `icon.ico` file
-  will be created using the `appicon.png` file in the build directory.
-- `installer/*` - The files used to create the Windows installer. These are used when building using `wails build`.
-- `info.json` - Application details used for Windows builds. The data here will be used by the Windows installer,
-  as well as the application itself (right click the exe -> properties -> details)
-- `wails.exe.manifest` - The main application manifest file.
+- `nfpm.yaml`: the `.deb` the release workflow builds with nfpm. It depends on
+  WebKit2GTK 4.1 and GTK3, which the app builds against (the `gtk3` tag).
+- `klustr.desktop`: the desktop entry the `.deb` installs.
+- `aur/PKGBUILD.tmpl`: the `klustr-bin` AUR package that `publish-packages.yml`
+  renders for each release.

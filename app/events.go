@@ -2,36 +2,33 @@ package app
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"slices"
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// emit sends a Wails event. Use it instead of runtime.EventsEmit.
+// emit sends a Wails event. Use it instead of Event.Emit.
 //
-// Wails delivers an event by embedding its JSON payload in a script through
+// The event's data is always the argument list, even for one argument or
+// none. Wails sends a single argument as itself and several as a list, so a
+// listener could not tell two arguments from one list argument such as the
+// []string of pod:logs:line. src/lib/runtime.ts spreads the list back into
+// the listener's arguments.
+//
+// Wails v2 delivered an event by embedding its JSON payload in a script through
 // text/template's JSEscapeString, which writes a rune Go considers unprintable
 // as `\u%04X`. Above U+FFFF that is five or six hex digits, and JavaScript
-// reads only four, so U+F033D, a Nerd Font icon, arrives as U+F033 followed by
-// "D". Private-use icons in shell prompts, characters newer than Go's Unicode
-// tables and tag characters all hit it. emit pre-encodes any argument that
-// carries such a rune and writes it as JSON surrogate-pair escapes, which
-// JSEscapeString leaves intact; the frontend receives the same values as before.
-func emit(ctx context.Context, name string, data ...any) {
-	if len(data) == 0 {
-		runtime.EventsEmit(ctx, name)
-		return
-	}
+// reads only four, so U+F033D, a Nerd Font icon, arrived as U+F033 followed by
+// "D". emit pre-encodes any argument that carries such a rune and writes it as
+// JSON surrogate-pair escapes, which decode to the same value on any transport.
+func (a *App) emit(name string, data ...any) {
 	args := make([]any, len(data))
 	for i, d := range data {
 		args[i] = eventArg(d)
 	}
-	runtime.EventsEmit(ctx, name, args...)
+	a.wails.Event.Emit(name, probeArgs(name, args))
 }
 
 // eventArg returns v itself unless its JSON would carry a rune above U+FFFF.
