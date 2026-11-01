@@ -67,6 +67,11 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      # Before the Wails CLI install, which builds against these headers on
+      # Linux as the app does.
+      - uses: ./.github/actions/linux-build-deps
+        if: matrix.os == 'ubuntu-24.04'
+
       # The build runs through `wails3 task`, and the CLI generates the
       # Windows syso and the macOS icon. It tracks the library version in
       # go.mod rather than a hand-written pin.
@@ -85,19 +90,19 @@ jobs:
             ~/go/bin/wails3.exe
           key: wails3-cli-${{ steps.wails.outputs.version }}-${{ runner.os }}-${{ runner.arch }}
 
+      # On Linux the CLI links GTK and WebKit too (for `wails3 doctor`) and
+      # would look for the GTK4 headers. linux-build-deps installs the GTK3
+      # ones the app builds against; macOS and Windows ignore the tag.
       - name: Install Wails CLI
         if: steps.wails-cache.outputs.cache-hit != 'true'
         shell: bash
         env:
           WAILS_VERSION: ${{ steps.wails.outputs.version }}
-        run: go install "github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}"
+        run: go install -tags gtk3 "github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}"
 
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
-
-      - uses: ./.github/actions/linux-build-deps
-        if: matrix.os == 'ubuntu-24.04'
 
       - name: Resolve version and artifact name
         id: meta
