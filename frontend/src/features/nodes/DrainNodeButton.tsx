@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
+import { EventsOn } from '@/lib/runtime'
 import { api, type NodeDrainProgress } from '@/lib/api'
 import type { SelectedResource } from '@/store/ui'
 import { ContextBadge } from '@/features/_shared/ContextBadge'

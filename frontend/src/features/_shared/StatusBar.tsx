@@ -4,7 +4,7 @@ import { SiGithub } from './brandIcons'
 import { useActiveContexts, useIsAggregated, useUIStore } from '@/store/ui'
 import { usePortForwards } from '@/store/portForwards'
 import { api, type UpdateResult } from '@/lib/api'
-import { BrowserOpenURL } from '@/lib/wails/wailsjs/runtime/runtime'
+import { BrowserOpenURL } from '@/lib/runtime'
 
 const REPO_URL = 'https://github.com/SametKUM/klustr'
 

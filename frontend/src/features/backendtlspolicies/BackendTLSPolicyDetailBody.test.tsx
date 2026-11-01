@@ -2,7 +2,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BackendTLSPolicyDetail } from '@/lib/api'
-import { kube } from '@/lib/wails/wailsjs/go/models'
+import { model } from '@/test/model'
 import { BackendTLSPolicyDetailBody } from './BackendTLSPolicyDetailBody'
 
 const { useResourceDetail, openResource } = vi.hoisted(() => ({ useResourceDetail: vi.fn(), openResource: vi.fn() }))
@@ -13,7 +13,7 @@ vi.mock('@/store/ui', () => ({
 }))
 
 function policy(): BackendTLSPolicyDetail {
-  return kube.BackendTLSPolicyDetail.createFrom({
+  return model<BackendTLSPolicyDetail>({
     name: 'backend', namespace: 'apps', uid: 'policy-uid', createdAt: '2026-09-20T00:00:00Z',
     hostname: 'backend.internal', wellKnownCACertificates: '', labels: {}, annotations: {}, options: {},
     targetRefs: [{ group: '', kind: 'Service', namespace: 'apps', name: 'api', sectionName: 'https', port: 0 }],

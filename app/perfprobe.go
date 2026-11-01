@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // The perf probe measures the Wails bridge for hack/perf. It is compiled in
@@ -85,7 +85,7 @@ func probeArgs(name string, args []any) []any {
 	return append(args, perfMarker{perfStamp{T: time.Now().UnixMicro(), Bytes: size}})
 }
 
-func probeStartup(ctx context.Context) {
+func probeStartup(_ context.Context) {
 	// A probe run must only ever see the perf cluster. Without KUBECONFIG
 	// client-go falls back to ~/.kube/config and its real contexts.
 	kubeconfig := filepath.ToSlash(os.Getenv("KUBECONFIG"))
@@ -104,36 +104,31 @@ func probeStartup(ctx context.Context) {
 	}
 	log.Printf("[perf] probe on, report goes to %s", perfProbe.out)
 
+	app := application.Get()
 	// hack/perf/run.sh polls this file to start the cluster-side churn when
 	// the scenario reaches that phase.
-	wailsruntime.EventsOn(ctx, "perf:phase", func(data ...any) {
-		if len(data) == 0 {
-			return
-		}
-		phase := fmt.Sprint(data[0])
+	app.Event.On("perf:phase", func(e *application.CustomEvent) {
+		phase := fmt.Sprint(e.Data)
 		log.Printf("[perf] phase %s", phase)
 		if err := os.WriteFile(perfProbe.out+".phase", []byte(phase+"\n"), 0o644); err != nil {
 			log.Printf("[perf] write phase: %v", err)
 		}
 	})
 
-	wailsruntime.EventsOn(ctx, "perf:report", func(data ...any) {
+	app.Event.On("perf:report", func(e *application.CustomEvent) {
 		perfProbe.report.Do(func() {
-			if err := writePerfReport(data); err != nil {
+			if err := writePerfReport(e.Data); err != nil {
 				log.Printf("[perf] report: %v", err)
 			} else {
 				log.Printf("[perf] report written to %s", perfProbe.out)
 			}
-			wailsruntime.Quit(ctx)
+			app.Quit()
 		})
 	})
 }
 
-func writePerfReport(data []any) error {
-	if len(data) == 0 {
-		return fmt.Errorf("empty perf:report")
-	}
-	frontend, ok := data[0].(string)
+func writePerfReport(data any) error {
+	frontend, ok := data.(string)
 	if !ok || !json.Valid([]byte(frontend)) {
 		return fmt.Errorf("perf:report payload is not a JSON string")
 	}

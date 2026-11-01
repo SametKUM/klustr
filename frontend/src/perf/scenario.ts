@@ -2,6 +2,7 @@
 // lengths are constants so every run, v2 or v3, does the same work;
 // hack/perf/run.sh starts the cluster-side churn when the "churn" phase begins.
 
+import { api } from '@/lib/api'
 import { useUIStore } from '@/store/ui'
 import type { Probe } from './probe'
 
@@ -77,7 +78,7 @@ async function runExec(probe: Probe): Promise<void> {
     await sleep(2 * SECOND)
     bytes = 0
     const started = performance.now()
-    await probe.bindings.SendExecInput(sessionId, EXEC_COMMAND)
+    await api.sendExecInput(sessionId, EXEC_COMMAND)
     await waitFor('the exec output marker', () => finished > 0, EXEC_TIMEOUT_MS)
     probe.mark('execMs', finished - started)
     probe.mark('execBytes', bytes)

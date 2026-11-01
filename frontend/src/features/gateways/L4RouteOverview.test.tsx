@@ -1,8 +1,8 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TCPRouteDetail } from '@/lib/api'
-import { kube } from '@/lib/wails/wailsjs/go/models'
+import type { TCPRouteDetail, TLSRouteDetail } from '@/lib/api'
+import { model } from '@/test/model'
 import { L4RouteOverview } from './L4RouteOverview'
 
 const { openResource } = vi.hoisted(() => ({ openResource: vi.fn() }))
@@ -16,7 +16,7 @@ const parent = {
 }
 
 function route(): TCPRouteDetail {
-  return kube.TCPRouteDetail.createFrom({
+  return model<TCPRouteDetail>({
     name: 'db', namespace: 'apps', uid: 'route-uid', createdAt: '2026-09-20T00:00:00Z',
     parents: [parent],
     rules: [{ name: 'database', backends: [
@@ -71,7 +71,7 @@ describe('L4RouteOverview', () => {
   })
 
   it('shows TLS SNI hostnames and explicitly reports missing controller status', () => {
-    const detail = kube.TLSRouteDetail.createFrom({ ...route(), hostnames: ['*.example.com'], status: [] })
+    const detail = model<TLSRouteDetail>({ ...route(), hostnames: ['*.example.com'], status: [] })
     act(() => root.render(<L4RouteOverview detail={detail} kind="TLSRoute" contextName="staging" />))
     expect(container.textContent).toContain('SNI hostnames')
     expect(container.textContent).toContain('*.example.com')

@@ -36,7 +36,7 @@ vi.mock('@/lib/api', () => ({
     saveTextFile: vi.fn(),
   },
 }))
-vi.mock('@/lib/wails/wailsjs/runtime/runtime', () => ({
+vi.mock('@/lib/runtime', () => ({
   EventsOn: mocks.eventsOn,
   EventsOff: mocks.eventsOff,
 }))

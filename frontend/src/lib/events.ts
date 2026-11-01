@@ -1,4 +1,4 @@
-import { EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
+import { EventsOn } from '@/lib/runtime'
 import type { CredentialStatus } from '@/lib/api'
 
 // KubeDelta mirrors the backend KindDelta: incremental upserts (projected Info
