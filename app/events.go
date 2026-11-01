@@ -24,14 +24,14 @@ import (
 // JSEscapeString leaves intact; the frontend receives the same values as before.
 func emit(ctx context.Context, name string, data ...any) {
 	if len(data) == 0 {
-		runtime.EventsEmit(ctx, name)
+		runtime.EventsEmit(ctx, name, probeArgs(name, nil)...)
 		return
 	}
 	args := make([]any, len(data))
 	for i, d := range data {
 		args[i] = eventArg(d)
 	}
-	runtime.EventsEmit(ctx, name, args...)
+	runtime.EventsEmit(ctx, name, probeArgs(name, args)...)
 }
 
 // eventArg returns v itself unless its JSON would carry a rune above U+FFFF.

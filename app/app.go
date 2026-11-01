@@ -74,6 +74,7 @@ func (a *App) CheckForUpdate() (update.Result, error) {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	kube.StartPprofServer() // no-op unless KLUSTR_PPROF is set
+	probeStartup(ctx)       // no-op unless built with -tags perfprobe
 	go a.clients.ImportShellEnv()
 	go a.clients.SweepStaleLaunchFiles()
 	a.clients.SetOnChange(func(c kube.ContextChange) {
