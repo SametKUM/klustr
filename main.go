@@ -16,6 +16,10 @@ import (
 var assets embed.FS
 
 func main() {
+	if err := ensureWebView2(); err != nil {
+		log.Fatal(err)
+	}
+
 	dist, err := fs.Sub(assets, "frontend/dist")
 	if err != nil {
 		log.Fatal(err)
