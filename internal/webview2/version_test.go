@@ -1,4 +1,4 @@
-package main
+package webview2
 
 import "testing"
 
@@ -21,7 +21,7 @@ func TestCompareVersions(t *testing.T) {
 		}
 	}
 	for _, bad := range []string{"", "94.x.1", "94..1", "-1.0"} {
-		if _, ok := compareVersions(bad, minimumWebView2); ok {
+		if _, ok := compareVersions(bad, minimumVersion); ok {
 			t.Errorf("compareVersions(%q, ...) accepted a malformed version", bad)
 		}
 	}

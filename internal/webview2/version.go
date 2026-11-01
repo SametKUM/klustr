@@ -1,14 +1,17 @@
-package main
+// Package webview2 keeps the start-up check Wails v2 made on Windows: the
+// WebView2 runtime Klustr renders with is installed and new enough before the
+// window opens. Wails v3 leaves it to the app.
+package webview2
 
 import (
 	"strconv"
 	"strings"
 )
 
-// minimumWebView2 is the oldest WebView2 runtime Klustr starts on: the floor
+// minimumVersion is the oldest WebView2 runtime Klustr starts on: the floor
 // Wails v2 enforced (WebView2 SDK 1.0.992.28). Wails v3 itself needs 86 or
 // later.
-const minimumWebView2 = "94.0.992.31"
+const minimumVersion = "94.0.992.31"
 
 // compareVersions compares dotted numeric versions such as 120.0.2210.91 and
 // returns -1, 0 or 1. ok is false when either is not one.
