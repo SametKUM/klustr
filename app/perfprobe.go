@@ -207,6 +207,10 @@ func newPerfMeta() perfMeta {
 			}
 		}
 	}
+	// wails build leaves the VCS settings out; hack/perf/run.sh passes it.
+	if rev := os.Getenv("KLUSTR_PERF_REV"); rev != "" {
+		m.Revision = rev
+	}
 	return m
 }
 
