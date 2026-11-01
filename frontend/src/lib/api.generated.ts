@@ -394,6 +394,8 @@ export const generatedApi = {
   certManagerOrdersFor: call(bindings.CertManagerOrdersFor),
   checkForUpdate: call(bindings.CheckForUpdate),
   clearCredentialMapping: call(bindings.ClearCredentialMapping),
+  clipboardGetText: call(bindings.ClipboardGetText),
+  clipboardSetText: call(bindings.ClipboardSetText),
   cordonNode: call(bindings.CordonNode),
   deleteArgoApplication: call(bindings.DeleteArgoApplication),
   deleteResource: call(bindings.DeleteResource),
