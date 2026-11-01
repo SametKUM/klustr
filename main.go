@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"klustr/app"
+	"klustr/internal/webview2"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -16,7 +17,7 @@ import (
 var assets embed.FS
 
 func main() {
-	if err := ensureWebView2(); err != nil {
+	if err := webview2.Ensure(); err != nil {
 		log.Fatal(err)
 	}
 
