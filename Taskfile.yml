@@ -1,0 +1,39 @@
+# Wails v3 development tasks. `wails3 dev` runs them through the dev_mode
+# section of build/config.yml; `wails3 task <name>` runs one by hand.
+version: '3'
+
+vars:
+  # Linux builds use GTK3 / WebKit2GTK 4.1: Ubuntu 22.04 and Debian 12 do not
+  # ship WebKitGTK 6.0, which the GTK4 default needs.
+  GO_TAGS: '{{if eq OS "linux"}}gtk3{{end}}'
+  DEV_BIN: 'build/bin/klustr-dev{{exeExt}}'
+
+tasks:
+  bindings:
+    desc: Regenerate the frontend bindings and the API facade from the Go services
+    cmds:
+      - wails3 generate bindings -ts -i -d frontend/src/lib/wails/bindings
+      - npm --prefix frontend run --silent generate:api
+
+  dev:build:
+    desc: Build the development binary; wails3 dev reruns this on every Go change
+    cmds:
+      - task: bindings
+      # main.go embeds frontend/dist, which a fresh checkout does not have. In
+      # development the assets come from Vite, so a placeholder is enough.
+      - mkdir -p frontend/dist
+      - test -n "$(ls -A frontend/dist)" || touch frontend/dist/.gitkeep
+      - go build -tags "{{.GO_TAGS}}" -o {{.DEV_BIN}} .
+
+  # wails3 dev waits for the frontend URL before starting the app when this
+  # task has exactly this name.
+  common:dev:frontend:
+    desc: Run the Vite dev server that the development app loads its assets from
+    dir: frontend
+    cmds:
+      - npm run dev
+
+  dev:run:
+    desc: Run the development binary
+    cmds:
+      - '{{.DEV_BIN}}'

@@ -1,0 +1,36 @@
+# Wails v3 project configuration. For now only `wails3 dev` reads it, through
+# dev_mode below; the release build does not use it yet.
+version: '3'
+
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  ignore:
+    dir:
+      - .git
+      - .codegraph
+      - .claude
+      - node_modules
+      # Vite reloads the frontend on its own.
+      - frontend
+      # The dev binary is written to build/bin.
+      - build
+      - hack
+      - docs
+    file:
+      - .DS_Store
+      - .gitignore
+      - .gitkeep
+      - "*_test.go"
+    watched_extension:
+      - "*.go"
+    git_ignore: true
+  executes:
+    - cmd: wails3 task dev:build
+      type: blocking
+    - cmd: wails3 task common:dev:frontend
+      type: background
+    - cmd: wails3 task dev:run
+      type: primary
+      exit_policy: shutdown
