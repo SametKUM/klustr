@@ -11,7 +11,7 @@ there are no long-term support branches for older tags.
 | Any older release | ❌ — please upgrade before reporting |
 
 If you hit a security issue, first confirm it still reproduces on the latest
-release (or a `wails dev` build of `main`).
+release (or a `wails3 dev` build of `main`).
 
 ## Reporting a vulnerability
 

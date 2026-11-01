@@ -7,6 +7,6 @@ Conventional Commits: `feat(logs): add a line wrap toggle`.
 
 ## How it was tested
 
-- [ ] `go test klustr/internal/...` and `go vet ./...`
+- [ ] `go test klustr/internal/...` and `go vet -tags gtk3 ./...`
 - [ ] `cd frontend && npm test && npm run lint && npm run typecheck`
-- [ ] Tried in `wails dev` (UI changes; attach a screenshot or short clip)
+- [ ] Tried in `wails3 dev` (UI changes; attach a screenshot or short clip)

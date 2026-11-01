@@ -197,18 +197,21 @@ Task-focused guides live at [klustr.dev/docs](https://klustr.dev/docs/) (source:
 ## Build from source
 
 ```bash
-mise install     # installs Go, Node, Wails CLI pinned in .mise.toml
-wails dev        # hot-reload dev session
+mise install          # installs Go, Node and the wails3 CLI pinned in .mise.toml
+cd frontend && npm ci && cd ..
+wails3 dev            # dev session: Vite hot reload, rebuilds on Go changes
 
-# or a production build for your host platform
-wails build -trimpath -clean
+# or a release build for your host platform, into build/bin
+wails3 task build
 ```
+
+On Linux the build needs the GTK3 / WebKit2GTK 4.1 development headers (`libgtk-3-dev libwebkit2gtk-4.1-dev` on Debian and Ubuntu).
 
 ## Architecture (short version)
 
 | Layer | Choice |
 |---|---|
-| Desktop | Wails v2 (Go + native webview) |
+| Desktop | Wails v3 (Go + native webview) |
 | Backend | Go 1.27 + `client-go` (typed clientset + dynamic) + `sigs.k8s.io/gateway-api` |
 | Frontend | React 19 · TypeScript · Vite |
 | UI | Tailwind CSS · shadcn/ui |

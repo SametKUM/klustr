@@ -5,13 +5,14 @@ Cross-platform Kubernetes desktop client: multi-context cluster management with 
 ## Layout
 
 - `internal/kube/` holds everything that talks to a cluster and imports nothing from Wails, so it stays testable with plain `go test`; `doc.go` has the package overview. Files are split per sidebar group: `informers_<group>.go` (list types and listers), `details_<group>.go` (detail builders), `manager_<group>.go` (`ClientManager` forwarders).
-- `app/` is the thin Wails binding layer over `ClientManager` — the only part a CLI or web mode would replace.
-- `frontend/src/lib/wails/` and `frontend/src/lib/api.generated.ts` are generated: change the Go side and run `npm run generate:api` instead of editing them. `frontend/src/lib/api.ts` is only for bindings that need real normalization on top. `frontend/src/lib/integrationCatalog.generated.ts` is generated from the Go integration catalog (see below).
+- `app/` is the thin Wails binding layer over `ClientManager` — the only part a CLI or web mode would replace. `App` is a Wails v3 service; `main.go` builds the application and its one window.
+- `frontend/src/lib/wails/bindings/` and `frontend/src/lib/api.generated.ts` are generated: change the Go side and run `wails3 task bindings` (`wails3 dev` does it on every Go change) instead of editing them; CI fails while the bindings are stale. `frontend/src/lib/api.ts` is only for bindings that need real normalization on top. `frontend/src/lib/integrationCatalog.generated.ts` is generated from the Go integration catalog (see below).
+- `frontend/src/lib/wailsCall.ts` gives the generated bindings the shapes the frontend relies on: slices and maps typed non-null, and a rejected call carrying the Go error's message as a string. `frontend/src/lib/runtime.ts` wraps the Wails runtime (events, browser, clipboard); import it, not `@wailsio/runtime`.
 - The landing site and user guides live in [SametKUM/klustr.dev](https://github.com/SametKUM/klustr.dev). When a change alters behavior a guide describes, point it out so the guide can be updated there in its own pull request.
 
 ## How it works
 
-- **Live data comes from informers.** K8s watch → informer → Wails event (debounced ~100 ms) → Zustand → React. Resource lists are not polled; the deliberate exceptions are `metrics.k8s.io`, which has no watch, and Events (the bounded cluster feed and the detail panel's Events tab), all refreshed every 15 s by the frontend.
+- **Live data comes from informers.** K8s watch → informer → Wails event (debounced ~100 ms) → Zustand → React. `emit` (`app/events.go`) always sends an event's arguments as one list, which `runtime.ts` spreads back into the listener's parameters. Resource lists are not polled; the deliberate exceptions are `metrics.k8s.io`, which has no watch, and Events (the bounded cluster feed and the detail panel's Events tab), all refreshed every 15 s by the frontend.
 - **Access routing.** On `Watch`, `permissions.go` probes SelfSubjectAccessReview per kind and routes it to the all-namespaces factory, a factory scoped to the kubeconfig namespace, or nothing (denied: empty list, `errKindNoAccess` on Get). Every lister and Get goes through `w.factoryFor(kind)`, which also starts that kind's informer on first use (`ensureKind`); only Namespace and Pod start on attach. Covered kinds are listed twice: `kindBindings` in `informers.go` and the probe's `watchedKinds` in `permissions.go`.
 - **Namespaces and contexts filter at query time**, so switching them never restarts informers. A multi-namespace selection reaches the backend as a comma-separated string; namespaced list forwarders route through `listAcrossNamespaces`, and one that passes the string straight to a lister renders an empty table. In aggregated (multi-context) mode the frontend fans list calls out per context, while detail and mutation calls target the row's own context.
 - **CRDs.** `crd.go` watches the CRD list and starts a dynamic informer per GVR when a CR view opens (`EnsureCRWatch`), at the version the CRD stores; integrations read at that same served version. A CR without a dedicated integration gets a generic list with its printer columns and a YAML detail.
@@ -60,19 +61,22 @@ Tests are headless unit tests next to the code: `go test` for the backend, Vites
 
 ```bash
 mise install                  # one-time toolchain install
-wails dev                     # hot-reload native window
+wails3 dev                    # native window; Vite hot reload, rebuild on Go changes
 go test klustr/internal/...   # also with -race
-go vet ./...
-golangci-lint run
+go vet -tags gtk3 ./...
+golangci-lint run --build-tags gtk3
 cd frontend && npm test && npm run lint && npm run typecheck && npm run build
+wails3 task build             # release app for this OS into build/bin
 ```
 
-Run the checks for the side you changed. For UI work, also try the change in `wails dev`: passing type checks says nothing about whether the screen works.
+On Linux, Go builds that reach the root or `app` package take the `gtk3` tag, as the release and CI do: Wails v3 defaults to GTK4 / WebKitGTK 6.0, which Ubuntu 22.04 and Debian 12 don't ship, so Klustr stays on GTK3 / WebKit2GTK 4.1. `Taskfile.yml` sets it for its builds.
+
+Run the checks for the side you changed. For UI work, also try the change in `wails3 dev`: passing type checks says nothing about whether the screen works.
 
 ## Commits and releases
 
 - Every change reaches `main` through a pull request. The branch ruleset rejects direct pushes, admins included, and requires the `Backend (Go)`, `Backend (Go, Windows)`, `Frontend (TypeScript)` and `PR title` checks.
 - Conventional Commits, small and logically scoped. A squash merge takes the PR title as the commit subject, so the title follows the same format; `pr-title.yml` checks it.
 - Keep `[skip ci]` out of commit messages, body included: on a PR's head commit it keeps the required checks from ever reporting, and the PR can't merge.
-- Releases ship from `main` by tag. A signed `vX.Y.Z` tag makes `release.yml` build and sign every platform into a draft release; publishing the draft runs `publish-packages.yml`, which bumps the Homebrew tap and the AUR package. Only admins can push, move or delete `v*` tags.
+- Releases ship from `main` by tag. A signed `vX.Y.Z` tag makes `release.yml` build (`wails3 task build`) and sign every platform into a draft release; publishing the draft runs `publish-packages.yml`, which bumps the Homebrew tap and the AUR package. Only admins can push, move or delete `v*` tags.
 - Third-party actions are pinned to a full commit SHA and listed in the repository's allowed actions; a new one fails to start until it is added there. GitHub's own `actions/*` and `github/*` are always allowed.
