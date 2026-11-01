@@ -1,16 +1,16 @@
 {
 	"fixed": {
-		"file_version": "{{.Info.ProductVersion}}"
+		"file_version": {{json .Version}}
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "{{.Info.ProductVersion}}",
-			"FileVersion": "{{.Info.ProductVersion}}",
-			"CompanyName": "{{.Info.CompanyName}}",
-			"FileDescription": "{{.Info.ProductName}}",
-			"LegalCopyright": "{{.Info.Copyright}}",
-			"ProductName": "{{.Info.ProductName}}",
-			"Comments": "{{.Info.Comments}}"
+			"ProductVersion": {{json .Version}},
+			"FileVersion": {{json .Version}},
+			"CompanyName": {{json .CompanyName}},
+			"FileDescription": {{json .ProductName}},
+			"LegalCopyright": {{json .Copyright}},
+			"ProductName": {{json .ProductName}},
+			"Comments": {{json .Comments}}
 		}
 	}
 }

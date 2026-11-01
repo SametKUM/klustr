@@ -1,5 +1,8 @@
-# Wails v3 development tasks. `wails3 dev` runs them through the dev_mode
-# section of build/config.yml; `wails3 task <name>` runs one by hand.
+# Wails v3 tasks. `wails3 dev` runs the dev tasks through the dev_mode section
+# of build/config.yml; `wails3 task <name>` runs any of them by hand.
+#
+#   wails3 task build                          release build for this OS
+#   wails3 task build KLUSTR_VERSION=v1.2.3    stamped with a release version
 version: '3'
 
 vars:
@@ -7,6 +10,13 @@ vars:
   # ship WebKitGTK 6.0, which the GTK4 default needs.
   GO_TAGS: '{{if eq OS "linux"}}gtk3{{end}}'
   DEV_BIN: 'build/bin/klustr-dev{{exeExt}}'
+  # A release version (v1.2.3, v1.2.3-rc.1), from the variable or the
+  # environment. Left empty, the app reports a dev version from the Go build
+  # info, as `go build` would.
+  KLUSTR_VERSION: '{{.KLUSTR_VERSION | default ""}}'
+  ASSETS_DIR: build/bin/assets
+  # -s -w strips the binary, as Wails v2's production builds did.
+  LDFLAGS: '-s -w{{if .KLUSTR_VERSION}} -X klustr/app.Version={{.KLUSTR_VERSION}}{{end}}'
 
 tasks:
   bindings:
@@ -37,3 +47,68 @@ tasks:
     desc: Run the development binary
     cmds:
       - '{{.DEV_BIN}}'
+
+  build:
+    desc: Build the release app for this OS into build/bin
+    cmds:
+      - task: build:{{OS}}
+
+  build:frontend:
+    desc: Build the frontend into frontend/dist, which the binary embeds
+    cmds:
+      - npm --prefix frontend run build
+
+  build:assets:
+    desc: Render the macOS Info.plist and the Windows version resource and manifest
+    cmds:
+      # The tool runs on the build host, also when GOOS/GOARCH cross-compile.
+      - GOOS= GOARCH= go run ./tools/buildassets -version "{{.KLUSTR_VERSION}}" -out {{.ASSETS_DIR}}
+
+  build:linux:
+    desc: Build build/bin/klustr for Linux (GTK3 / WebKit2GTK 4.1)
+    cmds:
+      - task: build:frontend
+      - go build -tags "gtk3 production" -trimpath -ldflags "{{.LDFLAGS}}" -o build/bin/klustr .
+
+  build:windows:
+    desc: Build build/bin/klustr.exe for Windows, with its version resource, icon and manifest
+    vars:
+      ARCH: '{{.GOARCH | default ARCH}}'
+      SYSO: 'klustr_windows_{{.ARCH}}.syso'
+    cmds:
+      - task: build:frontend
+      - task: build:assets
+      # go build links any .syso in the main package's directory; the name
+      # limits this one to Windows builds for the arch. It is gitignored and
+      # regenerated on every build.
+      - >-
+        wails3 generate syso -arch {{.ARCH}} -icon build/windows/icon.ico
+        -manifest {{.ASSETS_DIR}}/wails.exe.manifest -info {{.ASSETS_DIR}}/info.json -out {{.SYSO}}
+      - >-
+        go build -tags production -trimpath -ldflags "{{.LDFLAGS}} -H windowsgui"
+        -o build/bin/klustr.exe .
+
+  build:darwin:
+    desc: Build build/bin/klustr.app for macOS (unsigned; the release workflow signs it)
+    vars:
+      APP: build/bin/klustr.app
+    env:
+      # Go has needed macOS 12 since Go 1.25; Wails v3 targets it as well.
+      CGO_CFLAGS: -mmacosx-version-min=12.0
+      CGO_LDFLAGS: -mmacosx-version-min=12.0
+      MACOSX_DEPLOYMENT_TARGET: "12.0"
+    cmds:
+      - task: build:frontend
+      - task: build:assets
+      - go build -tags production -trimpath -ldflags "{{.LDFLAGS}}" -o build/bin/klustr .
+      - rm -rf {{.APP}}
+      - mkdir -p {{.APP}}/Contents/MacOS {{.APP}}/Contents/Resources
+      - mv build/bin/klustr {{.APP}}/Contents/MacOS/klustr
+      - cp {{.ASSETS_DIR}}/Info.plist {{.APP}}/Contents/Info.plist
+      # Wails v2 named the bundle icon iconfile.icns and the Info.plist points
+      # at it. -windowsfilename only keeps generate icons off the committed
+      # build/windows/icon.ico.
+      - >-
+        wails3 generate icons -input build/appicon.png
+        -macfilename {{.APP}}/Contents/Resources/iconfile.icns
+        -windowsfilename {{.ASSETS_DIR}}/unused.ico
