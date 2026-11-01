@@ -1,6 +1,17 @@
-# Wails v3 project configuration. For now only `wails3 dev` reads it, through
-# dev_mode below; the release build does not use it yet.
+# Wails v3 project configuration. `wails3 dev` reads dev_mode; the build tasks
+# render the macOS Info.plist and the Windows version resource and manifest
+# from info (tools/buildassets).
 version: '3'
+
+info:
+  companyName: "Samet Kum"
+  productName: "Klustr"
+  # The identifier Wails v2 gave the macOS bundle. macOS keeps the webview's
+  # storage (the frontend's settings) per bundle identifier, so it must not
+  # change.
+  productIdentifier: "com.wails.klustr"
+  copyright: "Copyright 2026 Samet Kum and the Klustr contributors"
+  comments: "Kubernetes desktop client"
 
 dev_mode:
   root_path: .
