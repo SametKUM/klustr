@@ -72,6 +72,11 @@ jobs:
     if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     timeout-minutes: 20
     runs-on: ubuntu-24.04
+    # Wails v3 builds GTK4 by default. The release builds GTK3 (Ubuntu 22.04
+    # and Debian 12 lack WebKitGTK 6.0), and linux-build-deps installs its
+    # headers, so vet, test and lint take the same tag.
+    env:
+      GOFLAGS: -tags=gtk3
     steps:
       - uses: actions/checkout@v7
         with:
@@ -105,6 +110,20 @@ jobs:
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
         with:
           version: v2.15.0
+
+      # The frontend calls Go through bindings that `wails3 generate bindings`
+      # writes from the Go source; they must be regenerated whenever a bound
+      # method or model changes. The CLI version tracks the library in go.mod.
+      - name: Bindings are current
+        run: |
+          version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          go run "github.com/wailsapp/wails/v3/cmd/wails3@${version}" \
+            generate bindings -ts -i -d frontend/src/lib/wails/bindings
+          if ! git diff --exit-code -- frontend/src/lib/wails/bindings ||
+            [ -n "$(git status --porcelain -- frontend/src/lib/wails/bindings)" ]; then
+            echo "::error::frontend/src/lib/wails/bindings is stale. Run: wails3 task bindings" >&2
+            exit 1
+          fi
 
   # The ConPTY terminal is Windows-only code the Linux job never compiles.
   windows:
@@ -142,6 +161,9 @@ jobs:
     if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     timeout-minutes: 20
     runs-on: ubuntu-24.04
+    # Same tag as the backend job: the GTK3 headers are the ones installed.
+    env:
+      GOFLAGS: -tags=gtk3
     steps:
       - uses: actions/checkout@v7
         with:
@@ -197,6 +219,6 @@ jobs:
 
       # tsc --noEmit says nothing about whether rollup can resolve and chunk
       # the bundle. Keep this after Lint, whose check:api runs before the
-      # build regenerates the bindings.
+      # build regenerates the API facade.
       - name: Build
         run: npm run build

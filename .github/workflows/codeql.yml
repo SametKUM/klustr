@@ -26,10 +26,11 @@ jobs:
     name: Analyze ${{ matrix.language }}
     timeout-minutes: 30
     runs-on: ubuntu-24.04
-    # Match release.yml: webkit 4.1 needs the webkit2_41 build tag so CodeQL's
-    # autobuild of the Go module links against the right headers.
+    # Match the release build: Wails v3 builds GTK4 by default, and the gtk3
+    # tag keeps CodeQL's autobuild on the GTK3 / WebKit2GTK 4.1 headers that
+    # linux-build-deps installs.
     env:
-      GOFLAGS: -tags=webkit2_41
+      GOFLAGS: -tags=gtk3
     strategy:
       fail-fast: false
       matrix:
