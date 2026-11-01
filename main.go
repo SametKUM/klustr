@@ -4,6 +4,8 @@ import (
 	"embed"
 	"io/fs"
 	"log"
+	"os"
+	"runtime"
 
 	"klustr/app"
 
@@ -32,6 +34,7 @@ func main() {
 
 	wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:  "Klustr",
+		URL:    startURL(),
 		Width:  1280,
 		Height: 800,
 		// Esc closes dialogs and the inspector, so it must not also leave
@@ -42,4 +45,18 @@ func main() {
 	if err := wailsApp.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// startURL keeps the page on the origin Wails v2 served it from. The webview
+// keeps localStorage per origin, and the frontend stores its settings there
+// (theme, table layouts, context tags and groups), so a new origin would
+// start every upgraded user from scratch. On Linux and macOS v2 used
+// wails://wails/ and v3 defaults to wails://localhost; v3 ignores the host
+// when it serves assets. On Windows both use http://wails.localhost already.
+// Under wails3 dev the page comes from Vite, whose origin it keeps.
+func startURL() string {
+	if runtime.GOOS == "windows" || os.Getenv("FRONTEND_DEVSERVER_URL") != "" {
+		return ""
+	}
+	return "wails://wails/"
 }
