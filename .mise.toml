@@ -1,5 +1,7 @@
 [tools]
 go = "1.27"
 node = "26"
-"go:github.com/wailsapp/wails/v3/cmd/wails3" = "v3.1.0"
+# On Linux the CLI links GTK and WebKit; gtk3 builds it against GTK3 /
+# WebKit2GTK 4.1, the only stack Ubuntu 22.04 and Debian 12 ship.
+"go:github.com/wailsapp/wails/v3/cmd/wails3" = { version = "v3.1.0", tags = "gtk3" }
 "go:github.com/golangci/golangci-lint/v2/cmd/golangci-lint" = "v2.15.0"
