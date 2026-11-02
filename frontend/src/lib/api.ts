@@ -1,12 +1,13 @@
-import {
-  DeleteArgoApplication,
-  ListNodeMetrics,
-  ListPodMetrics,
-  ReconcileFluxResource,
-  SetFluxResourceSuspended,
-} from '@/lib/wails/wailsjs/go/app/App'
+import * as bindings from '@/lib/wails/bindings/klustr/app/app'
 import { generatedApi } from '@/lib/api.generated'
 import type { NodeMetrics, PodMetrics } from '@/lib/api.generated'
+import { call, callNullable } from '@/lib/wailsCall'
+
+const ListPodMetrics = callNullable(bindings.ListPodMetrics)
+const ListNodeMetrics = callNullable(bindings.ListNodeMetrics)
+const DeleteArgoApplication = call(bindings.DeleteArgoApplication)
+const ReconcileFluxResource = call(bindings.ReconcileFluxResource)
+const SetFluxResourceSuspended = call(bindings.SetFluxResourceSuspended)
 
 export type * from '@/lib/api.generated'
 

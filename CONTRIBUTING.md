@@ -10,9 +10,12 @@ Bug reports and focused pull requests are welcome. Klustr is a desktop Kubernete
 ## Build and run
 
 ```bash
-mise install      # installs Go, Node and the Wails CLI pinned in .mise.toml
-wails dev         # opens the native window, hot-reload
+mise install      # installs Go, Node and the wails3 CLI pinned in .mise.toml
+cd frontend && npm ci && cd ..
+wails3 dev        # opens the native window; Vite hot reload, rebuilds on Go changes
 ```
+
+`wails3 dev` rebuilds when a Go file is written in place, which is how VS Code saves. An editor that saves through a temporary file and a rename, such as JetBrains IDEs with "safe write" on, doesn't trigger it.
 
 A local [kind](https://kind.sigs.k8s.io/) cluster (`kind create cluster --name klustr-dev`) is the easiest dev target. No Docker required for the build itself — only for kind, if you choose it.
 
@@ -21,11 +24,11 @@ A local [kind](https://kind.sigs.k8s.io/) cluster (`kind create cluster --name k
 Run what CI runs:
 
 ```bash
-go test klustr/internal/... && go vet ./...
+go test klustr/internal/... && go vet -tags gtk3 ./...
 cd frontend && npm test && npm run lint && npm run typecheck
 ```
 
-For UI work, also exercise the change in `wails dev` — type checks don't catch visual regressions.
+For UI work, also exercise the change in `wails3 dev` — type checks don't catch visual regressions.
 
 These checks must pass before a PR can merge.
 
@@ -35,7 +38,7 @@ These checks must pass before a PR can merge.
 - [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`) for commit messages and the PR title. PRs are usually squash-merged, so the title becomes the commit on `main`; a check enforces its format.
 - Prefer many small commits over one monolith.
 - For UI changes, attach a screenshot or short clip in the PR description.
-- Don't edit `frontend/src/lib/wails/` (auto-generated).
+- Don't edit `frontend/src/lib/wails/` (auto-generated); after changing a bound Go method or model, run `wails3 task bindings`.
 
 ## What stays out of Klustr
 

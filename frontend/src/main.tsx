@@ -15,7 +15,7 @@ const queryClient = new QueryClient({
   },
 })
 
-root.render(
+const render = () => root.render(
   <React.StrictMode>
     <ErrorBoundary
       fallback={({ error, componentStack, reset }) => (
@@ -36,3 +36,14 @@ root.render(
     </ErrorBoundary>
   </React.StrictMode>,
 )
+
+// A perf probe build (hack/perf) instruments the Wails bridge before the app
+// subscribes to anything. Every other build constant-folds this branch away.
+if (import.meta.env.VITE_KLUSTR_PERF === '1') {
+  void import('./perf/probe').then((probe) => {
+    probe.install()
+    render()
+  })
+} else {
+  render()
+}

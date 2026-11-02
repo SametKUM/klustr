@@ -4,60 +4,24 @@
         <key>CFBundlePackageType</key>
         <string>APPL</string>
         <key>CFBundleName</key>
-        <string>{{.Info.ProductName}}</string>
+        <string>{{xml .ProductName}}</string>
         <key>CFBundleExecutable</key>
-        <string>{{.OutputFilename}}</string>
+        <string>{{xml .BinaryName}}</string>
         <key>CFBundleIdentifier</key>
-        <string>com.wails.{{.Name}}</string>
+        <string>{{xml .ProductIdentifier}}</string>
         <key>CFBundleVersion</key>
-        <string>{{.Info.ProductVersion}}</string>
+        <string>{{xml .Version}}</string>
         <key>CFBundleGetInfoString</key>
-        <string>{{.Info.Comments}}</string>
+        <string>{{xml .Comments}}</string>
         <key>CFBundleShortVersionString</key>
-        <string>{{.Info.ProductVersion}}</string>
+        <string>{{xml .Version}}</string>
         <key>CFBundleIconFile</key>
         <string>iconfile</string>
         <key>LSMinimumSystemVersion</key>
-        <string>10.13.0</string>
+        <string>12.0.0</string>
         <key>NSHighResolutionCapable</key>
         <string>true</string>
         <key>NSHumanReadableCopyright</key>
-        <string>{{.Info.Copyright}}</string>
-        {{if .Info.FileAssociations}}
-        <key>CFBundleDocumentTypes</key>
-        <array>
-          {{range .Info.FileAssociations}}
-          <dict>
-            <key>CFBundleTypeExtensions</key>
-            <array>
-              <string>{{.Ext}}</string>
-            </array>
-            <key>CFBundleTypeName</key>
-            <string>{{.Name}}</string>
-            <key>CFBundleTypeRole</key>
-            <string>{{.Role}}</string>
-            <key>CFBundleTypeIconFile</key>
-            <string>{{.IconName}}</string>
-          </dict>
-          {{end}}
-        </array>
-        {{end}}
-        {{if .Info.Protocols}}
-        <key>CFBundleURLTypes</key>
-        <array>
-          {{range .Info.Protocols}}
-            <dict>
-                <key>CFBundleURLName</key>
-                <string>com.wails.{{.Scheme}}</string>
-                <key>CFBundleURLSchemes</key>
-                <array>
-                    <string>{{.Scheme}}</string>
-                </array>
-                <key>CFBundleTypeRole</key>
-                <string>{{.Role}}</string>
-            </dict>
-          {{end}}
-        </array>
-        {{end}}
+        <string>{{xml .Copyright}}</string>
     </dict>
 </plist>

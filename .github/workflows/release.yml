@@ -40,19 +40,15 @@ jobs:
           # during the next alias migration, when either image can answer.
           - os: macos-26
             label: macOS (Apple Silicon)
-            platform: darwin/arm64
             suffix: darwin-arm64.tar.gz
           # Not code-signed yet: SignPath's free signing for open source
           # projects takes only a project that already ships the binary.
           - os: windows-latest
             label: Windows (amd64)
-            platform: windows/amd64
             suffix: windows-amd64.zip
           - os: ubuntu-24.04
             label: Linux (amd64)
-            platform: linux/amd64
             suffix: linux-amd64.tar.gz
-            tags: webkit2_41
     runs-on: ${{ matrix.os }}
     environment: release
     steps:
@@ -71,32 +67,42 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      # The CLI generates the bindings the wails/v2 library consumes at runtime,
-      # so it must track the module version rather than a hand-written pin.
+      # Before the Wails CLI install, which builds against these headers on
+      # Linux as the app does.
+      - uses: ./.github/actions/linux-build-deps
+        if: matrix.os == 'ubuntu-24.04'
+
+      # The build runs through `wails3 task`, and the CLI generates the
+      # Windows syso and the macOS icon. It tracks the library version in
+      # go.mod rather than a hand-written pin.
       - name: Resolve Wails CLI version
         id: wails
         shell: bash
         run: |
-          echo "version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)" >> "$GITHUB_OUTPUT"
+          echo "version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Wails CLI
         id: wails-cache
         uses: actions/cache@v6
         with:
           path: |
-            ~/go/bin/wails
-            ~/go/bin/wails.exe
-          key: wails-cli-${{ steps.wails.outputs.version }}-${{ runner.os }}-${{ runner.arch }}
+            ~/go/bin/wails3
+            ~/go/bin/wails3.exe
+          key: wails3-cli-${{ steps.wails.outputs.version }}-${{ runner.os }}-${{ runner.arch }}
 
+      # On Linux the CLI links GTK and WebKit too (for `wails3 doctor`) and
+      # would look for the GTK4 headers. linux-build-deps installs the GTK3
+      # ones the app builds against; macOS and Windows ignore the tag.
       - name: Install Wails CLI
         if: steps.wails-cache.outputs.cache-hit != 'true'
         shell: bash
         env:
           WAILS_VERSION: ${{ steps.wails.outputs.version }}
-        run: go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
+        run: go install -tags gtk3 "github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}"
 
-      - uses: ./.github/actions/linux-build-deps
-        if: matrix.os == 'ubuntu-24.04'
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
 
       - name: Resolve version and artifact name
         id: meta
@@ -135,34 +141,15 @@ jobs:
           echo "deb_version=${DEB_VERSION}" >> "$GITHUB_OUTPUT"
           echo "deb_name=klustr_${DEB_VERSION}_amd64.deb" >> "$GITHUB_OUTPUT"
 
-      # wails.json holds a placeholder; Wails fills the macOS Info.plist and
-      # the Windows version resource from it.
-      - name: Stamp app version
-        shell: bash
-        env:
-          APP_VERSION: ${{ steps.meta.outputs.app_version }}
-        run: |
-          set -euo pipefail
-          jq --arg v "$APP_VERSION" '.info.productVersion = $v' wails.json > wails.json.tmp
-          mv wails.json.tmp wails.json
-
+      # Taskfile.yml's build task builds for the runner's OS into build/bin:
+      # klustr.app, klustr.exe or klustr. KLUSTR_VERSION goes into the app
+      # and, as numbers only (app_version above), into the macOS Info.plist
+      # and the Windows version resource.
       - name: Build
         shell: bash
         env:
           KLUSTR_VERSION: ${{ steps.meta.outputs.version }}
-          BUILD_TAGS: ${{ matrix.tags }}
-          BUILD_PLATFORM: ${{ matrix.platform }}
-        run: |
-          TAGS_ARG=""
-          if [ -n "$BUILD_TAGS" ]; then
-            TAGS_ARG="-tags $BUILD_TAGS"
-          fi
-          wails build \
-            $TAGS_ARG \
-            -platform "$BUILD_PLATFORM" \
-            -ldflags "-X klustr/app.Version=${KLUSTR_VERSION}" \
-            -trimpath \
-            -clean
+        run: wails3 task build
 
       - name: Import code-signing certificate
         if: startsWith(matrix.os, 'macos')
@@ -242,7 +229,7 @@ jobs:
           Compress-Archive -Path klustr.exe, LICENSE, NOTICE -DestinationPath $env:ARTIFACT
 
       # A console-subsystem build would open a terminal window beside the
-      # app, and a missed stamp shows Wails' 1.0.0 in the file properties.
+      # app, and a missed stamp shows 0.0.0 in the file properties.
       - name: Verify Windows package
         if: matrix.os == 'windows-latest'
         shell: pwsh

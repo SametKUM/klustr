@@ -1,7 +1,8 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { kube } from '@/lib/wails/wailsjs/go/models'
+import type { CiliumResourceDetail, CRDInfo } from '@/lib/api'
+import { model } from '@/test/model'
 import type { KubeDelta } from '@/lib/events'
 
 const { getCiliumResource, handlers } = vi.hoisted(() => ({
@@ -26,7 +27,7 @@ const { useCRDStore } = await import('@/store/crds')
 const { CiliumResourceDetailBody } = await import('./CiliumResourceDetailBody')
 
 function fixture(state = 'waiting-for-identity') {
-  return kube.CiliumResourceDetail.createFrom({
+  return model<CiliumResourceDetail>({
     name: 'web', namespace: 'app', kind: 'CiliumEndpoint', state, primary: '10.0.1.2', secondary: '12345', createdAt: '',
     fields: [{ label: 'Addresses', value: '10.0.1.2' }],
     tables: [{ title: 'Failing controllers', columns: ['Name', 'Last error'], rows: [['identity', 'allocation pending']] }],
@@ -48,8 +49,8 @@ describe('Cilium CRD detail', () => {
     handlers.clear()
     getCiliumResource.mockReset().mockResolvedValue(fixture())
     useCRDStore.getState().reset()
-    useCRDStore.getState().setCRDs('row-context', [kube.CRDInfo.createFrom({ group: 'cilium.io', resource: 'ciliumidentities', kind: 'CiliumIdentity', version: 'v2alpha1' })])
-    useCRDStore.getState().setCRDs('other-context', [kube.CRDInfo.createFrom({ group: 'cilium.io', resource: 'ciliumidentities', kind: 'CiliumIdentity', version: 'v2' })])
+    useCRDStore.getState().setCRDs('row-context', [model<CRDInfo>({ group: 'cilium.io', resource: 'ciliumidentities', kind: 'CiliumIdentity', version: 'v2alpha1' })])
+    useCRDStore.getState().setCRDs('other-context', [model<CRDInfo>({ group: 'cilium.io', resource: 'ciliumidentities', kind: 'CiliumIdentity', version: 'v2' })])
     useUIStore.setState({
       selectedContext: 'other-context', resourceNavStack: [],
       selectedResource: { kind: 'CiliumEndpoint', namespace: 'app', name: 'web', context: 'row-context', gvr: { group: 'cilium.io', version: 'v2', resource: 'ciliumendpoints' } },

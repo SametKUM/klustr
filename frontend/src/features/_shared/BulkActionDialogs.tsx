@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
-import { EventsOn } from '@/lib/wails/wailsjs/runtime/runtime'
+import { EventsOn } from '@/lib/runtime'
 import { api, type NodeDrainProgress } from '@/lib/api'
 
 export type BulkItem = {

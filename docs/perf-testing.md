@@ -39,7 +39,7 @@ Both knobs are off by default and cost nothing in production builds.
   (in DEV builds) a frontend `roundtrip=`/`apply=` line per refetch.
 
 ```bash
-KLUSTR_PPROF=127.0.0.1:6060 KLUSTR_PERF_TRACE=1 wails dev
+KLUSTR_PPROF=127.0.0.1:6060 KLUSTR_PERF_TRACE=1 wails3 dev
 # while a list view is open and synced:
 go tool pprof -http=: http://127.0.0.1:6060/debug/pprof/heap        # cache RAM (inuse_space)
 go tool pprof -http=: http://127.0.0.1:6060/debug/pprof/allocs      # allocation churn
@@ -59,7 +59,7 @@ local-only and not part of the repo. Any equivalent large cluster works.
 Protocol (run before and after the change under identical sim state):
 
 1. Bring up the simulation (`hack/sim/sim-up.sh`, ~1500 pods/cluster).
-2. Launch with profiling: `KLUSTR_PPROF=127.0.0.1:6060 KLUSTR_PERF_TRACE=1 wails dev`.
+2. Launch with profiling: `KLUSTR_PPROF=127.0.0.1:6060 KLUSTR_PERF_TRACE=1 wails3 dev`.
 3. Attach to a sim context, open the Pods view, wait for sync.
 4. Baseline capture:
    - heap `inuse_space` of the pod informer cache (pprof),

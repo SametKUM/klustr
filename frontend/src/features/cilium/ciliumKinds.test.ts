@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CRDInfo } from '@/lib/api'
-import { kube } from '@/lib/wails/wailsjs/go/models'
+import { model } from '@/test/model'
 import { ALL_RESOURCE_VIEWS } from '@/features/_shared/resourceGroups'
 import { buildVisibleResourceGroups } from '@/features/_shared/visibleResourceGroups'
 import { buildCustomResourceSelection } from '@/features/_shared/customResourceModel'
@@ -10,12 +10,12 @@ import { CILIUM_GROUP, CILIUM_RESOURCES, isCiliumView, type CiliumView } from '.
 describe('Cilium navigation', () => {
   it.each(Object.keys(CILIUM_RESOURCES) as CiliumView[])('gates %s on the exact CRD in an active context', (resource) => {
     const definition = CILIUM_RESOURCES[resource]
-    const crd = kube.CRDInfo.createFrom({ group: CILIUM_GROUP, resource, kind: definition.kind, version: 'v2alpha1', scope: definition.scope === 'namespaced' ? 'Namespaced' : 'Cluster' })
+    const crd = model<CRDInfo>({ group: CILIUM_GROUP, resource, kind: definition.kind, version: 'v2alpha1', scope: definition.scope === 'namespaced' ? 'Namespaced' : 'Cluster' })
     const input = { activeContexts: ['dev'], accessByContext: {}, hiddenItems: [] }
     const group = (catalog: Record<string, CRDInfo[]>) => buildVisibleResourceGroups({ ...input, crdsByContext: catalog }).find((g) => g.label === 'Cilium')
 
     expect(group({ inactive: [crd] })).toBeUndefined()
-    expect(group({ dev: [kube.CRDInfo.createFrom({ ...crd, group: 'example.com' })] })).toBeUndefined()
+    expect(group({ dev: [model<CRDInfo>({ ...crd, group: 'example.com' })] })).toBeUndefined()
     expect(group({ dev: [crd] })?.items.map((i) => i.view)).toEqual([resource])
     expect(ALL_RESOURCE_VIEWS.has(resource)).toBe(true)
     expect(buildVisibleResourceGroups({ ...input, crdsByContext: { dev: [crd] }, hiddenItems: [resource] }).some((g) => g.label === 'Cilium')).toBe(false)
