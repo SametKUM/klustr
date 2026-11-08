@@ -44,71 +44,59 @@
 
 ## What is Klustr?
 
-Klustr is a cross-platform Kubernetes desktop client built with [Wails](https://wails.io/) (Go + native webview) and React. It uses your existing `~/.kube/config` and speaks the standard Kubernetes API directly — **nothing is deployed in the cluster**. Drop the binary in, point at any context, and you're looking at a live view of everything you have permission to see — built-in resources, full **RBAC** with a **subject → effective-permissions** review, **Custom Resources (CRDs)**, **Helm releases**, **Argo CD Applications**, **Flux CD reconcilers**, **Tekton** pipelines, **Gateway API** routes, **cert-manager** certificates, and **Kyverno** policy reports included. No extra logins, no `argocd`, `flux`, `tkn` or `helm` CLI required — only your kubeconfig.
+Klustr is a cross-platform Kubernetes desktop client for working across clusters. It reads your existing `~/.kube/config`, connects directly to the Kubernetes API and uses the permissions your contexts already have. Browse resources, troubleshoot workloads and manage ecosystem tools from one app, without the `argocd`, `flux`, `tkn` or `helm` CLI.
 
 ## Features
 
-- 🔌 **Pure client.** No CRDs, no in-cluster components — works with whatever your kubeconfig already grants.
-- 🔁 **Live everywhere.** `client-go` informers, never polled.
-- 🌐 **Multi-context aggregation.** View 2+ clusters in one table, per-context status pings with latency in the status bar.
-- 👥 **Context groups & tags.** Named multi-context groups; color tags on the top bar so you always know which environment you're touching.
-- 📋 **Every built-in resource.** Workloads, networking, storage, config, admission, autoscaling, and the full **RBAC** set under a dedicated Access Control sidebar group.
-- 🔎 **Access Review.** Subject → effective-permissions **GVR × verb matrix** with the binding → role chain behind every ✓, wildcards and `cluster-admin` flagged. Live, no `--as` impersonation, no extra API traffic.
-- 🧩 **Custom Resources (CRDs).** Auto-discovered on connect, grouped by API group, watch-backed.
-- ⎈ **Helm.** First-class Helm v3: install / upgrade / rollback / uninstall with a **dry-run preview** before any change, plus repo management and chart search.
-- 🚢 **Argo CD.** Sync, Refresh, Rollback and cascade-aware Delete through the Kubernetes API — no `argocd-server`, no `argocd` CLI, no Argo login.
-- 🚀 **Flux CD.** Kustomization · HelmRelease · GitRepository · HelmRepository · OCIRepository · Bucket · Provider · Alert · Receiver, plus **ImageRepository**, **ImagePolicy** and **ImageUpdateAutomation**. Inspect scanned tags, selected images and digests, and automation Git commits; follow repository references across namespaces. Reconcile and Suspend/Resume actions are available where the resource API supports them, with no `flux` CLI required.
-- 🏷️ **Managed by.** The detail header names the Argo CD Application, Flux Kustomization or HelmRelease, or Helm release behind a resource and opens it, in another active context when the Application runs in a different cluster. YAML edit and Scale **warn before a change the owner will revert** (Argo CD self-heal, Flux reconciliation or drift detection), honoring `ignoreDifferences`, ignore rules and per-object opt-outs.
-- 🏗️ **Tekton.** PipelineRuns, TaskRuns, Pipelines and Tasks. A PipelineRun's **task table** joins the resolved pipeline with its TaskRuns and skipped tasks, and a **graph** draws the tasks in dependency order; TaskRun **step logs** open on the running or failed step. **Start** a Pipeline from a form of its params and workspaces, **Cancel** and **Rerun** without `tkn`. Tekton **Triggers**: EventListeners, Triggers, TriggerTemplates and (Cluster)TriggerBindings.
-- 🌉 **Gateway API.** Typed informers; **listener table**, per-rule **match → backend → weight** matrix and `RouteParentStatus` so a misrouted parent or `RefNotPermitted` backend is one click away. Vendor-neutral.
-- 🔐 **cert-manager.** Certificates, Issuers / ClusterIssuers, and the full issuance chain — CertificateRequest → Order → Challenge — with ready/expiry status and a drill-down across the chain. One-click **Renew**, no `cmctl` CLI.
-- 🕸️ **Istio.** Gateways, VirtualServices, DestinationRules, ServiceEntries, Sidecars, AuthorizationPolicies, RequestAuthentications and PeerAuthentications, watch-backed. VirtualService hosts and destinations link to their Services, DestinationRule subsets to the pods they select, and policies list the workloads they apply to; the served API version is read from the discovered CRD rather than hardcoded.
-- **Cilium.** Dedicated views for network policies, endpoints, nodes, identities, CIDR groups, LoadBalancer IP pools, L2 announcement and egress gateway policies, and BGP configuration. Read policy rules, IP allocation and reported BGP peer status directly from CRDs, with links to referenced resources.
-- 🌳 **Karpenter.** NodePools, NodeClaims and AWS **EC2NodeClasses**, surfaced automatically when their CRDs are present. Follow a pool or claim to its node class and inspect resolved subnets, security groups, AMIs and their requirements, IAM configuration and readiness conditions. A **Disruption** tab on nodes and NodeClaims explains why Karpenter is not removing a node: `do-not-disrupt` pods, blocking PDBs, active budgets, `consolidateAfter`.
-- ⚖️ **KEDA.** ScaledObjects, ScaledJobs and (Cluster)TriggerAuthentications with triggers, Ready / Active / Fallback state and the objects that use each authentication, without reading secret values. **Pause** at the current or a given replica count and **Resume**; KEDA-managed HPAs show their `s0-…` metrics as the triggers behind them.
-- 🛡️ **Kyverno.** ClusterPolicies, Policies, PolicyExceptions, every CEL policy kind (validating, image-validating, mutating, generating and deleting, with their namespaced variants) and `wgpolicyk8s.io` **policy reports**. Each policy lists the resources it fails, and a resource's detail shows its own report.
-- 📜 **Logs.** Stern-style multi-pod streaming with per-pod ANSI colors, follow, save and regex, a line-count picker for pods and workloads, and the previous container instance's logs.
-- 🖥️ **In-app exec.** SPDY shell into any container.
-- 🐚 **Node shell.** Root shell on any node via a temporary privileged `nsenter` pod that's removed when the session ends — no SSH, nothing pre-installed.
-- 🚧 **Cordon & drain.** One-click cordon/uncordon and a live-progress drain that evicts through the Eviction API (PDB-aware, skips DaemonSet & mirror pods).
-- 🔧 **YAML edit.** Monaco editor with a server-side dry-run diff before apply.
-- 🚀 **Scale, restart, pause/resume.** Replica controls, one-click rolling restart, inline pause/resume, HPA min/max editable inline.
-- 📐 **In-place pod resize.** Change a running container's CPU / memory requests and limits via the `pods/resize` subresource — no pod recreation; shows the live resize status (Deferred / Infeasible).
-- ⏪ **Rollout history & rollback.** Side-by-side template diff and one-click revert on Deployments / StatefulSets / DaemonSets.
-- 🔄 **Port-forwarding.** Suggested local ports, persistent header indicator, click-to-open in browser.
-- 🗺️ **Cluster overviews.** CPU / memory / pod donuts, workloads health, recent warnings — single-cluster or aggregated.
-- 🔍 **Inspector.** Details open beside the live list in a resizable inspector that keeps the list's filter and page; step through results with `Alt+↑` / `Alt+↓`.
-- 🧭 **Cross-resource navigation.** Drill from workload to pod to node and back.
-- 🎨 **Themes & shortcuts.** Command palette (`⌘K`), pod search (`⌘P`), namespace search (`⌘N`), keyboard cheatsheet (`?`).
+### Helm, GitOps and pipelines
 
-## Screenshots
+- **Helm.** Install, upgrade, roll back and uninstall Helm v3 releases. Preview install and upgrade manifests with a dry-run diff, manage repositories and search charts — no `helm` CLI required.
+- **Argo CD.** Sync, Refresh, Rollback and cascade-aware Delete through the Kubernetes API — no `argocd-server`, `argocd` CLI or Argo login.
+- **Flux CD.** Kustomizations, HelmReleases, GitRepositories, HelmRepositories, OCIRepositories, Buckets, Providers, Alerts and Receivers, plus ImageRepositories, ImagePolicies and ImageUpdateAutomations. Inspect scanned tags, selected images and digests, and automation Git commits; follow repository references across namespaces. Reconcile and Suspend/Resume where the resource API supports them, without the `flux` CLI.
+- **Managed by.** Follow a resource to its Argo CD Application, Flux Kustomization or HelmRelease, or Helm release — including Applications in another active context. YAML edit and Scale warn before changes the owner will revert, honoring Argo CD `ignoreDifferences`, Flux ignore rules and per-object opt-outs.
+- **Tekton.** PipelineRuns, TaskRuns, Pipelines and Tasks. A task table joins the resolved pipeline with TaskRuns and skipped tasks; a graph shows dependency order, and step logs open on the running or failed step. Start a Pipeline from its params and workspaces, Cancel and Rerun without `tkn`. Triggers support includes EventListeners, Triggers, TriggerTemplates and (Cluster)TriggerBindings.
 
-Every shot is captured from two kind clusters seeded with realistic workloads and deliberate failures. The shots cycle through Klustr's themes, so the pack doubles as a tour of them — see [`docs/screenshots/`](docs/screenshots) for the full set.
+### Networking, policy and autoscaling
 
-|   |   |
-|---|---|
-| ![Aggregated pods — Dracula](docs/screenshots/01-pods-aggregated-dracula.png) | ![Connections — Default Dark](docs/screenshots/02-connections-default-dark.png) |
-| **Aggregated pods** — two clusters and three namespaces in one table; failing pods sit next to the healthy rows | **Connections** — contexts grouped by tag, two checked for an aggregated session, a saved group for one-click reconnect |
-| ![Pod diagnosis — Default Light](docs/screenshots/03-pod-diagnosis-default-light.png) | ![Multi-pod logs — Dracula Light](docs/screenshots/04-logs-stream-dracula-light.png) |
-| **Pod diagnosis** — a card that says *why* the pod is unhealthy and what to check next | **Multi-pod logs** — one stream across a Deployment, a color per pod, live regex filter |
-| ![Debug container — One Dark](docs/screenshots/05-debug-container-one-dark.png) | ![Helm upgrade — Monokai Light](docs/screenshots/06-helm-upgrade-diff-monokai-light.png) |
-| **Debug container** — netshoot injected into a shell-less pod, `ps` / `curl` / `dig` against the target | **Helm upgrade** — values on the left, the dry-run rendered manifest on the right, apply only after reading it |
-| ![Argo CD — One Light](docs/screenshots/07-argo-applications-one-light.png) | ![Flux Kustomization — Monokai](docs/screenshots/08-flux-kustomization-monokai.png) |
-| **Argo CD** — Sync / Health pills, per-row Refresh, Suspend and Sync through the Kubernetes API | **Flux CD** — a failed Kustomization with its status message, source and path readable without YAML |
-| ![Gateway API — Tokyo Night](docs/screenshots/09-gateway-httproute-tokyo-night.png) | ![cert-manager chain — Nord Light](docs/screenshots/10-certmanager-chain-nord-light.png) |
-| **Gateway API** — rule matrix plus `RouteParentStatus`: Accepted, but `ResolvedRefs=False` with `RefNotPermitted` | **cert-manager** — Certificate → CertificateRequest → Order → Challenge, with the ACME self-check error |
-| ![Access Review — Nord](docs/screenshots/11-access-review-nord.png) | ![YAML diff — Default Dark](docs/screenshots/12-yaml-diff-default-dark.png) |
-| **Access Review** — a ServiceAccount's effective permissions as a resource × verb matrix per scope, wildcard rules flagged | **YAML edit** — Monaco editor with the server-side dry-run diff before apply |
-| ![Rollout history — Monokai Light](docs/screenshots/13-rollout-history-monokai-light.png) | ![Node drain — Dracula](docs/screenshots/14-node-drain-dracula.png) |
-| **Rollout history** — revision diff with change causes and one-click rollback | **Node drain** — Eviction API progress, the PDB-blocked pod called out and retried |
-| ![Terminal drawer — One Dark](docs/screenshots/15-terminal-drawer-one-dark.png) | ![Cluster overview — Nord](docs/screenshots/17-cluster-overview-nord.png) |
-| **Terminal** — a local shell pinned to a context under the table, `KUBECONFIG` already set | **Cluster overview** — CPU / memory / pod capacity per cluster and a live warnings feed |
-| ![Istio VirtualService — One Light](docs/screenshots/18-istio-virtualservice-one-light.png) | ![Karpenter NodeClaims — Tokyo Night](docs/screenshots/19-karpenter-nodeclaims-tokyo-night.png) |
-| **Istio** — a VirtualService's weighted canary and header match as a rule table | **Karpenter** — NodeClaims with node, pool, instance, zone and the Launched / Registered / Initialized steps |
-| ![KEDA HPA — Nord Light](docs/screenshots/20-keda-hpa-nord-light.png) | ![Tekton PipelineRun — Dracula Light](docs/screenshots/21-tekton-pipelinerun-dracula-light.png) |
-| **KEDA** — a KEDA-managed HPA with its external metrics mapped back to the cron and CPU triggers | **Tekton** — a failed PipelineRun's task table: the failing test, the tasks it skipped, and the finally task that still ran |
-| ![Kyverno Policy tab — Monokai](docs/screenshots/22-kyverno-policy-tab-monokai.png) | |
-| **Kyverno** — a Deployment's own policy report on its Policy tab, the failing count on the tab label | |
+- **Gateway API.** Listener tables, per-rule match → backend → weight matrices and `RouteParentStatus` expose misrouted parents and `RefNotPermitted` backends. Vendor-neutral, with typed informers.
+- **cert-manager.** Certificates, Issuers / ClusterIssuers and the full CertificateRequest → Order → Challenge chain, with readiness, expiry and links between resources. One-click Renew without `cmctl`.
+- **Istio.** Gateways, VirtualServices, DestinationRules, ServiceEntries, Sidecars, AuthorizationPolicies, RequestAuthentications and PeerAuthentications. Follow hosts and destinations to Services, subsets to pods, and policies to workloads; reads use the discovered served API version.
+- **Cilium.** Dedicated views for network policies, endpoints, nodes, identities, CIDR groups, LoadBalancer IP pools, L2 announcement and egress gateway policies, and BGP configuration. Inspect policy rules, IP allocation and reported BGP peer status, with links to referenced resources.
+- **Karpenter.** NodePools, NodeClaims and AWS EC2NodeClasses with provisioning conditions, resolved subnets, security groups, AMIs, requirements and IAM configuration. Follow pools and claims to their node class; the Disruption tab on nodes and NodeClaims explains blockers such as `do-not-disrupt` pods, PDBs, active budgets and `consolidateAfter`.
+- **KEDA.** ScaledObjects, ScaledJobs and (Cluster)TriggerAuthentications with triggers, Ready / Active / Fallback state and authentication references, without reading secret values. Pause at the current or a given replica count and Resume; KEDA-managed HPAs map `s0-…` metrics back to their triggers.
+- **Kyverno.** ClusterPolicies, Policies, PolicyExceptions, every CEL policy kind (validating, image-validating, mutating, generating and deleting, with their namespaced variants) and `wgpolicyk8s.io` policy reports. Follow policy failures to resources and inspect each resource's own report in its Policy tab.
+
+### Cluster management and access
+
+- **Pure client.** Connect directly with your existing kubeconfig and permissions; no in-cluster agent required.
+- **Live resource lists.** `client-go` informers keep resource lists current. Metrics and Events refresh periodically.
+- **Multi-context aggregation.** View two or more clusters in one table, with per-context status and latency in the status bar.
+- **Context groups and tags.** Save named context groups for one-click reconnect and use color tags to identify environments in the top bar.
+- **Built-in resources.** Workloads, networking, storage, config, admission, autoscaling and the full RBAC set under a dedicated Access Control sidebar group.
+- **Access Review.** A subject → effective-permissions GVR × verb matrix traces each permission through its binding and role. Wildcards and `cluster-admin` are flagged; reviews update live without `--as` impersonation or extra API traffic.
+- **Custom resources.** CRDs are discovered on connect and grouped by API group. Resources without a dedicated integration get live lists with their printer columns and YAML details.
+- **Cluster overviews.** CPU, memory and pod capacity, workload health and recent warnings for a single cluster or an aggregated session.
+
+### Debugging and resource actions
+
+- **Logs.** Stern-style streaming across pods with per-pod ANSI colors, follow, save, regex filtering, a line-count picker and previous container logs.
+- **In-app exec.** Open a shell in a container over SPDY.
+- **Node shell.** Open a root shell through a temporary privileged `nsenter` pod that is removed when the session ends — no SSH or preinstalled tooling.
+- **Terminal.** A local shell drawer stays pinned to a context with `KUBECONFIG` set, alongside support for external terminal apps.
+- **Cordon and drain.** Cordon/uncordon and a live-progress drain through the Eviction API, respecting PDBs and skipping DaemonSet and mirror pods.
+- **YAML edit.** Monaco editor with a server-side dry-run diff before apply.
+- **Scale, restart and pause/resume.** Replica controls, rolling restart, deployment pause/resume and inline HPA min/max editing.
+- **In-place pod resize.** Change CPU and memory requests and limits through `pods/resize` without recreating the pod, with Deferred / Infeasible status displayed live.
+- **Rollout history and rollback.** Compare revision templates side by side and revert Deployments, StatefulSets and DaemonSets.
+- **Port-forwarding.** Suggested local ports, a persistent header indicator and click-to-open in the browser.
+
+### Navigation and customization
+
+- **Inspector.** Open details beside the live list without losing its filter or page. Resize the panel and step through results with `Alt+↑` / `Alt+↓`.
+- **Cross-resource navigation.** Follow workload → pod → node links, inspect related resources and return through the back stack.
+- **Themes and shortcuts.** Multiple light and dark themes, command palette (`⌘K`), pod search (`⌘P`), namespace search (`⌘N`) and a keyboard cheatsheet (`?`).
+
+See the [documentation](#documentation) for integration guides and workflows.
 
 ## Install
 
@@ -182,6 +170,17 @@ The Windows build is not code-signed yet. On first launch SmartScreen shows "Win
 2. On first run, pick a context — or check **two or more** to view them aggregated as one cluster. Save a recurring selection as a named **group** for one-click reconnect, and toggle **Auto-connect** on a card to pin it as the default.
 3. Browse via the sidebar, click any row to open it in the inspector beside the list, use `⌘K` to open the command palette, or `⌘P` to search pods by name. The header's **Disconnect** button drops you back to the picker at any time.
 
+## Screenshots
+
+Captured from two kind clusters with realistic workloads and deliberate failures. See the [full screenshot gallery](docs/screenshots/README.md) for more workflows and themes.
+
+|   |   |
+|---|---|
+| ![Aggregated pods — Dracula](docs/screenshots/01-pods-aggregated-dracula.png) | ![Multi-pod logs — Dracula Light](docs/screenshots/04-logs-stream-dracula-light.png) |
+| **Multiple clusters** — pods from two clusters and three namespaces in one table | **Workload debugging** — one log stream across a Deployment, with pod colors and a live regex filter |
+| ![Helm upgrade — Monokai Light](docs/screenshots/06-helm-upgrade-diff-monokai-light.png) | ![Tekton PipelineRun — Dracula Light](docs/screenshots/21-tekton-pipelinerun-dracula-light.png) |
+| **Helm upgrade** — review values and the dry-run manifest before applying | **Tekton** — inspect failed, skipped and completed pipeline tasks |
+
 ## Documentation
 
 Task-focused guides live at [klustr.dev/docs](https://klustr.dev/docs/) (source: [SametKUM/klustr.dev](https://github.com/SametKUM/klustr.dev/tree/main/docs/guide)):
@@ -220,34 +219,6 @@ On Linux the build needs the GTK3 / WebKit2GTK 4.1 development headers (`libgtk-
 | Live data | `client-go` informers → Wails events → Zustand → React |
 
 Full design notes, conventions and the "add a new resource kind" recipe live in [`AGENTS.md`](AGENTS.md).
-
-## Roadmap
-
-- [x] Every built-in resource kind (incl. full RBAC: ServiceAccounts, Roles, RoleBindings, ClusterRoles, ClusterRoleBindings)
-- [x] **Access Review** — subject → effective-permission matrix with binding trace, implicit-group expansion (`system:serviceaccounts:*`, `system:authenticated`), wildcard / cluster-admin detection, live across every active context
-- [x] Logs, exec, port-forwarding
-- [x] Node shell (privileged `nsenter` pod), cordon/uncordon, PDB-aware drain
-- [x] YAML edit / apply with diff, scale, restart, deployment pause/resume, HPA inline edit
-- [x] In-place pod resize (CPU/memory requests & limits via the `pods/resize` subresource, no recreation)
-- [x] Rollout history with revision diff and one-click rollback (Deployments / StatefulSets / DaemonSets)
-- [x] Cross-resource navigation (related pods, owner/node links, back stack)
-- [x] Custom Resource Definitions (CRDs)
-- [x] Helm support — release browser, dry-run diff, install / upgrade / rollback / uninstall, repo management
-- [x] Gateway API — Gateways, HTTPRoutes, GRPCRoutes, GatewayClasses, ReferenceGrants (typed informers, status pills, listener / rule / RouteParentStatus tables)
-- [x] cert-manager — Certificates, Issuers / ClusterIssuers, CertificateRequests, Orders, Challenges (issuance-chain drill-down, ready/expiry status, one-click Renew)
-- [x] Istio — Gateways, VirtualServices, DestinationRules, ServiceEntries, Sidecars, AuthorizationPolicies, RequestAuthentications, PeerAuthentications (Service and pod links, served version read from the discovered CRD)
-- [x] Cilium — policies, endpoints, nodes, identities, CIDR groups, LB IPAM, L2 announcements, egress gateways and BGP (CRD-backed views)
-- [x] Karpenter — NodePools, NodeClaims, AWS EC2NodeClasses (provisioning status, resolved infrastructure, reference navigation and a per-node Disruption tab)
-- [x] KEDA — ScaledObjects, ScaledJobs, TriggerAuthentications, ClusterTriggerAuthentications (Pause / Resume, triggers mapped onto KEDA-managed HPAs)
-- [x] Flux image automation — ImageRepositories, ImagePolicies, ImageUpdateAutomations (tag/digest selection, Git update status, cross-namespace references)
-- [x] Tekton — PipelineRuns, TaskRuns, Pipelines, Tasks, and Triggers (task table and graph, step logs, Start, Cancel and Rerun)
-- [x] Kyverno — ClusterPolicies, Policies, every CEL policy kind, PolicyExceptions, PolicyReports (per-policy violations, per-resource Policy tab)
-- [x] Managed-by chips for Argo CD, Flux and Helm, with a warning before edits the owner will revert
-- [x] Multi-cluster aggregated mode + named context groups + per-context health ping
-- [x] Notarized macOS build — signed with a Developer ID Application certificate and notarized by Apple
-- [x] Linux (amd64) release distribution
-- [x] Windows (amd64) release distribution
-- [ ] Code-signed Windows build
 
 ## Contributing
 
