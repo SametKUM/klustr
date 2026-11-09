@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/wailsapp/wails/v3 v3.1.0
-	golang.org/x/sys v0.49.0
+	golang.org/x/sys v0.50.0
 	helm.sh/helm/v3 v3.22.1
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
